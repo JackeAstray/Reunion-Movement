@@ -5,7 +5,7 @@ namespace ReunionMovement.Common.Util
 {
     public static class RandomUtil
     {
-        private static readonly Random random = new Random();
+        public static readonly Random random = new Random();
 
         /// <summary>
         /// 根据给定的概率（百分比）判断某个事件是否“发生”  float （0-100）
@@ -113,27 +113,6 @@ namespace ReunionMovement.Common.Util
         {
             var offset = random.NextDouble() * range - range / 2;
             return (float)(value + offset);
-        }
-
-        /// <summary>
-        /// 从一个List中随机获取
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="list"></param>
-        /// <returns></returns>
-        public static T? GetRandomItemFromList<T>(this IList<T> list)
-        {
-            if (list == null)
-            {
-                Log.Error("GetRandomItemFromList : list 不能为空");
-            }
-
-            if (list.Count == 0)
-            {
-                return default(T);
-            }
-
-            return list[random.Next(0, list.Count)];
         }
 
         #region 正态分布
