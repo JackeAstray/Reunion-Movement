@@ -21,7 +21,7 @@ namespace LLAFramework
 
         [Tooltip("日志区域的高度占屏幕高度的百分比")]
         [Range(0.3f, 1.0f)]
-        public float Height = 1f;
+        public float Hight = 1f;
 
         [Tooltip("日志区域的宽度占屏幕宽度的百分比")]
         [Range(0.3f, 1.0f)]
@@ -95,7 +95,7 @@ namespace LLAFramework
         {
             if (!ShowInEditor && Application.isEditor) return;
 
-            while (queue.Count > ((Screen.height - 2 * Margin) * Height - 2 * padding) / styleText.lineHeight)
+            while (queue.Count > ((Screen.height - 2 * Margin) * Hight - 2 * padding) / styleText.lineHeight)
             {
                 queue.Dequeue();
             }
@@ -106,19 +106,19 @@ namespace LLAFramework
             if (!ShowInEditor && Application.isEditor) return;
 
             float w = (Screen.width - 2 * Margin) * Width;
-            float h = (Screen.height - 2 * Margin) * Height;
+            float h = (Screen.height - 2 * Margin) * Hight;
             float x = 1, y = 1;
 
             switch (AnchorPosition)
             {
                 case LogAnchor.BottomLeft:
                     x = Margin;
-                    y = Margin + (Screen.height - 2 * Margin) * (1 - Height);
+                    y = Margin + (Screen.height - 2 * Margin) * (1 - Hight);
                     break;
 
                 case LogAnchor.BottomRight:
                     x = Margin + (Screen.width - 2 * Margin) * (1 - Width);
-                    y = Margin + (Screen.height - 2 * Margin) * (1 - Height);
+                    y = Margin + (Screen.height - 2 * Margin) * (1 - Hight);
                     break;
 
                 case LogAnchor.TopLeft:
