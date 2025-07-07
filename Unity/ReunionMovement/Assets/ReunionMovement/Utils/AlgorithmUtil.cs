@@ -644,112 +644,58 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        ///  获取最小
+        /// 获取最小或最大值
         /// </summary>
-        public static T? Min<T, K>(IList<T> array, Func<T, K> handler) where K : IComparable<K>
+        /// <typeparam name="T">元素类型</typeparam>
+        /// <param name="array">待查找的集合</param>
+        /// <param name="comparison">比较器，返回小于0表示第一个参数更小，大于0表示第二个参数更小</param>
+        /// <param name="findMax">true查找最大值，false查找最小值</param>
+        /// <returns>最小或最大值</returns>
+        public static T? MinMax<T>(IList<T> array, Comparison<T> comparison, bool findMax = false)
         {
-            T? temp = default(T);
-            temp = array[0];
+            if (array == null || array.Count == 0) return default;
+            T temp = array[0];
             foreach (var arr in array)
             {
-                if (handler(temp).CompareTo(handler(arr)) > 0)
+                int cmp = comparison(temp, arr);
+                if ((findMax && cmp < 0) || (!findMax && cmp > 0))
                 {
                     temp = arr;
                 }
             }
-
             return temp;
+        }
+
+        /// <summary>
+        /// 获取最小值
+        /// </summary>
+        public static T? Min<T, K>(IList<T> array, Func<T, K> keySelector) where K : IComparable<K>
+        {
+            return MinMax(array, (a, b) => keySelector(a).CompareTo(keySelector(b)), false);
         }
 
         /// <summary>
         /// 获取最大值
         /// </summary>
-        public static T? Max<T, K>(IList<T> array, Func<T, K> handler) where K : IComparable<K>
+        public static T? Max<T, K>(IList<T> array, Func<T, K> keySelector) where K : IComparable<K>
         {
-            T? temp = default(T);
-            temp = array[0];
-            foreach (var arr in array)
-            {
-                if (handler(temp).CompareTo(handler(arr)) < 0)
-                {
-                    temp = arr;
-                }
-            }
-
-            return temp;
+            return MinMax(array, (a, b) => keySelector(a).CompareTo(keySelector(b)), true);
         }
 
         /// <summary>
-        /// 获取最小
+        /// 获取最小值（自定义比较器）
         /// </summary>
-        public static T? Min<T, K>(IList<T> array, Comparison<T> comparison)
+        public static T? Min<T>(IList<T> array, Comparison<T> comparison)
         {
-            T? temp = default(T);
-            temp = array[0];
-            foreach (var arr in array)
-            {
-                if (comparison(temp, arr) > 0)
-                {
-                    temp = arr;
-                }
-            }
-
-            return temp;
+            return MinMax(array, comparison, false);
         }
 
         /// <summary>
-        /// 获取最大值
+        /// 获取最大值（自定义比较器）
         /// </summary>
-        public static T? Max<T, K>(IList<T> array, Comparison<T> comparison)
+        public static T? Max<T>(IList<T> array, Comparison<T> comparison)
         {
-            T? temp = default(T);
-            temp = array[0];
-            foreach (var arr in array)
-            {
-                if (comparison(temp, arr) < 0)
-                {
-                    temp = arr;
-                }
-            }
-
-            return temp;
-        }
-
-        /// <summary>
-        /// 获得传入元素某个符合条件的所有对象
-        /// </summary>
-        public static T? Find<T>(IList<T> array, Predicate<T> handler)
-        {
-            T? temp = default(T);
-            for (int i = 0; i < array.Count; i++)
-            {
-                if (handler(array[i]))
-                {
-                    return array[i];
-                }
-            }
-
-            return temp;
-        }
-
-        /// <summary>
-        /// 获得传入元素某个符合条件的所有对象
-        /// </summary>
-        public static T[] FindAll<T>(IList<T> array, Predicate<T> handler)
-        {
-            var dstArray = new T[array.Count];
-            int idx = 0;
-            for (int i = 0; i < array.Count; i++)
-            {
-                if (handler(array[i]))
-                {
-                    dstArray[idx] = array[i];
-                    idx++;
-                }
-            }
-
-            Array.Resize(ref dstArray, idx);
-            return dstArray;
+            return MinMax(array, comparison, true);
         }
 
         /// <summary>
@@ -764,18 +710,7 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 从序列中获取第一个元素或者默认值
-        /// </summary>
-        /// <param name="source"></param>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public static T FirstOrDefaultEx<T>(this IEnumerable<T> source)
-        {
-            return source.FirstOrDefault();
-        }
-
-        /// <summary>
-        /// 从序列中获取第一个元素
+        /// 从序列中获取第N个元素
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="source"></param>
@@ -787,18 +722,7 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 从序列中获取最后一个元素或者默认值
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="source"></param>
-        /// <returns></returns>
-        public static T LastOrDefaultEx<T>(this IEnumerable<T> source)
-        {
-            return source.LastOrDefault();
-        }
-
-        /// <summary>
-        /// 从序列中获取最后一个元素
+        /// 从序列中获取最后N个元素
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="source"></param>
@@ -1135,62 +1059,6 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 根据索引交换
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="list"></param>
-        /// <param name="i"></param>
-        /// <param name="j"></param>
-        internal static void SwapAt<T>(this IList<T> list, int i, int j)
-        {
-            if (list == null)
-            {
-                Log.Error("list is null");
-                return;
-            }
-            if (i < 0 || i >= list.Count)
-            {
-                Log.Error("i is out of range");
-                return;
-            }
-            if (j < 0 || j >= list.Count)
-            {
-                Log.Error("j is out of range");
-                return;
-            }
-
-            (list[i], list[j]) = (list[j], list[i]);
-        }
-
-        /// <summary>
-        /// 根据索引交换
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="list"></param>
-        /// <param name="i"></param>
-        /// <param name="j"></param>
-        internal static void SwapAt<T>(this T[] list, int i, int j)
-        {
-            if (list == null)
-            {
-                Log.Error("list is null");
-                return;
-            }
-            if (i < 0 || i >= list.Length)
-            {
-                Log.Error("i is out of range");
-                return;
-            }
-            if (j < 0 || j >= list.Length)
-            {
-                Log.Error("j is out of range");
-                return;
-            }
-
-            (list[i], list[j]) = (list[j], list[i]);
-        }
-
-        /// <summary>
         /// 转成数组
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -1270,18 +1138,6 @@ namespace ReunionMovement.Common.Util
         {
             var transform = go.transform.Find(subnode);
             return transform != null ? transform.GetComponent<T>() : null;
-        }
-
-        /// <summary>
-        /// 包含
-        /// </summary>
-        /// <typeparam name="TSource"></typeparam>
-        /// <param name="source"></param>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        public static bool Contains<TSource>(this IEnumerable<TSource> source, TSource value)
-        {
-            return source.Contains(value);
         }
         #endregion
 
@@ -2961,7 +2817,7 @@ namespace ReunionMovement.Common.Util
                 return comp;
             }
 
-            return go.GetComponentsInChildren<T>().FirstOrDefaultEx();
+            return go.GetComponentsInChildren<T>().FirstOrDefault();
         }
 
         /// <summary>
@@ -3020,7 +2876,7 @@ namespace ReunionMovement.Common.Util
         /// 清除所有子节点
         /// </summary>
         /// <param name="go"></param>
-        public static void ClearChild(GameObject go)
+        public static void ClearChild(this GameObject go)
         {
             var tran = go.transform;
 
@@ -3038,15 +2894,6 @@ namespace ReunionMovement.Common.Util
                 }
                 child.parent = null;
             }
-        }
-
-        /// <summary>
-        /// 清除所有子节点
-        /// </summary>
-        /// <param name="go"></param>
-        public static void ThisClearChild(this GameObject go)
-        {
-            ClearChild(go);
         }
         #endregion
 
