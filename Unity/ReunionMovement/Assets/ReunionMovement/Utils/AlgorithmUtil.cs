@@ -2,7 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.UI;
+using static Unity.VisualScripting.Member;
 
 namespace ReunionMovement.Common.Util
 {
@@ -95,7 +99,7 @@ namespace ReunionMovement.Common.Util
         /// <param name="arg1"></param>
         /// <param name="arg2"></param>
         /// <returns></returns>
-        public static bool ArraysEqual<T>(T[] arg1, T[] arg2)
+        public static bool ArraysEqual<T>(IEnumerable<T> arg1, IEnumerable<T> arg2)
         {
             return Enumerable.SequenceEqual(arg1, arg2);
         }
@@ -281,9 +285,9 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         /// <typeparam name="T">数组类型</typeparam>
         /// <param name="array">数组</param>
-        public static void Disrupt<T>(IList<T> array)
+        public static void Shuffle<T>(IList<T> array)
         {
-            Disrupt(array, 0, array.Count);
+            Shuffle(array, 0, array.Count);
         }
 
         /// <summary>
@@ -293,7 +297,7 @@ namespace ReunionMovement.Common.Util
         /// <param name="array">数组</param>
         /// <param name="startIndex">起始序号</param>
         /// <param name="count">数量</param>
-        public static void Disrupt<T>(IList<T> array, int startIndex, int count)
+        public static void Shuffle<T>(IList<T> array, int startIndex, int count)
         {
             if (array == null)
             {
@@ -418,7 +422,65 @@ namespace ReunionMovement.Common.Util
         }
         #endregion
 
-        #region 排序
+        #region Engine
+        /// <summary>
+        /// 设置屏幕分辨率
+        /// </summary>
+        /// <param name="width">屏幕宽度</param>
+        /// <param name="height">屏幕高度</param>
+        /// <param name="fullScreen">是否全屏显示</param>
+        public static void SetScreen(int width, int height, bool fullScreen)
+        {
+            Screen.SetResolution(width, height, fullScreen);
+        }
+
+        /// <summary>
+        /// 打开一个URL链接
+        /// </summary>
+        /// <param name="url"></param>
+        public static void OpenURL(string url)
+        {
+            Application.OpenURL(url);
+        }
+
+        /// <summary>
+        /// 退出
+        /// </summary>
+        public static void Quit()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
+        }
+
+        /// <summary>
+        /// 网络可用
+        /// </summary>
+        public static bool NetAvailable
+        {
+            get
+            {
+                return Application.internetReachability != NetworkReachability.NotReachable;
+            }
+        }
+
+        /// <summary>
+        /// 是否是无线
+        /// </summary>
+        public static bool IsWifi
+        {
+            get
+            {
+                return Application.internetReachability == NetworkReachability.ReachableViaLocalAreaNetwork;
+            }
+        }
+        #endregion
+
+        #region Collection
+        public delegate bool FilterAction<T, K>(T t, K k);
+
         /// <summary>
         /// 交换两个值
         /// </summary>
@@ -688,6 +750,538 @@ namespace ReunionMovement.Common.Util
 
             Array.Resize(ref dstArray, idx);
             return dstArray;
+        }
+
+        /// <summary>
+        /// 判断是否为空
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="collection"></param>
+        /// <returns></returns>
+        public static bool IsEmpty<T>(this ICollection<T> collection)
+        {
+            return collection == null || collection.Count == 0;
+        }
+
+        /// <summary>
+        /// 从序列中获取第一个元素或者默认值
+        /// </summary>
+        /// <param name="source"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static T FirstOrDefaultEx<T>(this IEnumerable<T> source)
+        {
+            return source.FirstOrDefault();
+        }
+
+        /// <summary>
+        /// 从序列中获取第一个元素
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="source"></param>
+        /// <param name="num"></param>
+        /// <returns></returns>
+        public static List<T> First<T>(this IEnumerable<T> source, int num)
+        {
+            return source.Take(num).ToList();
+        }
+
+        /// <summary>
+        /// 从序列中获取最后一个元素或者默认值
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        public static T LastOrDefaultEx<T>(this IEnumerable<T> source)
+        {
+            return source.LastOrDefault();
+        }
+
+        /// <summary>
+        /// 从序列中获取最后一个元素
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="source"></param>
+        /// <param name="num"></param>
+        /// <returns></returns>
+        public static List<T> Last<T>(this IEnumerable<T> source, int num)
+        {
+            if (source == null)
+            {
+                return new List<T>();
+            }
+
+            var list = source as IList<T> ?? source.ToList();
+            int startIndex = Math.Max(0, list.Count - num);
+            return list.Skip(startIndex).Take(num).ToList();
+        }
+
+        /// <summary>
+        /// 从集合中随机获取一个元素，支持 IList、数组、IEnumerable
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <returns></returns>
+        public static T GetRandomItemFromList<T>(IEnumerable<T> source)
+        {
+            if (source == null)
+                return default;
+
+            // 优先处理 IList<T>，如 List、数组，效率高
+            if (source is IList<T> list)
+            {
+                if (list.Count == 0)
+                    return default;
+                return list[RandomUtil.random.Next(list.Count)];
+            }
+
+            // 其它 IEnumerable，使用蓄水池抽样算法
+            int count = 0;
+            T selected = default;
+            foreach (var item in source)
+            {
+                count++;
+                if (RandomUtil.random.Next(count) == 0)
+                    selected = item;
+            }
+            return count == 0 ? default : selected;
+        }
+
+        /// <summary>
+        /// 筛选(列表)
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="source"></param>
+        /// <param name="testAction"></param>
+        /// <returns></returns>
+        public static List<T> Filter<T>(this IEnumerable<T> source, Func<T, bool> predicate)
+        {
+            return source?.Where(predicate).ToList() ?? new List<T>();
+        }
+
+        /// <summary>
+        /// 筛选(字典)
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="K"></typeparam>
+        /// <param name="source"></param>
+        /// <param name="testAction"></param>
+        /// <returns></returns>
+        public static Dictionary<T, K> Filter<T, K>(this IEnumerable<KeyValuePair<T, K>> source, FilterAction<T, K> testAction)
+        {
+            return source.Where(pair => testAction(pair.Key, pair.Value)).ToDictionary(pair => pair.Key, pair => pair.Value);
+        }
+
+        /// <summary>
+        /// 给哈希集添加批量数据
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="this"></param>
+        /// <param name="items"></param>
+        /// <returns></returns>
+        public static void AddRange<T>(this ICollection<T> collection, IEnumerable<T> other)
+        {
+            if (other == null)
+            {
+                return;
+            }
+
+            foreach (var obj in other)
+            {
+                collection.Add(obj);
+            }
+        }
+
+        /// <summary>
+        /// 用固定值填充列表
+        /// </summary>
+        /// <typeparam name="T">类型</typeparam>
+        /// <param name="list">列表</param>
+        /// <param name="value">固定值</param>
+        public static void Fill<T>(this IList<T> list, T value)
+        {
+            if (list == null)
+            {
+                Log.Error("list is null");
+                return;
+            }
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                list[i] = value;
+            }
+        }
+
+        /// <summary>
+        /// 用默认值填充列表
+        /// </summary>
+        /// <typeparam name="T">类型</typeparam>
+        /// <param name="list">列表</param>
+        public static void FillWithDefault<T>(this IList<T> list)
+        {
+            if (list == null)
+            {
+                Log.Error("list is null");
+                return;
+            }
+
+            Fill(list, default);
+        }
+
+        /// <summary>
+        /// 通过二分查找在集合中查找元素。
+        /// </summary>
+        /// <typeparam name="TCollection"></typeparam>
+        /// <typeparam name="TElement"></typeparam>
+        /// <param name="source"></param>
+        /// <param name="value"></param>
+        /// <param name="getSubElement"></param>
+        /// <param name="index"></param>
+        /// <param name="length"></param>
+        /// <param name="comparer"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        /// <exception cref="ArgumentException"></exception>
+        public static int BinarySearch<TCollection, TElement>(this IList<TCollection> source,
+                                                              TElement value,
+                                                              Func<TCollection, TElement> getSubElement,
+                                                              int index,
+                                                              int length,
+                                                              IComparer<TElement> comparer)
+        {
+            if (index < 0)
+            {
+                Log.Error("index is less than the lower bound of array.");
+                return -1;
+            }
+
+            if (length < 0)
+            {
+                Log.Error("Value has to be >= 0.");
+                return -1;
+            }
+
+            if (index > source.Count - length)
+            {
+                Log.Error("index and length do not specify a valid range in array.");
+                return -1;
+            }
+
+            comparer ??= Comparer<TElement>.Default;
+
+            int min = index;
+            int max = index + length - 1;
+
+            while (min <= max)
+            {
+                int mid = min + ((max - min) >> 1);
+                int cmp = comparer.Compare(getSubElement(source[mid]), value);
+
+                if (cmp == 0)
+                {
+                    return mid;
+                }
+
+                if (cmp > 0)
+                {
+                    max = mid - 1;
+                }
+                else
+                {
+                    min = mid + 1;
+                }
+            }
+
+            return ~min;
+        }
+
+        /// <summary>
+        /// 比较器
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="comparer"></param>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
+        /// <returns></returns>
+        public static bool Less<T>(this IComparer<T> comparer, T a, T b) => comparer.Compare(a, b) < 0;
+
+        /// <summary>
+        /// 小于
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="v"></param>
+        /// <param name="w"></param>
+        /// <returns></returns>
+        internal static bool Less<T>(T v, T w) where T : IComparable<T> => v.CompareTo(w) < 0;
+
+        /// <summary>
+        /// 小于
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="i"></param>
+        /// <param name="j"></param>
+        /// <returns></returns>
+        internal static bool LessAt<T>(T[] list, int i, int j) where T : IComparable<T> => Less(list[i], list[j]);
+
+        /// <summary>
+        /// 小于
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="i"></param>
+        /// <param name="j"></param>
+        /// <returns></returns>
+        internal static bool LessAt<T>(IList<T> list, int i, int j) where T : IComparable<T> => Less(list[i], list[j]);
+
+        /// <summary>
+        /// 小于
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="i"></param>
+        /// <param name="j"></param>
+        /// <param name="comparer"></param>
+        /// <returns></returns>
+        internal static bool LessAt<T>(this T[] list, int i, int j, IComparer<T> comparer) => comparer.Less(list[i], list[j]);
+
+        /// <summary>
+        /// 小于
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="comparer"></param>
+        /// <param name="list"></param>
+        /// <param name="i"></param>
+        /// <param name="j"></param>
+        /// <returns></returns>
+        internal static bool LessAt<T>(IComparer<T> comparer, IList<T> list, int i, int j) => comparer.Less(list[i], list[j]);
+
+        /// <summary>
+        /// 小于等于
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="v"></param>
+        /// <param name="w"></param>
+        /// <returns></returns>
+        internal static bool LessOrEqual<T>(T v, T w) where T : IComparable<T> => v.CompareTo(w) <= 0;
+
+        /// <summary>
+        /// 小于等于
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="i"></param>
+        /// <param name="j"></param>
+        /// <returns></returns>
+        internal static bool LessOrEqualAt<T>(this IList<T> list, int i, int j) where T : IComparable<T> => LessOrEqual(list[i], list[j]);
+
+        /// <summary>
+        /// 移动到目标索引
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="sourceIndex"></param>
+        /// <param name="destinationIndex"></param>
+        internal static void MoveAt<T>(this IList<T> list, int sourceIndex, int destinationIndex)
+        {
+            if (list == null)
+            {
+                Log.Error("list is null");
+                return;
+            }
+            if (sourceIndex < 0 || sourceIndex >= list.Count)
+            {
+                Log.Error("sourceIndex is out of range");
+                return;
+            }
+            if (destinationIndex < 0 || destinationIndex >= list.Count)
+            {
+                Log.Error("destinationIndex is out of range");
+                return;
+            }
+
+            var item = list[sourceIndex];
+            list.RemoveAt(sourceIndex);
+            list.Insert(destinationIndex, item);
+        }
+
+        /// <summary>
+        /// 移动到目标索引
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="sourceIndex"></param>
+        /// <param name="destinationIndex"></param>
+        internal static void MoveAt<T>(this T[] list, int sourceIndex, int destinationIndex)
+        {
+            if (list == null)
+            {
+                Log.Error("list is null");
+                return;
+            }
+            if (sourceIndex < 0 || sourceIndex >= list.Length)
+            {
+                Log.Error("sourceIndex is out of range");
+                return;
+            }
+            if (destinationIndex < 0 || destinationIndex >= list.Length)
+            {
+                Log.Error("destinationIndex is out of range");
+                return;
+            }
+            var item = list[sourceIndex];
+            Array.Copy(list, sourceIndex + 1, list, sourceIndex, destinationIndex - sourceIndex);
+            list[destinationIndex] = item;
+        }
+
+        /// <summary>
+        /// 根据索引交换
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="i"></param>
+        /// <param name="j"></param>
+        internal static void SwapAt<T>(this IList<T> list, int i, int j)
+        {
+            if (list == null)
+            {
+                Log.Error("list is null");
+                return;
+            }
+            if (i < 0 || i >= list.Count)
+            {
+                Log.Error("i is out of range");
+                return;
+            }
+            if (j < 0 || j >= list.Count)
+            {
+                Log.Error("j is out of range");
+                return;
+            }
+
+            (list[i], list[j]) = (list[j], list[i]);
+        }
+
+        /// <summary>
+        /// 根据索引交换
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="i"></param>
+        /// <param name="j"></param>
+        internal static void SwapAt<T>(this T[] list, int i, int j)
+        {
+            if (list == null)
+            {
+                Log.Error("list is null");
+                return;
+            }
+            if (i < 0 || i >= list.Length)
+            {
+                Log.Error("i is out of range");
+                return;
+            }
+            if (j < 0 || j >= list.Length)
+            {
+                Log.Error("j is out of range");
+                return;
+            }
+
+            (list[i], list[j]) = (list[j], list[i]);
+        }
+
+        /// <summary>
+        /// 转成数组
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        public static T[] ToArray<T>(this IEnumerable<T> source)
+        {
+            return source.ToList().ToArray();
+        }
+
+        /// <summary>
+        /// 转成列表
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        public static List<T> ToList<T>(this IEnumerable<T> source)
+        {
+            return new List<T>(source);
+        }
+
+        /// <summary>
+        /// 列表合并
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="first"></param>
+        /// <param name="second"></param>
+        /// <param name="comparer"></param>
+        /// <returns></returns>
+        public static List<T> Union<T>(this List<T> first, List<T> second, IEqualityComparer<T> comparer)
+        {
+            return first.Concat(second).Distinct(comparer).ToList();
+        }
+        #endregion
+
+        #region Component
+        /// <summary>
+        /// 将一个组件附加到给定组件的游戏对象
+        /// </summary>
+        /// <param name="component">Component.</param>
+        /// <returns>Newly attached component.</returns>
+        public static T AddComponent<T>(this Component component) where T : Component
+        {
+            return component.gameObject.AddComponent<T>();
+        }
+
+        /// <summary>
+        /// 获取附加到给定组件的游戏对象的组件
+        /// 如果没有找到，则会附加一个新的并返回
+        /// </summary>
+        /// <param name="component">Component.</param>
+        /// <returns>Previously or newly attached component.</returns>
+        public static T GetOrAddComponent<T>(this Component component) where T : Component
+        {
+            var existingComponent = component.GetComponent<T>();
+            return existingComponent != null ? existingComponent : component.AddComponent<T>();
+        }
+
+        /// <summary>
+        /// 检查组件的游戏对象是否附加了类型为T的组件
+        /// </summary>
+        /// <param name="component">Component.</param>
+        /// <returns>True when component is attached.</returns>
+        public static bool HasComponent<T>(this Component component) where T : Component
+        {
+            return component.GetComponent<T>() != null;
+        }
+
+        /// <summary>
+        /// 搜索子物体组件
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="go"></param>
+        /// <param name="subnode"></param>
+        /// <returns></returns>
+        public static T Get<T>(this Component go, string subnode) where T : Component
+        {
+            var transform = go.transform.Find(subnode);
+            return transform != null ? transform.GetComponent<T>() : null;
+        }
+
+        /// <summary>
+        /// 包含
+        /// </summary>
+        /// <typeparam name="TSource"></typeparam>
+        /// <param name="source"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static bool Contains<TSource>(this IEnumerable<TSource> source, TSource value)
+        {
+            return source.Contains(value);
         }
         #endregion
 
@@ -1235,6 +1829,1399 @@ namespace ReunionMovement.Common.Util
         {
             return !float.IsNaN(f) && !float.IsInfinity(f);
         }
+        #endregion
+
+        #region Transform
+        /// <summary>
+        /// 使指定的多个GameObject成为子节点
+        /// </summary>
+        /// <param name="transform"></param>
+        /// <param name="children"></param>
+        public static void AddChildren(this Transform transform, GameObject[] children)
+        {
+            foreach (var child in children)
+            {
+                child.transform.parent = transform;
+            }
+        }
+
+        /// <summary>
+        /// 使指定的多个Component成为子节点
+        /// </summary>
+        /// <param name="transform"></param>
+        /// <param name="children"></param>
+        public static void AddChildren(this Transform transform, Component[] children)
+        {
+            foreach (var child in children)
+            {
+                child.transform.parent = transform;
+            }
+        }
+
+        /// <summary>
+        /// 重置子节点位置
+        /// </summary>
+        /// <param name="transform">父对象</param>
+        /// <param name="recursive">父对象一起重置</param>
+        public static void ResetChildPositions(this Transform transform, bool recursive = false)
+        {
+            foreach (Transform child in transform)
+            {
+                child.localPosition = Vector3.zero;
+
+                if (recursive)
+                {
+                    child.ResetChildPositions(true);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 设置子层级的layer
+        /// </summary>
+        /// <param name="transform"></param>
+        /// <param name="layerName"></param>
+        /// <param name="recursive"></param>
+        public static void SetChildLayers(this Transform transform, string layerName, bool recursive = false)
+        {
+            var layer = LayerMask.NameToLayer(layerName);
+
+            foreach (Transform child in transform)
+            {
+                child.gameObject.layer = layer;
+
+                if (recursive)
+                {
+                    child.SetChildLayers(layerName, true);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 设置XYZ位置
+        /// </summary>
+        /// <param name="transform"></param>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <param name="z"></param>
+        public static void SetXYZ(this Transform transform, float x, float y, float z)
+        {
+            transform.position = new Vector3(x, y, z);
+        }
+
+        /// <summary>
+        /// 设置XYZ位置
+        /// </summary>
+        /// <param name="transform"></param>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <param name="z"></param>
+        public static void SetLocalXYZ(this Transform transform, float x, float y, float z)
+        {
+            transform.localPosition = new Vector3(x, y, z);
+        }
+
+        /// <summary>
+        /// 设置X、Y和Y缩放
+        /// </summary>
+        public static void SetScaleXYZ(this Transform transform, float x, float y, float z)
+        {
+            transform.localScale = new Vector3(x, y, z);
+        }
+
+        /// <summary>
+        /// 在X、Y和Z方向上缩放
+        /// </summary>
+        public static void ScaleByXYZ(this Transform transform, float x, float y, float z)
+        {
+            transform.localScale = new Vector3(x, y, z);
+        }
+
+        /// <summary>
+        /// 在X、Y和Z方向上缩放
+        /// </summary>
+        public static void ScaleByXYZ(this Transform transform, float r)
+        {
+            transform.ScaleByXYZ(r, r, r);
+        }
+
+        /// <summary>
+        /// 设置X轴旋转
+        /// </summary>
+        public static void SetRotationX(this Transform transform, float angle)
+        {
+            transform.eulerAngles = new Vector3(angle, 0, 0);
+        }
+
+        /// <summary>
+        /// 设置Y轴旋转
+        /// </summary>
+        public static void SetRotationY(this Transform transform, float angle)
+        {
+            transform.eulerAngles = new Vector3(0, angle, 0);
+        }
+
+        /// <summary>
+        /// 设置Z轴旋转
+        /// </summary>
+        public static void SetRotationZ(this Transform transform, float angle)
+        {
+            transform.eulerAngles = new Vector3(0, 0, angle);
+        }
+
+        /// <summary>
+        /// 设置本地X轴旋转
+        /// </summary>
+        public static void SetLocalRotationX(this Transform transform, float angle)
+        {
+            transform.localRotation = Quaternion.Euler(new Vector3(angle, 0, 0));
+        }
+
+        /// <summary>
+        /// 设置本地Y轴旋转
+        /// </summary>
+        public static void SetLocalRotationY(this Transform transform, float angle)
+        {
+            transform.localRotation = Quaternion.Euler(new Vector3(0, angle, 0));
+        }
+
+        /// <summary>
+        /// 设置本地Z轴旋转
+        /// </summary>
+        public static void SetLocalRotationZ(this Transform transform, float angle)
+        {
+            transform.localRotation = Quaternion.Euler(new Vector3(0, 0, angle));
+        }
+
+        /// <summary>
+        /// 重置位置
+        /// </summary>
+        public static void ResetPosition(this Transform transform)
+        {
+            transform.position = Vector3.zero;
+        }
+
+        /// <summary>
+        /// 重置位置
+        /// </summary>
+        public static void ResetLocalPosition(this Transform transform)
+        {
+            transform.localPosition = Vector3.zero;
+        }
+
+        /// <summary>
+        /// 重置旋转
+        /// </summary>
+        /// <param name="transform"></param>
+        public static void ResetRotation(this Transform transform)
+        {
+            transform.rotation = Quaternion.identity;
+        }
+
+        /// <summary>
+        /// 重置旋转
+        /// </summary>
+
+        public static void ResetLocalRotation(this Transform transform)
+        {
+            transform.localRotation = Quaternion.identity;
+        }
+
+        /// <summary>
+        /// 重置本地位置/旋转/缩放
+        /// </summary>
+        /// <param name="transform"></param>
+        public static void ResetLocal(this Transform transform)
+        {
+            transform.ResetLocalRotation();
+            transform.ResetLocalPosition();
+            transform.ResetScale();
+
+        }
+
+        /// <summary>
+        /// 重置位置/旋转/缩放
+        /// </summary>
+        /// <param name="transform"></param>
+        public static void Reset(this Transform transform)
+        {
+            transform.ResetRotation();
+            transform.ResetPosition();
+            transform.ResetScale();
+        }
+
+        /// <summary>
+        /// 重置缩放
+        /// </summary>
+        /// <param name="transform"></param>
+        public static void ResetScale(this Transform transform)
+        {
+            transform.localScale = Vector3.one;
+        }
+
+        /// <summary>
+        /// 计算该物体的位置。无论它位于顶部还是底部。分别为-1和1。
+        /// </summary>
+        /// <returns></returns>
+        public static int CloserEdge(this Transform transform, Camera camera, int width, int height)
+        {
+            // 世界坐标转换为屏幕坐标
+            var worldPointTop = camera.ScreenToWorldPoint(new Vector3(width / 2, height));
+            var worldPointBot = camera.ScreenToWorldPoint(new Vector3(width / 2, 0));
+            // 计算距离
+            var deltaTop = Vector2.Distance(worldPointTop, transform.position);
+            var deltaBottom = Vector2.Distance(worldPointBot, transform.position);
+
+            return deltaBottom <= deltaTop ? 1 : -1;
+        }
+
+        /// <summary>
+        /// 搜索子物体组件
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="tf"></param>
+        /// <param name="objName"></param>
+        /// <returns></returns>
+        public static T Get<T>(this Transform tf, string objName) where T : Component
+        {
+            var sub = tf?.Find(objName);
+            return sub?.GetComponent<T>();
+        }
+
+        /// <summary>
+        /// 清除所有子节点
+        /// </summary>
+        /// <param name="tf"></param>
+        public static void ClearChild(this Transform tf)
+        {
+            if (tf == null) return;
+            for (int i = tf.childCount - 1; i >= 0; i--)
+            {
+                GameObject.Destroy(tf.GetChild(i).gameObject);
+            }
+        }
+
+        /// <summary>
+        /// 将位置旋转缩放清零
+        /// </summary>
+        /// <param name="tf"></param>
+        public static void ResetLocalTransform(this Transform tf)
+        {
+            tf.localPosition = Vector3.zero;
+            tf.localRotation = Quaternion.identity;
+            tf.localScale = Vector3.one;
+        }
+
+        /// <summary>
+        /// 查找子项
+        /// </summary>
+        /// <param name="findTrans"></param>
+        /// <param name="objName"></param>
+        /// <param name="check_visible">检查可见性</param>
+        /// <param name="raise_error">抛出错误</param>
+        /// <returns></returns>
+        public static Transform Child(this Transform findTrans, string objName, bool check_visible = false, bool raise_error = true)
+        {
+            if (!findTrans)
+            {
+                if (raise_error)
+                {
+                    Log.Error("查找失败. findTrans是空的!");
+                }
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(objName))
+            {
+                return null;
+            }
+            // 如果需要检查可见性，但是当前物体不可见
+            if (check_visible && !findTrans.gameObject.activeInHierarchy)
+            {
+                return null;
+            }
+            if (objName == ".")
+            {
+                return findTrans;
+            }
+
+            var ids = objName.Split('/');
+
+            foreach (var id1 in ids)
+            {
+                findTrans = ChildDirect(findTrans, id1, check_visible);
+                if (findTrans == null)
+                {
+                    // 如果需要抛出错误
+                    if (raise_error)
+                    {
+                        Log.Error($"查找子项失败, id:{objName} ,parent={findTrans.name}");
+                    }
+                    break;
+                }
+            }
+
+            return findTrans;
+        }
+
+        /// <summary>
+        /// 查找子项
+        /// </summary>
+        /// <param name="t"></param>
+        /// <param name="objName"></param>
+        /// <param name="check_visible"></param>
+        /// <param name="raise_error"></param>
+        /// <returns></returns>
+        public static Transform ChildTF(this Transform t, string objName, bool check_visible = false, bool raise_error = true)
+        {
+            return Child(t, objName, check_visible, raise_error);
+        }
+
+        /// <summary>
+        /// 查找子项
+        /// </summary>
+        /// <param name="trans"></param>
+        /// <param name="objName"></param>
+        /// <param name="check_visible"></param>
+        /// <returns></returns>
+        private static Transform ChildDirect(this Transform trans, string objName, bool check_visible)
+        {
+            if (trans == null || string.IsNullOrEmpty(objName))
+            {
+                return null;
+            }
+
+            var child = trans.Find(objName);
+            if (child != null && (!check_visible || child.gameObject.activeInHierarchy))
+            {
+                return child;
+            }
+
+            if (!check_visible)
+            {
+                // 如果不检查可见性且未找到匹配项，直接返回null
+                return null;
+            }
+
+            foreach (Transform t in trans)
+            {
+                if (t.gameObject.activeInHierarchy)
+                {
+                    var found = ChildDirect(t, objName, true);
+                    if (found != null)
+                    {
+                        return found;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 获取从父节点到自己的完整路径
+        /// </summary>
+        /// <param name="transform"></param>
+        /// <returns></returns>
+        public static string GetRootPathName(this Transform transform)
+        {
+            if (transform == null)
+            {
+                return string.Empty;
+            }
+
+            StringBuilder path = new StringBuilder();
+            BuildPath(transform, ref path);
+            return path.ToString();
+        }
+
+        /// <summary>
+        /// 递归构建Transform的完整路径名称
+        /// </summary>
+        /// <param name="current"></param>
+        /// <param name="path"></param>
+        private static void BuildPath(Transform current, ref StringBuilder path)
+        {
+            if (current.parent != null)
+            {
+                BuildPath(current.parent, ref path);
+                path.Append("/");
+            }
+            path.Append(current.name);
+        }
+
+        /// <summary>
+        /// 旋转物体，处理万向锁
+        /// </summary>
+        /// <param name="transform"></param>
+        /// <param name="v3"></param>
+        /// <param name="order"></param>
+        /// <param name="algorithmType"></param>
+        public static void RotateXYZ(this Transform transform, Vector3 v3, XYZOrder order, XYZAlgorithmType algorithmType = XYZAlgorithmType.Quaternion)
+        {
+            if (algorithmType == XYZAlgorithmType.Quaternion)
+            {
+                transform.rotation = RotateXYZ_Quaternion(v3, order);
+            }
+            else
+            {
+                transform.rotation = RotateXYZ_Matrix4x4(v3, order);
+            }
+        }
+
+        /// <summary>
+        /// 旋转物体，处理万向锁 采用四元数计算
+        /// </summary>
+        /// <param name="v3"></param>
+        /// <param name="order"></param>
+        /// <returns></returns>
+        public static Quaternion RotateXYZ_Quaternion(Vector3 v3, XYZOrder order)
+        {
+            Quaternion xRot = Quaternion.AngleAxis(v3.x, Vector3.right);
+            Quaternion yRot = Quaternion.AngleAxis(v3.y, Vector3.up);
+            Quaternion zRot = Quaternion.AngleAxis(v3.z, Vector3.forward);
+
+            Quaternion combinedRotation;
+
+            switch (order)
+            {
+                case XYZOrder.XYZ:
+                    combinedRotation = xRot * yRot * zRot;
+                    break;
+                case XYZOrder.XZY:
+                    combinedRotation = xRot * zRot * yRot;
+                    break;
+                case XYZOrder.YXZ:
+                    combinedRotation = yRot * xRot * zRot;
+                    break;
+                case XYZOrder.YZX:
+                    combinedRotation = yRot * zRot * xRot;
+                    break;
+                case XYZOrder.ZXY:
+                    combinedRotation = zRot * xRot * yRot;
+                    break;
+                case XYZOrder.ZYX:
+                    combinedRotation = zRot * yRot * xRot;
+                    break;
+                // 与unity inspector中的顺序一致
+                default:
+                    combinedRotation = yRot * xRot * zRot;
+                    break;
+            }
+
+            return combinedRotation;
+        }
+
+        /// <summary>
+        /// 旋转物体，处理万向锁 采用矩阵计算
+        /// </summary>
+        /// <param name="transform"></param>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <param name="z"></param>
+        public static Quaternion RotateXYZ_Matrix4x4(Vector3 v3, XYZOrder order)
+        {
+            Matrix4x4 xRot = RotXMat(v3.x * Mathf.Deg2Rad);
+            Matrix4x4 yRot = RotYMat(v3.y * Mathf.Deg2Rad);
+            Matrix4x4 zRot = RotZMat(v3.z * Mathf.Deg2Rad);
+
+            Matrix4x4 combinedRotation;
+
+            switch (order)
+            {
+                case XYZOrder.XYZ:
+                    combinedRotation = xRot * yRot * zRot;
+                    break;
+                case XYZOrder.XZY:
+                    combinedRotation = xRot * zRot * yRot;
+                    break;
+                case XYZOrder.YXZ:
+                    combinedRotation = yRot * xRot * zRot;
+                    break;
+                case XYZOrder.YZX:
+                    combinedRotation = yRot * zRot * xRot;
+                    break;
+                case XYZOrder.ZXY:
+                    combinedRotation = zRot * xRot * yRot;
+                    break;
+                case XYZOrder.ZYX:
+                    combinedRotation = zRot * yRot * xRot;
+                    break;
+                // 与unity inspector中的顺序一致
+                default:
+                    combinedRotation = yRot * xRot * zRot;
+                    break;
+            }
+
+            return combinedRotation.rotation;
+        }
+
+        static Matrix4x4 RotXMat(float angle)
+        {
+            Matrix4x4 rxmat = new Matrix4x4();
+            rxmat.SetRow(0, new Vector4(1f, 0f, 0f, 0f));
+            rxmat.SetRow(1, new Vector4(0f, Mathf.Cos(angle), -Mathf.Sin(angle), 0f));
+            rxmat.SetRow(2, new Vector4(0f, Mathf.Sin(angle), Mathf.Cos(angle), 0f));
+            rxmat.SetRow(3, new Vector4(0f, 0f, 0f, 1f));
+
+            return rxmat;
+        }
+
+        static Matrix4x4 RotYMat(float angle)
+        {
+            Matrix4x4 rymat = new Matrix4x4();
+            rymat.SetRow(0, new Vector4(Mathf.Cos(angle), 0f, Mathf.Sin(angle), 0f));
+            rymat.SetRow(1, new Vector4(0f, 1f, 0f, 0f));
+            rymat.SetRow(2, new Vector4(-Mathf.Sin(angle), 0f, Mathf.Cos(angle), 0f));
+            rymat.SetRow(3, new Vector4(0f, 0f, 0f, 1f));
+
+            return rymat;
+        }
+
+        static Matrix4x4 RotZMat(float angle)
+        {
+            Matrix4x4 rzmat = new Matrix4x4();
+            rzmat.SetRow(0, new Vector4(Mathf.Cos(angle), -Mathf.Sin(angle), 0f, 0f));
+            rzmat.SetRow(1, new Vector4(Mathf.Sin(angle), Mathf.Cos(angle), 0f, 0f));
+            rzmat.SetRow(2, new Vector4(0f, 0f, 1f, 0f));
+            rzmat.SetRow(3, new Vector4(0f, 0f, 0f, 1f));
+
+            return rzmat;
+        }
+        #endregion
+
+        #region RectTransform
+        /// <summary>
+        /// 设置RectTransform的锚点位置X
+        /// </summary>
+        /// <param name="rectTransform"></param>
+        /// <param name="x"></param>
+        public static void SetAnchoredPositionX(this RectTransform rectTransform, float x)
+        {
+            var pos = rectTransform.anchoredPosition;
+            pos.x = x;
+            rectTransform.anchoredPosition = pos;
+        }
+        /// <summary>
+        /// 设置RectTransform的锚点位置Y
+        /// </summary>
+        /// <param name="rectTransform"></param>
+        /// <param name="y"></param>
+        public static void SetAnchoredPositionY(this RectTransform rectTransform, float y)
+        {
+            var pos = rectTransform.anchoredPosition;
+            pos.y = y;
+            rectTransform.anchoredPosition = pos;
+        }
+        /// <summary>
+        /// 设置RectTransform的锚点位置Z
+        /// </summary>
+        /// <param name="rectTransform"></param>
+        /// <param name="z"></param>
+        public static void SetAnchoredPositionZ(this RectTransform rectTransform, float z)
+        {
+            var pos = rectTransform.anchoredPosition3D;
+            pos.z = z;
+            rectTransform.anchoredPosition3D = pos;
+        }
+        /// <summary>
+        /// 设置RectTransform的大小X
+        /// </summary>
+        /// <param name="rectTransform"></param>
+        /// <param name="x"></param>
+        public static void SetSizeDeltaX(this RectTransform rectTransform, float x)
+        {
+            var size = rectTransform.sizeDelta;
+            size.x = x;
+            rectTransform.sizeDelta = size;
+        }
+        /// <summary>
+        /// 设置RectTransform的大小Y
+        /// </summary>
+        /// <param name="rectTransform"></param>
+        /// <param name="y"></param>
+        public static void SetSizeDeltaY(this RectTransform rectTransform, float y)
+        {
+            var size = rectTransform.sizeDelta;
+            size.y = y;
+            rectTransform.sizeDelta = size;
+        }
+        /// <summary>
+        /// 设置RectTransform的锚点最小位置X
+        /// </summary>
+        /// <param name="rectTransform"></param>
+        /// <param name="x"></param>
+        public static void SetAnchorMinX(this RectTransform rectTransform, float x)
+        {
+            var anchor = rectTransform.anchorMin;
+            anchor.x = x;
+            rectTransform.anchorMin = anchor;
+        }
+        /// <summary>
+        /// 设置RectTransform的锚点最小位置Y
+        /// </summary>
+        /// <param name="rectTransform"></param>
+        /// <param name="y"></param>
+        public static void SetAnchorMinY(this RectTransform rectTransform, float y)
+        {
+            var anchor = rectTransform.anchorMin;
+            anchor.y = y;
+            rectTransform.anchorMin = anchor;
+        }
+        /// <summary>
+        /// 设置RectTransform的锚点最大位置X
+        /// </summary>
+        /// <param name="rectTransform"></param>
+        /// <param name="x"></param>
+        public static void SetAnchorMaxX(this RectTransform rectTransform, float x)
+        {
+            var anchor = rectTransform.anchorMax;
+            anchor.x = x;
+            rectTransform.anchorMax = anchor;
+        }
+        /// <summary>
+        /// 设置RectTransform的锚点最大位置Y
+        /// </summary>
+        /// <param name="rectTransform"></param>
+        /// <param name="y"></param>
+        public static void SetAnchorMaxY(this RectTransform rectTransform, float y)
+        {
+            var anchor = rectTransform.anchorMax;
+            anchor.y = y;
+            rectTransform.anchorMax = anchor;
+        }
+        /// <summary>
+        /// 设置RectTransform的Pivot X
+        /// </summary>
+        /// <param name="rectTransform"></param>
+        /// <param name="x"></param>
+        public static void SetPivotX(this RectTransform rectTransform, float x)
+        {
+            var pivot = rectTransform.pivot;
+            pivot.x = x;
+            rectTransform.pivot = pivot;
+        }
+
+        /// <summary>
+        /// 设置RectTransform的Pivot Y
+        /// </summary>
+        /// <param name="rectTransform"></param>
+        /// <param name="y"></param>
+        public static void SetPivotY(this RectTransform rectTransform, float y)
+        {
+            var pivot = rectTransform.pivot;
+            pivot.y = y;
+            rectTransform.pivot = pivot;
+        }
+
+        /// <summary>
+        /// 设置锚点
+        /// </summary>
+        /// <param name="rect"></param>
+        /// <param name="type"></param>
+        public static void SetAnchor(this RectTransform rect, AnchorType type)
+        {
+            if (rect == null)
+                return;
+            var size = rect.sizeDelta;
+            //left,right对应x,top,bottom对应Y
+            switch (type)
+            {
+                case AnchorType.TopRight:
+                    rect.pivot = new Vector2(1, 1);
+                    rect.anchorMin = new Vector2(1, 1);
+                    rect.anchorMax = new Vector2(1, 1);
+                    rect.anchoredPosition = Vector2.zero;
+                    break;
+                case AnchorType.TopLeft:
+                    rect.pivot = new Vector2(0.5f, 1);
+                    rect.anchorMin = new Vector2(0, 1);
+                    rect.anchorMax = new Vector2(0, 1);
+                    rect.anchoredPosition = Vector2.zero;
+                    break;
+                case AnchorType.Stretch:
+                    rect.pivot = new Vector2(0.5f, 0.5f);
+                    rect.anchorMin = Vector2.zero;
+                    rect.anchorMax = Vector2.one;
+                    rect.anchoredPosition = Vector2.zero;
+                    rect.sizeDelta = Vector2.zero;
+                    break;
+                case AnchorType.StretchTop:
+                    rect.pivot = new Vector2(0.5f, 1);
+                    rect.anchorMin = new Vector2(0, 1);
+                    rect.anchorMax = new Vector2(1, 1);
+                    rect.anchoredPosition = Vector2.zero;
+                    rect.sizeDelta = new Vector2(0, rect.sizeDelta.y);
+                    break;
+                case AnchorType.StretchBottom:
+                    rect.pivot = new Vector2(0.5f, 0);
+                    rect.anchorMin = new Vector2(0, 0);
+                    rect.anchorMax = new Vector2(1, 0);
+                    rect.anchoredPosition = Vector2.zero;
+                    rect.sizeDelta = new Vector2(0, rect.sizeDelta.y);
+                    break;
+                case AnchorType.StretchLeft:
+                    rect.pivot = new Vector2(0, 0.5f);
+                    rect.anchorMin = new Vector2(0, 0);
+                    rect.anchorMax = new Vector2(0, 1);
+                    rect.anchoredPosition = Vector2.zero;
+                    rect.sizeDelta = new Vector2(rect.sizeDelta.x, 0);
+                    break;
+                case AnchorType.StretchRight:
+                    rect.pivot = new Vector2(1, 0.5f);
+                    rect.anchorMin = new Vector2(1, 0);
+                    rect.anchorMax = new Vector2(1, 1);
+                    rect.anchoredPosition = Vector2.zero;
+                    rect.sizeDelta = new Vector2(rect.sizeDelta.x, 0);
+                    break;
+                default:
+                    Log.Debug("未知的锚点类型");
+                    break;
+            }
+        }
+        #endregion
+
+        #region GameObject
+        /// <summary>
+        /// 设置宽
+        /// </summary>
+        /// <param name="rectTrans"></param>
+        /// <param name="width"></param>
+        public static void SetWidth(this RectTransform rectTrans, float width)
+        {
+            rectTrans.sizeDelta = new Vector2(width, rectTrans.sizeDelta.y);
+        }
+
+        /// <summary>
+        /// 设置高
+        /// </summary>
+        /// <param name="rectTrans"></param>
+        /// <param name="height"></param>
+        public static void SetHeight(this RectTransform rectTrans, float height)
+        {
+            rectTrans.sizeDelta = new Vector2(rectTrans.sizeDelta.x, height);
+        }
+        /// <summary>
+        /// 获取位置的X轴
+        /// </summary>
+        /// <param name="t"></param>
+        /// <param name="newX"></param>
+        public static void SetPositionX(this Transform t, float newX)
+        {
+            t.position = new Vector3(newX, t.position.y, t.position.z);
+        }
+        /// <summary>
+        /// 获取位置的Y轴
+        /// </summary>
+        /// <param name="t"></param>
+        /// <param name="newY"></param>
+        public static void SetPositionY(this Transform t, float newY)
+        {
+            t.position = new Vector3(t.position.x, newY, t.position.z);
+        }
+        /// <summary>
+        /// 获取位置的Z轴
+        /// </summary>
+        /// <param name="t"></param>
+        /// <param name="newZ"></param>
+        public static void SetPositionZ(this Transform t, float newZ)
+        {
+            t.position = new Vector3(t.position.x, t.position.y, newZ);
+        }
+        /// <summary>
+        /// 获取本地位置的X轴
+        /// </summary>
+        /// <param name="t"></param>
+        /// <param name="newX"></param>
+        public static void SetLocalPositionX(this Transform t, float newX)
+        {
+            t.localPosition = new Vector3(newX, t.localPosition.y, t.localPosition.z);
+        }
+        /// <summary>
+        /// 获取本地位置的Y轴
+        /// </summary>
+        /// <param name="t"></param>
+        /// <param name="newY"></param>
+        public static void SetLocalPositionY(this Transform t, float newY)
+        {
+            t.localPosition = new Vector3(t.localPosition.x, newY, t.localPosition.z);
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="t"></param>
+        /// <param name="newZ"></param>
+        public static void SetLocalPositionZ(this Transform t, float newZ)
+        {
+            t.localPosition = new Vector3(t.localPosition.x, t.localPosition.y, newZ);
+        }
+        /// <summary>
+        /// 设置缩放为0
+        /// </summary>
+        /// <param name="t"></param>
+        /// <param name="newScale"></param>
+        public static void SetLocalScale(this Transform t, Vector3 newScale)
+        {
+            t.localScale = newScale;
+        }
+        /// <summary>
+        /// 设置本地缩放为0
+        /// </summary>
+        /// <param name="t"></param>
+        public static void SetLocalScaleZero(this Transform t)
+        {
+            t.localScale = Vector3.zero;
+        }
+        /// <summary>
+        /// 获取位置的X轴
+        /// </summary>
+        /// <param name="t"></param>
+        /// <returns></returns>
+        public static float GetPositionX(this Transform t)
+        {
+            return t.position.x;
+        }
+        /// <summary>
+        /// 获取位置的Y轴
+        /// </summary>
+        /// <param name="t"></param>
+        /// <returns></returns>
+        public static float GetPositionY(this Transform t)
+        {
+            return t.position.y;
+        }
+        /// <summary>
+        /// 获取位置的Z轴
+        /// </summary>
+        /// <param name="t"></param>
+        /// <returns></returns>
+        public static float GetPositionZ(this Transform t)
+        {
+            return t.position.z;
+        }
+        /// <summary>
+        /// 获取本地位置的X轴
+        /// </summary>
+        /// <param name="t"></param>
+        /// <returns></returns>
+        public static float GetLocalPositionX(this Transform t)
+        {
+            return t.localPosition.x;
+        }
+        /// <summary>
+        /// 获取本地位置的Y轴
+        /// </summary>
+        /// <param name="t"></param>
+        /// <returns></returns>
+        public static float GetLocalPositionY(this Transform t)
+        {
+            return t.localPosition.y;
+        }
+        /// <summary>
+        /// 获取本地位置的Z轴
+        /// </summary>
+        /// <param name="t"></param>
+        /// <returns></returns>
+        public static float GetLocalPositionZ(this Transform t)
+        {
+            return t.localPosition.z;
+        }
+        /// <summary>
+        /// 判断活动状态
+        /// </summary>
+        /// <param name="t"></param>
+        /// <returns></returns>
+        public static bool IsActive(this Transform t)
+        {
+            return t?.gameObject.activeInHierarchy ?? false;
+        }
+        /// <summary>
+        /// 变换转矩阵变换
+        /// </summary>
+        /// <param name="t"></param>
+        /// <returns></returns>
+        public static RectTransform RectTransform(this Transform t)
+        {
+            return t?.gameObject.GetComponent<RectTransform>();
+        }
+        /// <summary>
+        /// 判断刚体是否存在
+        /// </summary>
+        /// <param name="gobj"></param>
+        /// <returns></returns>
+        public static bool HasRigidbody(this GameObject gobj)
+        {
+            return gobj.GetComponent<Rigidbody>() != null;
+        }
+        /// <summary>
+        /// 判断动画是否存在
+        /// </summary>
+        /// <param name="gobj"></param>
+        /// <returns></returns>
+        public static bool HasAnimation(this GameObject gobj)
+        {
+            return gobj.GetComponent<Animation>() != null;
+        }
+        /// <summary>
+        /// 设置动画速度
+        /// </summary>
+        /// <param name="anim"></param>
+        /// <param name="newSpeed"></param>
+        public static void SetSpeed(this Animation anim, float newSpeed)
+        {
+            anim[anim.clip.name].speed = newSpeed;
+        }
+        /// <summary>
+        /// v3转v2
+        /// </summary>
+        /// <param name="vec"></param>
+        /// <returns></returns>
+        public static Vector2 ToVector2(this Vector3 vec)
+        {
+            return new Vector2(vec.x, vec.y);
+        }
+        /// <summary>
+        /// 设置活动状态
+        /// </summary>
+        /// <param name="com"></param>
+        /// <param name="visible"></param>
+        public static void SetActive(this Component com, bool visible)
+        {
+            if (com && com.gameObject && com.gameObject.activeSelf != visible) com.gameObject.SetActive(visible);
+        }
+        /// <summary>
+        /// 设置活动状态（反向）
+        /// </summary>
+        /// <param name="go"></param>
+        /// <param name="visible"></param>
+        public static void SetActiveReverse(this GameObject go, bool visible)
+        {
+            if (go && go.activeSelf != visible) go.SetActive(visible);
+        }
+        /// <summary>
+        /// 设置名字
+        /// </summary>
+        /// <param name="go"></param>
+        /// <param name="name"></param>
+        public static void SetName(this GameObject go, string name)
+        {
+            if (go && go.name != name) go.name = name;
+        }
+
+        /// <summary>
+        /// 获取附加到给定游戏对象的组件
+        /// 如果找不到，则附加一个新的并返回
+        /// </summary>
+        /// <param name="gameObject">Game object.</param>
+        /// <returns>Previously or newly attached component.</returns>
+        public static T GetOrAddComponent<T>(this GameObject gameObject) where T : Component
+        {
+            return gameObject.GetComponent<T>() ?? gameObject.AddComponent<T>();
+        }
+
+        /// <summary>
+        /// 检查游戏对象是否附加了类型为T的组件
+        /// </summary>
+        /// <param name="gameObject">Game object.</param>
+        /// <returns>True when component is attached.</returns>
+        public static bool HasComponent<T>(this GameObject gameObject) where T : Component
+        {
+            return gameObject.GetComponent<T>() != null;
+        }
+
+        /// <summary>
+        /// 搜索子物体组件
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="go"></param>
+        /// <param name="subnode"></param>
+        /// <returns></returns>
+        public static T Get<T>(this GameObject go, string subnode) where T : Component
+        {
+            if (go != null)
+            {
+                Transform sub = go.transform.Find(subnode);
+                if (sub != null) return sub.GetComponent<T>();
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 递归设置游戏对象的层
+        /// </summary>
+        public static void SetLayer(GameObject go, int layer)
+        {
+            go.layer = layer;
+            foreach (Transform child in go.transform)
+            {
+                SetLayer(child.gameObject, layer);
+            }
+        }
+
+        /// <summary> 
+        /// 在指定物体上添加指定图片 
+        /// </summary>
+        public static Image AddImage(this GameObject target, Sprite sprite)
+        {
+            target.SetActive(false);
+            Image image = target.GetComponent<Image>();
+            if (!image)
+            {
+                image = target.AddComponent<Image>();
+            }
+            image.sprite = sprite;
+            image.SetNativeSize();
+            target.SetActive(true);
+            return image;
+        }
+
+        /// <summary>
+        /// 查找子对象
+        /// </summary>
+        /// <param name="go">自己</param>
+        /// <param name="objName">对象名称</param>
+        /// <returns></returns>
+        public static GameObject Child(this GameObject go, string objName)
+        {
+            return Child(go.transform, objName);
+        }
+
+        /// <summary>
+        /// 查找子对象
+        /// </summary>
+        /// <param name="go">自己</param>
+        /// <param name="objName">对象名称</param>
+        /// <returns></returns>
+        public static GameObject Child(Transform go, string objName)
+        {
+            Transform tran = go.Find(objName);
+            return tran?.gameObject;
+        }
+
+        /// <summary>
+        /// 查找子对象
+        /// </summary>
+        /// <param name="go">自己</param>
+        /// <param name="objName">对象名</param>
+        /// <param name="check_visible">检查可见</param>
+        /// <param name="error">错误</param>
+        /// <returns></returns>
+        public static GameObject Child(this GameObject go, string objName, bool check_visible = false, bool error = true)
+        {
+            if (!go)
+            {
+                if (error)
+                {
+                    Log.Error("查找失败，GameObject是空的！");
+                }
+                return null;
+            }
+
+            var t = Child(go, objName, check_visible, error);
+            return t?.gameObject;
+        }
+
+        /// <summary>
+        /// 查找子对象组件
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="go">自己</param>
+        /// <param name="objName">对象名</param>
+        /// <param name="check_visible">检查可见</param>
+        /// <param name="error">错误</param>
+        /// <returns></returns>
+        public static T Child<T>(this GameObject go, string objName, bool check_visible = false, bool error = true) where T : Component
+        {
+            var t = Child(go, objName, check_visible, error);
+            return t?.GetComponent<T>();
+        }
+
+        /// <summary>
+        /// 查找子项组件
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="go"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public static T FindInChild<T>(this GameObject go, string name = "") where T : Component
+        {
+            if (!go)
+            {
+                return null;
+            }
+
+            if (!string.IsNullOrEmpty(name) && !go.name.Contains(name))
+            {
+                return null;
+            }
+
+            var comp = go.GetComponent<T>();
+            if (comp)
+            {
+                return comp;
+            }
+
+            return go.GetComponentsInChildren<T>().FirstOrDefaultEx();
+        }
+
+        /// <summary>
+        /// 取平级对象
+        /// </summary>
+        /// <param name="go"></param>
+        /// <param name="subnode"></param>
+        /// <returns></returns>
+        public static GameObject Peer(this GameObject go, string subnode)
+        {
+            return Peer(go.transform, subnode);
+        }
+
+        /// <summary>
+        /// 取平级对象
+        /// </summary>
+        /// <param name="go"></param>
+        /// <param name="subnode"></param>
+        /// <returns></returns>
+        public static GameObject Peer(Transform go, string subnode)
+        {
+            Transform tran = go.parent.Find(subnode);
+            return tran?.gameObject;
+        }
+
+        /// <summary>
+        /// 清除单个实例，默认延迟为0，仅在场景中删除对应对象
+        /// </summary>
+        public static void DestroyObject(this UnityEngine.Object obj, float delay = 0)
+        {
+            GameObject.Destroy(obj, delay);
+        }
+
+        /// <summary>
+        /// 立刻清理实例对象，会在内存中清理实例，Editor适用
+        /// </summary>
+        public static void DestroyObjectImmediate(this UnityEngine.Object obj)
+        {
+            GameObject.DestroyImmediate(obj);
+        }
+
+        /// <summary>
+        /// 清除一组实例
+        /// </summary>
+        /// <typeparam name="T">实例类型</typeparam>
+        /// <param name="objs">对象实例集合</param>
+        public static void DestroyObjects<T>(IEnumerable<T> objs) where T : UnityEngine.Object
+        {
+            foreach (var obj in objs)
+            {
+                GameObject.Destroy(obj);
+            }
+        }
+
+        /// <summary>
+        /// 清除所有子节点
+        /// </summary>
+        /// <param name="go"></param>
+        public static void ClearChild(GameObject go)
+        {
+            var tran = go.transform;
+
+            while (tran.childCount > 0)
+            {
+                var child = tran.GetChild(0);
+
+                if (Application.isEditor && !Application.isPlaying)
+                {
+                    GameObject.DestroyImmediate(child.gameObject);
+                }
+                else
+                {
+                    GameObject.Destroy(child.gameObject);
+                }
+                child.parent = null;
+            }
+        }
+
+        /// <summary>
+        /// 清除所有子节点
+        /// </summary>
+        /// <param name="go"></param>
+        public static void ThisClearChild(this GameObject go)
+        {
+            ClearChild(go);
+        }
+        #endregion
+
+        #region Object
+        /// <summary>
+        /// 从一个 object[] 数组中，安全地获取并转换指定下标的元素为目标类型 T。
+        /// object[] args = { 123, "hello", 3.14f };
+        /// int a = args.Get<int>(0);// 123
+        /// </summary>
+        /// <typeparam name="T">类型</typeparam>
+        /// <param name="openArgs"></param>
+        /// <param name="index">下标</param>
+        /// <param name="isLog">开启log</param>
+        /// <returns></returns>
+        public static T Get<T>(this object[] openArgs, int index, bool isLog = true)
+        {
+            if (openArgs == null)
+            {
+                if (isLog)
+                {
+                    Log.Error("[获取错误<object[]>], openArgs为null");
+                }
+                return default;
+            }
+
+            if (index < 0 || index >= openArgs.Length)
+            {
+                if (isLog)
+                {
+                    Log.Error($"[获取错误<object[]>], 越界: {index}  {openArgs.Length}");
+                }
+                return default;
+            }
+
+            var arrElement = openArgs[index];
+            if (arrElement == null || arrElement is DBNull)
+            {
+                return default;
+            }
+
+            try
+            {
+                // 直接类型匹配
+                if (arrElement is T t)
+                {
+                    return t;
+                }
+
+                // 可空类型支持
+                var targetType = typeof(T);
+                var underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+
+                // 针对常用类型做特殊处理
+                if (underlyingType == typeof(int))
+                {
+                    return (T)(object)arrElement.ObjToInt32();
+                }
+                if (underlyingType == typeof(long))
+                {
+                    return (T)(object)arrElement.ObjToInt64();
+                }
+                if (underlyingType == typeof(float))
+                {
+                    return (T)(object)arrElement.ObjToFloat();
+                }
+                if (underlyingType == typeof(string))
+                {
+                    return (T)(object)arrElement.ObjToString();
+                }
+
+                // 其它类型尝试通用转换
+                return (T)Convert.ChangeType(arrElement, underlyingType);
+            }
+            catch (Exception ex)
+            {
+                if (isLog)
+                    Log.Error($"[获取错误<object[]>], '{arrElement}' 无法转换为类型<{typeof(T)}>: {ex}");
+                return default;
+            }
+        }
+        /// <summary>
+        /// object转int32
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        public static int ObjToInt32(this object obj)
+        {
+            if (obj is int i)
+            {
+                return i;
+            }
+
+            try
+            {
+                return Convert.ToInt32(obj);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("ToInt32 : " + ex);
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// object转int64 | long
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        public static long ObjToInt64(this object obj)
+        {
+            if (obj is long l)
+            {
+                return l;
+            }
+
+            try
+            {
+                return Convert.ToInt64(obj);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("ToInt64 : " + ex);
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// object转float
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        public static float ObjToFloat(this object obj)
+        {
+            if (obj is float f)
+            {
+                return f;
+            }
+
+            try
+            {
+                return (float)Math.Round(Convert.ToSingle(obj), 2);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("object转float失败 : " + ex);
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// object转string
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        public static string ObjToString(this object obj)
+        {
+            if (obj is string s)
+            {
+                return s;
+            }
+
+            try
+            {
+                return Convert.ToString(obj);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("object转string失败 : " + ex);
+                return null;
+            }
+        }
+        #endregion
+
+        #region Texture
+
         #endregion
     }
 }
