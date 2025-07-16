@@ -20,11 +20,11 @@ namespace ReunionMovement.Example
                 resolutionManager.ToggleFullscreen();
 
             int i = 0;
-            foreach (Vector2 r in Screen.fullScreen ? resolutionManager.FullscreenResolutions : resolutionManager.WindowedResolutions)
+            foreach (Vector2 r in Screen.fullScreen ? resolutionManager.fullscreenResolutions : resolutionManager.windowedResolutions)
             {
                 string label = r.x + "x" + r.y;
                 if (r.x == Screen.width && r.y == Screen.height) label += "*";
-                if (r.x == resolutionManager.DisplayResolution.width && r.y == resolutionManager.DisplayResolution.height) label += " (native)";
+                if (r.x == resolutionManager.displayResolution.width && r.y == resolutionManager.displayResolution.height) label += " (native)";
 
                 if (GUILayout.Button(label))
                     resolutionManager.SetResolution(i, Screen.fullScreen);
