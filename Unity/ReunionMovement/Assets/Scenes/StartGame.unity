@@ -391,7 +391,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   IsPersistent: 1
   ShowInEditor: 1
-  Height: 1
+  Hight: 1
   Width: 1
   Margin: 20
   AnchorPosition: 2

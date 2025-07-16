@@ -62,10 +62,17 @@ public enum DownloadType
     PersistentAssets,
     PersistentFile,
     PersistentImage,
+    PersistentJson,
     // 流媒体路径
     StreamingAssets,
     StreamingAssetsFile,
     StreamingAssetsImage,
+    StreamingAssetsJson,
+    // 缓存路径
+    CacheAssets,
+    CacheFile,
+    CacheImage,
+    CacheJson,
 }
 
 /// <summary>
