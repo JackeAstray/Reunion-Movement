@@ -16,38 +16,38 @@ namespace LLAFramework
             BottomRight
         }
 
-        public bool IsPersistent = true;
-        public bool ShowInEditor = true;
+        public bool isPersistent = true;
+        public bool showInEditor = true;
 
         [Tooltip("日志区域的高度占屏幕高度的百分比")]
         [Range(0.3f, 1.0f)]
-        public float Height = 1f;
+        public float height = 1f;
 
         [Tooltip("日志区域的宽度占屏幕宽度的百分比")]
         [Range(0.3f, 1.0f)]
-        public float Width = 1f;
+        public float width = 1f;
 
-        public int Margin = 20;
+        public int margin = 20;
 
-        public LogAnchor AnchorPosition = LogAnchor.BottomLeft;
+        public LogAnchor anchorPosition = LogAnchor.BottomLeft;
 
-        public int FontSize = 20;
+        public int fontSize = 20;
 
         [Range(0f, 01f)]
-        public float BackgroundOpacity = 0.5f;
-        public Color BackgroundColor = Color.black;
+        public float backgroundOpacity = 0.5f;
+        public Color backgroundColor = Color.black;
 
-        public bool LogMessages = true;
-        public bool LogWarnings = true;
-        public bool LogErrors = true;
+        public bool logMessages = true;
+        public bool logWarnings = true;
+        public bool logErrors = true;
 
-        public Color MessageColor = Color.green;
-        public Color WarningColor = Color.yellow;
-        public Color ErrorColor = new Color(1, 0f, 0.25f);
+        public Color messageColor = Color.green;
+        public Color warningColor = Color.yellow;
+        public Color errorColor = new Color(1, 0f, 0.25f);
 
-        public bool StackTraceMessages = false;
-        public bool StackTraceWarnings = false;
-        public bool StackTraceErrors = true;
+        public bool stackTraceMessages = false;
+        public bool stackTraceWarnings = false;
+        public bool stackTraceErrors = true;
 
         static Queue<LogMessage> queue = new Queue<LogMessage>();
 
@@ -57,8 +57,8 @@ namespace LLAFramework
         public void Awake()
         {
             Texture2D back = new Texture2D(1, 1);
-            BackgroundColor.a = BackgroundOpacity;
-            back.SetPixel(0, 0, BackgroundColor);
+            backgroundColor.a = backgroundOpacity;
+            back.SetPixel(0, 0, backgroundColor);
             back.Apply();
 
             styleContainer = new GUIStyle();
@@ -67,9 +67,9 @@ namespace LLAFramework
             styleContainer.padding = new RectOffset(padding, padding, padding, padding);
 
             styleText = new GUIStyle();
-            styleText.fontSize = FontSize;
+            styleText.fontSize = fontSize;
 
-            if (IsPersistent)
+            if (isPersistent)
             {
                 DontDestroyOnLoad(this);
             }
@@ -77,7 +77,7 @@ namespace LLAFramework
 
         void OnEnable()
         {
-            if (!ShowInEditor && Application.isEditor) return;
+            if (!showInEditor && Application.isEditor) return;
 
             queue = new Queue<LogMessage>();
 
@@ -86,16 +86,16 @@ namespace LLAFramework
 
         void OnDisable()
         {
-            if (!ShowInEditor && Application.isEditor) return;
+            if (!showInEditor && Application.isEditor) return;
 
             Application.logMessageReceived -= HandleLog;
         }
 
         void Update()
         {
-            if (!ShowInEditor && Application.isEditor) return;
+            if (!showInEditor && Application.isEditor) return;
 
-            while (queue.Count > ((Screen.height - 2 * Margin) * Height - 2 * padding) / styleText.lineHeight)
+            while (queue.Count > ((Screen.height - 2 * margin) * height - 2 * padding) / styleText.lineHeight)
             {
                 queue.Dequeue();
             }
@@ -103,32 +103,32 @@ namespace LLAFramework
 
         void OnGUI()
         {
-            if (!ShowInEditor && Application.isEditor) return;
+            if (!showInEditor && Application.isEditor) return;
 
-            float w = (Screen.width - 2 * Margin) * Width;
-            float h = (Screen.height - 2 * Margin) * Height;
+            float w = (Screen.width - 2 * margin) * width;
+            float h = (Screen.height - 2 * margin) * height;
             float x = 1, y = 1;
 
-            switch (AnchorPosition)
+            switch (anchorPosition)
             {
                 case LogAnchor.BottomLeft:
-                    x = Margin;
-                    y = Margin + (Screen.height - 2 * Margin) * (1 - Height);
+                    x = margin;
+                    y = margin + (Screen.height - 2 * margin) * (1 - height);
                     break;
 
                 case LogAnchor.BottomRight:
-                    x = Margin + (Screen.width - 2 * Margin) * (1 - Width);
-                    y = Margin + (Screen.height - 2 * Margin) * (1 - Height);
+                    x = margin + (Screen.width - 2 * margin) * (1 - width);
+                    y = margin + (Screen.height - 2 * margin) * (1 - height);
                     break;
 
                 case LogAnchor.TopLeft:
-                    x = Margin;
-                    y = Margin;
+                    x = margin;
+                    y = margin;
                     break;
 
                 case LogAnchor.TopRight:
-                    x = Margin + (Screen.width - 2 * Margin) * (1 - Width);
-                    y = Margin;
+                    x = margin + (Screen.width - 2 * margin) * (1 - width);
+                    y = margin;
                     break;
             }
 
@@ -139,21 +139,21 @@ namespace LLAFramework
                 switch (m.Type)
                 {
                     case LogType.Warning:
-                        styleText.normal.textColor = WarningColor;
+                        styleText.normal.textColor = warningColor;
                         break;
 
                     case LogType.Log:
-                        styleText.normal.textColor = MessageColor;
+                        styleText.normal.textColor = messageColor;
                         break;
 
                     case LogType.Assert:
                     case LogType.Exception:
                     case LogType.Error:
-                        styleText.normal.textColor = ErrorColor;
+                        styleText.normal.textColor = errorColor;
                         break;
 
                     default:
-                        styleText.normal.textColor = MessageColor;
+                        styleText.normal.textColor = messageColor;
                         break;
                 }
                 GUILayout.Label(m.Message, styleText);
@@ -187,13 +187,13 @@ namespace LLAFramework
                 case LogType.Assert:
                 case LogType.Error:
                 case LogType.Exception:
-                    return LogErrors;
+                    return logErrors;
 
                 case LogType.Log:
-                    return LogMessages;
+                    return logMessages;
 
                 case LogType.Warning:
-                    return LogWarnings;
+                    return logWarnings;
 
                 default:
                     return false;
@@ -207,13 +207,13 @@ namespace LLAFramework
                 case LogType.Assert:
                 case LogType.Error:
                 case LogType.Exception:
-                    return StackTraceErrors;
+                    return stackTraceErrors;
 
                 case LogType.Log:
-                    return StackTraceMessages;
+                    return stackTraceMessages;
 
                 case LogType.Warning:
-                    return StackTraceWarnings;
+                    return stackTraceWarnings;
 
                 default:
                     return false;

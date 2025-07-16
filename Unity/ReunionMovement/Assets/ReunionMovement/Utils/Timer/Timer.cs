@@ -15,30 +15,30 @@ namespace ReunionMovement.Common.Util.Timer
         public enum TimerState { Idle, Running, Paused, Finished, Cancelled }
 
         // 总时长（秒）
-        public float Duration { get; private set; }
+        public float duration { get; private set; }
         // 已经过的时间（秒）
-        public float Elapsed { get; private set; }
+        public float elapsed { get; private set; }
         // 是否为倒计时
-        public bool IsCountingDown { get; private set; }
+        public bool isCountingDown { get; private set; }
         // 时间缩放
-        public float TimeScale { get; set; } = 1f;
+        public float timeScale { get; set; } = 1f;
         // 是否循环
-        public bool IsLoop { get; private set; }
+        public bool isLoop { get; private set; }
         // 已循环次数
-        public int LoopCount { get; private set; } = 0;
+        public int loopCount { get; private set; } = 0;
         // 0为无限循环
-        public int MaxLoop { get; private set; } = 0;
+        public int maxLoop { get; private set; } = 0;
         // 当前状态
-        public TimerState State { get; private set; } = TimerState.Idle;
+        public TimerState state { get; private set; } = TimerState.Idle;
 
         // 完成事件，当计时器到达结束时触发
-        public event Action OnCompleted;
+        public event Action onCompleted;
         // 循环完成事件，当计时器每次循环结束时触发
-        public event Action<int> OnLoopCompleted;
+        public event Action<int> onLoopCompleted;
         // 取消事件，只有在计时器被取消时触发，不会触发OnCompleted事件
-        public event Action OnCancelled;
+        public event Action onCancelled;
         // 参数为当前已用时间或剩余时间
-        public event Action<float> OnTick;
+        public event Action<float> onTick;
 
         /// <summary>
         /// 创建一个新的计时器实例
@@ -47,11 +47,11 @@ namespace ReunionMovement.Common.Util.Timer
         /// <param name="isCountingDown"></param>
         public Timer(float duration, bool isCountingDown = true, bool isLoop = false, int maxLoop = 0)
         {
-            Duration = Math.Max(0, duration);
-            IsCountingDown = isCountingDown;
-            IsLoop = isLoop;
-            MaxLoop = maxLoop;
-            Elapsed = 0f;
+            this.duration = Math.Max(0, duration);
+            this.isCountingDown = isCountingDown;
+            this.isLoop = isLoop;
+            this.maxLoop = maxLoop;
+            elapsed = 0f;
         }
 
         /// <summary>
@@ -59,9 +59,9 @@ namespace ReunionMovement.Common.Util.Timer
         /// </summary>
         public void Start()
         {
-            if (State == TimerState.Running) return;
-            State = TimerState.Running;
-            Elapsed = 0f;
+            if (state == TimerState.Running) return;
+            state = TimerState.Running;
+            elapsed = 0f;
         }
 
         /// <summary>
@@ -69,8 +69,8 @@ namespace ReunionMovement.Common.Util.Timer
         /// </summary>
         public void Pause()
         {
-            if (State != TimerState.Running) return;
-            State = TimerState.Paused;
+            if (state != TimerState.Running) return;
+            state = TimerState.Paused;
         }
 
         /// <summary>
@@ -78,8 +78,8 @@ namespace ReunionMovement.Common.Util.Timer
         /// </summary>
         public void Resume()
         {
-            if (State != TimerState.Paused) return;
-            State = TimerState.Running;
+            if (state != TimerState.Paused) return;
+            state = TimerState.Running;
         }
 
         /// <summary>
@@ -87,9 +87,9 @@ namespace ReunionMovement.Common.Util.Timer
         /// </summary>
         public void Cancel()
         {
-            if (State == TimerState.Finished || State == TimerState.Cancelled) return;
-            State = TimerState.Cancelled;
-            OnCancelled?.Invoke();
+            if (state == TimerState.Finished || state == TimerState.Cancelled) return;
+            state = TimerState.Cancelled;
+            onCancelled?.Invoke();
         }
 
         /// <summary>
@@ -97,9 +97,9 @@ namespace ReunionMovement.Common.Util.Timer
         /// </summary>
         public void Reset()
         {
-            Elapsed = 0f;
-            State = TimerState.Idle;
-            LoopCount = 0;
+            elapsed = 0f;
+            state = TimerState.Idle;
+            loopCount = 0;
         }
 
         /// <summary>
@@ -107,29 +107,29 @@ namespace ReunionMovement.Common.Util.Timer
         /// </summary>
         public void Update(float deltaTime)
         {
-            if (State != TimerState.Running)
+            if (state != TimerState.Running)
             {
                 return;
             }
 
-            Elapsed += deltaTime * TimeScale;
+            elapsed += deltaTime * timeScale;
 
-            float time = IsCountingDown ? Duration - Elapsed : Elapsed;
+            float time = isCountingDown ? duration - elapsed : elapsed;
 
-            OnTick?.Invoke(time);
+            onTick?.Invoke(time);
 
-            if ((IsCountingDown && time <= 0f) || (!IsCountingDown && Elapsed >= Duration))
+            if ((isCountingDown && time <= 0f) || (!isCountingDown && elapsed >= duration))
             {
-                LoopCount++;
-                if (IsLoop && (MaxLoop == 0 || LoopCount < MaxLoop))
+                loopCount++;
+                if (isLoop && (maxLoop == 0 || loopCount < maxLoop))
                 {
-                    Elapsed = 0f;
-                    OnLoopCompleted?.Invoke(LoopCount);
+                    elapsed = 0f;
+                    onLoopCompleted?.Invoke(loopCount);
                 }
                 else
                 {
-                    State = TimerState.Finished;
-                    OnCompleted?.Invoke();
+                    state = TimerState.Finished;
+                    onCompleted?.Invoke();
                 }
             }
         }
@@ -140,7 +140,7 @@ namespace ReunionMovement.Common.Util.Timer
         /// <returns></returns>
         public float GetProgress()
         {
-            return Math.Clamp(Elapsed / Duration, 0f, 1f);
+            return Math.Clamp(elapsed / duration, 0f, 1f);
         }
 
         /// <summary>
@@ -148,7 +148,7 @@ namespace ReunionMovement.Common.Util.Timer
         /// </summary>
         public float GetRemainingTime()
         {
-            return IsCountingDown ? Duration - Elapsed : Elapsed;
+            return isCountingDown ? duration - elapsed : elapsed;
         }
     }
 }

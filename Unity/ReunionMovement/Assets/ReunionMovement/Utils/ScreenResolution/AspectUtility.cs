@@ -35,10 +35,10 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         private void UpdateCamera()
         {
-            if (!ResolutionMgr.FixedAspectRatio || cameraObj == null) return;
+            if (!ResolutionMgr.Instance.fixedAspectRatio || cameraObj == null) return;
 
             float currentAspectRatio = (float)Screen.width / Screen.height;
-            float targetAspect = ResolutionMgr.TargetAspectRatio;
+            float targetAspect = ResolutionMgr.Instance.targetAspectRatio;
 
             if (Mathf.Approximately(currentAspectRatio, targetAspect))
             {

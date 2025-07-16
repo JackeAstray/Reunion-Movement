@@ -30,21 +30,21 @@ namespace ReunionMovement.Common.Util
         public bool fixedAspectRatio = true;
 
         // 目标纵横比
-        public float TargetAspectRatio { get; private set; } = 4f / 3f;
+        public float targetAspectRatio { get; private set; } = 4f / 3f;
         // 窗口纵横比
-        public float WindowedAspectRatio { get; private set; } = 4f / 3f;
+        public float windowedAspectRatio { get; private set; } = 4f / 3f;
 
         // 预定义分辨率宽度
         private static readonly int[] predefinedWidths =
         {
             600, 720, 800, 900, 1024, 1280, 1400, 1440, 1600, 1680, 1920, 2048, 2560, 2880, 3440, 3840, 5120, 7680
         };
-        private const float MaxResolutionRatio = 0.8f;
-        private const float HalfResolutionRatio = 0.5f;
+        private const float maxResolutionRatio = 0.8f;
+        private const float halfResolutionRatio = 0.5f;
 
-        public Resolution DisplayResolution { get; private set; }
-        public List<Vector2> WindowedResolutions { get; private set; }
-        public List<Vector2> FullscreenResolutions { get; private set; }
+        public Resolution displayResolution { get; private set; }
+        public List<Vector2> windowedResolutions { get; private set; }
+        public List<Vector2> fullscreenResolutions { get; private set; }
 
         private int currWindowedRes;
         private int currFullscreenRes;
@@ -73,8 +73,8 @@ namespace ReunionMovement.Common.Util
                 AspectRatio.AspectRatio_32_9 => 32f / 9f,
                 _ => 16f / 9f
             };
-            TargetAspectRatio = ratio;
-            WindowedAspectRatio = ratio;
+            targetAspectRatio = ratio;
+            windowedAspectRatio = ratio;
         }
 
         /// <summary>
@@ -84,7 +84,7 @@ namespace ReunionMovement.Common.Util
         {
             if (Application.platform == RuntimePlatform.OSXPlayer)
             {
-                DisplayResolution = Screen.currentResolution;
+                displayResolution = Screen.currentResolution;
             }
             else
             {
@@ -93,13 +93,13 @@ namespace ReunionMovement.Common.Util
                     var r = Screen.currentResolution;
                     Screen.fullScreen = false;
                     yield return null; yield return null;
-                    DisplayResolution = Screen.currentResolution;
+                    displayResolution = Screen.currentResolution;
                     Screen.SetResolution(r.width, r.height, true);
                     yield return null;
                 }
                 else
                 {
-                    DisplayResolution = Screen.currentResolution;
+                    displayResolution = Screen.currentResolution;
                 }
             }
             InitResolutions();
@@ -110,36 +110,36 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         private void InitResolutions()
         {
-            float screenAspect = (float)DisplayResolution.width / DisplayResolution.height;
-            WindowedResolutions = new List<Vector2>();
-            FullscreenResolutions = new List<Vector2>();
+            float screenAspect = (float)displayResolution.width / displayResolution.height;
+            windowedResolutions = new List<Vector2>();
+            fullscreenResolutions = new List<Vector2>();
 
             foreach (int w in predefinedWidths)
             {
-                if (w < DisplayResolution.width * MaxResolutionRatio)
+                if (w < displayResolution.width * maxResolutionRatio)
                 {
                     AddResolution(w, screenAspect);
                 }
             }
 
             // 添加当前显示分辨率和一半分辨率
-            AddUniqueResolution(FullscreenResolutions, new Vector2(DisplayResolution.width, DisplayResolution.height));
-            Vector2 halfNative = new Vector2(DisplayResolution.width * HalfResolutionRatio, DisplayResolution.height * HalfResolutionRatio);
+            AddUniqueResolution(fullscreenResolutions, new Vector2(displayResolution.width, displayResolution.height));
+            Vector2 halfNative = new Vector2(displayResolution.width * halfResolutionRatio, displayResolution.height * halfResolutionRatio);
             if (halfNative.x > predefinedWidths[0])
             {
-                AddUniqueResolution(FullscreenResolutions, halfNative);
+                AddUniqueResolution(fullscreenResolutions, halfNative);
             }
 
-            FullscreenResolutions = FullscreenResolutions.OrderBy(r => r.x).ToList();
+            fullscreenResolutions = fullscreenResolutions.OrderBy(r => r.x).ToList();
 
             bool found = false;
             if (Screen.fullScreen)
             {
-                currWindowedRes = WindowedResolutions.Count - 1;
-                for (int i = 0; i < FullscreenResolutions.Count; i++)
+                currWindowedRes = windowedResolutions.Count - 1;
+                for (int i = 0; i < fullscreenResolutions.Count; i++)
                 {
-                    if (Mathf.Approximately(FullscreenResolutions[i].x, Screen.width) &&
-                        Mathf.Approximately(FullscreenResolutions[i].y, Screen.height))
+                    if (Mathf.Approximately(fullscreenResolutions[i].x, Screen.width) &&
+                        Mathf.Approximately(fullscreenResolutions[i].y, Screen.height))
                     {
                         currFullscreenRes = i;
                         found = true;
@@ -148,16 +148,16 @@ namespace ReunionMovement.Common.Util
                 }
                 if (!found)
                 {
-                    SetResolution(FullscreenResolutions.Count - 1, true);
+                    SetResolution(fullscreenResolutions.Count - 1, true);
                 }
             }
             else
             {
-                currFullscreenRes = FullscreenResolutions.Count - 1;
-                for (int i = 0; i < WindowedResolutions.Count; i++)
+                currFullscreenRes = fullscreenResolutions.Count - 1;
+                for (int i = 0; i < windowedResolutions.Count; i++)
                 {
-                    if (Mathf.Approximately(WindowedResolutions[i].x, Screen.width) &&
-                        Mathf.Approximately(WindowedResolutions[i].y, Screen.height))
+                    if (Mathf.Approximately(windowedResolutions[i].x, Screen.width) &&
+                        Mathf.Approximately(windowedResolutions[i].y, Screen.height))
                     {
                         currWindowedRes = i;
                         found = true;
@@ -165,7 +165,7 @@ namespace ReunionMovement.Common.Util
                     }
                 }
                 if (!found)
-                    SetResolution(WindowedResolutions.Count - 1, false);
+                    SetResolution(windowedResolutions.Count - 1, false);
             }
         }
 
@@ -185,15 +185,15 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         private void AddResolution(int width, float screenAspect)
         {
-            float heightWindowed = Mathf.Round(width / (fixedAspectRatio ? TargetAspectRatio : WindowedAspectRatio));
+            float heightWindowed = Mathf.Round(width / (fixedAspectRatio ? targetAspectRatio : windowedAspectRatio));
             Vector2 windowed = new Vector2(width, heightWindowed);
-            if (windowed.y < DisplayResolution.height * MaxResolutionRatio)
+            if (windowed.y < displayResolution.height * maxResolutionRatio)
             {
-                AddUniqueResolution(WindowedResolutions, windowed);
+                AddUniqueResolution(windowedResolutions, windowed);
             }
 
             float heightFullscreen = Mathf.Round(width / screenAspect);
-            AddUniqueResolution(FullscreenResolutions, new Vector2(width, heightFullscreen));
+            AddUniqueResolution(fullscreenResolutions, new Vector2(width, heightFullscreen));
         }
 
         /// <summary>
@@ -202,8 +202,8 @@ namespace ReunionMovement.Common.Util
         public void SetResolution(int index, bool fullscreen)
         {
             Vector2 r = fullscreen
-                ? FullscreenResolutions[currFullscreenRes = index]
-                : WindowedResolutions[currWindowedRes = index];
+                ? fullscreenResolutions[currFullscreenRes = index]
+                : windowedResolutions[currWindowedRes = index];
 
             bool fullscreen2windowed = Screen.fullScreen && !fullscreen;
             Screen.SetResolution((int)r.x, (int)r.y, fullscreen);
