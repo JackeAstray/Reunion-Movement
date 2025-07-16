@@ -130,6 +130,45 @@ namespace ReunionMovement.Common.Util
 
             return result;
         }
+
+        /// <summary>
+        /// 判断是否为空
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="collection"></param>
+        /// <returns></returns>
+        public static bool IsEmpty<T>(this ICollection<T> collection)
+        {
+            return collection == null || collection.Count == 0;
+        }
+
+        /// <summary>
+        /// 判断活动状态
+        /// </summary>
+        /// <param name="t"></param>
+        /// <returns></returns>
+        public static bool IsActive(this Transform t)
+        {
+            return t?.gameObject.activeInHierarchy ?? false;
+        }
+        /// <summary>
+        /// 判断刚体是否存在
+        /// </summary>
+        /// <param name="gobj"></param>
+        /// <returns></returns>
+        public static bool HasRigidbody(this GameObject gobj)
+        {
+            return gobj.GetComponent<Rigidbody>() != null;
+        }
+        /// <summary>
+        /// 判断动画是否存在
+        /// </summary>
+        /// <param name="gobj"></param>
+        /// <returns></returns>
+        public static bool HasAnimation(this GameObject gobj)
+        {
+            return gobj.GetComponent<Animation>() != null;
+        }
         #endregion
 
         #region 计算
@@ -698,16 +737,7 @@ namespace ReunionMovement.Common.Util
             return MinMax(array, comparison, true);
         }
 
-        /// <summary>
-        /// 判断是否为空
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="collection"></param>
-        /// <returns></returns>
-        public static bool IsEmpty<T>(this ICollection<T> collection)
-        {
-            return collection == null || collection.Count == 0;
-        }
+
 
         /// <summary>
         /// 从序列中获取第N个元素
@@ -2582,15 +2612,7 @@ namespace ReunionMovement.Common.Util
         {
             return t.localPosition.z;
         }
-        /// <summary>
-        /// 判断活动状态
-        /// </summary>
-        /// <param name="t"></param>
-        /// <returns></returns>
-        public static bool IsActive(this Transform t)
-        {
-            return t?.gameObject.activeInHierarchy ?? false;
-        }
+
         /// <summary>
         /// 变换转矩阵变换
         /// </summary>
@@ -2600,24 +2622,7 @@ namespace ReunionMovement.Common.Util
         {
             return t?.gameObject.GetComponent<RectTransform>();
         }
-        /// <summary>
-        /// 判断刚体是否存在
-        /// </summary>
-        /// <param name="gobj"></param>
-        /// <returns></returns>
-        public static bool HasRigidbody(this GameObject gobj)
-        {
-            return gobj.GetComponent<Rigidbody>() != null;
-        }
-        /// <summary>
-        /// 判断动画是否存在
-        /// </summary>
-        /// <param name="gobj"></param>
-        /// <returns></returns>
-        public static bool HasAnimation(this GameObject gobj)
-        {
-            return gobj.GetComponent<Animation>() != null;
-        }
+
         /// <summary>
         /// 设置动画速度
         /// </summary>
