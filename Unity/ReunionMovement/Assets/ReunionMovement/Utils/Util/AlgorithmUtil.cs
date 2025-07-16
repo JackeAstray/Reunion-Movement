@@ -1546,15 +1546,15 @@ namespace ReunionMovement.Common.Util
         /// <param name="originalX">原始X</param>
         /// <param name="originalY">原始Y</param>
         /// <param name="originalWidth">原始W</param>
-        /// <param name="originalHight">原始H</param>
+        /// <param name="originalHeight">原始H</param>
         /// <param name="targetWidth">目标W</param>
-        /// <param name="targetHight">目标H</param>
+        /// <param name="targetHeight">目标H</param>
         /// <returns></returns>
-        public static Vector2 ConvertScreenPoint(float originalX, float originalY, float originalWidth, float originalHight, float targetWidth, float targetHight)
+        public static Vector2 ConvertScreenPoint(float originalX, float originalY, float originalWidth, float originalHeight, float targetWidth, float targetHeight)
         {
             // 计算宽度和高度的缩放比例
             float scaleX = targetWidth / originalWidth;
-            float scaleY = targetHight / originalHight;
+            float scaleY = targetHeight / originalHeight;
 
             // 应用缩放比例到原始点位
             float newX = originalX * scaleX;
