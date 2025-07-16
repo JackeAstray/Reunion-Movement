@@ -8,6 +8,9 @@ using UnityEngine;
 
 namespace ReunionMovement.Common.Utils
 {
+    /// <summary>
+    /// 颜色工具类
+    /// </summary>
     public static class ColorUtil
     {
         private const float LightOffset = 0.0625f;

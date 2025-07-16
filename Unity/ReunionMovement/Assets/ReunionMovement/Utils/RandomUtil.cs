@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace ReunionMovement.Common.Util
 {
+    /// <summary>
+    /// 随机工具类
+    /// </summary>
     public static class RandomUtil
     {
         public static readonly Random random = new Random();

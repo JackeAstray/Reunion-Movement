@@ -273,7 +273,7 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 第一个字符大写，不改变其他字符
+        /// 字符串首字母大写，不改变其他字符
         /// </summary>
         /// <param name="name"></param>
         /// <returns></returns>
