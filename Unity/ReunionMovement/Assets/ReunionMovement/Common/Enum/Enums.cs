@@ -16,4 +16,19 @@ namespace ReunionMovement.Common
         Jumping,
         Attacking
     }
+
+    /// <summary>
+    /// 震动类型枚举
+    /// </summary>
+    public enum HapticTypes
+    {
+        Selection,
+        Success,
+        Warning,
+        Failure,
+        LightImpact,
+        MediumImpact,
+        HeavyImpact
+    }
+
 }
