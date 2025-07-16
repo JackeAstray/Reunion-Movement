@@ -342,6 +342,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2039756974}
   - component: {fileID: 2039756975}
+  - component: {fileID: 2039756977}
   - component: {fileID: 2039756976}
   m_Layer: 0
   m_Name: StartGame
@@ -389,24 +390,37 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aa0afa61f775305429a6c5930482c488, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  IsPersistent: 1
-  ShowInEditor: 1
-  Hight: 1
-  Width: 1
-  Margin: 20
-  AnchorPosition: 2
-  FontSize: 20
-  BackgroundOpacity: 0.5
-  BackgroundColor: {r: 0, g: 0, b: 0, a: 1}
-  LogMessages: 1
-  LogWarnings: 1
-  LogErrors: 1
-  MessageColor: {r: 0, g: 1, b: 0, a: 1}
-  WarningColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  ErrorColor: {r: 1, g: 0, b: 0.25, a: 1}
-  StackTraceMessages: 0
-  StackTraceWarnings: 0
-  StackTraceErrors: 1
+  isPersistent: 1
+  showInEditor: 1
+  height: 1
+  width: 1
+  margin: 20
+  anchorPosition: 2
+  fontSize: 20
+  backgroundOpacity: 0.5
+  backgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  logMessages: 1
+  logWarnings: 1
+  logErrors: 1
+  messageColor: {r: 0, g: 1, b: 0, a: 1}
+  warningColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  errorColor: {r: 1, g: 0, b: 0.25, a: 1}
+  stackTraceMessages: 0
+  stackTraceWarnings: 0
+  stackTraceErrors: 1
+--- !u!114 &2039756977
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2039756973}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fa90d0526c4ac440a851777ccb0a82d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  taskIndex: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

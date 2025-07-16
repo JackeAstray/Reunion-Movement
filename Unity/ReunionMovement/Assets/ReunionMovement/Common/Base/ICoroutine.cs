@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace ReunionMovement.Core.Base
+namespace ReunionMovement.Common.Base
 {
     /// <summary>
     /// 协程接口
