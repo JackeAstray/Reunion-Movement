@@ -57,7 +57,14 @@ namespace ReunionMovement.Common.Util.Download
             mimeTypeToExtension.Clear();
         }
 
-        public void DownloadImage_Web(string url, Action<float> onProgress, Action<Texture2D> onComplete, string suffix = ".png")
+        /// <summary>
+        /// 下载图片（HTTP方式）
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="onProgress"></param>
+        /// <param name="onComplete"></param>
+        /// <param name="suffix"></param>
+        public void DownloadImage_Http(string url, Action<float> onProgress, Action<Texture2D> onComplete)
         {
             if (imageCache.TryGetValue(url, out Texture2D cachedTexture))
             {
@@ -65,9 +72,12 @@ namespace ReunionMovement.Common.Util.Download
                 return;
             }
 
+            string suffix = GetExtensionFromUrl(url);
+
             string localPath = GetLocalFilePath(url, suffix);
             if (TryLoadFromLocal(localPath, out Texture2D texture))
             {
+                Log.Debug($"从本地加载图片成功: {localPath}");
                 imageCache[url] = texture;
                 onComplete?.Invoke(texture);
             }
@@ -89,7 +99,13 @@ namespace ReunionMovement.Common.Util.Download
             }
         }
 
-        public void DownloadFile_Web(string url, Action<float> onProgress, Action<HttpResponse> onComplete)
+        /// <summary>
+        /// 下载文件（Http方式）
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="onProgress"></param>
+        /// <param name="onComplete"></param>
+        public void DownloadFile_Http(string url, Action<float> onProgress, Action<HttpResponse> onComplete)
         {
             string fileName = FileOperationUtil.GetFileName(url);
             string localPath = Path.Combine(PathUtil.GetLocalPath(DownloadType.PersistentFile), fileName);
@@ -109,18 +125,19 @@ namespace ReunionMovement.Common.Util.Download
         /// <param name="uiPlane"></param>
         /// <param name="set"></param>
         /// <param name="action"></param>
-        public async void DownloadFiles(List<string> url, string savePath, string uiPlane, string set, Action action = null)
+        public async void DownloadFiles(List<string> url, string savePath, Action<float> progress = null, Action action = null, Action<string> error = null)
         {
-            UnityFileDownloader ufd = new UnityFileDownloader(savePath, false, 3, true, false, true, url);
+            FileDownloader ufd = new FileDownloader(savePath, true, 3, true, false, true, url);
 
             ufd.OnDownloadSuccess += (string uri) =>
             {
                 Log.Debug("OnDownloadSuccess = " + ufd.Progress);
+                progress?.Invoke(ufd.Progress);
             };
 
             ufd.OnDownloadChunkedSucces += (string uri) =>
             {
-                Log.Debug("Progress for " + uri + " is " + ufd.GetProgress(uri));
+                Log.Debug("进度 for " + uri + " is " + ufd.GetProgress(uri));
             };
 
             ufd.OnDownloadsSuccess += () =>
@@ -132,6 +149,7 @@ namespace ReunionMovement.Common.Util.Download
             ufd.OnDownloadError += (string uri, int errorCode, string errorMsg) =>
             {
                 Log.Error($"错误代码={errorCode}, EM={errorMsg}, URU={uri}");
+                error?.Invoke(errorMsg);
             };
 
             await ufd.Download();
@@ -146,7 +164,7 @@ namespace ReunionMovement.Common.Util.Download
         public string GetLocalFilePath(string url, string suffix)
         {
             string urlHash = StringUtil.CreateMD5(url);
-            return $"{PathUtil.GetLocalPath(DownloadType.PersistentFile)}/{urlHash}{suffix}";
+            return $"{PathUtil.GetLocalPath(DownloadType.CacheImage)}/{urlHash}{suffix}";
         }
 
         /// <summary>
@@ -206,6 +224,51 @@ namespace ReunionMovement.Common.Util.Download
             if (mimeTypeToExtension.TryGetValue(mimeType, out string extension))
             {
                 return extension;
+            }
+            return ".asset";
+        }
+
+        /// <summary>
+        /// 从Url获取文件后缀
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public string GetExtensionFromUrl(string url)
+        {
+            if (string.IsNullOrEmpty(url))
+            {
+                return ".asset";
+            }
+
+            try
+            {
+                // 去除查询参数和片段
+                var uri = new Uri(url);
+                string path = uri.AbsolutePath;
+                int lastDot = path.LastIndexOf('.');
+                if (lastDot >= 0 && lastDot < path.Length - 1)
+                {
+                    string ext = path.Substring(lastDot);
+                    // 简单校验：只允许字母数字和部分常见符号
+                    if (ext.Length <= 8 && ext.All(c => char.IsLetterOrDigit(c) || c == '.'))
+                    {
+                        return ext.ToLower();
+                    }
+                }
+            }
+            catch
+            {
+                // url 不是标准格式时，尝试直接查找
+                int lastDot = url.LastIndexOf('.');
+                int lastSlash = url.LastIndexOf('/');
+                if (lastDot > lastSlash && lastDot >= 0 && lastDot < url.Length - 1)
+                {
+                    string ext = url.Substring(lastDot);
+                    if (ext.Length <= 8 && ext.All(c => char.IsLetterOrDigit(c) || c == '.'))
+                    {
+                        return ext.ToLower();
+                    }
+                }
             }
             return ".asset";
         }

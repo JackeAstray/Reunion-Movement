@@ -32,13 +32,13 @@ namespace ReunionMovement.Common.Util.Timer
         public TimerState state { get; private set; } = TimerState.Idle;
 
         // 完成事件，当计时器到达结束时触发
-        public event Action onCompleted;
+        public event Action OnCompleted;
         // 循环完成事件，当计时器每次循环结束时触发
-        public event Action<int> onLoopCompleted;
+        public event Action<int> OnLoopCompleted;
         // 取消事件，只有在计时器被取消时触发，不会触发OnCompleted事件
-        public event Action onCancelled;
+        public event Action OnCancelled;
         // 参数为当前已用时间或剩余时间
-        public event Action<float> onTick;
+        public event Action<float> OnTick;
 
         /// <summary>
         /// 创建一个新的计时器实例
@@ -89,7 +89,7 @@ namespace ReunionMovement.Common.Util.Timer
         {
             if (state == TimerState.Finished || state == TimerState.Cancelled) return;
             state = TimerState.Cancelled;
-            onCancelled?.Invoke();
+            OnCancelled?.Invoke();
         }
 
         /// <summary>
@@ -116,7 +116,7 @@ namespace ReunionMovement.Common.Util.Timer
 
             float time = isCountingDown ? duration - elapsed : elapsed;
 
-            onTick?.Invoke(time);
+            OnTick?.Invoke(time);
 
             if ((isCountingDown && time <= 0f) || (!isCountingDown && elapsed >= duration))
             {
@@ -124,12 +124,12 @@ namespace ReunionMovement.Common.Util.Timer
                 if (isLoop && (maxLoop == 0 || loopCount < maxLoop))
                 {
                     elapsed = 0f;
-                    onLoopCompleted?.Invoke(loopCount);
+                    OnLoopCompleted?.Invoke(loopCount);
                 }
                 else
                 {
                     state = TimerState.Finished;
-                    onCompleted?.Invoke();
+                    OnCompleted?.Invoke();
                 }
             }
         }

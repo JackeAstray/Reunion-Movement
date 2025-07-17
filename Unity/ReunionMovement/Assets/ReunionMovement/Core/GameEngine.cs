@@ -48,11 +48,11 @@ namespace ReunionMovement.Core
         // 应用程序正在运行
         public static bool isAppPlaying = false;
         // 更新事件
-        public static Action updateEvent;
+        public static Action UpdateEvent;
         // 每300ms事件更新一次
-        public static Action updatePer300msEvent;
+        public static Action UpdatePer300msEvent;
         // 每1s事件更新一次
-        public static Action updatePer1sEvent;
+        public static Action UpdatePer1sEvent;
 
         // 更新间隔时间 (每1s)
         private float time_update_per1s;
@@ -151,17 +151,17 @@ namespace ReunionMovement.Core
 
         protected virtual void Update()
         {
-            updateEvent?.Invoke();
+            UpdateEvent?.Invoke();
             float time = Time.time;
             if (time > time_update_per1s)
             {
                 time_update_per1s = time + 1.0f;
-                updatePer1sEvent?.Invoke();
+                UpdatePer1sEvent?.Invoke();
             }
             if (time > time_update_per300ms)
             {
                 time_update_per300ms = time + 0.3f;
-                updatePer300msEvent?.Invoke();
+                UpdatePer300msEvent?.Invoke();
             }
 
             foreach (ICustommModule module in gameModules)
