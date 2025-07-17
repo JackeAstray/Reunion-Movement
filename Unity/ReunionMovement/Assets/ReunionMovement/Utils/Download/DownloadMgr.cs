@@ -72,9 +72,8 @@ namespace ReunionMovement.Common.Util.Download
                 return;
             }
 
-            string suffix = GetExtensionFromUrl(url);
+            string localPath = PathUtil.GetLocalFilePath(url);
 
-            string localPath = GetLocalFilePath(url, suffix);
             if (TryLoadFromLocal(localPath, out Texture2D texture))
             {
                 Log.Debug($"从本地加载图片成功: {localPath}");
@@ -125,9 +124,55 @@ namespace ReunionMovement.Common.Util.Download
         /// <param name="uiPlane"></param>
         /// <param name="set"></param>
         /// <param name="action"></param>
-        public async void DownloadFiles(List<string> url, string savePath, Action<float> progress = null, Action action = null, Action<string> error = null)
+        public async void DownloadFiles(List<string> url,
+            string savePath,
+            Action<float> progress = null,
+            Action action = null,
+            Action<string> error = null,
+            bool skipIfExists = true, // 存在则跳过
+            bool deleteIfExists = false // 存在则删除
+        )
         {
-            FileDownloader ufd = new FileDownloader(savePath, true, 3, true, false, true, url);
+            // 检查本地文件是否存在
+            List<string> urlsToDownload = new List<string>();
+            foreach (var fileUrl in url)
+            {
+                string fileName = FileOperationUtil.GetFileName(fileUrl);
+                string localFilePath = Path.Combine(savePath, fileName);
+
+                if (File.Exists(localFilePath))
+                {
+                    if (skipIfExists)
+                    {
+                        Log.Debug($"文件已存在，跳过下载: {localFilePath}");
+                        continue;
+                    }
+                    else if (deleteIfExists)
+                    {
+                        try
+                        {
+                            File.Delete(localFilePath);
+                            Log.Debug($"已删除旧文件: {localFilePath}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Error($"删除文件失败: {localFilePath}, {ex.Message}");
+                            error?.Invoke($"删除文件失败: {localFilePath}, {ex.Message}");
+                            continue;
+                        }
+                    }
+                }
+                urlsToDownload.Add(fileUrl);
+            }
+
+            if (urlsToDownload.Count == 0)
+            {
+                Log.Debug("所有文件均已存在，无需下载。");
+                action?.Invoke();
+                return;
+            }
+
+            FileDownloader ufd = new FileDownloader(savePath, true, true, 3, true, false, true, url);
 
             ufd.OnDownloadSuccess += (string uri) =>
             {
@@ -155,17 +200,6 @@ namespace ReunionMovement.Common.Util.Download
             await ufd.Download();
         }
 
-        /// <summary>
-        /// 获取本地文件路径
-        /// </summary>
-        /// <param name="url"></param>
-        /// <param name="suffix"></param>
-        /// <returns></returns>
-        public string GetLocalFilePath(string url, string suffix)
-        {
-            string urlHash = StringUtil.CreateMD5(url);
-            return $"{PathUtil.GetLocalPath(DownloadType.CacheImage)}/{urlHash}{suffix}";
-        }
 
         /// <summary>
         /// 尝试从本地加载图片
@@ -224,51 +258,6 @@ namespace ReunionMovement.Common.Util.Download
             if (mimeTypeToExtension.TryGetValue(mimeType, out string extension))
             {
                 return extension;
-            }
-            return ".asset";
-        }
-
-        /// <summary>
-        /// 从Url获取文件后缀
-        /// </summary>
-        /// <param name="url"></param>
-        /// <returns></returns>
-        public string GetExtensionFromUrl(string url)
-        {
-            if (string.IsNullOrEmpty(url))
-            {
-                return ".asset";
-            }
-
-            try
-            {
-                // 去除查询参数和片段
-                var uri = new Uri(url);
-                string path = uri.AbsolutePath;
-                int lastDot = path.LastIndexOf('.');
-                if (lastDot >= 0 && lastDot < path.Length - 1)
-                {
-                    string ext = path.Substring(lastDot);
-                    // 简单校验：只允许字母数字和部分常见符号
-                    if (ext.Length <= 8 && ext.All(c => char.IsLetterOrDigit(c) || c == '.'))
-                    {
-                        return ext.ToLower();
-                    }
-                }
-            }
-            catch
-            {
-                // url 不是标准格式时，尝试直接查找
-                int lastDot = url.LastIndexOf('.');
-                int lastSlash = url.LastIndexOf('/');
-                if (lastDot > lastSlash && lastDot >= 0 && lastDot < url.Length - 1)
-                {
-                    string ext = url.Substring(lastDot);
-                    if (ext.Length <= 8 && ext.All(c => char.IsLetterOrDigit(c) || c == '.'))
-                    {
-                        return ext.ToLower();
-                    }
-                }
             }
             return ".asset";
         }

@@ -25,6 +25,8 @@ namespace ReunionMovement.Common.Util.Download
         internal string downloadPath;
         internal bool downloadToRoot;
 
+        internal bool isMd5Name;
+
         internal bool multipartDownload = false;
         internal bool abandonOnFailure = true;
         internal bool paused = false;
@@ -48,6 +50,12 @@ namespace ReunionMovement.Common.Util.Download
         {
             get => downloadPath;
             set => downloadPath = value;
+        }
+
+        public override bool IsMD5Name
+        {
+            get => isMd5Name;
+            set => isMd5Name = value;
         }
 
         public override bool DownloadToRoot
@@ -168,7 +176,7 @@ namespace ReunionMovement.Common.Util.Download
 
             if (!MultipartDownload)
             {
-                resp = HTTPHelper.Download(ref uwr, Uri, DownloadPath, DownloadToRoot, AbandonOnFailure, false, RequestHeaders, Timeout);
+                resp = HTTPHelper.Download(ref uwr, Uri, DownloadPath, isMd5Name, DownloadToRoot, AbandonOnFailure, false, RequestHeaders, Timeout);
                 resp.completed += (obj) =>
                 {
                     if (!File.Exists(DownloadResultPath))
@@ -201,6 +209,7 @@ namespace ReunionMovement.Common.Util.Download
                     int remaining = expectedSize - fileSize;
                     if (remaining <= 0)
                     {
+                        Log.Warning($"文件已存在且大小符合要求，跳过下载: {DownloadResultPath}");
                         return null;
                     }
 
@@ -213,7 +222,7 @@ namespace ReunionMovement.Common.Util.Download
                     RequestHeaders.Remove("Range");
                     RequestHeaders.Add("Range", $"bytes={fileSize}-{fileSize + reqChunkSize - 1}");
 
-                    resp = HTTPHelper.Download(ref uwr, Uri, DownloadPath, DownloadToRoot, AbandonOnFailure, true, RequestHeaders, Timeout);
+                    resp = HTTPHelper.Download(ref uwr, Uri, DownloadPath, isMd5Name, DownloadToRoot, AbandonOnFailure, true, RequestHeaders, Timeout);
                     resp.completed -= OnCompleteMulti;
                     resp.completed += OnCompleteMulti;
                 }
