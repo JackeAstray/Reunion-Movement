@@ -17,9 +17,9 @@ namespace ReunionMovement.Common.Util.StateMachine
         private class State
         {
             public readonly TLabel label;       // 状态标签
-            public readonly Action onStart;     // 开始时的回调
-            public readonly Action onStop;      // 结束时的回调
-            public readonly Action onUpdate;    // 更新时的回调
+            public readonly Action OnStart;     // 开始时的回调
+            public readonly Action OnStop;      // 结束时的回调
+            public readonly Action OnUpdate;    // 更新时的回调
 
             public readonly int priority;       // 优先级
 
@@ -29,9 +29,9 @@ namespace ReunionMovement.Common.Util.StateMachine
             public State(TLabel label, Action onStart, Action onUpdate, Action onStop, float timeout = float.MaxValue, int priority = 0)
             {
                 this.label = label;
-                this.onStart = onStart;
-                this.onUpdate = onUpdate;
-                this.onStop = onStop;
+                this.OnStart = onStart;
+                this.OnUpdate = onUpdate;
+                this.OnStop = onStop;
                 this.priority = priority;
                 this.timeout = timeout;
                 this.elapsedTime = 0f;
@@ -43,17 +43,17 @@ namespace ReunionMovement.Common.Util.StateMachine
         // 当前状态
         private State currentState;
         // 全局更新
-        private Action globalUpdate;
+        private Action GlobalUpdate;
         // 历史状态
         private Stack<State> stateHistory;
         // 并行状态
         private List<State> parallelStates;
         // 状态改变事件
-        public event Action<TLabel, TLabel> onStateChanged;
+        public event Action<TLabel, TLabel> OnStateChanged;
         // 状态进入事件
-        public event Action<TLabel> onStateEnter;
+        public event Action<TLabel> OnStateEnter;
         // 状态退出事件
-        public event Action<TLabel> onStateExit;
+        public event Action<TLabel> OnStateExit;
         // 状态转换条件
         private readonly Dictionary<(TLabel, TLabel), Func<bool>> transitionConditions;
         // 默认状态
@@ -85,7 +85,7 @@ namespace ReunionMovement.Common.Util.StateMachine
         /// <param name="globalUpdate"></param>
         public void SetGlobalUpdate(Action globalUpdate)
         {
-            this.globalUpdate = globalUpdate;
+            this.GlobalUpdate = globalUpdate;
         }
 
         /// <summary>
@@ -98,14 +98,14 @@ namespace ReunionMovement.Common.Util.StateMachine
                 return;
             }
 
-            globalUpdate?.Invoke();
+            GlobalUpdate?.Invoke();
 
             if (currentState == null)
             {
                 return;
             }
 
-            currentState?.onUpdate?.Invoke();
+            currentState?.OnUpdate?.Invoke();
             currentState.elapsedTime += Time.deltaTime;
 
             if (currentState.elapsedTime >= currentState.timeout)
@@ -115,7 +115,7 @@ namespace ReunionMovement.Common.Util.StateMachine
 
             foreach (var state in parallelStates)
             {
-                state.onUpdate?.Invoke();
+                state.OnUpdate?.Invoke();
             }
         }
 
@@ -190,13 +190,13 @@ namespace ReunionMovement.Common.Util.StateMachine
         {
             try
             {
-                currentState?.onStop?.Invoke();
-                onStateExit?.Invoke(currentState.label);
+                currentState?.OnStop?.Invoke();
+                OnStateExit?.Invoke(currentState.label);
                 stateHistory.Push(currentState);
                 currentState = stateDictionary[newState];
-                currentState?.onStart?.Invoke();
-                onStateEnter?.Invoke(newState);
-                onStateChanged?.Invoke(stateHistory.Peek().label, newState);
+                currentState?.OnStart?.Invoke();
+                OnStateEnter?.Invoke(newState);
+                OnStateChanged?.Invoke(stateHistory.Peek().label, newState);
             }
             catch (Exception ex)
             {
@@ -258,9 +258,9 @@ namespace ReunionMovement.Common.Util.StateMachine
         {
             if (stateHistory.Count > 0)
             {
-                currentState?.onStop?.Invoke();
+                currentState?.OnStop?.Invoke();
                 currentState = stateHistory.Pop();
-                currentState?.onStart?.Invoke();
+                currentState?.OnStart?.Invoke();
             }
         }
 
@@ -285,7 +285,7 @@ namespace ReunionMovement.Common.Util.StateMachine
         /// </summary>
         public void Reset()
         {
-            currentState?.onStop?.Invoke();
+            currentState?.OnStop?.Invoke();
             currentState = null;
             stateHistory.Clear();
         }

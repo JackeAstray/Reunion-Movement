@@ -98,15 +98,15 @@ namespace ReunionMovement.Common.Util.Timer
         {
             // 创建一个计时器，5秒后完成
             Timer timer = CreateTimer(5f, true);
-            timer.onCompleted += () => Debug.Log("Timer 1 completed!");
-            timer.onTick += (elapsed) => Debug.Log($"1 Elapsed time: {elapsed} seconds");
+            timer.OnCompleted += () => Debug.Log("Timer 1 completed!");
+            timer.OnTick += (elapsed) => Debug.Log($"1 Elapsed time: {elapsed} seconds");
             // 启动计时器
             timer.Start();
 
             // 创建一个计时器，5秒后完成
             Timer timer2 = CreateTimer(5f, false);
-            timer2.onCompleted += () => Debug.Log("Timer 2 completed!");
-            timer2.onTick += (elapsed) => Debug.Log($"2 Elapsed time: {elapsed} seconds");
+            timer2.OnCompleted += () => Debug.Log("Timer 2 completed!");
+            timer2.OnTick += (elapsed) => Debug.Log($"2 Elapsed time: {elapsed} seconds");
             // 启动计时器
             timer2.Start();
         }

@@ -10,11 +10,11 @@ namespace ReunionMovement.Common.Util.Download
     /// <summary>
     /// Unity文件下载器
     /// </summary>
-    public class UnityFileDownloader : IDownloader
+    public class FileDownloader : IDownloader
     {
-        public UnityFileDownloader() { }
+        public FileDownloader() { }
 
-        public UnityFileDownloader(
+        public FileDownloader(
             string downloadPath,
             bool downloadToRoot,
             int maxConcurrency,
@@ -35,7 +35,7 @@ namespace ReunionMovement.Common.Util.Download
 
         internal readonly static SemaphoreLocker Locker = new SemaphoreLocker();
 
-        internal int InitialCount;
+        internal int initialCount;
         internal int timeout = 6;
         internal int maxConcurrency = 4;
         internal bool abandonOnFailure = true;
@@ -168,7 +168,7 @@ namespace ReunionMovement.Common.Util.Download
             startTime = DateTime.Now.Millisecond;
             downloading = true;
 
-            InitialCount = Uris.Length;
+            initialCount = Uris.Length;
             int threadCount = Math.Min(MaxConcurrency, numFilesRemaining);
             if (threadCount <= 0)
             {
@@ -202,7 +202,7 @@ namespace ReunionMovement.Common.Util.Download
             {
                 downloading = true;
                 startTime = DateTime.Now.Millisecond;
-                InitialCount = 1;
+                initialCount = 1;
             }
 
             if (!executors.Any(idf => idf.Uri == uri) && !executorsOld.Any(idf => idf.Uri == uri))
