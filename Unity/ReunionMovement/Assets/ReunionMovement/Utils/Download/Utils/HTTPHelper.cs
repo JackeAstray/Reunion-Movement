@@ -160,6 +160,7 @@ namespace ReunionMovement.Common.Util.Download
             ref UnityWebRequest req,
             string uri,
             string path = null,
+            bool isMd5Name = false,
             bool downloadToRoot = false,
             bool abandonOnFailure = false,
             bool append = false,
@@ -179,7 +180,17 @@ namespace ReunionMovement.Common.Util.Download
 
             req = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET);
 
-            string filename = GetFilenameFromUriNaively(uri);
+            string filename = "";
+
+            if (isMd5Name)
+            {
+                filename = PathUtil.GetFileNameByUrl(uri);
+            }
+            else
+            {
+                filename = GetFilenameFromUriNaively(uri);
+            }
+
             string tempPath;
 
             if (downloadToRoot)

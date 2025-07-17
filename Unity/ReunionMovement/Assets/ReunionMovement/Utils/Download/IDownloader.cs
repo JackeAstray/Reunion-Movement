@@ -81,7 +81,13 @@ namespace ReunionMovement.Common.Util.Download
 
         public abstract string DownloadPath { get; set; }
         public abstract bool DownloadToRoot { get; set; }
+        public abstract bool IsMD5Name { get; set; }
 
+        /// <summary>
+        /// 获取下载进度
+        /// </summary>
+        /// <param name="uri"></param>
+        /// <returns></returns>
         public float GetProgress(string uri)
         {
             if (string.IsNullOrEmpty(uri) || uris == null || uris.Length == 0)
@@ -130,6 +136,7 @@ namespace ReunionMovement.Common.Util.Download
                     var idf = DownloadExecutorFactory.CreateFromClassName(iDownloadExecutorClassName);
                     idf.Uri = str;
                     idf.DownloadPath = DownloadPath;
+                    idf.IsMD5Name = IsMD5Name;
                     idf.DownloadToRoot = DownloadToRoot;
                     idf.AbandonOnFailure = AbandonOnFailure;
                     idf.Timeout = Timeout;

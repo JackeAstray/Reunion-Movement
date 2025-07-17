@@ -54,6 +54,8 @@ namespace ReunionMovement.Common.Util.Download
 
         public abstract bool DownloadToRoot { get; set; }
 
+        public abstract bool IsMD5Name { get; set; }
+
         /// <summary>
         /// 下载的结果路径
         /// </summary>
@@ -66,8 +68,10 @@ namespace ReunionMovement.Common.Util.Download
                     return null;
                 }
 
+                string filename = IsMD5Name ? PathUtil.GetFileNameByUrl(Uri) : HTTPHelper.GetFilenameFromUriNaively(Uri);
+
                 var relativePath = DownloadToRoot
-                    ? HTTPHelper.GetFilenameFromUriNaively(Uri)
+                    ? filename
                     : HTTPHelper.GetRelativePathFromUri(Uri);
 
                 return Path.Combine(DownloadPath, relativePath)

@@ -144,5 +144,59 @@ namespace ReunionMovement.Common.Util
 
             return savePath;
         }
+
+        /// <summary>
+        /// 获取本地文件路径
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="suffix"></param>
+        /// <returns></returns>
+        public static string GetLocalFilePath(string url)
+        {
+            string urlHash = StringUtil.CreateMD5(url);
+            return $"{GetLocalPath(DownloadType.CacheImage)}/{urlHash}{GetExtensionFromUrl(url)}";
+        }
+
+        /// <summary>
+        /// 获取文件名通过Url和后缀
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="suffix"></param>
+        /// <returns></returns>
+        public static string GetFileNameByUrl(string url)
+        {
+            string urlHash = StringUtil.CreateMD5(url);
+            return $"{urlHash}{GetExtensionFromUrl(url)}";
+        }
+
+        /// <summary>
+        /// 从Url获取文件后缀
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public static string GetExtensionFromUrl(string url)
+        {
+            if (string.IsNullOrEmpty(url))
+            {
+                return ".asset";
+            }
+
+            // 去除参数和 fragment
+            int queryIndex = url.IndexOf('?');
+            int fragmentIndex = url.IndexOf('#');
+            int endIndex = url.Length;
+            if (queryIndex >= 0) endIndex = queryIndex;
+            if (fragmentIndex >= 0 && fragmentIndex < endIndex) endIndex = fragmentIndex;
+            string cleanUrl = url.Substring(0, endIndex);
+
+            // 用Path.GetExtension获取后缀
+            string ext = Path.GetExtension(cleanUrl);
+            if (!string.IsNullOrEmpty(ext) && ext.Length <= 8 && ext.All(c => char.IsLetterOrDigit(c) || c == '.'))
+            {
+                return ext.ToLower();
+            }
+
+            return ".asset";
+        }
     }
 }

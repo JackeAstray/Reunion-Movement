@@ -16,6 +16,7 @@ namespace ReunionMovement.Common.Util.Download
 
         public FileDownloader(
             string downloadPath,
+            bool isMd5Name,
             bool downloadToRoot,
             int maxConcurrency,
             bool abandonOnFailure,
@@ -25,6 +26,7 @@ namespace ReunionMovement.Common.Util.Download
         )
         {
             DownloadPath = downloadPath;
+            IsMD5Name = isMd5Name;
             DownloadToRoot = downloadToRoot;
             MaxConcurrency = maxConcurrency;
             AbandonOnFailure = abandonOnFailure;
@@ -47,6 +49,7 @@ namespace ReunionMovement.Common.Util.Download
         internal int startTime = 0, endTime = 0;
         internal string downloadPath;
         internal bool downloadToRoot;
+        internal bool isMd5Name;
         internal string[] pendingUris = null;
 
         #region Events/Actions
@@ -64,7 +67,7 @@ namespace ReunionMovement.Common.Util.Download
         public override int EndTime => endTime;
 
         /// <summary>
-        /// Calculates the amount of files-per-second this downloder processed. 
+        /// 计算此下载器每秒处理的文件量
         /// </summary>
         /// <value></value>
         public override float NumFilesPerSecond
@@ -113,6 +116,13 @@ namespace ReunionMovement.Common.Util.Download
             get => downloadPath;
             set => downloadPath = value;
         }
+
+        public override bool IsMD5Name
+        {
+            get => isMd5Name;
+            set => isMd5Name = value;
+        }
+
 
         public override bool DownloadToRoot
         {
@@ -210,6 +220,7 @@ namespace ReunionMovement.Common.Util.Download
                 var idf = DownloadExecutorFactory.CreateFromClassName(iDownloadExecutorClassName);
                 idf.Uri = uri;
                 idf.DownloadPath = DownloadPath;
+                idf.IsMD5Name = IsMD5Name;
                 idf.DownloadToRoot = DownloadToRoot;
                 idf.AbandonOnFailure = AbandonOnFailure;
                 idf.Timeout = Timeout;
@@ -260,15 +271,32 @@ namespace ReunionMovement.Common.Util.Download
             {
                 var treq = ((UWRExecutor)idf).HeadRequest();
                 n++;
-                treq.completed += (obj) =>
+
+                if (treq != null)
                 {
-                    var rv = idf.Download();
-                    rv.completed += resp =>
+                    treq.completed += (obj) =>
                     {
-                        n--;
-                        _ = DispatchCompletion(idf);
+                        var rv = idf.Download();
+                        if (rv != null)
+                        {
+                            rv.completed += resp =>
+                            {
+                                n--;
+                                _ = DispatchCompletion(idf);
+                            };
+                        }
+                        else
+                        {
+                            Log.Warning($"Download for {idf.Uri} returned null（未进入下载流程）");
+                            // 如果还有待下载的 URI，则继续调度
+                            if (pendingUris != null && pendingUris.Length > 0)
+                            {
+                                _ = Dispatch();
+                            }
+                        }
                     };
-                };
+                }
+
                 return ReturnFalseAsync();
             }
 
@@ -288,7 +316,7 @@ namespace ReunionMovement.Common.Util.Download
         }
 
         /// <summary>
-        /// Dispatches a given IDF, for multi-part downloads.
+        /// 发送指定的IDF, 用于分快下载.
         /// </summary>
         /// <param name="idf"></param>
         /// <returns></returns>
