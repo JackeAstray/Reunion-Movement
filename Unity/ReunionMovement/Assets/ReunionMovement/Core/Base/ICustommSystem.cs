@@ -7,7 +7,7 @@ namespace ReunionMovement.Core.Base
     /// <summary>
     /// 自定义模块
     /// </summary>
-    public interface ICustommModule
+    public interface ICustommSystem
     {
         /// <summary>
         /// 初始化进度
@@ -18,7 +18,7 @@ namespace ReunionMovement.Core.Base
         /// 初始化协程
         /// </summary>
         /// <returns></returns>
-        Task InitAsync();
+        Task Init();
 
         /// <summary>
         /// 更新模块时间 （以秒为单位）

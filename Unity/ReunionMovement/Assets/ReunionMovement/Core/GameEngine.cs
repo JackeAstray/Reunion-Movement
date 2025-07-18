@@ -17,7 +17,7 @@ namespace ReunionMovement.Core
         /// <summary>
         /// 所有自定义游戏逻辑模块
         /// </summary>
-        public IList<ICustommModule> gameModules { get; private set; }
+        public IList<ICustommSystem> gameModules { get; private set; }
 
         /// <summary>
         /// 进入
@@ -68,7 +68,7 @@ namespace ReunionMovement.Core
         /// <param name="entry"></param>
         /// <param name="modules"></param>
         /// <returns></returns>
-        public static GameEngine StartEngine(GameObject gameObjectToAttach, IGameEntry entry, IList<ICustommModule> modules)
+        public static GameEngine StartEngine(GameObject gameObjectToAttach, IGameEntry entry, IList<ICustommSystem> modules)
         {
             GameEngine appEngine = gameObjectToAttach.AddComponent<GameEngine>();
             appEngine.gameModules = modules;
@@ -126,9 +126,9 @@ namespace ReunionMovement.Core
         /// <summary>
         /// 执行初始化模块（异步）
         /// </summary>
-        private async Task OnInitModulesAsync(IList<ICustommModule> modules)
+        private async Task OnInitModulesAsync(IList<ICustommSystem> modules)
         {
-            foreach (ICustommModule initModule in modules)
+            foreach (ICustommSystem initModule in modules)
             {
                 if (isWindowsEditor)
                 {
@@ -137,7 +137,7 @@ namespace ReunionMovement.Core
                 }
 
                 var startTime = Time.realtimeSinceStartup;
-                await initModule.InitAsync();
+                await initModule.Init();
                 var endTime = Time.realtimeSinceStartup;
 
                 if (isWindowsEditor)
@@ -164,7 +164,7 @@ namespace ReunionMovement.Core
                 UpdatePer300msEvent?.Invoke();
             }
 
-            foreach (ICustommModule module in gameModules)
+            foreach (ICustommSystem module in gameModules)
             {
                 module.Update(Time.deltaTime, Time.unscaledDeltaTime);
             }
@@ -192,7 +192,7 @@ namespace ReunionMovement.Core
         /// </summary>
         public void ClearModuleData()
         {
-            foreach (ICustommModule initModule in gameModules)
+            foreach (ICustommSystem initModule in gameModules)
             {
                 initModule.Clear();
             }

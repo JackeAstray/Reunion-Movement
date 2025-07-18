@@ -101,7 +101,7 @@ namespace ReunionMovement.Common.Util.Coroutiner
         /// </summary>
         /// <param name="routine"></param>
         /// <param name="callback"></param>
-        public void AddRoutine(IEnumerator routine, Action<Coroutine> callback)
+        public void AddRoutine(IEnumerator routine, Action<Coroutine> callback = null)
         {
             var task = taskPool.Get();
             task.Enumerator = routine;
