@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace ReunionMovement.Common.Utils
+namespace ReunionMovement.Common.Util
 {
     /// <summary>
     /// iOS Android 震动
