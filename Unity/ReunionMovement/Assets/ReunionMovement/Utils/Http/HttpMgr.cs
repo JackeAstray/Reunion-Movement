@@ -19,7 +19,7 @@ namespace ReunionMovement.Common.Util.HttpService
         private Dictionary<string, string> superHeaders;
         private Dictionary<IHttpRequest, Coroutine> httpRequests;
 
-        public bool isInit = false;
+        bool isInit = false;
 
         public void Start()
         {
@@ -39,7 +39,6 @@ namespace ReunionMovement.Common.Util.HttpService
         }
 
         #region Super Headers
-
         /// <summary>
         /// SuperHeaders是键值对，将被添加到每个后续的HttpRequest中。
         /// </summary>
