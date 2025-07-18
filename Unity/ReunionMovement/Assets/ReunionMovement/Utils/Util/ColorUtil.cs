@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace ReunionMovement.Common.Utils
+namespace ReunionMovement.Common.Util
 {
     /// <summary>
     /// 颜色工具类

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace ReunionMovement.Common.Utils
+namespace ReunionMovement.Common.Util
 {
     public class Arrow : MonoBehaviour
     {

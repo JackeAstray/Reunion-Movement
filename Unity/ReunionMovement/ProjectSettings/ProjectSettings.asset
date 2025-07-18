@@ -821,7 +821,12 @@ PlayerSettings:
   webGLCloseOnQuit: 0
   webWasm2023: 0
   webEnableSubmoduleStrippingCompatibility: 0
-  scriptingDefineSymbols: {}
+  scriptingDefineSymbols:
+    Android: UNITY_PHYSICS_ENABLED
+    Standalone: UNITY_PHYSICS_ENABLED
+    WebGL: UNITY_PHYSICS_ENABLED
+    Windows Store Apps: UNITY_PHYSICS_ENABLED
+    iPhone: UNITY_PHYSICS_ENABLED
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:
