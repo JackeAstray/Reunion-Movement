@@ -1,5 +1,7 @@
 ﻿using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
+using ReunionMovement.Core.Resources;
+using ReunionMovement.Core.UI;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -12,9 +14,13 @@ namespace ReunionMovement.Core
 {
     public class StartGame : GameEntry
     {
-        protected override IList<ICustommModule> CreateModules()
+        protected override IList<ICustommSystem> CreateModules()
         {
             var modules = base.CreateModules();
+
+            modules.Add(ResourcesSystem.Instance);
+
+            modules.Add(UISystem.Instance);
 
             return modules;
         }
