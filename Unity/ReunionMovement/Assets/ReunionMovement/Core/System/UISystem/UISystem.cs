@@ -1,14 +1,13 @@
 using ReunionMovement.Common;
-using ReunionMovement.Common.Util.Coroutiner;
 using ReunionMovement.Core.Base;
 using ReunionMovement.Core.Resources;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 
 namespace ReunionMovement.Core.UI
 {
@@ -25,6 +24,7 @@ namespace ReunionMovement.Core.UI
         public double InitProgress { get { return initProgress; } }
         #endregion
 
+        private UIWindowPool windowPool = new UIWindowPool();
         private Dictionary<string, UILoadState> uiStateCache = new Dictionary<string, UILoadState>();
 
         public static Action<UIController> onInitEvent;
@@ -88,7 +88,7 @@ namespace ReunionMovement.Core.UI
             GameObject.DontDestroyOnLoad(uiRoot);
 
             EventSystem = new GameObject("EventSystem").AddComponent<EventSystem>();
-            EventSystem.gameObject.AddComponent<StandaloneInputModule>();
+            EventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
             GameObject.DontDestroyOnLoad(EventSystem);
 
             initProgress = 50;
@@ -141,10 +141,14 @@ namespace ReunionMovement.Core.UI
         /// <returns></returns>
         public UILoadState LoadWindow(string name, bool openWhenFinish, params object[] args)
         {
-            GameObject uiObj = ResourcesSystem.Instance.InstantiateAsset<GameObject>(Config.UIPath + name);
+            GameObject uiObj = windowPool.Get(name);
             if (uiObj == null)
             {
-                return null;
+                uiObj = ResourcesSystem.Instance.InstantiateAsset<GameObject>(Config.UIPath + name);
+                if (uiObj == null)
+                {
+                    return null;
+                }
             }
 
             InitUIAsset(uiObj);
@@ -227,7 +231,7 @@ namespace ReunionMovement.Core.UI
         [Obsolete("使用字符串UI名称代替更灵活!")]
         public void CallUI<T>(Action<T, object[]> callback, params object[] args) where T : UIController
         {
-            string uiName = typeof(T).Name.Remove(0, 3); // 去掉 "XUI"
+            string uiName = typeof(T).Name.Remove(0, 3);
 
             CallUI(uiName, (_uibase, _args) => { callback(_uibase as T, _args); }, args);
         }
@@ -441,7 +445,9 @@ namespace ReunionMovement.Core.UI
             }
 
             foreach (string item in LoadList)
-                DestroyWindow(item, true);
+            {
+                DestroyWindow(item/*, true*/);
+            }
         }
 
         /// <summary>
@@ -470,7 +476,7 @@ namespace ReunionMovement.Core.UI
         /// </summary>
         /// <param name="uiName"></param>
         /// <param name="destroyImmediate"></param>
-        public void DestroyWindow(string uiName, bool destroyImmediate = false)
+        public void DestroyWindow(string uiName/*, bool destroyImmediate = false*/)
         {
             UILoadState uiState;
             uiStateCache.TryGetValue(uiName, out uiState);
@@ -479,17 +485,19 @@ namespace ReunionMovement.Core.UI
                 Log.Warning($"{uiName} 已被销毁");
                 return;
             }
-            if (destroyImmediate)
-            {
-                UnityEngine.Object.DestroyImmediate(uiState.uiWindow.gameObject);
-            }
-            else
-            {
-                UnityEngine.Object.Destroy(uiState.uiWindow.gameObject);
-            }
+            //if (destroyImmediate)
+            //{
+            //    UnityEngine.Object.DestroyImmediate(uiState.uiWindow.gameObject);
+            //}
+            //else
+            //{
+            //    UnityEngine.Object.Destroy(uiState.uiWindow.gameObject);
+            //}
+
+            // 回收到对象池而不是直接销毁
+            windowPool.Return(uiName, uiState.uiWindow.gameObject);
 
             uiState.uiWindow = null;
-
             uiStateCache.Remove(uiName);
         }
         #endregion
@@ -575,6 +583,11 @@ namespace ReunionMovement.Core.UI
             return uiBase;
         }
 
+        /// <summary>
+        /// 记录操作的耗时
+        /// </summary>
+        /// <param name="action"></param>
+        /// <param name="message"></param>
         private void LogElapsedTime(Action action, string message)
         {
             Stopwatch stopwatch = new Stopwatch();
@@ -642,9 +655,12 @@ namespace ReunionMovement.Core.UI
         public void DoCallback(Action<UIController, object[]> callback, object[] args = null)
         {
             if (args == null)
+            {
                 args = new object[0];
+            }
 
-            if (isLoading) // Loading
+            // Loading
+            if (isLoading)
             {
                 callbacksWhenFinish.Enqueue(callback);
                 callbacksArgsWhenFinish.Enqueue(args);
@@ -664,9 +680,66 @@ namespace ReunionMovement.Core.UI
             while (uiState.callbacksWhenFinish.Count > 0)
             {
                 Action<UIController, object[]> callback = uiState.callbacksWhenFinish.Dequeue();
-                object[] _args = uiState.callbacksArgsWhenFinish.Dequeue();
-                DoCallback(callback, _args);
+                object[] args = uiState.callbacksArgsWhenFinish.Dequeue();
+                DoCallback(callback, args);
             }
+        }
+    }
+
+    /// <summary>
+    /// UIWindowPool是一个简单的对象池，用于管理UI窗口的复用
+    /// </summary>
+    public class UIWindowPool
+    {
+        private readonly Dictionary<string, Stack<GameObject>> pool = new();
+
+        /// <summary>
+        /// 获取一个对象池中的对象，如果没有可用对象则返回null
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public GameObject Get(string name)
+        {
+            if (pool.TryGetValue(name, out var stack) && stack.Count > 0)
+            {
+                var obj = stack.Pop();
+                obj.SetActive(true);
+                return obj;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 将一个对象返回到对象池中，设置为非激活状态
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="obj"></param>
+        public void Return(string name, GameObject obj)
+        {
+            obj.SetActive(false);
+
+            // 清理所有事件监听
+            foreach (var comp in obj.GetComponents<MonoBehaviour>())
+            {
+                if (comp is UIController controller)
+                {
+                    controller.OnClose();
+                }
+            }
+
+            if (!pool.ContainsKey(name))
+            {
+                pool[name] = new Stack<GameObject>();
+            }
+            pool[name].Push(obj);
+        }
+
+        /// <summary>
+        /// 清空对象池中的所有对象
+        /// </summary>
+        public void Clear()
+        {
+            pool.Clear();
         }
     }
 }

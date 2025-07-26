@@ -120,7 +120,7 @@ namespace ReunionMovement.Core
             isInited = true;
 
             var t1 = Time.realtimeSinceStartup; // 记录结束时间
-            Log.Debug($"[GameEngine]->[InitAsync] 总耗时: {t1 - t0} 秒");
+            Log.Debug($"[GameEngine]->[InitAsync] 总耗时: {Math.Round(t1 - t0, 3)} 秒");
         }
 
         /// <summary>
@@ -145,7 +145,7 @@ namespace ReunionMovement.Core
                     var nowMem = GC.GetTotalMemory(false);
                 }
 
-                Log.Debug($"Module {initModule.GetType().Name} InitAsync耗时: {endTime - startTime}秒");
+                Log.Debug($"Module {initModule.GetType().Name} InitAsync耗时: {Math.Round(endTime - startTime, 3)}秒");
             }
         }
 

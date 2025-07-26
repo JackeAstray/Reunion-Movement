@@ -14,12 +14,12 @@ namespace ReunionMovement.Core.UI
 
         #region 每个界面都有一个Canvas
         private Canvas canvas;
-        public Canvas Canvas => canvas ??= gameObject.GetComponent<Canvas>();
+        public Canvas Canvas => canvas ??= GetComponent<Canvas>();
         #endregion
 
         #region 每个界面都有一个UIWindowAsset
         private UIWindowAsset windowAsset;
-        public UIWindowAsset WindowAsset => windowAsset ??= gameObject.GetComponent<UIWindowAsset>();
+        public UIWindowAsset WindowAsset => windowAsset ??= GetComponent<UIWindowAsset>();
         #endregion
 
         private bool isVisiable;
@@ -39,15 +39,26 @@ namespace ReunionMovement.Core.UI
             doOpen?.Invoke();
         }
 
+        /// <summary>
+        /// UIController打开窗口时调用的方法，子类可以重写此方法来实现自定义逻辑。
+        /// </summary>
+        /// <param name="args"></param>
         public virtual void OnOpen(params object[] args)
         {
             IsVisiable = true;
         }
 
+        /// <summary>
+        /// UIController设置参数时调用的方法，子类可以重写此方法来实现自定义逻辑。
+        /// </summary>
+        /// <param name="args"></param>
         public virtual void OnSet(params object[] args)
         {
         }
 
+        /// <summary>
+        /// UIController关闭窗口时调用的方法，子类可以重写此方法来实现自定义逻辑。
+        /// </summary>
         public virtual void OnClose()
         {
             IsVisiable = false;

@@ -6,6 +6,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -16,7 +17,7 @@ namespace ReunionMovement.Common.Util.EditorTools
         // 脚本输出路径
         static string scriptOutPutPath = "Assets/ReunionMovement/GenerateScript/UI/UIPlane/";
         // 场景导出UI路径
-        static string prefabsOutPutPath = "Assets/ResourcesFiles/Prefabs/UIs/";
+        static string prefabsOutPutPath = "Assets/ReunionMovement/Resources/Prefabs/UIs/";
         // 场景导出UI路径
         static string sceneOutPutPath = "Assets/ReunionMovement/Editor/UIScenes/";
 
@@ -26,7 +27,6 @@ namespace ReunionMovement.Common.Util.EditorTools
         string uiResolution = "1920,1080";
 
         string scriptName { get; set; }
-        string prefabsName { get; set; }
         string sceneName { get; set; }
         string targetName { get; set; }
         GameObject uiObj { get; set; }
@@ -91,7 +91,7 @@ namespace ReunionMovement.Common.Util.EditorTools
 
             if (mainCamera != null)
             {
-                GameObject.Destroy(mainCamera);
+                Destroy(mainCamera);
             }
 
             scriptName = className + "UIPlane";
@@ -193,7 +193,7 @@ namespace ReunionMovement.Common.Util.EditorTools
             {
                 var evtSystemObj = new GameObject("EventSystem");
                 evtSystemObj.AddComponent<EventSystem>();
-                evtSystemObj.AddComponent<StandaloneInputModule>();
+                evtSystemObj.AddComponent<InputSystemUIInputModule>();
             }
         }
         private void SaveScene(Scene scene, string path)
@@ -217,7 +217,7 @@ namespace ReunionMovement.Common.Util.EditorTools
         public void BindingSpriptRoot()
         {
             scriptName = className + "UIPlane";
-            var type = Type.GetType("LLAFramework.UI." + scriptName + ", Assembly-CSharp");
+            var type = Type.GetType("ReunionMovement.Core.UI." + scriptName + ", Assembly-CSharp");
             SetUIObj();
             BindScript(uiObj, type);
         }
@@ -228,12 +228,17 @@ namespace ReunionMovement.Common.Util.EditorTools
         public void BindingSpriptToTarget()
         {
             scriptName = className + "UIPlane";
-            var type = Type.GetType("LLAFramework.UI." + scriptName + ", Assembly-CSharp");
+            var type = Type.GetType("ReunionMovement.Core.UI." + scriptName + ", Assembly-CSharp");
             SetUIObj();
             GameObject @object = uiObj.transform.Find(targetName).gameObject;
             BindScript(@object, type);
         }
 
+        /// <summary>
+        /// 绑定脚本到UI对象
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <param name="type"></param>
         private void BindScript(GameObject obj, Type type)
         {
             if (!obj.TryGetComponent(type, out Component component))
@@ -257,7 +262,7 @@ namespace ReunionMovement.Common.Util.EditorTools
 
                 if (uiObj == null)
                 {
-                    Debug.LogError("请检查类名！");
+                    Log.Error("请检查类名！");
                 }
             }
         }
@@ -270,12 +275,12 @@ namespace ReunionMovement.Common.Util.EditorTools
             var windowAssets = GetUIWIndoeAssetsFromCurrentScene();
             var uiPrefabDir = prefabsOutPutPath;
             if (!Directory.Exists(uiPrefabDir))
-                Directory.CreateDirectory(uiPrefabDir);
-
-            foreach (var windowAsset in windowAssets)
             {
-                ExportPrefab(windowAsset, uiPrefabDir);
+                Directory.CreateDirectory(uiPrefabDir);
             }
+
+            ExportPrefab(windowAssets, uiPrefabDir);
+
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
         }
@@ -299,13 +304,14 @@ namespace ReunionMovement.Common.Util.EditorTools
         /// 获取当前场景中的UIWindowAsset
         /// </summary>
         /// <returns></returns>
-        static UIWindowAsset[] GetUIWIndoeAssetsFromCurrentScene()
+        static UIWindowAsset GetUIWIndoeAssetsFromCurrentScene()
         {
-            var windowAssets = GameObject.FindObjectsOfType<UIWindowAsset>();
-            if (windowAssets.Length <= 0)
+            var windowAssets = FindFirstObjectByType<UIWindowAsset>();
+
+            if (windowAssets == null)
             {
-                var currentScene = EditorSceneManager.GetActiveScene().path;
-                Debug.LogError(string.Format("Not found UIWindowAsset in scene `{0}`", currentScene));
+                Log.Error("当前场景中没有UIWindowAsset，请先创建UIWindowAsset对象。");
+                return null;
             }
 
             return windowAssets;
@@ -360,13 +366,13 @@ namespace ReunionMovement.Core.UI
         //打开窗口
         public void OpenWindow()
         {
-            UIModule.Instance.OpenWindow(openWindow);
+            UISystem.Instance.OpenWindow(openWindow);
         }
 
         //关闭窗口
         public void CloseWindow()
         {
-            UIModule.Instance.CloseWindow(closeWindow);
+            UISystem.Instance.CloseWindow(closeWindow);
         }
     }
 }
