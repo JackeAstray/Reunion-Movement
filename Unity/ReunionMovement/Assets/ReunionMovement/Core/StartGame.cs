@@ -41,6 +41,8 @@ namespace ReunionMovement.Core
         public override async Task OnGameStartAsync()
         {
             Log.Debug("游戏启动");
+
+            UISystem.Instance.OpenWindow("StartGameUIPlane");
         }
     }
 }
