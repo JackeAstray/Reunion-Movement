@@ -70,8 +70,7 @@ namespace ReunionMovement.Core.Resources
             if (isCache)
             {
                 resourceTable[assetPath] = assets;
-                // 增加引用计数
-                IncrementRefCount(assetPath);
+                resourceRefCount[assetPath] = 1;
             }
             return assets;
         }
@@ -102,8 +101,7 @@ namespace ReunionMovement.Core.Resources
             if (isCache)
             {
                 resourceTable[assetPath] = assets;
-                // 增加引用计数
-                IncrementRefCount(assetPath);
+                resourceRefCount[assetPath] = 1;
             }
             return assets;
         }
@@ -177,11 +175,7 @@ namespace ReunionMovement.Core.Resources
         {
             foreach (var kvp in resourceTable)
             {
-                DecrementRefCount(kvp.Key);
-                if (!resourceRefCount.ContainsKey(kvp.Key) || resourceRefCount[kvp.Key] <= 0)
-                {
-                    Object.Destroy(kvp.Value);
-                }
+                Object.Destroy(kvp.Value);
             }
             resourceTable.Clear();
             resourceRefCount.Clear();
@@ -193,9 +187,9 @@ namespace ReunionMovement.Core.Resources
         /// <param name="path"></param>
         public void IncrementRefCount(string path)
         {
-            if (resourceRefCount.ContainsKey(path))
+            if (resourceRefCount.TryGetValue(path, out var count))
             {
-                resourceRefCount[path]++;
+                resourceRefCount[path] = count + 1;
             }
             else
             {
@@ -209,13 +203,21 @@ namespace ReunionMovement.Core.Resources
         /// <param name="path"></param>
         public void DecrementRefCount(string path)
         {
-            if (resourceRefCount.ContainsKey(path))
+            if (resourceRefCount.TryGetValue(path, out var count))
             {
-                resourceRefCount[path]--;
-                if (resourceRefCount[path] <= 0)
+                count--;
+                if (count <= 0)
                 {
                     resourceRefCount.Remove(path);
-                    DeleteAssetCache(path);
+                    if (resourceTable.TryGetValue(path, out var obj))
+                    {
+                        Object.Destroy(obj);
+                        resourceTable.Remove(path);
+                    }
+                }
+                else
+                {
+                    resourceRefCount[path] = count;
                 }
             }
         }
@@ -229,8 +231,7 @@ namespace ReunionMovement.Core.Resources
         {
             if (obj != null)
             {
-                GameObject.Destroy(obj);
-                // 减少引用计数
+                Object.Destroy(obj);
                 DecrementRefCount(path);
             }
         }

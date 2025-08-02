@@ -110,25 +110,18 @@ namespace ReunionMovement.Core.UI
                 return;
             }
             var windowAsset = uiObj.GetComponent<UIWindowAsset>();
-            var canvas = uiObj.GetComponent<Canvas>();
-            switch (windowAsset.panelType)
+            var parent = windowAsset.panelType switch
             {
-                case PanelType.MainUI:
-                    uiObj.transform.SetParent(mainUIRoot.transform);
-                    break;
-                case PanelType.NormalUI:
-                    uiObj.transform.SetParent(normalUIRoot.transform);
-                    break;
-                case PanelType.HeadInfoUI:
-                    uiObj.transform.SetParent(headInfoUIRoot.transform);
-                    break;
-                case PanelType.TipsUI:
-                    uiObj.transform.SetParent(tipsUIRoot.transform);
-                    break;
-                default:
-                    Log.Error(string.Format("没有默认PanelType", windowAsset.panelType));
-                    uiObj.transform.SetParent(uiRoot.transform);
-                    break;
+                PanelType.MainUI => mainUIRoot.transform,
+                PanelType.NormalUI => normalUIRoot.transform,
+                PanelType.HeadInfoUI => headInfoUIRoot.transform,
+                PanelType.TipsUI => tipsUIRoot.transform,
+                _ => uiRoot.transform
+            };
+            uiObj.transform.SetParent(parent);
+            if (parent == uiRoot.transform)
+            {
+                Log.Error($"没有默认PanelType: {windowAsset.panelType}");
             }
         }
 
@@ -141,14 +134,15 @@ namespace ReunionMovement.Core.UI
         /// <returns></returns>
         public UILoadState LoadWindow(string name, bool openWhenFinish, params object[] args)
         {
-            GameObject uiObj = windowPool.Get(name);
+            if (uiStateCache.TryGetValue(name, out var existingState))
+            {
+                return existingState;
+            }
+
+            GameObject uiObj = windowPool.Get(name) ?? ResourcesSystem.Instance.InstantiateAsset<GameObject>(Config.UIPath + name);
             if (uiObj == null)
             {
-                uiObj = ResourcesSystem.Instance.InstantiateAsset<GameObject>(Config.UIPath + name);
-                if (uiObj == null)
-                {
-                    return null;
-                }
+                return null;
             }
 
             InitUIAsset(uiObj);
@@ -158,18 +152,18 @@ namespace ReunionMovement.Core.UI
             uiObj.transform.localScale = Vector3.one;
 
             var uiController = uiObj.GetComponent<UIController>();
-
-            UILoadState uiLoadState = new UILoadState(name);
-            uiLoadState.uiWindow = uiController ?? CreateUIController(uiObj, name);
+            var uiLoadState = new UILoadState(name)
+            {
+                uiWindow = uiController ?? CreateUIController(uiObj, name),
+                isLoading = false,
+                openWhenFinish = openWhenFinish,
+                openArgs = args,
+                isOnInit = true
+            };
             uiLoadState.uiWindow.UIName = name;
-            uiLoadState.isLoading = false;
-            uiLoadState.openWhenFinish = openWhenFinish;
-            uiLoadState.openArgs = args;
-            uiLoadState.isOnInit = true;
             InitWindow(uiLoadState, uiLoadState.uiWindow, uiLoadState.openWhenFinish, uiLoadState.openArgs);
 
             uiStateCache.Add(name, uiLoadState);
-
             return uiLoadState;
         }
 
@@ -211,30 +205,6 @@ namespace ReunionMovement.Core.UI
 
             uiState.OnUIWindowLoadedCallbacks(uiState);
         }
-        /// <summary>
-        /// 和UI通讯
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="callback"></param>
-        [Obsolete("使用字符串UI名称代替更灵活!")]
-        public void CallUI<T>(Action<T> callback) where T : UIController
-        {
-            CallUI<T>((_ui, _args) => callback(_ui));
-        }
-
-        /// <summary>
-        /// 和UI通讯 - 使用泛型方式
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="callback"></param>
-        /// <param name="args"></param>
-        [Obsolete("使用字符串UI名称代替更灵活!")]
-        public void CallUI<T>(Action<T, object[]> callback, params object[] args) where T : UIController
-        {
-            string uiName = typeof(T).Name.Remove(0, 3);
-
-            CallUI(uiName, (_uibase, _args) => { callback(_uibase as T, _args); }, args);
-        }
 
         /// <summary>
         /// 和UI通讯
@@ -247,9 +217,11 @@ namespace ReunionMovement.Core.UI
         /// <param name="args"></param>
         public void CallUI(string uiName, Action<UIController, object[]> callback, params object[] args)
         {
-            if (uiStateCache.TryGetValue(uiName, out UILoadState uiState))
+            UILoadState uiState;
+
+            if (uiStateCache.TryGetValue(uiName, out uiState))
             {
-                // 加载，这样就有UIState了, 但注意因为没参数，不要随意执行OnOpen
+                // 只加载，不打开
                 uiState = LoadWindow(uiName, false);
                 uiStateCache[uiName] = uiState;
             }
@@ -373,7 +345,6 @@ namespace ReunionMovement.Core.UI
                         onOpenEvent(uiBase);
                 });
             }
-
         }
 
         /// <summary>
@@ -446,7 +417,7 @@ namespace ReunionMovement.Core.UI
 
             foreach (string item in LoadList)
             {
-                DestroyWindow(item/*, true*/);
+                DestroyWindow(item);
             }
         }
 
@@ -476,7 +447,7 @@ namespace ReunionMovement.Core.UI
         /// </summary>
         /// <param name="uiName"></param>
         /// <param name="destroyImmediate"></param>
-        public void DestroyWindow(string uiName/*, bool destroyImmediate = false*/)
+        public void DestroyWindow(string uiName)
         {
             UILoadState uiState;
             uiStateCache.TryGetValue(uiName, out uiState);
@@ -485,14 +456,6 @@ namespace ReunionMovement.Core.UI
                 Log.Warning($"{uiName} 已被销毁");
                 return;
             }
-            //if (destroyImmediate)
-            //{
-            //    UnityEngine.Object.DestroyImmediate(uiState.uiWindow.gameObject);
-            //}
-            //else
-            //{
-            //    UnityEngine.Object.Destroy(uiState.uiWindow.gameObject);
-            //}
 
             // 回收到对象池而不是直接销毁
             windowPool.Return(uiName, uiState.uiWindow.gameObject);
@@ -562,12 +525,7 @@ namespace ReunionMovement.Core.UI
 
         private UIController GetUIBase(string name)
         {
-            UILoadState uiState;
-            uiStateCache.TryGetValue(name, out uiState);
-            if (uiState != null && uiState.uiWindow != null)
-                return uiState.uiWindow;
-
-            return null;
+            return uiStateCache.TryGetValue(name, out var uiState) ? uiState.uiWindow : null;
         }
 
         /// <summary>
@@ -716,9 +674,13 @@ namespace ReunionMovement.Core.UI
         /// <param name="obj"></param>
         public void Return(string name, GameObject obj)
         {
+            if (!obj.activeSelf)
+            {
+                return; // 已经是非激活状态，避免重复回收
+            }
+
             obj.SetActive(false);
 
-            // 清理所有事件监听
             foreach (var comp in obj.GetComponents<MonoBehaviour>())
             {
                 if (comp is UIController controller)
