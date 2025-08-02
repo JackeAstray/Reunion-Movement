@@ -22,11 +22,13 @@ namespace ReunionMovement.Core.UI
         public UIWindowAsset WindowAsset => windowAsset ??= GetComponent<UIWindowAsset>();
         #endregion
 
-        private bool isVisiable;
+        /// <summary>
+        /// 是否可见（直接与activeSelf绑定）
+        /// </summary>
         public bool IsVisiable
         {
-            get => isVisiable;
-            set => isVisiable = value;
+            get => gameObject.activeSelf;
+            set => gameObject.SetActive(value);
         }
 
         public virtual void OnInit()
@@ -54,6 +56,7 @@ namespace ReunionMovement.Core.UI
         /// <param name="args"></param>
         public virtual void OnSet(params object[] args)
         {
+
         }
 
         /// <summary>
@@ -81,10 +84,12 @@ namespace ReunionMovement.Core.UI
             UISystem.Instance.CloseWindow(uiName ?? UIName);
         }
 
-        [Obsolete("使用字符串UI名称代替更灵活!")]
-        public static void CallUI<T>(Action<T> callback) where T : UIController
+        /// <summary>
+        /// 推荐使用字符串UI名称进行UI通讯，灵活且不易出错
+        /// </summary>
+        public static void CallUI(string uiName, Action<UIController, object[]> callback, params object[] args)
         {
-            UISystem.Instance.CallUI<T>(callback);
+            UISystem.Instance.CallUI(uiName, callback, args);
         }
 
         #region 功能
@@ -96,6 +101,7 @@ namespace ReunionMovement.Core.UI
         {
             return (T)GetControl(typeof(T), uri, findTrans, isLog);
         }
+
         /// <summary>
         /// 输入uri搜寻控件
         /// </summary>
@@ -107,7 +113,6 @@ namespace ReunionMovement.Core.UI
         public object GetControl(Type type, string uri, Transform findTrans = null, bool isLog = true)
         {
             findTrans ??= transform;
-
             Transform trans = findTrans.Find(uri);
             if (trans == null)
             {
@@ -152,11 +157,12 @@ namespace ReunionMovement.Core.UI
         }
 
         /// <summary>
-        /// 从数组获取参数，并且不报错，返回null, 一般用于OnOpen, OnClose的可变参数
+        /// 从数组获取参数，安全返回
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="openArgs"></param>
         /// <param name="offset"></param>
+        /// <param name="isLog"></param>
         /// <returns></returns>
         protected T GetFromArgs<T>(object[] openArgs, int offset, bool isLog = true)
         {
