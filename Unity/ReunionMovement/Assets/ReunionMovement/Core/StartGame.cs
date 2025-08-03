@@ -1,6 +1,8 @@
 ﻿using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
+using ReunionMovement.Core.EventMessage;
 using ReunionMovement.Core.Resources;
+using ReunionMovement.Core.Scene;
 using ReunionMovement.Core.UI;
 using System;
 using System.Collections;
@@ -18,7 +20,12 @@ namespace ReunionMovement.Core
         {
             var modules = base.CreateModules();
 
+
             modules.Add(ResourcesSystem.Instance);
+
+            modules.Add(SceneSystem.Instance);
+
+            modules.Add(EventMessageSystem.Instance);
 
             modules.Add(UISystem.Instance);
 
@@ -43,6 +50,8 @@ namespace ReunionMovement.Core
             Log.Debug("游戏启动");
 
             UISystem.Instance.OpenWindow("StartGameUIPlane");
+
+            await SceneSystem.Instance.LoadScene("Temp", true);
         }
     }
 }
