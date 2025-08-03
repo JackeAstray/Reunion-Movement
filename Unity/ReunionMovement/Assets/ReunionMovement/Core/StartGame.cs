@@ -3,6 +3,7 @@ using ReunionMovement.Core.Base;
 using ReunionMovement.Core.EventMessage;
 using ReunionMovement.Core.Resources;
 using ReunionMovement.Core.Scene;
+using ReunionMovement.Core.Sound;
 using ReunionMovement.Core.UI;
 using System;
 using System.Collections;
@@ -26,6 +27,8 @@ namespace ReunionMovement.Core
             modules.Add(SceneSystem.Instance);
 
             modules.Add(EventMessageSystem.Instance);
+
+            modules.Add(SoundSystem.Instance);
 
             modules.Add(UISystem.Instance);
 
