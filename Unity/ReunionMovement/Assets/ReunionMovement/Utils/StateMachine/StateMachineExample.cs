@@ -9,6 +9,9 @@ using ReunionMovement.Common.Util.StateMachine;
 
 namespace ReunionMovement.Example
 {
+    /// <summary>
+    /// 状态机示例
+    /// </summary>
     public class StateMachineExample : MonoBehaviour
     {
         private StateMachine<StateMachineExampleState> stateMachine;

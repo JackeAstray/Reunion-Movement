@@ -10,8 +10,9 @@ using System.Threading.Tasks;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
 using UnityEngine;
+using ReunionMovement.Core.UI;
 
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Core.Scene
 {
     /// <summary>
     /// 场景系统
@@ -135,6 +136,8 @@ namespace ReunionMovement.Core.UI
             currentSceneName = loadSceneName;
             this.openLoad = openLoad;
 
+            HideUIWindowsOnSceneChange();
+
             if (openLoad)
             {
                 await OnLoadingSceneAsync(loadSceneName, LoadSceneMode.Single);
@@ -253,10 +256,28 @@ namespace ReunionMovement.Core.UI
         /// <param name="progress"></param>
         public void CallbackProgress(float progress)
         {
-            Log.Debug(progress);
+            Log.Debug("加载场景进度：" + progress);
             if (getProgress != null)
             {
                 getProgress(progress);
+            }
+        }
+
+        /// <summary>
+        /// 在场景切换时隐藏UI窗口
+        /// </summary>
+        private void HideUIWindowsOnSceneChange()
+        {
+            // 获取所有激活的UIWindowAsset  
+            var windows = UnityEngine.Object.FindObjectsByType<UIWindowAsset>(FindObjectsSortMode.None);
+
+            foreach (var window in windows)
+            {
+                if (window.IsHidenWhenLeaveScene)
+                {
+                    // 这里可以是隐藏、关闭或销毁窗口的逻辑  
+                    window.gameObject.SetActive(false);
+                }
             }
         }
         #endregion
