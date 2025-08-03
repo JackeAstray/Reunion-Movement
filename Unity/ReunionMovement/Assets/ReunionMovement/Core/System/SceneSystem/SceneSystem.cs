@@ -53,7 +53,7 @@ namespace ReunionMovement.Core.Scene
 
             initProgress = 100;
             IsInited = true;
-            Log.Debug("UIModule 初始化完成");
+            Log.Debug("SceneSystem 初始化完成");
         }
 
         public void Update(float logicTime, float realTime)
@@ -63,7 +63,7 @@ namespace ReunionMovement.Core.Scene
 
         public void Clear()
         {
-            Log.Debug("UIModule 清除数据");
+            Log.Debug("SceneSystem 清除数据");
         }
 
         private Task OnInit()
