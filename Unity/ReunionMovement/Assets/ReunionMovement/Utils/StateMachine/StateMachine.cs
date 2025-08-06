@@ -1,10 +1,10 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
-using ReunionMovement.Common.Util.LitJson;
 
 namespace ReunionMovement.Common.Util.StateMachine
 {
@@ -297,7 +297,7 @@ namespace ReunionMovement.Common.Util.StateMachine
         public string Serialize()
         {
             // 序列化当前状态、历史状态等信息
-            return JsonMapper.ToJson(this);
+            return JsonConvert.SerializeObject(this);
         }
 
         /// <summary>
@@ -306,7 +306,7 @@ namespace ReunionMovement.Common.Util.StateMachine
         /// <param name="json"></param>
         public StateMachine<TLabel> Deserialize(string json)
         {
-            return JsonMapper.ToObject<StateMachine<TLabel>>(json);
+            return JsonConvert.DeserializeObject<StateMachine<TLabel>>(json);
         }
 
         /// <summary>
