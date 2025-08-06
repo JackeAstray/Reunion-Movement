@@ -1,10 +1,10 @@
-﻿using ReunionMovement.Common.Util.LitJson;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
+using Newtonsoft.Json;
 
 namespace ReunionMovement.Common.Util.HttpService
 {
@@ -56,7 +56,7 @@ namespace ReunionMovement.Common.Util.HttpService
 
         public IHttpRequest PostJson<T>(string uri, T payload) where T : class
         {
-            var json = JsonMapper.ToJson(payload);
+            var json = JsonConvert.SerializeObject(payload);
             return PostJson(uri, json);
         }
 

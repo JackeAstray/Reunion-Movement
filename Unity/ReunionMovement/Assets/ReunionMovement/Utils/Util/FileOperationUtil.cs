@@ -1,5 +1,4 @@
-﻿using ReunionMovement.Common.Util.LitJson;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -8,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine.Networking;
 using UnityEngine;
+using Newtonsoft.Json;
 
 namespace ReunionMovement.Common.Util
 {
@@ -139,7 +139,7 @@ namespace ReunionMovement.Common.Util
                 return default;
             }
             var tempStr = File.ReadAllText(fileAbslutePath);
-            return JsonMapper.ToObject<T>(tempStr);
+            return JsonConvert.DeserializeObject<T>(tempStr);
         }
 
         /// <summary>
