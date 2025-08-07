@@ -163,8 +163,6 @@ namespace LLAFramework.EditorTools
              *    2    |   xxx |
              */
 
-            ////每行的数据
-            //List<object> rowDatas = new List<object>();
             //字段名称
             List<object> fieldNameRowDatas = new List<object>();
             //字段类型
