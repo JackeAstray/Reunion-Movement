@@ -348,9 +348,8 @@ namespace ReunionMovement.Common.Util.Download
 
                 if (pendingUris.Length > 0)
                 {
-                    _ = Dispatch();
+                    await Dispatch();
                 }
-
                 else if (NumThreads == 0)
                 {
                     OnDownloadsSuccess?.Invoke();
@@ -426,13 +425,14 @@ namespace ReunionMovement.Common.Util.Download
         /// 取消所有下载
         /// </summary>
         /// <returns></returns>
-        public override async Task<bool> Cancel()
+        public override Task<bool> Cancel()
         {
             downloading = false;
             OnCancel?.Invoke();
+            OnCancelInvoked?.Invoke();
             endTime = DateTime.Now.Millisecond;
             HandleAbandonOnFailure();
-            return true;
+            return Task.FromResult(true);
         }
 
         /// <summary>

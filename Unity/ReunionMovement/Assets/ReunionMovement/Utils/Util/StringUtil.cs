@@ -156,9 +156,9 @@ namespace ReunionMovement.Common.Util
         /// <param name="count">要返回的子字符串的最大数量</param>
         /// <param name="removeEmptyEntries">是否移除空实体</param>
         /// <returns>分割后的字段</returns>
-        public static string? StringSplit(this string fullString, string[] separator, int count, bool removeEmptyEntries)
+        public static string StringSplit(this string fullString, string[] separator, int count, bool removeEmptyEntries)
         {
-            string[]? stringArray = null;
+            string[] stringArray = null;
             if (removeEmptyEntries)
             {
                 stringArray = fullString.Split(separator, count, StringSplitOptions.RemoveEmptyEntries);
