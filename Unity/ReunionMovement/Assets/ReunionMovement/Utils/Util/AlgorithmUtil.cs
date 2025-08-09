@@ -467,7 +467,7 @@ namespace ReunionMovement.Common.Util
         /// <param name="key">要查找的键</param>
         /// <param name="value">查找到的值</param>
         /// <returns>是否找到</returns>
-        public static bool TryFindInDictionary<TKey, TValue>(Dictionary<TKey, TValue> dictionary, TKey key, out TValue? value) where TKey : notnull
+        public static bool TryFindInDictionary<TKey, TValue>(Dictionary<TKey, TValue> dictionary, TKey key, out TValue value) where TKey : notnull
         {
             if (dictionary == null)
             {
@@ -709,7 +709,7 @@ namespace ReunionMovement.Common.Util
         /// <param name="comparison">比较器，返回小于0表示第一个参数更小，大于0表示第二个参数更小</param>
         /// <param name="findMax">true查找最大值，false查找最小值</param>
         /// <returns>最小或最大值</returns>
-        public static T? MinMax<T>(IList<T> array, Comparison<T> comparison, bool findMax = false)
+        public static T MinMax<T>(IList<T> array, Comparison<T> comparison, bool findMax = false)
         {
             if (array == null || array.Count == 0) return default;
             T temp = array[0];
@@ -727,7 +727,7 @@ namespace ReunionMovement.Common.Util
         /// <summary>
         /// 获取最小值
         /// </summary>
-        public static T? Min<T, K>(IList<T> array, Func<T, K> keySelector) where K : IComparable<K>
+        public static T Min<T, K>(IList<T> array, Func<T, K> keySelector) where K : IComparable<K>
         {
             return MinMax(array, (a, b) => keySelector(a).CompareTo(keySelector(b)), false);
         }
@@ -735,7 +735,7 @@ namespace ReunionMovement.Common.Util
         /// <summary>
         /// 获取最大值
         /// </summary>
-        public static T? Max<T, K>(IList<T> array, Func<T, K> keySelector) where K : IComparable<K>
+        public static T Max<T, K>(IList<T> array, Func<T, K> keySelector) where K : IComparable<K>
         {
             return MinMax(array, (a, b) => keySelector(a).CompareTo(keySelector(b)), true);
         }
@@ -743,7 +743,7 @@ namespace ReunionMovement.Common.Util
         /// <summary>
         /// 获取最小值（自定义比较器）
         /// </summary>
-        public static T? Min<T>(IList<T> array, Comparison<T> comparison)
+        public static T Min<T>(IList<T> array, Comparison<T> comparison)
         {
             return MinMax(array, comparison, false);
         }
@@ -751,7 +751,7 @@ namespace ReunionMovement.Common.Util
         /// <summary>
         /// 获取最大值（自定义比较器）
         /// </summary>
-        public static T? Max<T>(IList<T> array, Comparison<T> comparison)
+        public static T Max<T>(IList<T> array, Comparison<T> comparison)
         {
             return MinMax(array, comparison, true);
         }

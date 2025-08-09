@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace LLAFramework.EditorTools
+namespace ReunionMovement.EditorTools
 {
     public enum FieldTypes
     {
@@ -35,11 +35,11 @@ namespace LLAFramework.EditorTools
         Color,
         String,
         Strings,
+        //对象
+        Object,
         //自定义类型
         CustomType,
         //自定义类型数组
-        CustomTypeList,
-
-        Object,
+        CustomTypeList
     }
 }

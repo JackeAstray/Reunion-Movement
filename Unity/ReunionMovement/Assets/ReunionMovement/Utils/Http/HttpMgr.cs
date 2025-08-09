@@ -19,8 +19,6 @@ namespace ReunionMovement.Common.Util.HttpService
         private Dictionary<string, string> superHeaders;
         private Dictionary<IHttpRequest, Coroutine> httpRequests;
 
-        bool isInit = false;
-
         public void Start()
         {
             Init(new UnityHttpService());
@@ -35,7 +33,6 @@ namespace ReunionMovement.Common.Util.HttpService
             superHeaders = new Dictionary<string, string>();
             httpRequests = new Dictionary<IHttpRequest, Coroutine>();
             this.service = service;
-            isInit = true;
         }
 
         #region Super Headers
