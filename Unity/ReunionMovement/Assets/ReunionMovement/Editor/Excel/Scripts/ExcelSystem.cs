@@ -19,7 +19,7 @@ namespace ReunionMovement.EditorTools
     {
         static readonly string toDirSO = "Assets/ReunionMovement/Editor/Excel/Resources";                                           // 源文件路径
         static readonly string scriptOutPutPath = "Assets/ReunionMovement/GenerateScript/AutoScripts/";                             // 脚本输出路径
-        static readonly string scriptableOutPutPath = "Assets/ReunionMovement/Resources/ScriptableObjects/";                                        // 脚本对象输出路径
+        static readonly string scriptableOutPutPath = "Assets/ReunionMovement/Resources/ScriptableObjects/";                        // 脚本对象输出路径
 
         static int tableRows_Max = 3;                                           // 最大行数
         static int tableRows_1 = 0;                                             // 第一行中文名称
