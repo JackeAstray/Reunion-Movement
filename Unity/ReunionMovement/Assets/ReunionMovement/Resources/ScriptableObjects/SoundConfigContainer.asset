@@ -75,85 +75,85 @@ MonoBehaviour:
     Detailed: "\u65E0"
   - Id: 11
     Number: 300001
-    Path: Sounds/Effect/UI
+    Path: Sounds/SFX/UI
     Name: JDSherbert - Ultimate UI SFX Pack - Cancel - 1
     Type: 2
     Detailed: "\u53D6\u6D88"
   - Id: 12
     Number: 300002
-    Path: Sounds/Effect/UI
+    Path: Sounds/SFX/UI
     Name: JDSherbert - Ultimate UI SFX Pack - Cancel - 2
     Type: 2
     Detailed: "\u53D6\u6D88"
   - Id: 13
     Number: 300003
-    Path: Sounds/Effect/UI
+    Path: Sounds/SFX/UI
     Name: JDSherbert - Ultimate UI SFX Pack - Cursor - 1
     Type: 2
     Detailed: "\u5149\u6807"
   - Id: 14
     Number: 300004
-    Path: Sounds/Effect/UI
+    Path: Sounds/SFX/UI
     Name: JDSherbert - Ultimate UI SFX Pack - Cursor - 2
     Type: 2
     Detailed: "\u5149\u6807"
   - Id: 15
     Number: 300005
-    Path: Sounds/Effect/UI
+    Path: Sounds/SFX/UI
     Name: JDSherbert - Ultimate UI SFX Pack - Cursor - 3
     Type: 2
     Detailed: "\u5149\u6807"
   - Id: 16
     Number: 300006
-    Path: Sounds/Effect/UI
+    Path: Sounds/SFX/UI
     Name: JDSherbert - Ultimate UI SFX Pack - Cursor - 4
     Type: 2
     Detailed: "\u5149\u6807"
   - Id: 17
     Number: 300007
-    Path: Sounds/Effect/UI
+    Path: Sounds/SFX/UI
     Name: JDSherbert - Ultimate UI SFX Pack - Cursor - 5
     Type: 2
     Detailed: "\u5149\u6807"
   - Id: 18
     Number: 300008
-    Path: Sounds/Effect/UI
+    Path: Sounds/SFX/UI
     Name: JDSherbert - Ultimate UI SFX Pack - Error - 1
     Type: 2
     Detailed: "\u9519\u8BEF"
   - Id: 19
     Number: 300009
-    Path: Sounds/Effect/UI
+    Path: Sounds/SFX/UI
     Name: JDSherbert - Ultimate UI SFX Pack - Popup Close - 1
     Type: 2
     Detailed: "\u5F39\u51FA\u5173\u95ED"
   - Id: 20
     Number: 300010
-    Path: Sounds/Effect/UI
+    Path: Sounds/SFX/UI
     Name: JDSherbert - Ultimate UI SFX Pack - Popup Open - 1
     Type: 2
     Detailed: "\u5F39\u51FA\u6253\u5F00"
   - Id: 21
     Number: 300011
-    Path: Sounds/Effect/UI
+    Path: Sounds/SFX/UI
     Name: JDSherbert - Ultimate UI SFX Pack - Select - 1
     Type: 2
     Detailed: "\u9009\u62E9"
   - Id: 22
     Number: 300012
-    Path: Sounds/Effect/UI
+    Path: Sounds/SFX/UI
     Name: JDSherbert - Ultimate UI SFX Pack - Select - 2
     Type: 2
     Detailed: "\u9009\u62E9"
   - Id: 23
     Number: 300013
-    Path: Sounds/Effect/UI
+    Path: Sounds/SFX/UI
     Name: JDSherbert - Ultimate UI SFX Pack - Swipe - 1
     Type: 2
     Detailed: "\u6ED1\u52A8"
   - Id: 24
     Number: 300014
-    Path: Sounds/Effect/UI
+    Path: Sounds/SFX/UI
     Name: JDSherbert - Ultimate UI SFX Pack - Swipe - 2
     Type: 2
     Detailed: "\u6ED1\u52A8"

@@ -175,6 +175,7 @@ namespace ReunionMovement.Core
         /// </summary>
         void OnApplicationQuit()
         {
+            GameOption.SaveOptions();
             isApplicationQuit = true;
             isAppPlaying = false;
         }
