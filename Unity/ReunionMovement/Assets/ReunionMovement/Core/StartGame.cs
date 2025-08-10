@@ -45,6 +45,7 @@ namespace ReunionMovement.Core
         public override async Task OnBeforeInitAsync()
         {
             Log.Debug("初始化前执行");
+            GameOption.LoadOptions();
         }
 
         /// <summary>
