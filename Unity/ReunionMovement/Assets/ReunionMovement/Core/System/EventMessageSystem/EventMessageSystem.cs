@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 
 namespace ReunionMovement.Core.EventMessage
 {
+    /// <summary>
+    /// 事件消息系统
+    /// </summary>
     public class EventMessageSystem : ICustommSystem
     {
         #region 单例与初始化

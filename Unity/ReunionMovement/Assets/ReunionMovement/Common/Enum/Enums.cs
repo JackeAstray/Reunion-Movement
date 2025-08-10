@@ -37,12 +37,12 @@ namespace ReunionMovement.Common
     public enum Multilingual
     {
         // 中文
-        ZH,
+        ZH_CN,
         // 英文
-        EN,
+        EN_US,
         // 俄语
-        RU,
+        RU_RU,
         // 日语
-        JP,
+        JA_JP,
     }
 }

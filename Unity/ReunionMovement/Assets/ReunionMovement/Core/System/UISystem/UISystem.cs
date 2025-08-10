@@ -12,7 +12,7 @@ using UnityEngine.InputSystem.UI;
 namespace ReunionMovement.Core.UI
 {
     /// <summary>
-    /// UISystem是UI系统的核心类，负责管理UI界面的显示和交互逻辑
+    /// UI系统
     /// </summary>
     public class UISystem : ICustommSystem
     {

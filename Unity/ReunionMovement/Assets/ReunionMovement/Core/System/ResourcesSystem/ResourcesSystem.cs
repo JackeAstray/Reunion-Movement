@@ -13,6 +13,9 @@ using Object = UnityEngine.Object;
 
 namespace ReunionMovement.Core.Resources
 {
+    /// <summary>
+    /// 资源系统
+    /// </summary>
     public class ResourcesSystem : ICustommSystem
     {
         #region 单例与初始化
