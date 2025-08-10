@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 
 namespace ReunionMovement.Core.Sound
 {
+    /// <summary>
+    /// 声音系统
+    /// </summary>
     public class SoundSystem : ICustommSystem
     {
         #region 单例与初始化

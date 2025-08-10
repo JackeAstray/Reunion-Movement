@@ -10,6 +10,9 @@ using UnityEngine;
 
 namespace ReunionMovement.Core.Languages
 {
+    /// <summary>
+    /// 语言系统
+    /// </summary>
     public class LanguagesSystem : SubjectBase, ICustommSystem
     {
         #region 单例与初始化
@@ -20,7 +23,7 @@ namespace ReunionMovement.Core.Languages
         public double InitProgress { get { return initProgress; } }
         #endregion
 
-        public Multilingual multilingual = Multilingual.ZH;
+        public Multilingual multilingual = Multilingual.ZH_CN;
         private LanguagesContainer languagesContainer;
 
         public async Task Init()
@@ -84,16 +87,17 @@ namespace ReunionMovement.Core.Languages
                     // 根据当前多语言设置返回对应的文本
                     switch (multilingual)
                     {
-                        case Multilingual.ZH:
-                            return language.ZH;
-                        case Multilingual.EN:
-                            return language.EN;
-                        case Multilingual.RU:
-                            return language.RU;
-                        case Multilingual.JP:
-                            return language.JP;
+                        case Multilingual.ZH_CN:
+                            return language.ZH_CN;
+                        case Multilingual.EN_US:
+                            return language.EN_US;
+                        case Multilingual.RU_RU:
+                            return language.RU_RU;
+                        case Multilingual.JA_JP:
+                            return language.JA_JP;
                         default:
-                            return language.ZH; // 默认返回中文
+                            // 默认返回中文
+                            return language.ZH_CN;
                     }
                 }
                 else
