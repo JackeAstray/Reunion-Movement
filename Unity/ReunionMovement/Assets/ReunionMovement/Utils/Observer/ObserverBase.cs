@@ -9,7 +9,7 @@ namespace ReunionMovement.Common.Util
     /// </summary>
     public abstract class ObserverBase : MonoBehaviour
     {
-        protected SubjectBase subject;
+        public SubjectBase subject;
 
         /// <summary>
         /// 更新数据
