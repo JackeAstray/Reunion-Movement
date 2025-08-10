@@ -1,0 +1,156 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a108b58881e8c3c4e9520b1a182a4b1d, type: 3}
+  m_Name: LanguagesContainer
+  m_EditorClassIdentifier: 
+  configs:
+  - Id: 1
+    Number: 100001
+    ZH: "\u5F00\u59CB\u6E38\u620F"
+    EN: Start Game
+    RU: "\u041F\u0443\u0441\u043A \u0438\u0433\u0440\u044B"
+    JP: "\u30B2\u30FC\u30E0\u958B\u59CB"
+  - Id: 2
+    Number: 100002
+    ZH: "\u8BBE\u7F6E"
+    EN: Options
+    RU: "\u041E\u043F\u0446\u0438\u0438"
+    JP: "\u30AA\u30D7\u30B7\u30E7\u30F3"
+  - Id: 3
+    Number: 100003
+    ZH: "\u9000\u51FA\u6E38\u620F"
+    EN: Exit Game
+    RU: "\u0412\u044B\u0439\u0442\u0438 \u0438\u0437 \u0438\u0433\u0440\u044B"
+    JP: "\u30B2\u30FC\u30E0\u3092\u9000\u51FA"
+  - Id: 4
+    Number: 100004
+    ZH: "\u7248\u672C\u53F7"
+    EN: Version Number
+    RU: "\u041D\u043E\u043C\u0435\u0440 \u0432\u0435\u0440\u0441\u0438\u0438"
+    JP: "\u30D0\u30FC\u30B8\u30E7\u30F3\u756A\u53F7"
+  - Id: 5
+    Number: 100005
+    ZH: "\u5168\u5C4F"
+    EN: Full Screen
+    RU: "\u041F\u043E\u043B\u043D\u044B\u0439 \u044D\u043A\u0440\u0430\u043D"
+    JP: "\u30D5\u30EB\u30B9\u30AF\u30EA\u30FC\u30F3"
+  - Id: 6
+    Number: 100006
+    ZH: "\u5206\u8FA8\u7387"
+    EN: Screen Resolution
+    RU: "\u0420\u0430\u0437\u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u044D\u043A\u0440\u0430\u043D\u0430"
+    JP: "\u753B\u9762\u89E3\u50CF\u5EA6"
+  - Id: 7
+    Number: 100007
+    ZH: "\u8BED\u8A00\u5207\u6362"
+    EN: Language Switch
+    RU: "\u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0430\u0442\u0435\u043B\u044C
+      \u044F\u0437\u044B\u043A\u0430"
+    JP: "\u8A00\u8A9E\u30B9\u30A4\u30C3\u30C1"
+  - Id: 8
+    Number: 100008
+    ZH: "\u80CC\u666F\u97F3\u4E50"
+    EN: Background Music
+    RU: "\u0424\u043E\u043D\u043E\u0432\u0430\u044F \u043C\u0443\u0437\u044B\u043A\u0430"
+    JP: "\u80CC\u666F\u97F3\u697D"
+  - Id: 9
+    Number: 100009
+    ZH: "\u80CC\u666F\u97F3\u4E50\u97F3\u91CF"
+    EN: Background Music Volume
+    RU: "\u041E\u0431\u044A\u0435\u043C \u0444\u043E\u043D\u043E\u0432\u043E\u0439
+      \u043C\u0443\u0437\u044B\u043A\u0438"
+    JP: "\u80CC\u666F\u97F3\u697D\u97F3\u91CF"
+  - Id: 10
+    Number: 100010
+    ZH: "\u58F0\u97F3\u7279\u6548"
+    EN: Sound Effect
+    RU: "\u0417\u0432\u0443\u043A\u043E\u0432\u044B\u0439 \u044D\u0444\u0444\u0435\u043A\u0442"
+    JP: "\u30B5\u30A6\u30F3\u30C9\u52B9\u679C"
+  - Id: 11
+    Number: 100011
+    ZH: "\u58F0\u97F3\u7279\u6548\u97F3\u97F3\u91CF"
+    EN: Sound Effect Volume
+    RU: "\u041E\u0431\u044A\u0435\u043C \u0437\u0432\u0443\u043A\u043E\u0432\u043E\u0433\u043E
+      \u044D\u0444\u0444\u0435\u043A\u0442\u0430"
+    JP: "\u30B5\u30A6\u30F3\u30C9\u52B9\u679C\u97F3\u91CF"
+  - Id: 12
+    Number: 100012
+    ZH: "\u5F00\u542F"
+    EN: ON
+    RU: "\u0412\u043A\u043B\u044E\u0447\u0435\u043D\u043E"
+    JP: "\u30AA\u30F3"
+  - Id: 13
+    Number: 100013
+    ZH: "\u5173\u95ED"
+    EN: OFF
+    RU: "\u041E\u0442\u043A\u043B\u044E\u0447\u0435\u043D\u043E"
+    JP: "\u30AA\u30D5"
+  - Id: 14
+    Number: 100014
+    ZH: "\u4E0A"
+    EN: Up
+    RU: "\u0412\u0432\u0435\u0440\u0445"
+    JP: "\u30A2\u30C3\u30D7"
+  - Id: 15
+    Number: 100015
+    ZH: "\u4E0B"
+    EN: Down
+    RU: "\u0432\u043D\u0438\u0437"
+    JP: "\u30C0\u30A6\u30F3"
+  - Id: 16
+    Number: 100016
+    ZH: "\u5DE6"
+    EN: Left
+    RU: "\u041B\u0435\u0432\u043E"
+    JP: "\u5DE6"
+  - Id: 17
+    Number: 100017
+    ZH: "\u53F3"
+    EN: Right
+    RU: "\u041F\u0440\u0430\u0432\u043E"
+    JP: "\u53F3"
+  - Id: 18
+    Number: 100018
+    ZH: "\u8FD4\u56DE"
+    EN: Return
+    RU: "\u0412\u043E\u0437\u0432\u0440\u0430\u0449\u0435\u043D\u0438\u0435"
+    JP: "\u30EA\u30BF\u30FC\u30F3"
+  - Id: 19
+    Number: 100019
+    ZH: "\u786E\u8BA4"
+    EN: Confirm
+    RU: "\u041F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044C"
+    JP: "\u78BA\u8A8D"
+  - Id: 20
+    Number: 100020
+    ZH: "\u9009\u62E9"
+    EN: Select
+    RU: "\u0412\u044B\u0431\u0440\u0430\u0442\u044C"
+    JP: "\u9078\u629E"
+  - Id: 21
+    Number: 100021
+    ZH: "\u5207\u6362"
+    EN: Switch
+    RU: "\u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0430\u0442\u0435\u043B\u044C"
+    JP: "\u5207\u308A\u66FF\u3048"
+  - Id: 22
+    Number: 100022
+    ZH: "\u53D6\u6D88"
+    EN: Cancel
+    RU: "\u041E\u0442\u043C\u0435\u043D\u0438\u0442\u044C"
+    JP: "\u30AD\u30E3\u30F3\u30BB\u30EB"
+  - Id: 23
+    Number: 100023
+    ZH: "\u6253\u5F00\u63A7\u5236\u53F0"
+    EN: Open Console
+    RU: "\u041E\u0442\u043A\u0440\u044B\u0442\u044C \u043A\u043E\u043D\u0441\u043E\u043B\u044C"
+    JP: "\u30B3\u30F3\u30BD\u30FC\u30EB\u3092\u958B\u304F"

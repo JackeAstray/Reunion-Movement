@@ -1,0 +1,159 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8919a83e524045c4aa96b5dfeb56aaf2, type: 3}
+  m_Name: SoundConfigContainer
+  m_EditorClassIdentifier: 
+  configs:
+  - Id: 1
+    Number: 100001
+    Path: Sounds/BGM/
+    Name: JDSherbert - Minigame Music Pack - A Minor Distraction
+    Type: 1
+    Detailed: "\u65E0"
+  - Id: 2
+    Number: 100002
+    Path: Sounds/BGM/
+    Name: JDSherbert - Minigame Music Pack - Beach Vibes
+    Type: 1
+    Detailed: "\u65E0"
+  - Id: 3
+    Number: 100003
+    Path: Sounds/BGM/
+    Name: JDSherbert - Minigame Music Pack - Blackjack
+    Type: 1
+    Detailed: "\u65E0"
+  - Id: 4
+    Number: 100004
+    Path: Sounds/BGM/
+    Name: JDSherbert - Minigame Music Pack - Corrupted Circuitry
+    Type: 1
+    Detailed: "\u65E0"
+  - Id: 5
+    Number: 100005
+    Path: Sounds/BGM/
+    Name: JDSherbert - Minigame Music Pack - Digital Waves
+    Type: 1
+    Detailed: "\u65E0"
+  - Id: 6
+    Number: 100006
+    Path: Sounds/BGM/
+    Name: JDSherbert - Minigame Music Pack - Electric Eel Fishing
+    Type: 1
+    Detailed: "\u65E0"
+  - Id: 7
+    Number: 100007
+    Path: Sounds/BGM/
+    Name: JDSherbert - Minigame Music Pack - Refreshing Dawn
+    Type: 1
+    Detailed: "\u65E0"
+  - Id: 8
+    Number: 100008
+    Path: Sounds/BGM/
+    Name: JDSherbert - Minigame Music Pack - Smooth Driving
+    Type: 1
+    Detailed: "\u65E0"
+  - Id: 9
+    Number: 100009
+    Path: Sounds/BGM/
+    Name: JDSherbert - Minigame Music Pack - Streetlights
+    Type: 1
+    Detailed: "\u65E0"
+  - Id: 10
+    Number: 100010
+    Path: Sounds/BGM/
+    Name: JDSherbert - Minigame Music Pack - Temple Puzzle
+    Type: 1
+    Detailed: "\u65E0"
+  - Id: 11
+    Number: 300001
+    Path: Sounds/Effect/UI
+    Name: JDSherbert - Ultimate UI SFX Pack - Cancel - 1
+    Type: 2
+    Detailed: "\u53D6\u6D88"
+  - Id: 12
+    Number: 300002
+    Path: Sounds/Effect/UI
+    Name: JDSherbert - Ultimate UI SFX Pack - Cancel - 2
+    Type: 2
+    Detailed: "\u53D6\u6D88"
+  - Id: 13
+    Number: 300003
+    Path: Sounds/Effect/UI
+    Name: JDSherbert - Ultimate UI SFX Pack - Cursor - 1
+    Type: 2
+    Detailed: "\u5149\u6807"
+  - Id: 14
+    Number: 300004
+    Path: Sounds/Effect/UI
+    Name: JDSherbert - Ultimate UI SFX Pack - Cursor - 2
+    Type: 2
+    Detailed: "\u5149\u6807"
+  - Id: 15
+    Number: 300005
+    Path: Sounds/Effect/UI
+    Name: JDSherbert - Ultimate UI SFX Pack - Cursor - 3
+    Type: 2
+    Detailed: "\u5149\u6807"
+  - Id: 16
+    Number: 300006
+    Path: Sounds/Effect/UI
+    Name: JDSherbert - Ultimate UI SFX Pack - Cursor - 4
+    Type: 2
+    Detailed: "\u5149\u6807"
+  - Id: 17
+    Number: 300007
+    Path: Sounds/Effect/UI
+    Name: JDSherbert - Ultimate UI SFX Pack - Cursor - 5
+    Type: 2
+    Detailed: "\u5149\u6807"
+  - Id: 18
+    Number: 300008
+    Path: Sounds/Effect/UI
+    Name: JDSherbert - Ultimate UI SFX Pack - Error - 1
+    Type: 2
+    Detailed: "\u9519\u8BEF"
+  - Id: 19
+    Number: 300009
+    Path: Sounds/Effect/UI
+    Name: JDSherbert - Ultimate UI SFX Pack - Popup Close - 1
+    Type: 2
+    Detailed: "\u5F39\u51FA\u5173\u95ED"
+  - Id: 20
+    Number: 300010
+    Path: Sounds/Effect/UI
+    Name: JDSherbert - Ultimate UI SFX Pack - Popup Open - 1
+    Type: 2
+    Detailed: "\u5F39\u51FA\u6253\u5F00"
+  - Id: 21
+    Number: 300011
+    Path: Sounds/Effect/UI
+    Name: JDSherbert - Ultimate UI SFX Pack - Select - 1
+    Type: 2
+    Detailed: "\u9009\u62E9"
+  - Id: 22
+    Number: 300012
+    Path: Sounds/Effect/UI
+    Name: JDSherbert - Ultimate UI SFX Pack - Select - 2
+    Type: 2
+    Detailed: "\u9009\u62E9"
+  - Id: 23
+    Number: 300013
+    Path: Sounds/Effect/UI
+    Name: JDSherbert - Ultimate UI SFX Pack - Swipe - 1
+    Type: 2
+    Detailed: "\u6ED1\u52A8"
+  - Id: 24
+    Number: 300014
+    Path: Sounds/Effect/UI
+    Name: JDSherbert - Ultimate UI SFX Pack - Swipe - 2
+    Type: 2
+    Detailed: "\u6ED1\u52A8"
