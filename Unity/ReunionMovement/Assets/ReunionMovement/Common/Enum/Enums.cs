@@ -31,4 +31,18 @@ namespace ReunionMovement.Common
         HeavyImpact
     }
 
+    /// <summary>
+    /// 多语言支持枚举
+    /// </summary>
+    public enum Multilingual
+    {
+        // 中文
+        ZH,
+        // 英文
+        EN,
+        // 俄语
+        RU,
+        // 日语
+        JP,
+    }
 }

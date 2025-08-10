@@ -17,7 +17,7 @@ namespace ReunionMovement.Common.Util
         /// <param name="args"></param>
         public void SetState(params object[] args)
         {
-            NotifyAllObservers(args);
+            NotifyAll(args);
         }
 
         /// <summary>
@@ -26,14 +26,19 @@ namespace ReunionMovement.Common.Util
         /// <param name="observer"></param>
         public void Attach(ObserverBase observer)
         {
-            observers.Add(observer);
+            if (!observers.Contains(observer))
+            {
+                observers.Add(observer);
+                // 设置观察者的subject
+                observer.subject = this;
+            }
         }
 
         /// <summary>
         /// 通知所有观察者
         /// </summary>
         /// <param name="args"></param>
-        public void NotifyAllObservers(params object[] args)
+        public void NotifyAll(params object[] args)
         {
             foreach (ObserverBase observer in observers)
             {
@@ -48,7 +53,7 @@ namespace ReunionMovement.Common.Util
         /// 移除观察者
         /// </summary>
         /// <param name="observer"></param>
-        public void RemoveObserver(ObserverBase observer)
+        public void Remove(ObserverBase observer)
         {
             if (observers.Contains(observer))
             {
