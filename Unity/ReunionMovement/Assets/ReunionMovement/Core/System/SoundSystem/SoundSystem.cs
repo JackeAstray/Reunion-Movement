@@ -101,12 +101,12 @@ namespace ReunionMovement.Core.Sound
         /// 播放音乐
         /// </summary>
         /// <param name="name"></param>
-        public void PlayMusic(int index, float volume = -1)
+        public async Task PlayMusic(int index, float volume = -1)
         {
             if (soundConfigDict != null && soundConfigDict.TryGetValue(index, out SoundConfig soundConfig))
             {
                 currentMusicIndex = index;
-                AudioClip audioClip = GetAudioClip(soundConfig.Path, soundConfig.Name);
+                AudioClip audioClip = await GetAudioClipAsync(soundConfig.Path, soundConfig.Name);
                 if (audioClip != null)
                 {
                     source.clip = audioClip;
@@ -151,7 +151,7 @@ namespace ReunionMovement.Core.Sound
             // 渐出音频
             await FadeOut();
             //播放音乐
-            PlayMusic(index, 0);
+            await PlayMusic(index, 0);
             // 渐入音频
             await FadeIn();
         }
@@ -204,11 +204,11 @@ namespace ReunionMovement.Core.Sound
         /// <param name="index">声音配置索引</param>
         /// <param name="emitter">声音发射器</param>
         /// <param name="loop">是否循环</param>
-        public void PlaySfx(int index, Transform emitter = null, bool loop = false)
+        public async void PlaySfx(int index, Transform emitter = null, bool loop = false)
         {
             if (soundConfigDict != null && soundConfigDict.TryGetValue(index, out SoundConfig soundConfig))
             {
-                AudioClip clip = GetAudioClip(soundConfig.Path, soundConfig.Name);
+                AudioClip clip = await GetAudioClipAsync(soundConfig.Path, soundConfig.Name);
                 if (clip != null)
                 {
                     // 假设第一个池是所有音效的池，如果需要多种音效池，这里需要修改
@@ -638,7 +638,7 @@ namespace ReunionMovement.Core.Sound
         /// <summary>
         /// 从缓存或资源加载音频剪辑
         /// </summary>
-        private AudioClip GetAudioClip(string path, string name)
+        private async Task<AudioClip> GetAudioClipAsync(string path, string name)
         {
             string fullPath = string.Concat(path, name);
             if (audioClipCache.TryGetValue(fullPath, out AudioClip clip))
@@ -646,7 +646,7 @@ namespace ReunionMovement.Core.Sound
                 return clip;
             }
 
-            clip = ResourcesSystem.Instance.Load<AudioClip>(fullPath);
+            clip = await ResourcesSystem.Instance.LoadAsync<AudioClip>(fullPath);
             if (clip != null)
             {
                 audioClipCache[fullPath] = clip;
