@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Rendering;
 using static Unity.VisualScripting.Member;
 
 namespace ReunionMovement.Core.Sound
@@ -53,11 +54,15 @@ namespace ReunionMovement.Core.Sound
         {
             initProgress = 0;
 
-            soundConfigContainer = ResourcesSystem.Instance.Load<SoundConfigContainer>("LanguagesContainer");
+            CreateAudioRoot();
+
+            soundConfigContainer = ResourcesSystem.Instance.Load<SoundConfigContainer>("ScriptableObjects/SoundConfigContainer");
             if (soundConfigContainer == null || soundConfigContainer.configs == null)
             {
-                Log.Error("LanguagesContainer或其configs为空, 语言系统初始化失败!");
+                Log.Error("SoundConfigContainer或其configs为空, 语言系统初始化失败!");
             }
+
+            CreatePools();
 
             initProgress = 100;
             IsInited = true;
@@ -82,7 +87,7 @@ namespace ReunionMovement.Core.Sound
         {
             if (soundConfigContainer != null && soundConfigContainer.configs != null)
             {
-                ReunionMovement.SoundConfig soundConfig = soundConfigContainer.configs.Find(l => l.Id == index);
+                SoundConfig soundConfig = soundConfigContainer.configs.Find(l => l.Number == index);
 
                 if (soundConfig != null)
                 {
@@ -178,6 +183,86 @@ namespace ReunionMovement.Core.Sound
             source.Stop();
         }
 
+        #region 播放声音
+        /// <summary>
+        /// 播放声音
+        /// </summary>
+        /// <param name="index"></param>
+        public void PlaySfxSound(int index)
+        {
+            PlaySfxSound(index, null, false);
+        }
+
+        /// <summary>
+        /// 播放声音
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="loop"></param>
+        public void PlaySfxSound(int index, bool loop)
+        {
+            PlaySfxSound(index, null, loop);
+        }
+
+        /// <summary>
+        /// 播放声音
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="loop"></param>
+        /// <param name="emitter"></param>
+        public void PlaySfxSound(int index, bool loop, Transform emitter)
+        {
+            PlaySfxSound(index, emitter, loop);
+        }
+
+        /// <summary>
+        /// 播放声音
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="emitter"></param>
+        /// <param name="loop"></param>
+        public void PlaySfxSound(int index, Transform emitter, bool loop)
+        {
+            ProcessingPlaySfxSound(index, emitter, loop);
+        }
+
+        /// <summary>
+        /// 播放声音
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="emitter"></param>
+        /// <param name="loop"></param>
+        void ProcessingPlaySfxSound(int index, Transform emitter, bool loop)
+        {
+            if (soundConfigContainer != null && soundConfigContainer.configs != null)
+            {
+                SoundConfig soundConfig = soundConfigContainer.configs.Find(l => l.Number == index);
+
+                if (soundConfig != null)
+                {
+                    AudioClip clip = ResourcesSystem.Instance.Load<AudioClip>(soundConfig.Path + soundConfig.Name);
+                    if (clip != null)
+                    {
+                        GameObject obj = startupPools[0].prefab;
+                        GameObject go = Spawn(obj);
+                        if (go != null)
+                        {
+                            SoundItem soundObj = go.GetComponent<SoundItem>();
+                            soundObj.clip = clip;
+                            soundObj.Processing(index, emitter, loop, GameOption.currentOption.musicVolume, GameOption.currentOption.musicMuted);
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 播放声音
+        /// </summary>
+        public void StopSound()
+        {
+            RecycleAll();
+        }
+        #endregion
 
         /// <summary>
         /// 创建音频根节点
@@ -222,6 +307,7 @@ namespace ReunionMovement.Core.Sound
         /// </summary>
         /// <param name="prefab"></param>
         /// <param name="size"></param>
+        /// <param name="parent"></param>
         public void CreatePool(GameObject prefab, int size, Transform parent)
         {
             if (prefab != null && !pooledObjects.ContainsKey(prefab))
@@ -250,6 +336,7 @@ namespace ReunionMovement.Core.Sound
         {
             return Spawn(prefab, parent, position, Quaternion.identity);
         }
+
         /// <summary>
         /// 生成
         /// </summary>
@@ -261,6 +348,7 @@ namespace ReunionMovement.Core.Sound
         {
             return Spawn(prefab, sfxRoot.transform, position, rotation);
         }
+
         /// <summary>
         /// 生成
         /// </summary>
@@ -271,6 +359,7 @@ namespace ReunionMovement.Core.Sound
         {
             return Spawn(prefab, parent, Vector3.zero, Quaternion.identity);
         }
+
         /// <summary>
         /// 生成
         /// </summary>
@@ -281,6 +370,7 @@ namespace ReunionMovement.Core.Sound
         {
             return Spawn(prefab, sfxRoot.transform, position, Quaternion.identity);
         }
+
         /// <summary>
         /// 生成
         /// </summary>
@@ -290,6 +380,7 @@ namespace ReunionMovement.Core.Sound
         {
             return Spawn(prefab, sfxRoot.transform, Vector3.zero, Quaternion.identity);
         }
+
         /// <summary>
         /// 生成
         /// </summary>
