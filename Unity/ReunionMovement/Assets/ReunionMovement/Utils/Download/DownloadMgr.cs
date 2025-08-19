@@ -45,6 +45,9 @@ namespace ReunionMovement.Common.Util.Download
             {"application/7z",".7z"},
         };
 
+        /// <summary>
+        /// 清除下载管理器数据
+        /// </summary>
         public void ClearData()
         {
             imageCache.Clear();

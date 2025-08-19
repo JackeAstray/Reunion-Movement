@@ -9,7 +9,6 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Rendering;
-using static Unity.VisualScripting.Member;
 
 namespace ReunionMovement.Core.Sound
 {
@@ -188,9 +187,9 @@ namespace ReunionMovement.Core.Sound
         /// 播放声音
         /// </summary>
         /// <param name="index"></param>
-        public void PlaySfxSound(int index)
+        public void PlaySfx(int index)
         {
-            PlaySfxSound(index, null, false);
+            PlaySfx(index, null, false);
         }
 
         /// <summary>
@@ -198,9 +197,9 @@ namespace ReunionMovement.Core.Sound
         /// </summary>
         /// <param name="index"></param>
         /// <param name="loop"></param>
-        public void PlaySfxSound(int index, bool loop)
+        public void PlaySfx(int index, bool loop)
         {
-            PlaySfxSound(index, null, loop);
+            PlaySfx(index, null, loop);
         }
 
         /// <summary>
@@ -209,9 +208,9 @@ namespace ReunionMovement.Core.Sound
         /// <param name="index"></param>
         /// <param name="loop"></param>
         /// <param name="emitter"></param>
-        public void PlaySfxSound(int index, bool loop, Transform emitter)
+        public void PlaySfx(int index, bool loop, Transform emitter)
         {
-            PlaySfxSound(index, emitter, loop);
+            PlaySfx(index, emitter, loop);
         }
 
         /// <summary>
@@ -220,9 +219,9 @@ namespace ReunionMovement.Core.Sound
         /// <param name="index"></param>
         /// <param name="emitter"></param>
         /// <param name="loop"></param>
-        public void PlaySfxSound(int index, Transform emitter, bool loop)
+        public void PlaySfx(int index, Transform emitter, bool loop)
         {
-            ProcessingPlaySfxSound(index, emitter, loop);
+            ProcessingPlaySfx(index, emitter, loop);
         }
 
         /// <summary>
@@ -231,7 +230,7 @@ namespace ReunionMovement.Core.Sound
         /// <param name="index"></param>
         /// <param name="emitter"></param>
         /// <param name="loop"></param>
-        void ProcessingPlaySfxSound(int index, Transform emitter, bool loop)
+        void ProcessingPlaySfx(int index, Transform emitter, bool loop)
         {
             if (soundConfigContainer != null && soundConfigContainer.configs != null)
             {

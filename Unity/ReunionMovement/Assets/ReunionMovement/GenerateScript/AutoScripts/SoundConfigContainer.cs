@@ -10,7 +10,6 @@ namespace ReunionMovement
     [CreateAssetMenu(fileName = "SoundConfigContainer", menuName = "ScriptableObjects/SoundConfigContainer", order = 0)]
     public class SoundConfigContainer : ScriptableObject
     {
-        
         public List<SoundConfig> configs;
     }
 }
