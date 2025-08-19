@@ -10,7 +10,6 @@ namespace ReunionMovement
     [CreateAssetMenu(fileName = "LanguagesContainer", menuName = "ScriptableObjects/LanguagesContainer", order = 0)]
     public class LanguagesContainer : ScriptableObject
     {
-        
         public List<Languages> configs;
     }
 }

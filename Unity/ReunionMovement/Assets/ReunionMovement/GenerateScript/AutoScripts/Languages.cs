@@ -10,7 +10,6 @@ namespace ReunionMovement
     [Serializable]
     public class Languages
     {
-        
         public int Id;    //索引
         public int Number;    //编号
         public string ZH_CN;    //中文
@@ -38,12 +37,12 @@ namespace ReunionMovement
         {
             return new Languages
             {
-                Id     = this.Id,
+                Id = this.Id,
                 Number = this.Number,
-                ZH_CN  = this.ZH_CN,
-                EN_US  = this.EN_US,
-                RU_RU  = this.RU_RU,
-                JA_JP  = this.JA_JP,
+                ZH_CN = this.ZH_CN,
+                EN_US = this.EN_US,
+                RU_RU = this.RU_RU,
+                JA_JP = this.JA_JP,
 
             };
         }
@@ -55,12 +54,12 @@ namespace ReunionMovement
         {
             return new Languages
             {
-                Id     = entity.Id,
+                Id = entity.Id,
                 Number = entity.Number,
-                ZH_CN  = entity.ZH_CN,
-                EN_US  = entity.EN_US,
-                RU_RU  = entity.RU_RU,
-                JA_JP  = entity.JA_JP,
+                ZH_CN = entity.ZH_CN,
+                EN_US = entity.EN_US,
+                RU_RU = entity.RU_RU,
+                JA_JP = entity.JA_JP,
 
             };
         }
