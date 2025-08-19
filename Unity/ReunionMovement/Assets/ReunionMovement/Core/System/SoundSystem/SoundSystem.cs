@@ -208,6 +208,7 @@ namespace ReunionMovement.Core.Sound
         {
             if (soundConfigDict != null && soundConfigDict.TryGetValue(index, out SoundConfig soundConfig))
             {
+                // 获取音频剪辑
                 AudioClip clip = await GetAudioClipAsync(soundConfig.Path, soundConfig.Name);
                 if (clip != null)
                 {
