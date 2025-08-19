@@ -39,13 +39,17 @@ namespace ReunionMovement.Core.Sound
         string poolPath = "Prefabs/Sound/SoundItem";
         int currentMusicIndex;
         private SoundConfigContainer soundConfigContainer;
+        // 将声音配置列表转换为字典以加快查找速度
+        private Dictionary<int, SoundConfig> soundConfigDict;
+        // 缓存已加载的AudioClip
+        private Dictionary<string, AudioClip> audioClipCache;
 
         // 启动时预设对象池
         public List<StartupPool> startupPools = new List<StartupPool>();
         //临时列表
         static List<GameObject> tempList = new List<GameObject>();
         //预设对象池
-        Dictionary<GameObject, List<GameObject>> pooledObjects = new Dictionary<GameObject, List<GameObject>>();
+        Dictionary<GameObject, Queue<GameObject>> pooledObjects = new Dictionary<GameObject, Queue<GameObject>>();
         //生成对象池 特效
         Dictionary<GameObject, GameObject> sfxObjects = new Dictionary<GameObject, GameObject>();
         #endregion
@@ -59,6 +63,16 @@ namespace ReunionMovement.Core.Sound
             if (soundConfigContainer == null || soundConfigContainer.configs == null)
             {
                 Log.Error("SoundConfigContainer或其configs为空, 语言系统初始化失败!");
+            }
+            else
+            {
+                // 初始化字典和缓存
+                soundConfigDict = new Dictionary<int, SoundConfig>(soundConfigContainer.configs.Count);
+                foreach (var config in soundConfigContainer.configs)
+                {
+                    soundConfigDict[config.Number] = config;
+                }
+                audioClipCache = new Dictionary<string, AudioClip>();
             }
 
             CreatePools();
@@ -84,14 +98,12 @@ namespace ReunionMovement.Core.Sound
         /// <param name="name"></param>
         public void PlayMusic(int index, float volume = -1)
         {
-            if (soundConfigContainer != null && soundConfigContainer.configs != null)
+            if (soundConfigDict != null && soundConfigDict.TryGetValue(index, out SoundConfig soundConfig))
             {
-                SoundConfig soundConfig = soundConfigContainer.configs.Find(l => l.Number == index);
-
-                if (soundConfig != null)
+                currentMusicIndex = index;
+                AudioClip audioClip = GetAudioClip(soundConfig.Path, soundConfig.Name);
+                if (audioClip != null)
                 {
-                    currentMusicIndex = index;
-                    AudioClip audioClip = ResourcesSystem.Instance.Load<AudioClip>(soundConfig.Path + soundConfig.Name);
                     source.clip = audioClip;
                     source.volume = volume == -1 ? GameOption.currentOption.musicVolume : volume;
                     source.loop = true;
@@ -129,7 +141,7 @@ namespace ReunionMovement.Core.Sound
         /// 音乐切换-带渐入渐出效果
         /// </summary>
         /// <param name="index"></param>
-        public async void PlaySwitch(int index)
+        public async Task PlaySwitch(int index)
         {
             // 渐出音频
             await FadeOut();
@@ -152,7 +164,7 @@ namespace ReunionMovement.Core.Sound
             while (source.volume < targetVolume)
             {
                 float elapsedTime = Time.time - startTime;
-                float t = Mathf.Clamp01(elapsedTime / fadeDuration);
+                float t = fadeDuration > 0 ? Mathf.Clamp01(elapsedTime / fadeDuration) : 1;
 
                 source.volume = Mathf.Lerp(startVolume, targetVolume, t);
 
@@ -172,7 +184,7 @@ namespace ReunionMovement.Core.Sound
             while (source.volume > 0.0f)
             {
                 float elapsedTime = Time.time - startTime;
-                float t = Mathf.Clamp01(elapsedTime / fadeDuration);
+                float t = fadeDuration > 0 ? Mathf.Clamp01(elapsedTime / fadeDuration) : 1;
 
                 source.volume = Mathf.Lerp(startVolume, 0.0f, t);
 
@@ -232,23 +244,18 @@ namespace ReunionMovement.Core.Sound
         /// <param name="loop"></param>
         void ProcessingPlaySfx(int index, Transform emitter, bool loop)
         {
-            if (soundConfigContainer != null && soundConfigContainer.configs != null)
+            if (soundConfigDict != null && soundConfigDict.TryGetValue(index, out SoundConfig soundConfig))
             {
-                SoundConfig soundConfig = soundConfigContainer.configs.Find(l => l.Number == index);
-
-                if (soundConfig != null)
+                AudioClip clip = GetAudioClip(soundConfig.Path, soundConfig.Name);
+                if (clip != null)
                 {
-                    AudioClip clip = ResourcesSystem.Instance.Load<AudioClip>(soundConfig.Path + soundConfig.Name);
-                    if (clip != null)
+                    // 假设第一个池是所有音效的池，如果需要多种音效池，这里需要修改
+                    GameObject obj = startupPools[0].prefab;
+                    GameObject go = Spawn(obj);
+                    if (go != null)
                     {
-                        GameObject obj = startupPools[0].prefab;
-                        GameObject go = Spawn(obj);
-                        if (go != null)
-                        {
-                            SoundItem soundObj = go.GetComponent<SoundItem>();
-                            soundObj.clip = clip;
-                            soundObj.Processing(index, emitter, loop, GameOption.currentOption.musicVolume, GameOption.currentOption.musicMuted);
-                        }
+                        SoundItem soundObj = go.GetComponent<SoundItem>();
+                        soundObj.Processing(clip, emitter, loop, GameOption.currentOption.musicVolume, GameOption.currentOption.musicMuted);
                     }
                 }
             }
@@ -311,15 +318,15 @@ namespace ReunionMovement.Core.Sound
         {
             if (prefab != null && !pooledObjects.ContainsKey(prefab))
             {
-                List<GameObject> list = new List<GameObject>();
-                pooledObjects.Add(prefab, list);
+                Queue<GameObject> queue = new Queue<GameObject>(size);
+                pooledObjects.Add(prefab, queue);
                 // 创建对象池
                 Transform parentVoice = parent;
                 for (int i = 0; i < size; i++)
                 {
                     var objVoice = GameObject.Instantiate(prefab, parentVoice);
                     objVoice.SetActive(false);
-                    list.Add(objVoice);
+                    queue.Enqueue(objVoice);
                 }
             }
         }
@@ -392,15 +399,16 @@ namespace ReunionMovement.Core.Sound
         {
             if (prefab == null) return null;
 
-            if (!pooledObjects.TryGetValue(prefab, out var list))
+            if (!pooledObjects.TryGetValue(prefab, out var queue))
             {
-                list = new List<GameObject>();
-                pooledObjects.Add(prefab, list);
+                queue = new Queue<GameObject>();
+                pooledObjects.Add(prefab, queue);
             }
 
-            GameObject obj = list.Find(o => !o.activeSelf);
-            if (obj != null)
+            GameObject obj;
+            if (queue.Count > 0)
             {
+                obj = queue.Dequeue();
                 obj.transform.SetParent(parent);
                 obj.transform.localPosition = position;
                 obj.transform.localRotation = rotation;
@@ -409,12 +417,9 @@ namespace ReunionMovement.Core.Sound
             else
             {
                 obj = GameObject.Instantiate(prefab, position, rotation, parent);
-                list.Add(obj);
             }
 
-            var spawnedObjects = sfxObjects;
-            spawnedObjects[obj] = prefab;
-
+            sfxObjects[obj] = prefab;
             return obj;
         }
 
@@ -434,13 +439,13 @@ namespace ReunionMovement.Core.Sound
         /// <param name="obj"></param>
         public void Recycle(GameObject obj)
         {
-            GameObject prefab;
-            if (sfxObjects.TryGetValue(obj, out prefab))
+            if (sfxObjects.TryGetValue(obj, out GameObject prefab))
             {
                 Recycle(obj, prefab);
             }
             else
             {
+                // 如果对象不在生成池中，则直接销毁
                 UnityEngine.Object.Destroy(obj);
             }
         }
@@ -452,12 +457,19 @@ namespace ReunionMovement.Core.Sound
         /// <param name="prefab"></param>
         void Recycle(GameObject obj, GameObject prefab)
         {
-            pooledObjects[prefab].Add(obj);
-
-            sfxObjects.Remove(obj);
-            obj.transform.parent = sfxRoot.transform;
-
-            obj.SetActive(false);
+            // 确保我们有这个预制体的池
+            if (pooledObjects.TryGetValue(prefab, out var queue))
+            {
+                queue.Enqueue(obj);
+                sfxObjects.Remove(obj);
+                obj.transform.SetParent(sfxRoot.transform);
+                obj.SetActive(false);
+            }
+            else
+            {
+                // 如果没有对应的池，直接销毁
+                UnityEngine.Object.Destroy(obj);
+            }
         }
 
         /// <summary>
@@ -476,18 +488,24 @@ namespace ReunionMovement.Core.Sound
         /// <param name="prefab"></param>
         public void RecycleAll(GameObject prefab)
         {
-            foreach (var item in sfxObjects)
+            try
             {
-                if (item.Value == prefab)
+                foreach (var item in sfxObjects)
                 {
-                    tempList.Add(item.Key);
+                    if (item.Value == prefab)
+                    {
+                        tempList.Add(item.Key);
+                    }
+                }
+                for (int i = 0; i < tempList.Count; ++i)
+                {
+                    Recycle(tempList[i]);
                 }
             }
-            for (int i = 0; i < tempList.Count; ++i)
+            finally
             {
-                Recycle(tempList[i]);
+                tempList.Clear();
             }
-            tempList.Clear();
         }
 
         /// <summary>
@@ -495,12 +513,18 @@ namespace ReunionMovement.Core.Sound
         /// </summary>
         public void RecycleAll()
         {
-            tempList.AddRange(sfxObjects.Keys);
-            for (int i = 0; i < tempList.Count; ++i)
+            try
             {
-                Recycle(tempList[i]);
+                tempList.AddRange(sfxObjects.Keys);
+                for (int i = 0; i < tempList.Count; ++i)
+                {
+                    Recycle(tempList[i]);
+                }
             }
-            tempList.Clear();
+            finally
+            {
+                tempList.Clear();
+            }
         }
 
         /// <summary>
@@ -521,10 +545,9 @@ namespace ReunionMovement.Core.Sound
         /// <returns></returns>
         public int CountPooled(GameObject prefab)
         {
-            List<GameObject> list;
-            if (pooledObjects.TryGetValue(prefab, out list))
+            if (pooledObjects.TryGetValue(prefab, out var queue))
             {
-                return list.Count;
+                return queue.Count;
             }
             return 0;
         }
@@ -537,9 +560,9 @@ namespace ReunionMovement.Core.Sound
         public int CountAllPooled()
         {
             int count = 0;
-            foreach (var list in pooledObjects.Values)
+            foreach (var queue in pooledObjects.Values)
             {
-                count += list.Count;
+                count += queue.Count;
             }
             return count;
         }
@@ -561,8 +584,7 @@ namespace ReunionMovement.Core.Sound
             {
                 list.Clear();
             }
-            List<GameObject> pooled;
-            if (pooledObjects.TryGetValue(prefab, out pooled))
+            if (pooledObjects.TryGetValue(prefab, out var pooled))
             {
                 list.AddRange(pooled);
             }
@@ -587,12 +609,11 @@ namespace ReunionMovement.Core.Sound
             {
                 list.Clear();
             }
-            List<GameObject> pooled;
-            if (pooledObjects.TryGetValue(prefab.gameObject, out pooled))
+            if (pooledObjects.TryGetValue(prefab.gameObject, out var pooled))
             {
-                for (int i = 0; i < pooled.Count; ++i)
+                foreach (var item in pooled)
                 {
-                    list.Add(pooled[i].GetComponent<T>());
+                    list.Add(item.GetComponent<T>());
                 }
             }
             return list;
@@ -703,12 +724,11 @@ namespace ReunionMovement.Core.Sound
         /// <param name="prefab"></param>
         public void DestroyPooled(GameObject prefab)
         {
-            List<GameObject> pooled;
-            if (pooledObjects.TryGetValue(prefab, out pooled))
+            if (pooledObjects.TryGetValue(prefab, out var pooled))
             {
-                for (int i = 0; i < pooled.Count; ++i)
+                foreach (var item in pooled)
                 {
-                    GameObject.Destroy(pooled[i]);
+                    GameObject.Destroy(item);
                 }
                 pooled.Clear();
             }
@@ -722,6 +742,29 @@ namespace ReunionMovement.Core.Sound
         {
             RecycleAll(prefab);
             DestroyPooled(prefab);
+        }
+
+        /// <summary>
+        /// 从缓存或资源加载音频剪辑
+        /// </summary>
+        private AudioClip GetAudioClip(string path, string name)
+        {
+            string fullPath = path + name;
+            if (audioClipCache.TryGetValue(fullPath, out AudioClip clip))
+            {
+                return clip;
+            }
+
+            clip = ResourcesSystem.Instance.Load<AudioClip>(fullPath);
+            if (clip != null)
+            {
+                audioClipCache[fullPath] = clip;
+            }
+            else
+            {
+                Log.Error($"加载AudioClip失败: {fullPath}");
+            }
+            return clip;
         }
     }
 
