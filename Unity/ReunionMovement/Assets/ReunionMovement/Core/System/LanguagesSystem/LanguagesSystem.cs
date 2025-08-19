@@ -31,7 +31,7 @@ namespace ReunionMovement.Core.Languages
             initProgress = 0;
 
             // 从ScriptableObjects中获取文本
-            languagesContainer = ResourcesSystem.Instance.Load<LanguagesContainer>("LanguagesContainer");
+            languagesContainer = ResourcesSystem.Instance.Load<LanguagesContainer>("ScriptableObjects/LanguagesContainer");
             if (languagesContainer == null || languagesContainer.configs == null)
             {
                 Log.Error("LanguagesContainer或其configs为空, 语言系统初始化失败!");
@@ -69,7 +69,7 @@ namespace ReunionMovement.Core.Languages
         {
             this.multilingual = multilingual;
             // 通知所有观察者
-            SetState(); 
+            SetState();
         }
 
         /// <summary>

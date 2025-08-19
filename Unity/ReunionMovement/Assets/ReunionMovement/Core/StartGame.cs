@@ -16,12 +16,14 @@ using UnityEngine;
 
 namespace ReunionMovement.Core
 {
+    /// <summary>
+    /// 游戏入口类
+    /// </summary>
     public class StartGame : GameEntry
     {
         protected override IList<ICustommSystem> CreateModules()
         {
             var modules = base.CreateModules();
-
 
             modules.Add(ResourcesSystem.Instance);
 
@@ -56,8 +58,18 @@ namespace ReunionMovement.Core
         {
             Log.Debug("游戏启动");
 
+            // 临时设置游戏选项
+            //GameOption.currentOption.sfxMuted = false;
+            //GameOption.currentOption.musicMuted = false;
+            //GameOption.SaveOptions();
+
             UISystem.Instance.OpenWindow("StartGameUIPlane");
 
+            // 播放声音
+            //SoundSystem.Instance.PlayMusic(100001);
+            //SoundSystem.Instance.PlaySfxSound(300001);
+
+            // 加载场景
             await SceneSystem.Instance.LoadScene("Temp", true);
         }
     }

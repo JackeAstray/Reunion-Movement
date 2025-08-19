@@ -10,7 +10,7 @@ namespace ReunionMovement.Core
 {
     public static class GameOption
     {
-        public class Option 
+        public class Option
         {
             // 版本号
             public string version = "0.1.0";
@@ -40,11 +40,11 @@ namespace ReunionMovement.Core
             // 主音量
             public float masterVolume = 0.8f;
             // 音乐设置
-            public bool musicMuted = true;
+            public bool musicMuted = false;
             // 音乐音量
             public float musicVolume = 0.5f;
             // 音效设置
-            public bool sfxMuted = true;
+            public bool sfxMuted = false;
             // 音效音量
             public float sfxVolume = 0.5f;
 
@@ -111,7 +111,7 @@ namespace ReunionMovement.Core
             PlayerPrefs.SetFloat("musicFadeTime", currentOption.musicFadeTime);
             PlayerPrefs.SetInt("sfxMuted", currentOption.sfxMuted ? 1 : 0);
             PlayerPrefs.SetFloat("sfxVolume", currentOption.sfxVolume);
-            
+
             PlayerPrefs.Save();
         }
 
