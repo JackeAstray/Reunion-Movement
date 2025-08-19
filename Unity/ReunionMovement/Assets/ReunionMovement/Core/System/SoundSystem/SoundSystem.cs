@@ -163,18 +163,17 @@ namespace ReunionMovement.Core.Sound
         private async Task FadeIn()
         {
             float startVolume = 0;
-            float startTime = Time.time;
+            float currentFadeTime = 0f;
             targetVolume = GameOption.currentOption.musicVolume;
 
-            while (source.volume < targetVolume)
+            while (currentFadeTime < fadeDuration)
             {
-                float elapsedTime = Time.time - startTime;
-                float t = fadeDuration > 0 ? Mathf.Clamp01(elapsedTime / fadeDuration) : 1;
-
+                currentFadeTime += Time.deltaTime;
+                float t = fadeDuration > 0 ? Mathf.Clamp01(currentFadeTime / fadeDuration) : 1;
                 source.volume = Mathf.Lerp(startVolume, targetVolume, t);
-
                 await Task.Yield();
             }
+            source.volume = targetVolume; // 确保达到目标音量
         }
 
         /// <summary>
@@ -184,18 +183,17 @@ namespace ReunionMovement.Core.Sound
         private async Task FadeOut()
         {
             float startVolume = source.volume;
-            float startTime = Time.time;
+            float currentFadeTime = 0f;
 
-            while (source.volume > 0.0f)
+            while (currentFadeTime < fadeDuration)
             {
-                float elapsedTime = Time.time - startTime;
-                float t = fadeDuration > 0 ? Mathf.Clamp01(elapsedTime / fadeDuration) : 1;
-
+                currentFadeTime += Time.deltaTime;
+                float t = fadeDuration > 0 ? Mathf.Clamp01(currentFadeTime / fadeDuration) : 1;
                 source.volume = Mathf.Lerp(startVolume, 0.0f, t);
-
                 await Task.Yield();
             }
 
+            source.volume = 0f; // 确保音量为0
             source.Stop();
         }
 
@@ -203,51 +201,10 @@ namespace ReunionMovement.Core.Sound
         /// <summary>
         /// 播放声音
         /// </summary>
-        /// <param name="index"></param>
-        public void PlaySfx(int index)
-        {
-            PlaySfx(index, null, false);
-        }
-
-        /// <summary>
-        /// 播放声音
-        /// </summary>
-        /// <param name="index"></param>
-        /// <param name="loop"></param>
-        public void PlaySfx(int index, bool loop)
-        {
-            PlaySfx(index, null, loop);
-        }
-
-        /// <summary>
-        /// 播放声音
-        /// </summary>
-        /// <param name="index"></param>
-        /// <param name="loop"></param>
-        /// <param name="emitter"></param>
-        public void PlaySfx(int index, bool loop, Transform emitter)
-        {
-            PlaySfx(index, emitter, loop);
-        }
-
-        /// <summary>
-        /// 播放声音
-        /// </summary>
-        /// <param name="index"></param>
-        /// <param name="emitter"></param>
-        /// <param name="loop"></param>
-        public void PlaySfx(int index, Transform emitter, bool loop)
-        {
-            ProcessingPlaySfx(index, emitter, loop);
-        }
-
-        /// <summary>
-        /// 播放声音
-        /// </summary>
-        /// <param name="index"></param>
-        /// <param name="emitter"></param>
-        /// <param name="loop"></param>
-        void ProcessingPlaySfx(int index, Transform emitter, bool loop)
+        /// <param name="index">声音配置索引</param>
+        /// <param name="emitter">声音发射器</param>
+        /// <param name="loop">是否循环</param>
+        public void PlaySfx(int index, Transform emitter = null, bool loop = false)
         {
             if (soundConfigDict != null && soundConfigDict.TryGetValue(index, out SoundConfig soundConfig))
             {
@@ -272,7 +229,7 @@ namespace ReunionMovement.Core.Sound
         }
 
         /// <summary>
-        /// 播放声音
+        /// 停止所有音效
         /// </summary>
         public void StopSound()
         {
@@ -504,11 +461,16 @@ namespace ReunionMovement.Core.Sound
         /// </summary>
         public void RecycleAll()
         {
-            // 使用 ToList() 创建一个副本，以避免在迭代时修改集合
-            var allSpawned = sfxObjects.Keys.ToList();
-            foreach (var obj in allSpawned)
+            if (sfxObjects.Count == 0) return;
+            // 创建一个键的副本进行迭代，以避免在回收时修改集合
+            var allSpawnedKeys = new List<GameObject>(sfxObjects.Keys);
+            foreach (var obj in allSpawnedKeys)
             {
-                Recycle(obj);
+                // Recycle会从sfxObjects中移除对象，所以我们需要检查键是否存在
+                if (sfxObjects.ContainsKey(obj))
+                {
+                    Recycle(obj);
+                }
             }
         }
 
@@ -678,7 +640,7 @@ namespace ReunionMovement.Core.Sound
         /// </summary>
         private AudioClip GetAudioClip(string path, string name)
         {
-            string fullPath = path + name;
+            string fullPath = string.Concat(path, name);
             if (audioClipCache.TryGetValue(fullPath, out AudioClip clip))
             {
                 return clip;
