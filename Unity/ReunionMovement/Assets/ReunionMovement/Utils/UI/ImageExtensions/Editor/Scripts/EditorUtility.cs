@@ -1,7 +1,9 @@
+using ReunionMovement.Core.Languages;
 using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -155,6 +157,28 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                     break;
             }
             return sb.ToString();
+        }
+
+        [MenuItem("CONTEXT/Text/添加UIText脚本")]
+        private static void AddUITextToText(MenuCommand command)
+        {
+            var text = command.context as Text;
+            if (text != null && text.gameObject.GetComponent<UIText>() == null)
+            {
+                text.gameObject.AddComponent<UIText>();
+                UnityEditor.EditorUtility.SetDirty(text.gameObject);
+            }
+        }
+
+        [MenuItem("CONTEXT/TMP_Text/添加UIText脚本")]
+        private static void AddUITextToTMPText(MenuCommand command)
+        {
+            var tmpText = command.context as TMP_Text;
+            if (tmpText != null && tmpText.gameObject.GetComponent<UIText>() == null)
+            {
+                tmpText.gameObject.AddComponent<UIText>();
+                UnityEditor.EditorUtility.SetDirty(tmpText.gameObject);
+            }
         }
     }
 }
