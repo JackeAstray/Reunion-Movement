@@ -65,12 +65,12 @@ namespace ReunionMovement.Core
 
             UISystem.Instance.OpenWindow("StartGameUIPlane");
 
-            //// 播放声音
+            // 播放声音
             //SoundSystem.Instance.PlayMusic(100001);
             //SoundSystem.Instance.PlaySfx(300001);
 
             // 加载场景
-            await SceneSystem.Instance.LoadScene("Temp", true);
+            //await SceneSystem.Instance.LoadScene("Temp", true);
         }
     }
 }

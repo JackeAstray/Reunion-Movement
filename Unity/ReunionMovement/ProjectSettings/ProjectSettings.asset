@@ -822,11 +822,24 @@ PlayerSettings:
   webWasm2023: 0
   webEnableSubmoduleStrippingCompatibility: 0
   scriptingDefineSymbols:
-    Android: UNITY_PHYSICS_ENABLED
-    Standalone: UNITY_PHYSICS_ENABLED
-    WebGL: UNITY_PHYSICS_ENABLED
-    Windows Store Apps: UNITY_PHYSICS_ENABLED
-    iPhone: UNITY_PHYSICS_ENABLED
+    Android: UNITY_PHYSICS_ENABLED;DOTWEEN
+    EmbeddedLinux: DOTWEEN
+    GameCoreScarlett: DOTWEEN
+    GameCoreXboxOne: DOTWEEN
+    Kepler: DOTWEEN
+    LinuxHeadlessSimulation: DOTWEEN
+    Nintendo Switch: DOTWEEN
+    PS4: DOTWEEN
+    PS5: DOTWEEN
+    QNX: DOTWEEN
+    ReservedCFE: DOTWEEN
+    Standalone: UNITY_PHYSICS_ENABLED;DOTWEEN
+    VisionOS: DOTWEEN
+    WebGL: UNITY_PHYSICS_ENABLED;DOTWEEN
+    Windows Store Apps: UNITY_PHYSICS_ENABLED;DOTWEEN
+    XboxOne: DOTWEEN
+    iPhone: UNITY_PHYSICS_ENABLED;DOTWEEN
+    tvOS: DOTWEEN
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:
