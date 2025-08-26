@@ -1,12 +1,7 @@
-﻿using ICSharpCode.SharpZipLib.Core;
-using ReunionMovement.Common.Util.HttpService;
+﻿using ReunionMovement.Common.Util.HttpService;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEditor.Rendering;
 using UnityEngine;
 
 namespace ReunionMovement.Common.Util.Download

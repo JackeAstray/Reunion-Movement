@@ -57,7 +57,7 @@ namespace ReunionMovement.Common.Util
         //球碰撞器-3D物理
         private List<SphereCollider> sphereColliders;
         //球碰撞器-3D物理
-		private List<MeshCollider> meshColliders;
+        private List<MeshCollider> meshColliders;
 #endif
 
         private readonly HashSet<Transform> withColliders = new HashSet<Transform>();
@@ -147,40 +147,40 @@ namespace ReunionMovement.Common.Util
 
 #if UNITY_PHYSICS_ENABLED
             if (boxColliders != null) boxColliders.Clear();
-			if (sphereColliders != null) sphereColliders.Clear();
-			if (meshColliders != null) meshColliders.Clear();
+            if (sphereColliders != null) sphereColliders.Clear();
+            if (meshColliders != null) meshColliders.Clear();
 
-			Collider[] colliders = includeChildColliders ? gameObject.GetComponentsInChildren<Collider>() : gameObject.GetComponents<Collider>();
+            Collider[] colliders = includeChildColliders ? gameObject.GetComponentsInChildren<Collider>() : gameObject.GetComponents<Collider>();
 
-			for (var i = 0; i < colliders.Length; i++)
-			{
-				var c = colliders[i];
+            for (var i = 0; i < colliders.Length; i++)
+            {
+                var c = colliders[i];
 
-				var box = c as BoxCollider;
-				if (box != null)
-				{
-					if (boxColliders == null) boxColliders = new List<BoxCollider>();
-					boxColliders.Add(box);
-					withColliders.Add(box.transform);
-					continue;
-				}
+                var box = c as BoxCollider;
+                if (box != null)
+                {
+                    if (boxColliders == null) boxColliders = new List<BoxCollider>();
+                    boxColliders.Add(box);
+                    withColliders.Add(box.transform);
+                    continue;
+                }
 
-				var sphere = c as SphereCollider;
-				if (sphere != null)
-				{
-					if (sphereColliders == null) sphereColliders = new List<SphereCollider>();
-					sphereColliders.Add(sphere);
-					withColliders.Add(sphere.transform);
-				}
+                var sphere = c as SphereCollider;
+                if (sphere != null)
+                {
+                    if (sphereColliders == null) sphereColliders = new List<SphereCollider>();
+                    sphereColliders.Add(sphere);
+                    withColliders.Add(sphere.transform);
+                }
 
-				var mesh = c as MeshCollider;
-				if (mesh != null)
-				{
-					if (meshColliders == null) meshColliders = new List<MeshCollider>();
-					meshColliders.Add(mesh);
-					withColliders.Add(mesh.transform);
-				}
-			}
+                var mesh = c as MeshCollider;
+                if (mesh != null)
+                {
+                    if (meshColliders == null) meshColliders = new List<MeshCollider>();
+                    meshColliders.Add(mesh);
+                    withColliders.Add(mesh.transform);
+                }
+            }
 #endif
         }
 
@@ -239,39 +239,39 @@ namespace ReunionMovement.Common.Util
 
 #if UNITY_PHYSICS_ENABLED
 
-		private void DrawBoxCollider(BoxCollider coll)
-		{
-			var target = coll.transform;
-			Gizmos.matrix = Matrix4x4.TRS(target.position, target.rotation, target.lossyScale);
-			DrawColliderGizmo(coll.center, coll.size);
-			Gizmos.matrix = Matrix4x4.identity;
-		}
+        private void DrawBoxCollider(BoxCollider coll)
+        {
+            var target = coll.transform;
+            Gizmos.matrix = Matrix4x4.TRS(target.position, target.rotation, target.lossyScale);
+            DrawColliderGizmo(coll.center, coll.size);
+            Gizmos.matrix = Matrix4x4.identity;
+        }
 
-		private void DrawSphereCollider(SphereCollider coll)
-		{
-			var target = coll.transform;
-			var scale = target.lossyScale;
-			var center = coll.center;
-			var max = Mathf.Max(scale.x, Mathf.Max(scale.y, scale.z)); // to not use Mathf.Max version with params[]
-			DrawColliderGizmo(target.position + new Vector3(center.x, center.y, 0.0f), coll.radius * max);
-		}
+        private void DrawSphereCollider(SphereCollider coll)
+        {
+            var target = coll.transform;
+            var scale = target.lossyScale;
+            var center = coll.center;
+            var max = Mathf.Max(scale.x, Mathf.Max(scale.y, scale.z)); // to not use Mathf.Max version with params[]
+            DrawColliderGizmo(target.position + new Vector3(center.x, center.y, 0.0f), coll.radius * max);
+        }
 
-		private void DrawMeshCollider(MeshCollider coll)
-		{
-			var target = coll.transform;
+        private void DrawMeshCollider(MeshCollider coll)
+        {
+            var target = coll.transform;
 
-			if (drawWire)
-			{
-				Gizmos.color = wireGizmoColor;
-				Gizmos.DrawWireMesh(coll.sharedMesh, target.position, target.rotation, target.localScale * 1.01f);
-			}
+            if (drawWire)
+            {
+                Gizmos.color = wireGizmoColor;
+                Gizmos.DrawWireMesh(coll.sharedMesh, target.position, target.rotation, target.localScale * 1.01f);
+            }
 
-			if (drawFill)
-			{
-				Gizmos.color = fillGizmoColor;
-				Gizmos.DrawMesh(coll.sharedMesh, target.position, target.rotation, target.localScale * 1.01f);
-			}
-		}
+            if (drawFill)
+            {
+                Gizmos.color = fillGizmoColor;
+                Gizmos.DrawMesh(coll.sharedMesh, target.position, target.rotation, target.localScale * 1.01f);
+            }
+        }
 
 #endif
 
@@ -345,31 +345,31 @@ namespace ReunionMovement.Common.Util
 
 #if UNITY_PHYSICS_ENABLED
             if (boxColliders != null)
-			{
-				foreach (var box in boxColliders)
-				{
-					if (box == null) continue;
-					DrawBoxCollider(box);
-				}
-			}
+            {
+                foreach (var box in boxColliders)
+                {
+                    if (box == null) continue;
+                    DrawBoxCollider(box);
+                }
+            }
 
-			if (sphereColliders != null)
-			{
-				foreach (var sphere in sphereColliders)
-				{
-					if (sphere == null) continue;
-					DrawSphereCollider(sphere);
-				}
-			}
+            if (sphereColliders != null)
+            {
+                foreach (var sphere in sphereColliders)
+                {
+                    if (sphere == null) continue;
+                    DrawSphereCollider(sphere);
+                }
+            }
 
-			if (meshColliders != null)
-			{
-				foreach (var mesh in meshColliders)
-				{
-					if (mesh == null) continue;
-					DrawMeshCollider(mesh);
-				}
-			}
+            if (meshColliders != null)
+            {
+                foreach (var mesh in meshColliders)
+                {
+                    if (mesh == null) continue;
+                    DrawMeshCollider(mesh);
+                }
+            }
 #endif
         }
 
@@ -507,6 +507,8 @@ namespace ReunionMovement.Common.Util
 #endif
     }
 
+#if UNITY_EDITOR
+
     [CustomEditor(typeof(ColliderGizmo)), CanEditMultipleObjects]
     public class ColliderGizmoEditor : Editor
     {
@@ -635,7 +637,7 @@ namespace ReunionMovement.Common.Util
             if (includeChilds.boolValue)
             {
 #if UNITY_PHYSICS_ENABLED
-				result += target.gameObject.GetComponentsInChildren<Collider>().Length;
+                result += target.gameObject.GetComponentsInChildren<Collider>().Length;
 #endif
 #if UNITY_PHYSICS2D_ENABLED
 				result += _target.gameObject.GetComponentsInChildren<Collider2D>().Length;
@@ -644,7 +646,7 @@ namespace ReunionMovement.Common.Util
             }
 
 #if UNITY_PHYSICS_ENABLED
-			result += target.gameObject.GetComponents<Collider>().Length;
+            result += target.gameObject.GetComponents<Collider>().Length;
 #endif
 #if UNITY_PHYSICS2D_ENABLED
 			result += _target.gameObject.GetComponents<Collider2D>().Length;
@@ -652,4 +654,5 @@ namespace ReunionMovement.Common.Util
             return result;
         }
     }
+#endif
 }
