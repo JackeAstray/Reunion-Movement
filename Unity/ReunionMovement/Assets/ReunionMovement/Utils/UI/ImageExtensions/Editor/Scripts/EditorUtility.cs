@@ -137,7 +137,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
         /// <returns></returns>
         internal static string FindImageExtensionsRootDirectory()
         {
-            string path = "Assets/Resources/UI";
+            string path = "Assets/ReunionMovement/Resources/UI";
 
             if (string.IsNullOrEmpty(path))
             {
