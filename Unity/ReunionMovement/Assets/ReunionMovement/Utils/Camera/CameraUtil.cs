@@ -11,14 +11,19 @@ namespace ReunionMovement.Common.Util
     /// </summary>
     public class CameraUtil : MonoBehaviour
     {
+        #region 目标
         // 目标对象
         public Transform targetPos;
         // 目标对象(原始)
         public Transform targetPosOriginal;
+        #endregion
 
         #region 摄像机移动
         // 摄像机
         public Camera csmoCamera { get; private set; }
+
+        [Space(10)]
+
         // 移动速度
         public float csmoCameraSpeed = 50;
         // 如果不为空，摄像机将限制在该盒子碰撞器内
@@ -29,9 +34,19 @@ namespace ReunionMovement.Common.Util
         private RaycastBase raycastBase;
         // 是否检查鼠标是否在UI上
         public bool checkPointerOverUI = true;
-
-        // 射线检测层
+        // 当前摄像机距离
+        private float currentDistance;
+        // 鼠标点击射线检测层
         public LayerMask layerMask;
+        #endregion
+
+        [Space(10)]
+
+        #region 遮挡物检测
+        // 是否启用遮挡物检测
+        public bool enableObstructionCheck = true;
+        // 遮挡物层
+        public LayerMask obstructionMask;
         #endregion
 
         [Space(10)]
@@ -53,7 +68,6 @@ namespace ReunionMovement.Common.Util
         public float minRot = -90f;                         //最小旋转角度
         public float distance = 30f;                        //默认距离
         Quaternion destRot = Quaternion.identity;
-        private Vector3 relativePosition = Vector3.zero;    //相对位置
         #endregion
 
         [Space(10)]
@@ -92,6 +106,7 @@ namespace ReunionMovement.Common.Util
             }
 
             raycastBase = new RaycastBase(layerMask, csmoCamera);
+            currentDistance = distance;
         }
 
         void Update()
@@ -304,11 +319,34 @@ namespace ReunionMovement.Common.Util
             offsetDistance = Mathf.MoveTowards(offsetDistance, distance, Time.deltaTime * zoomSpeed);
 
             Vector3 target = targetPos != null ? targetPos.position : Vector3.zero;
-            relativePosition = (target + (Vector3.up * offsetHeight)) +
-                               (csmoCamera.transform.rotation * (Vector3.forward * -offsetDistance)) +
-                               (csmoCamera.transform.right * lateralOffset);
+            Vector3 desiredCameraPos = (target + (Vector3.up * offsetHeight)) +
+                                      (csmoCamera.transform.rotation * (Vector3.forward * -offsetDistance)) +
+                                      (csmoCamera.transform.right * lateralOffset);
 
-            csmoCamera.transform.position = relativePosition;
+            if (enableObstructionCheck)
+            {
+                // 遮挡检测
+                Vector3 direction = desiredCameraPos - target;
+                float desiredDistance = direction.magnitude;
+                Ray ray = new Ray(target, direction.normalized);
+                RaycastHit hit;
+                if (Physics.Raycast(ray, out hit, desiredDistance, obstructionMask))
+                {
+                    currentDistance = hit.distance - 0.2f; // 0.2f为缓冲距离，防止摄像机贴面
+                    currentDistance = Mathf.Clamp(currentDistance, minDistance, desiredDistance);
+                }
+                else
+                {
+                    currentDistance = Mathf.MoveTowards(currentDistance, offsetDistance, Time.deltaTime * zoomSpeed);
+                }
+            }
+            else
+            {
+                currentDistance = Mathf.MoveTowards(currentDistance, offsetDistance, Time.deltaTime * zoomSpeed);
+            }
+
+            // 重新计算摄像机位置
+            csmoCamera.transform.position = target + (csmoCamera.transform.rotation * (Vector3.back * currentDistance)) + (csmoCamera.transform.right * lateralOffset) + (Vector3.up * offsetHeight);
         }
 
         #region 公开方法
