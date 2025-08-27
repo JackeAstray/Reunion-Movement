@@ -2,26 +2,32 @@
 Unity Game Framework | Unity游戏框架
 Unity Version 6000.1.10f1
 
-注意：该框架只支持 New Input System
-Note: This framework only supports New Input System
+注意：该框架只支持 New Input System<br>
+Note: This framework only supports New Input System<br>
 
-说明：此项目是重构的LLAFramework，由于LLAFramework有太多的多余代码所以我打算从新重构该项目。
-Describe：This project is a refactored LLAFramework, and due to the excessive amount of redundant code in LLAFramework, I plan to refactor the project again.
+说明：此项目是重构的LLAFramework，由于LLAFramework有太多的多余代码所以我打算从新重构该项目。<br>
+Describe：This project is a refactored LLAFramework, and due to the excessive amount of redundant code in LLAFramework, I plan to refactor the project again.<br>
 
 - [Catalogue](#Catalogue)
 - [Thanks](#Thanks)
 
+## Example：
+项目的例子在Assets->ReunionMovement->Scenes->Example中。<br>
+The example of the project can be found in Assets ->ReunionMovement ->Scenes ->Example.
+
 ## Catalogue：<a name="Catalogue"></a>
-Asset->ReunionMovement-|3rd <br>
-                      -|Common <br>
-                      -|Core <br>
-                      -|Editor <br>
-                      -|Fonts <br>
-                      -|GenerateScript <br>
-                      -|Plugins <br>
-                      -|Resources <br>
-                      -|Scenes <br>
-                      -|Utils <br>
+- Assets
+  - ReunionMovement
+    - 3rd
+    - Common
+    - Core
+    - Editor
+    - Fonts
+    - GenerateScript
+    - Plugins
+    - Resources
+    - Scenes
+    - Utils
 
 ## Thanks：<a name="Thanks"></a>
 
