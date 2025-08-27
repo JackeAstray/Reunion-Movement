@@ -12,7 +12,7 @@ Describe：This project is a refactored LLAFramework, and due to the excessive a
 - [Thanks](#Thanks)
 
 ## Catalogue：<a name="Catalogue"></a>
-Asset-|ReunionMovement-|3rd<br>
+Asset->ReunionMovement-|3rd<br>
                       -|Common<br>
                       -|Core<br>
                       -|Editor<br>
