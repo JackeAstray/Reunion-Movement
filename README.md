@@ -12,16 +12,16 @@ Describe：This project is a refactored LLAFramework, and due to the excessive a
 - [Thanks](#Thanks)
 
 ## Catalogue：<a name="Catalogue"></a>
-Asset->ReunionMovement-|3rd<br>
-                      -|Common<br>
-                      -|Core<br>
-                      -|Editor<br>
-                      -|Fonts<br>
-                      -|GenerateScript<br>
-                      -|Plugins<br>
-                      -|Resources<br>
-                      -|Scenes<br>
-                      -|Utils<br>
+Asset->ReunionMovement-|3rd <br>
+                      -|Common <br>
+                      -|Core <br>
+                      -|Editor <br>
+                      -|Fonts <br>
+                      -|GenerateScript <br>
+                      -|Plugins <br>
+                      -|Resources <br>
+                      -|Scenes <br>
+                      -|Utils <br>
 
 ## Thanks：<a name="Thanks"></a>
 
