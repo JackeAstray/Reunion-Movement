@@ -45,12 +45,26 @@ namespace ReunionMovement.Common.Util.Download
         /// </summary>
         public void ClearData()
         {
+            foreach (var tex in imageCache.Values)
+            {
+                if (tex != null)
+                {
+                    UnityEngine.Object.Destroy(tex);
+                }
+            }
             imageCache.Clear();
             Log.Debug("DownloadManagerModule 清除数据");
         }
 
         public void OnDestroy()
         {
+            foreach (var tex in imageCache.Values)
+            {
+                if (tex != null)
+                {
+                    UnityEngine.Object.Destroy(tex);
+                }
+            }
             imageCache.Clear();
             mimeTypeToExtension.Clear();
         }
@@ -64,53 +78,40 @@ namespace ReunionMovement.Common.Util.Download
         /// <param name="suffix"></param>
         public void DownloadImage_Http(string url, Action<float> onProgress, Action<Texture2D> onComplete)
         {
-            if (imageCache.TryGetValue(url, out Texture2D cachedTexture))
+            // 1. 内存查找
+            if (imageCache.TryGetValue(url, out Texture2D cachedTexture) && cachedTexture != null)
             {
                 onComplete?.Invoke(cachedTexture);
                 return;
             }
 
+            // 2. 本地查找
             string localPath = PathUtil.GetLocalFilePath(url);
-
-            if (TryLoadFromLocal(localPath, out Texture2D texture))
+            if (TryLoadFromLocal(localPath, out Texture2D localTexture) && localTexture != null)
             {
-                Log.Debug($"从本地加载图片成功: {localPath}");
-                imageCache[url] = texture;
-                onComplete?.Invoke(texture);
+                // 加入内存缓存
+                imageCache[url] = localTexture;
+                onComplete?.Invoke(localTexture);
+                return;
             }
-            else
-            {
-                HttpMgr.GetTexture(url)
-                    .OnDownloadProgress(onProgress)
-                    .OnSuccess(response =>
-                    {
-                        if (response.Texture != null)
-                        {
-                            imageCache[url] = response.Texture;
-                            SaveToLocal(response.Texture, localPath);
-                            onComplete?.Invoke(response.Texture);
-                        }
-                    })
-                    .OnError(error => Log.Error($"下载图片失败: {error}"))
-                    .Send();
-            }
-        }
 
-        /// <summary>
-        /// 下载文件（Http方式）
-        /// </summary>
-        /// <param name="url"></param>
-        /// <param name="onProgress"></param>
-        /// <param name="onComplete"></param>
-        public void DownloadFile_Http(string url, Action<float> onProgress, Action<HttpResponse> onComplete)
-        {
-            string fileName = FileOperationUtil.GetFileName(url);
-            string localPath = Path.Combine(PathUtil.GetLocalPath(DownloadType.PersistentFile), fileName);
-
-            HttpMgr.Get(url)
+            // 3. 网络下载
+            HttpMgr.GetTexture(url)
                 .OnDownloadProgress(onProgress)
-                .OnSuccess(onComplete)
-                .OnError(error => Log.Error($"下载文件失败: {error}"))
+                .OnSuccess(response =>
+                {
+                    if (response.Texture != null)
+                    {
+                        if (imageCache.TryGetValue(url, out Texture2D oldTex) && oldTex != null)
+                        {
+                            UnityEngine.Object.Destroy(oldTex);
+                        }
+                        imageCache[url] = response.Texture;
+                        SaveToLocal(response.Texture, localPath);
+                        onComplete?.Invoke(response.Texture);
+                    }
+                })
+                .OnError(error => Log.Error($"下载图片失败: {error}"))
                 .Send();
         }
 

@@ -19,8 +19,9 @@ namespace ReunionMovement.Common.Util.HttpService
         private Dictionary<string, string> superHeaders;
         private Dictionary<IHttpRequest, Coroutine> httpRequests;
 
-        public void Start()
+        public new void Awake()
         {
+            base.Awake();
             Init(new UnityHttpService());
         }
 
