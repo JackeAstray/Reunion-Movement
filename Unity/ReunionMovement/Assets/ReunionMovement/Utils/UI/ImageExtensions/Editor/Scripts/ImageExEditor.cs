@@ -14,7 +14,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
     public class ImageExEditor : ImageEditor
     {
         private SerializedProperty spSprite;
-        private SerializedProperty spCircle, spTriangle, spRectangle, spPentagon, spHexagon, spNStarPolygon, spHeart, spBlobbyCross, spSquircle, spNTriangleRounded;
+        private SerializedProperty spCircle, spTriangle, spRectangle, spPentagon, spHexagon, spChamferBox, spParallelogram, spNStarPolygon, spHeart, spBlobbyCross, spSquircle, spNTriangleRounded;
         private SerializedProperty spPreserveAspect;
         private SerializedProperty spFillMethod, spFillOrigin, spFillAmount, spFillClockwise;
         private SerializedProperty spAlphaThreshold;
@@ -68,6 +68,8 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             spTriangle = serializedObject.FindProperty("triangle");
             spPentagon = serializedObject.FindProperty("pentagon");
             spHexagon = serializedObject.FindProperty("hexagon");
+            spChamferBox = serializedObject.FindProperty("chamferBox");
+            spParallelogram = serializedObject.FindProperty("parallelogram");
             spNStarPolygon = serializedObject.FindProperty("nStarPolygon");
             spHeart = serializedObject.FindProperty("heart");
             spBlobbyCross = serializedObject.FindProperty("blobbyCross");
@@ -111,6 +113,12 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                             break;
                         case DrawShape.Hexagon:
                             EditorGUILayout.PropertyField(spHexagon);
+                            break;
+                        case DrawShape.ChamferBox:
+                            EditorGUILayout.PropertyField(spChamferBox);
+                            break;
+                        case DrawShape.Parallelogram:
+                            EditorGUILayout.PropertyField(spParallelogram);
                             break;
                         case DrawShape.NStarPolygon:
                             EditorGUILayout.PropertyField(spNStarPolygon);
@@ -201,7 +209,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
 
             line.width = labelWidth;
             EditorGUI.LabelField(line, "线条");
-            //Rect dragZone = line;
+            Rect dragZone = line;
             line.x += labelWidth;
             line.width = fieldWidth;
             EditorGUI.BeginChangeCheck();
@@ -217,6 +225,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             line.x += fieldWidth + 10;
             line.width = labelWidth;
             EditorGUI.LabelField(line, "衰减");
+            dragZone = line;
             line.x += labelWidth;
             line.width = fieldWidth;
 
@@ -226,6 +235,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                 falloff = FloatFieldDraggable.DraggableFloatField(line, spFalloffDistance.floatValue);
                 EditorGUI.showMixedValue = false;
             }
+
             if (EditorGUI.EndChangeCheck())
             {
                 spFalloffDistance.floatValue = falloff;
@@ -234,6 +244,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             line.x = r.x;
             line.width = labelWidth;
             EditorGUI.LabelField(line, "轮廓宽度");
+            dragZone = line;
             line.x += labelWidth;
             line.width = fieldWidth;
             EditorGUI.BeginChangeCheck();
@@ -249,7 +260,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             line.x += fieldWidth + 10;
             line.width = labelWidth;
             EditorGUI.LabelField(line, "轮廓颜色");
-            //dragZone = line;
+            dragZone = line;
             line.width = fieldWidth;
             line.x += labelWidth;
             EditorGUI.BeginChangeCheck();
@@ -290,7 +301,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                 line.x += fieldWidth + 10;
                 line.width = labelWidth;
                 EditorGUI.LabelField(line, "自定义时间");
-                //dragZone = line;
+                dragZone = line;
                 line.width = fieldWidth;
                 line.x += labelWidth;
                 EditorGUI.BeginChangeCheck();
@@ -346,7 +357,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             line.width = labelWidth - 10;
             EditorGUI.BeginDisabledGroup(spConstrainRotation.boolValue);
             {
-                //Rect dragZone = line;
+                Rect dragZone = line;
                 EditorGUI.LabelField(line, "角度");
                 line.x = r.x + labelWidth;
                 line.width = r.width - labelWidth - 148;
