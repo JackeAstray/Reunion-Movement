@@ -10,29 +10,28 @@ namespace ReunionMovement.Common.Util
     public class ObjectSpawnPool : MonoBehaviour
     {
         private GameObject spawnTem;
-        // 限制对象数量
         private int limit = 100;
-        // 当前生成的对象数量
         private int currentCount = 0;
         private Queue<GameObject> objectQueue = new Queue<GameObject>();
         private Action<GameObject> onSpawn;
         private Action<GameObject> onDespawn;
 
         /// <summary>
-        /// 对象数量
+        /// 当前池中可用对象数量
         /// </summary>
-        public int Count
-        {
-            get
-            {
-                return objectQueue.Count;
-            }
-        }
+        public int Count => objectQueue.Count;
 
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        /// <param name="spawnTem"></param>
+        /// <param name="limit"></param>
+        /// <param name="onSpawn"></param>
+        /// <param name="onDespawn"></param>
         public ObjectSpawnPool(GameObject spawnTem, int limit, Action<GameObject> onSpawn, Action<GameObject> onDespawn)
         {
             this.spawnTem = spawnTem;
-            this.limit = limit;
+            this.limit = limit > 0 ? limit : 100;
             this.onSpawn = onSpawn;
             this.onDespawn = onDespawn;
         }
@@ -40,61 +39,54 @@ namespace ReunionMovement.Common.Util
         /// <summary>
         /// 生成对象
         /// </summary>
-        /// <returns>对象</returns>
         public GameObject Spawn()
         {
-            GameObject obj;
-            if (currentCount >= limit && objectQueue.Count > 0)
+            GameObject obj = null;
+            if (objectQueue.Count > 0)
             {
                 obj = objectQueue.Dequeue();
             }
-            else if (currentCount >= limit && objectQueue.Count <= 0)
+            else if (currentCount < limit)
+            {
+                obj = ObjectPoolMgr.CloneGameObject(spawnTem);
+                currentCount++;
+            }
+            else
             {
                 Log.Warning("已达到对象池限制。无法生成更多对象。");
                 return null;
             }
-            else if (objectQueue.Count > 0)
-            {
-                obj = objectQueue.Dequeue();
-            }
-            else
-            {
-                obj = ObjectPoolMgr.CloneGameObject(spawnTem);
-                // 增加当前生成的对象数量
-                currentCount++;
-            }
 
             obj.SetActive(true);
-
             onSpawn?.Invoke(obj);
-
             return obj;
         }
+
         /// <summary>
         /// 回收对象
         /// </summary>
-        /// <param name="obj">对象</param>
         public void Despawn(GameObject obj)
         {
-            if (obj == null)
-            {
-                return;
-            }
+            if (obj == null) return;
 
-            if (objectQueue.Count >= limit)
+            // 防止重复回收
+            if (objectQueue.Contains(obj))
+                return;
+
+            onDespawn?.Invoke(obj);
+            obj.SetActive(false);
+
+            if (objectQueue.Count < limit)
             {
-                onDespawn?.Invoke(obj);
-                ObjectPoolMgr.Kill(obj);
-                // 减少当前生成的对象数量
-                currentCount--;
+                objectQueue.Enqueue(obj);
             }
             else
             {
-                obj.SetActive(false);
-                onDespawn?.Invoke(obj);
-                objectQueue.Enqueue(obj);
+                ObjectPoolMgr.Kill(obj);
+                currentCount--;
             }
         }
+
         /// <summary>
         /// 清空所有对象
         /// </summary>
@@ -102,13 +94,26 @@ namespace ReunionMovement.Common.Util
         {
             while (objectQueue.Count > 0)
             {
-                GameObject obj = objectQueue.Dequeue();
+                var obj = objectQueue.Dequeue();
                 if (obj)
                 {
                     ObjectPoolMgr.Kill(obj);
-                    // 减少当前生成的对象数量
                     currentCount--;
                 }
+            }
+        }
+
+        /// <summary>
+        /// 预热对象池（可选）
+        /// </summary>
+        public void Prewarm(int count)
+        {
+            for (int i = 0; i < count && currentCount < limit; i++)
+            {
+                var obj = ObjectPoolMgr.CloneGameObject(spawnTem);
+                obj.SetActive(false);
+                objectQueue.Enqueue(obj);
+                currentCount++;
             }
         }
     }

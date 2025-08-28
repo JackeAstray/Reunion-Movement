@@ -11,24 +11,13 @@ namespace ReunionMovement.Common.Util
     /// </summary>
     public class ObjectPoolMgr : SingletonMgr<ObjectPoolMgr>
     {
-        /// <summary>
-        /// 所有对象池
-        /// </summary>
         public Dictionary<string, ObjectSpawnPool> SpawnPools { get; private set; } = new Dictionary<string, ObjectSpawnPool>();
 
-        /// <summary>
-        /// 单个对象池上限【请勿在代码中修改】
-        /// </summary>
         [SerializeField] internal int Limit = 100;
 
         /// <summary>
         /// 注册对象池
         /// </summary>
-        /// <param name="name">对象池名称</param>
-        /// <param name="spawnTem">对象模板</param>
-        /// <param name="onSpawn">对象生成时初始化委托</param>
-        /// <param name="onDespawn">对象回收时处理委托</param>
-        /// <param name="limit">对象池上限，等于0时，表示使用默认值</param>
         public void RegisterSpawnPool(string name, GameObject spawnTem, Action<GameObject> onSpawn = null, Action<GameObject> onDespawn = null, int limit = 0)
         {
             if (string.IsNullOrEmpty(name) || spawnTem == null)
@@ -38,7 +27,8 @@ namespace ReunionMovement.Common.Util
 
             if (!SpawnPools.ContainsKey(name))
             {
-                SpawnPools.Add(name, new ObjectSpawnPool(spawnTem, limit, onSpawn, onDespawn));
+                int poolLimit = limit > 0 ? limit : Limit;
+                SpawnPools.Add(name, new ObjectSpawnPool(spawnTem, poolLimit, onSpawn, onDespawn));
             }
             else
             {
@@ -46,25 +36,14 @@ namespace ReunionMovement.Common.Util
             }
         }
 
-        /// <summary>
-        /// 是否存在指定名称的对象池
-        /// </summary>
-        /// <param name="name">对象池名称</param>
-        /// <returns>是否存在</returns>
-        public bool IsExistSpawnPool(string name)
-        {
-            return SpawnPools.ContainsKey(name);
-        }
+        public bool IsExistSpawnPool(string name) => SpawnPools.ContainsKey(name);
 
-        /// <summary>
-        /// 移除已注册的对象池
-        /// </summary>
-        /// <param name="name">对象池名称</param>
         public void UnRegisterSpawnPool(string name)
         {
-            if (SpawnPools.ContainsKey(name))
+            if (SpawnPools.TryGetValue(name, out var pool))
             {
-                SpawnPools[name].Clear();
+                pool.Clear();
+                Destroy(pool);
                 SpawnPools.Remove(name);
             }
             else
@@ -73,52 +52,31 @@ namespace ReunionMovement.Common.Util
             }
         }
 
-        /// <summary>
-        /// 获取对象池中对象数量
-        /// </summary>
-        /// <param name="name">对象池名称</param>
-        /// <returns>对象数量</returns>
         public int GetPoolCount(string name)
         {
-            if (SpawnPools.ContainsKey(name))
+            if (SpawnPools.TryGetValue(name, out var pool))
             {
-                return SpawnPools[name].Count;
+                return pool.Count;
             }
-            else
-            {
-                Log.Warning($"获取对象数量失败：不存在对象池 {name} ！");
-                return 0;
-            }
+            Log.Warning($"获取对象数量失败：不存在对象池 {name} ！");
+            return 0;
         }
 
-        /// <summary>
-        /// 生成对象
-        /// </summary>
-        /// <param name="name">对象池名称</param>
-        /// <returns>对象</returns>
         public GameObject Spawn(string name)
         {
-            if (SpawnPools.ContainsKey(name))
+            if (SpawnPools.TryGetValue(name, out var pool))
             {
-                return SpawnPools[name].Spawn();
+                return pool.Spawn();
             }
-            else
-            {
-                Log.Error($"生成对象失败：不存在对象池 {name} ！");
-                return null;
-            }
+            Log.Error($"生成对象失败：不存在对象池 {name} ！");
+            return null;
         }
 
-        /// <summary>
-        /// 回收对象
-        /// </summary>
-        /// <param name="name">对象池名称</param>
-        /// <param name="target">对象</param>
         public void Despawn(string name, GameObject target)
         {
-            if (SpawnPools.ContainsKey(name))
+            if (SpawnPools.TryGetValue(name, out var pool))
             {
-                SpawnPools[name].Despawn(target);
+                pool.Despawn(target);
             }
             else
             {
@@ -126,21 +84,17 @@ namespace ReunionMovement.Common.Util
             }
         }
 
-        /// <summary>
-        /// 批量回收对象
-        /// </summary>
-        /// <param name="name">对象池名称</param>
-        /// <param name="targets">对象数组</param>
         public void Despawns(string name, GameObject[] targets)
         {
             if (targets == null)
-                return;
-
-            if (SpawnPools.ContainsKey(name))
             {
-                for (int i = 0; i < targets.Length; i++)
+                return;
+            }
+            if (SpawnPools.TryGetValue(name, out var pool))
+            {
+                foreach (var t in targets)
                 {
-                    SpawnPools[name].Despawn(targets[i]);
+                    pool.Despawn(t);
                 }
             }
             else
@@ -149,21 +103,17 @@ namespace ReunionMovement.Common.Util
             }
         }
 
-        /// <summary>
-        /// 批量回收对象
-        /// </summary>
-        /// <param name="name">对象池名称</param>
-        /// <param name="targets">对象集合</param>
         public void Despawns(string name, List<GameObject> targets)
         {
             if (targets == null)
-                return;
-
-            if (SpawnPools.ContainsKey(name))
             {
-                for (int i = 0; i < targets.Count; i++)
+                return;
+            }
+            if (SpawnPools.TryGetValue(name, out var pool))
+            {
+                foreach (var t in targets)
                 {
-                    SpawnPools[name].Despawn(targets[i]);
+                    pool.Despawn(t);
                 }
                 targets.Clear();
             }
@@ -173,15 +123,11 @@ namespace ReunionMovement.Common.Util
             }
         }
 
-        /// <summary>
-        /// 清空指定的对象池
-        /// </summary>
-        /// <param name="name">对象池名称</param>
         public void Clear(string name)
         {
-            if (SpawnPools.ContainsKey(name))
+            if (SpawnPools.TryGetValue(name, out var pool))
             {
-                SpawnPools[name].Clear();
+                pool.Clear();
             }
             else
             {
@@ -189,103 +135,85 @@ namespace ReunionMovement.Common.Util
             }
         }
 
-        /// <summary>
-        /// 清空所有对象池
-        /// </summary>
         public void ClearAll()
         {
-            foreach (var spawnPool in SpawnPools)
+            foreach (var pool in SpawnPools.Values)
             {
-                spawnPool.Value.Clear();
+                pool.Clear();
             }
         }
 
         #region 静态方法
 
-        /// <summary>
-        /// 克隆实例
-        /// </summary>
-        /// <typeparam name="T">实例类型</typeparam>
-        /// <param name="original">初始对象</param>
-        /// <returns>克隆的新对象</returns>
         public static T Clone<T>(T original) where T : Object
         {
+            if (original == null)
+            {
+                return null;
+            }
             return Instantiate(original);
         }
 
-        /// <summary>
-        /// 克隆实例
-        /// </summary>
-        /// <typeparam name="T">实例类型</typeparam>
-        /// <param name="original">初始对象</param>
-        /// <param name="position">新对象的位置</param>
-        /// <param name="rotation">新对象的旋转</param>
-        /// <returns>克隆的新对象</returns>
         public static T Clone<T>(T original, Vector3 position, Quaternion rotation) where T : Object
         {
+            if (original == null)
+            {
+                return null;
+            }
             return Instantiate(original, position, rotation);
         }
 
-        /// <summary>
-        /// 克隆实例
-        /// </summary>
-        /// <typeparam name="T">实例类型</typeparam>
-        /// <param name="original">初始对象</param>
-        /// <param name="position">新对象的位置</param>
-        /// <param name="rotation">新对象的旋转</param>
-        /// <param name="parent">新对象的父物体</param>
-        /// <returns>克隆的新对象</returns>
         public static T Clone<T>(T original, Vector3 position, Quaternion rotation, Transform parent) where T : Object
         {
+            if (original == null)
+            {
+                return null;
+            }
             return Instantiate(original, position, rotation, parent);
         }
 
-        /// <summary>
-        /// 克隆实例
-        /// </summary>
-        /// <typeparam name="T">实例类型</typeparam>
-        /// <param name="original">初始对象</param>
-        /// <param name="parent">新对象的父物体</param>
-        /// <returns>克隆的新对象</returns>
         public static T Clone<T>(T original, Transform parent) where T : Object
         {
+            if (original == null)
+            {
+                return null;
+            }
             return Instantiate(original, parent);
         }
 
-        /// <summary>
-        /// 克隆实例
-        /// </summary>
-        /// <typeparam name="T">实例类型</typeparam>
-        /// <param name="original">初始对象</param>
-        /// <param name="parent">新对象的父物体</param>
-        /// <param name="worldPositionStays">是否保持世界位置不变</param>
-        /// <returns>克隆的新对象</returns>
         public static T Clone<T>(T original, Transform parent, bool worldPositionStays) where T : Object
         {
+            if (original == null)
+            {
+                return null;
+            }
             return Instantiate(original, parent, worldPositionStays);
         }
 
-        /// <summary>
-        /// 克隆 GameObject 实例
-        /// </summary>
-        /// <param name="original">初始对象</param>
-        /// <param name="isUI">是否是UI对象</param>
-        /// <returns>克隆的新对象</returns>
         public static GameObject CloneGameObject(GameObject original, bool isUI = false)
         {
+            if (original == null)
+            {
+                return null;
+            }
             GameObject obj = Instantiate(original);
+            // 优化：由池管理激活
+            obj.SetActive(false);
             obj.transform.SetParent(original.transform.parent);
             if (isUI)
             {
                 RectTransform rect = obj.GetComponent<RectTransform>();
                 RectTransform originalRect = original.GetComponent<RectTransform>();
-                rect.anchoredPosition3D = originalRect.anchoredPosition3D;
-                rect.sizeDelta = originalRect.sizeDelta;
-                rect.offsetMin = originalRect.offsetMin;
-                rect.offsetMax = originalRect.offsetMax;
-                rect.anchorMin = originalRect.anchorMin;
-                rect.anchorMax = originalRect.anchorMax;
-                rect.pivot = originalRect.pivot;
+                if (rect != null && originalRect != null)
+                {
+                    rect.anchoredPosition3D = originalRect.anchoredPosition3D;
+                    rect.sizeDelta = originalRect.sizeDelta;
+                    rect.offsetMin = originalRect.offsetMin;
+                    rect.offsetMax = originalRect.offsetMax;
+                    rect.anchorMin = originalRect.anchorMin;
+                    rect.anchorMax = originalRect.anchorMax;
+                    rect.pivot = originalRect.pivot;
+                }
             }
             else
             {
@@ -293,53 +221,47 @@ namespace ReunionMovement.Common.Util
             }
             obj.transform.localRotation = original.transform.localRotation;
             obj.transform.localScale = original.transform.localScale;
-            obj.SetActive(true);
             return obj;
         }
 
-        /// <summary>
-        /// 杀死实例
-        /// </summary>
-        /// <param name="obj">实例对象</param>
         public static void Kill(Object obj)
         {
-            Destroy(obj);
+            if (obj != null)
+            {
+                Destroy(obj);
+            }
         }
 
-        /// <summary>
-        /// 立即杀死实例
-        /// </summary>
-        /// <param name="obj">实例对象</param>
         public static void KillImmediate(Object obj)
         {
-            DestroyImmediate(obj);
+            if (obj != null)
+            {
+                DestroyImmediate(obj);
+            }
         }
 
-        /// <summary>
-        /// 杀死一群实例
-        /// </summary>
-        /// <typeparam name="T">实例类型</typeparam>
-        /// <param name="objs">实例集合</param>
         public static void Kills<T>(List<T> objs) where T : Object
         {
+            if (objs == null) return;
             foreach (var obj in objs)
             {
-                GameObject.Destroy(obj);
+                if (obj != null)
+                {
+                    GameObject.Destroy(obj);
+                }
             }
-
             objs.Clear();
         }
 
-        /// <summary>
-        /// 杀死一群实例
-        /// </summary>
-        /// <typeparam name="T">实例类型</typeparam>
-        /// <param name="objs">实例数组</param>
         public static void Kills<T>(T[] objs) where T : Object
         {
+            if (objs == null) return;
             foreach (var obj in objs)
             {
-                GameObject.Destroy(obj);
+                if (obj != null)
+                {
+                    GameObject.Destroy(obj);
+                }
             }
         }
         #endregion
