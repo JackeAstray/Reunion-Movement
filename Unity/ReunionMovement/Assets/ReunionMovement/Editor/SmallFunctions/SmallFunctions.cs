@@ -16,6 +16,9 @@ namespace ReunionMovement.Common.Util.EditorTools
         public static List<string> scenesName = new List<string>();
         public static List<string> scenePaths = new List<string>();
 
+        /// <summary>
+        /// 小功能窗口
+        /// </summary>
         [MenuItem("工具箱/小功能", false, 100)]
         public static void SmallFunctionsWindow()
         {
@@ -51,6 +54,10 @@ namespace ReunionMovement.Common.Util.EditorTools
             }
         }
 
+        /// <summary>
+        /// 加载场景
+        /// </summary>
+        /// <param name="scenePaths"></param>
         public void LoadScene(string scenePaths)
         {
             EditorSceneManager.OpenScene(scenePaths, OpenSceneMode.Single);
@@ -74,6 +81,14 @@ namespace ReunionMovement.Common.Util.EditorTools
             CreateButtonGroup("UI波纹", "添加波纹效果（Image）", "移除波纹效果（UIRipple）", AddRippleEffect<Image, UIRipple>, RemoveRippleEffect<UIRipple>);
         }
 
+        /// <summary>
+        /// 创建按钮组
+        /// </summary>
+        /// <param name="label"></param>
+        /// <param name="button1Text"></param>
+        /// <param name="button2Text"></param>
+        /// <param name="button1Action"></param>
+        /// <param name="button2Action"></param>
         void CreateButtonGroup(string label, string button1Text, string button2Text, Action button1Action, Action button2Action)
         {
             GUILayout.Label(label);
@@ -89,6 +104,11 @@ namespace ReunionMovement.Common.Util.EditorTools
             GUILayout.EndHorizontal();
         }
 
+        /// <summary>
+        /// 为选中的对象添加波纹效果
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="U"></typeparam>
         void AddRippleEffect<T, U>() where T : Component where U : Component
         {
             GameObject selectedObject = Selection.activeGameObject;
@@ -110,6 +130,10 @@ namespace ReunionMovement.Common.Util.EditorTools
             }
         }
 
+        /// <summary>
+        /// 为选中的对象移除波纹效果
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
         void RemoveRippleEffect<T>() where T : Component
         {
             GameObject selectedObject = Selection.activeGameObject;
@@ -132,26 +156,43 @@ namespace ReunionMovement.Common.Util.EditorTools
             }
         }
 
+        /// <summary>
+        /// 创建日志组件
+        /// </summary>
         public static void CreateLogComponent()
         {
             CreateComponent<ScreenLogger>("ScreenLogger");
         }
 
+        /// <summary>
+        /// 关闭日志组件
+        /// </summary>
         public static void CloseLogComponent()
         {
             CloseComponent<ScreenLogger>();
         }
 
+        /// <summary>
+        /// 创建FPS组件
+        /// </summary>
         public static void CreateFPSComponent()
         {
             CreateComponent<FPSCounter>("FPSCounter");
         }
 
+        /// <summary>
+        /// 关闭FPS组件
+        /// </summary>
         public static void CloseFPSComponent()
         {
             CloseComponent<FPSCounter>();
         }
 
+        /// <summary>
+        /// 创建组件
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="name"></param>
         public static void CreateComponent<T>(string name) where T : Component
         {
             GameObject obj = GameObject.Find(name);
@@ -171,6 +212,10 @@ namespace ReunionMovement.Common.Util.EditorTools
             }
         }
 
+        /// <summary>
+        /// 关闭组件
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
         public static void CloseComponent<T>() where T : Component
         {
             GameObject[] objects = GameObject.FindObjectsByType<GameObject>(FindObjectsSortMode.InstanceID);
