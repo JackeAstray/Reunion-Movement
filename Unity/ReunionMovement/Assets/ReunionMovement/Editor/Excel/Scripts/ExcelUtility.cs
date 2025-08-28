@@ -12,6 +12,9 @@ using System.Text;
 
 namespace ReunionMovement.EditorTools
 {
+    /// <summary>
+    /// Excel工具类
+    /// </summary>
     public class ExcelUtility
     {
         /// <summary>
@@ -101,7 +104,6 @@ namespace ReunionMovement.EditorTools
         /// 转换为Json
         /// </summary>
         /// <param name="JsonPath">Json文件路径</param>
-        /// <param name="Header">表头行数</param>
         public async void ConvertToJson(string JsonPath)
         {
             var json = GetJson();
@@ -397,6 +399,8 @@ namespace ReunionMovement.EditorTools
         /// <summary>
         /// 转换为CSV
         /// </summary>
+        /// <param name="CSVPath"></param>
+        /// <param name="encoding"></param>
         public void ConvertToCSV(string CSVPath, Encoding encoding)
         {
             //判断Excel文件中是否存在数据表
@@ -442,7 +446,8 @@ namespace ReunionMovement.EditorTools
         /// <summary>
         /// 转换为lua
         /// </summary>
-        /// <param name="luaPath">lua文件路径</param>
+        /// <param name="luaPath"></param>
+        /// <param name="encoding"></param>
         public void ConvertToLua(string luaPath, Encoding encoding)
         {
             //判断Excel文件中是否存在数据表
@@ -516,6 +521,7 @@ namespace ReunionMovement.EditorTools
         /// <summary>
         /// 导出为Xml
         /// </summary>
+        /// <param name="XmlFile"></param>
         public void ConvertToXml(string XmlFile)
         {
             //判断Excel文件中是否存在数据表
