@@ -276,7 +276,7 @@ namespace ReunionMovement.Common.Util
                 Vector2 mousePosition = mouse.position.ReadValue();
                 if (raycastBase.CastRayFromScreenPoint(mousePosition, out RaycastHit hitInfo))
                 {
-                    Debug.Log("Hit: " + hitInfo.collider.name);
+                    Log.Debug("Hit: " + hitInfo.collider.name);
                 }
             }
 
@@ -287,7 +287,7 @@ namespace ReunionMovement.Common.Util
                 {
                     if (raycastBase.CastRayFromScreenPoint(t.screenPosition, out RaycastHit hitInfo))
                     {
-                        Debug.Log("Hit: " + hitInfo.collider.name);
+                        Log.Debug("Hit: " + hitInfo.collider.name);
                     }
                 }
             }

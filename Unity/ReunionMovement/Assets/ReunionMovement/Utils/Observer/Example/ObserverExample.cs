@@ -1,3 +1,4 @@
+using ReunionMovement.Common;
 using ReunionMovement.Common.Util;
 using UnityEngine;
 
@@ -20,7 +21,7 @@ namespace ReunionMovement.Example
         {
             if (args != null && args.Length > 0 && args[0] is int value)
             {
-                Debug.Log($"收到数值变化通知: {value}");
+                Log.Debug($"收到数值变化通知: {value}");
                 exampleValue = value;
             }
         }

@@ -233,7 +233,7 @@ namespace ReunionMovement.Common.Util.Coroutiner
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"Coroutine task {task.TaskId} threw an exception: {ex}");
+                    Log.Error($"Coroutine task {task.TaskId} threw an exception: {ex}");
                 }
                 finally
                 {
