@@ -21,11 +21,9 @@ The example of the project can be found in Assets ->ReunionMovement ->Scenes ->E
 Arrow：<br>
 ![演示](Screenshot/Arrow.gif)
 
+
 CameraUtil：<br>
-<video width="720" controls>
-  <source src="Screenshot/Camera.mp4" type="video/mp4">
-  您的浏览器不支持 video 标签，请下载后观看。
-</video>
+![演示](https://github.com/JackeAstray/Reunion-Movement/blob/main/Screenshot/Camera.mp4)
 
 ## Catalogue：<a name="Catalogue"></a>
 - Assets
