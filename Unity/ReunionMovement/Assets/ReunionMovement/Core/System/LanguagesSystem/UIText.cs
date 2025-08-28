@@ -27,7 +27,7 @@ namespace ReunionMovement.Core.Languages
             textComponent = GetComponent<Text>();
             if (tmpTextComponent == null && textComponent == null)
             {
-                Debug.LogError("UIText组件需要绑定TMP_Text或Text组件");
+                Log.Error("UIText组件需要绑定TMP_Text或Text组件");
                 return;
             }
             LanguagesSystem.Instance.RegisterObserver(this);
