@@ -19,10 +19,13 @@ Describe：This project is a refactored LLAFramework, and due to the excessive a
 The example of the project can be found in Assets ->ReunionMovement ->Scenes ->Example.
 
 Arrow：<br>
-![Arrow：](Screenshot/Arrow.gif)
+![演示](Screenshot/Arrow.gif)
 
 CameraUtil：<br>
-[![CameraUtil](Screenshot/Camera.png)](Screenshot/Camera.mp4)
+<video width="720" controls>
+  <source src="Screenshot/Camera.mp4" type="video/mp4">
+  您的浏览器不支持 video 标签，请下载后观看。
+</video>
 
 ## Catalogue：<a name="Catalogue"></a>
 - Assets
