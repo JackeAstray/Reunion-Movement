@@ -175,7 +175,7 @@ namespace ReunionMovement.Common.Util.StateMachine
         {
             if (currentState != null && !IsTransitionConditionsMet(newState))
             {
-                Debug.LogError($"无法从状态 {currentState.label} 转换到 {newState}，条件未满足。");
+                Log.Error($"无法从状态 {currentState.label} 转换到 {newState}，条件未满足。");
                 return;
             }
 
@@ -200,7 +200,7 @@ namespace ReunionMovement.Common.Util.StateMachine
             }
             catch (Exception ex)
             {
-                Debug.LogError($"状态转换时发生异常: {ex.Message}");
+                Log.Error($"状态转换时发生异常: {ex.Message}");
             }
         }
 

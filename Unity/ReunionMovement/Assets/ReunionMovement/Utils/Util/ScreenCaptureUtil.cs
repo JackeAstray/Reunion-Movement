@@ -51,7 +51,7 @@ namespace ReunionMovement.Common.Util
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[ScreenCaptureUtil] CaptureFullScreenAsync failed: {ex}");
+                Log.Error($"[ScreenCaptureUtil] CaptureFullScreenAsync failed: {ex}");
                 return null;
             }
         }
@@ -96,7 +96,7 @@ namespace ReunionMovement.Common.Util
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[ScreenCaptureUtil] CaptureAreaAsync failed: {ex}");
+                Log.Error($"[ScreenCaptureUtil] CaptureAreaAsync failed: {ex}");
                 return null;
             }
         }

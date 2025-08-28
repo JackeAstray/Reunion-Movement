@@ -22,7 +22,7 @@ namespace ReunionMovement.Common.Util
 
             if (!cameraObj)
             {
-                Debug.LogError("无摄像头可用!");
+                Log.Error("无摄像头可用!");
                 enabled = false;
                 return;
             }

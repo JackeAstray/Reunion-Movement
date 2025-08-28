@@ -135,8 +135,6 @@ namespace ReunionMovement.UI.ImageExtensions
                     break;
             }
 
-
-            //v.w = (v.w + v.y) / 2;
             var color32 = color;
             vh.Clear();
             vh.AddVert(new Vector3(v.x, v.y), color32, new Vector2(uv.x, uv.y));
@@ -184,7 +182,6 @@ namespace ReunionMovement.UI.ImageExtensions
                 default:
                     break;
             }
-
         }
 
         static readonly Vector2[] s_VertScratch = new Vector2[4];
@@ -239,7 +236,6 @@ namespace ReunionMovement.UI.ImageExtensions
             s_UVScratch[2] = new Vector2(inner.z, inner.w);
             s_UVScratch[3] = new Vector2(outer.z, outer.w);
 
-
             switch (MirrorType)
             {
                 case MirrorTypes.Horizontal:
@@ -282,7 +278,6 @@ namespace ReunionMovement.UI.ImageExtensions
 
                     int y2 = y + 1;
 
-
                     AddQuad(toFill,
                         new Vector2(s_VertScratch[x].x, s_VertScratch[y].y),
                         new Vector2(s_VertScratch[x2].x, s_VertScratch[y2].y),
@@ -304,7 +299,6 @@ namespace ReunionMovement.UI.ImageExtensions
             var size = sprite == null ? Vector2.zero : new Vector2(sprite.rect.width, sprite.rect.height);
 
             Rect r = GetPixelAdjustedRect();
-
 
             int spriteW = Mathf.RoundToInt(size.x);
             int spriteH = Mathf.RoundToInt(size.y);
@@ -338,8 +332,7 @@ namespace ReunionMovement.UI.ImageExtensions
                     r.x + r.width * v.x,
                     r.y + r.height * v.y,
                     r.x + r.width * v.z,
-                    r.y + r.height * v.w
-                    );
+                    r.y + r.height * v.w);
 
             return v;
         }
@@ -413,7 +406,6 @@ namespace ReunionMovement.UI.ImageExtensions
         /// <param name="uvMax"></param>
         static void AddQuad(VertexHelper vertexHelper, Vector2 posMin, Vector2 posMax, Color32 color, Vector2 uvMin, Vector2 uvMax)
         {
-            //Debug.Log($"posMin:{posMin},posMax:{posMax},uvMin:{uvMin},uvMax:{uvMax}");
             int startIndex = vertexHelper.currentVertCount;
 
             vertexHelper.AddVert(new Vector3(posMin.x, posMin.y, 0), color, new Vector2(uvMin.x, uvMin.y));
@@ -492,18 +484,19 @@ namespace ReunionMovement.UI.ImageExtensions
                     double nVertices = 0;
                     if (hasBorder)
                     {
-                        nVertices = (nTilesW + 2.0) * (nTilesH + 2.0) * 4.0; // 4 vertices per tile
+                        // 4 vertices per tile
+                        nVertices = (nTilesW + 2.0) * (nTilesH + 2.0) * 4.0;
                     }
                     else
                     {
-                        nVertices = nTilesW * nTilesH * 4.0; // 4 vertices per tile
+                        // 4 vertices per tile
+                        nVertices = nTilesW * nTilesH * 4.0;
                     }
 
                     if (nVertices > 65000.0)
                     {
-                        //Debug.LogError("Too many sprite tiles on Image \"" + name + "\". The tile size will be increased. To remove the limit on the number of tiles, convert the Sprite to an Advanced texture, remove the borders, clear the Packing tag and set the Wrap mode to Repeat.", this);
-
-                        double maxTiles = 65000.0 / 4.0; // Max number of vertices is 65000; 4 vertices per tile.
+                        // Max number of vertices is 65000; 4 vertices per tile.
+                        double maxTiles = 65000.0 / 4.0;
                         double imageRatio;
                         if (hasBorder)
                         {
@@ -535,14 +528,13 @@ namespace ReunionMovement.UI.ImageExtensions
                         // 边框上的纹理只在一个方向上重复
                         nTilesW = (long)Mathf.Ceil((xMax - xMin) / tileWidth);
                         nTilesH = (long)Mathf.Ceil((yMax - yMin) / tileHeight);
-                        double nVertices = (nTilesH + nTilesW + 2.0 /*corners*/) * 2.0 /*sides*/ * 4.0 /*vertices per tile*/;
+                        double nVertices = (nTilesH + nTilesW + 2.0) * 2.0 * 4.0;
                         if (nVertices > 65000.0)
                         {
-                            //Debug.LogError("Too many sprite tiles on Image \"" + name + "\". The tile size will be increased. To remove the limit on the number of tiles, convert the Sprite to an Advanced texture, remove the borders, clear the Packing tag and set the Wrap mode to Repeat.", this);
-
-                            double maxTiles = 65000.0 / 4.0; // 最大顶点数为65000；每个瓦片有4个顶点。
+                            // 最大顶点数为65000；每个瓦片有4个顶点。
+                            double maxTiles = 65000.0 / 4.0;
                             double imageRatio = (double)nTilesW / nTilesH;
-                            float targetTilesW = (float)((maxTiles - 4 /*corners*/) / (2 * (1.0 + imageRatio)));
+                            float targetTilesW = (float)((maxTiles - 4) / (2 * (1.0 + imageRatio)));
                             float targetTilesH = (float)(targetTilesW * imageRatio);
 
                             nTilesW = (long)Mathf.Floor(targetTilesW);
@@ -584,7 +576,7 @@ namespace ReunionMovement.UI.ImageExtensions
 
                             var uvMin1 = uvMin;
                             var clipped1 = clipped;
-                            //Debug.Log("i::" + i + "  j:::" + j);
+
                             switch (MirrorType)
                             {
                                 case MirrorTypes.Horizontal:
@@ -596,7 +588,7 @@ namespace ReunionMovement.UI.ImageExtensions
                                             offsetX = uvMax.x - (uvMax.x - uvMin.x) * (xMax - x1) / (x2e - x1);
                                         }
                                         uvMin1 = new Vector2(uvMax.x, uvMin.y);
-                                        //clipped1 = new Vector2(uvMin.x, clipped.y);
+
                                         clipped1 = new Vector2(offsetX, clipped.y);
                                     }
                                     break;
@@ -608,9 +600,9 @@ namespace ReunionMovement.UI.ImageExtensions
                                         {
                                             offsetY = uvMax.y - (uvMax.y - uvMin.y) * (yMax - y1) / (y2e - y1);
                                         }
-                                        //uvMin1 = new Vector2(uvMin.x, clipped.y);
+
                                         uvMin1 = new Vector2(uvMin.x, uvMax.y);
-                                        //clipped1 = new Vector2(clipped.x, uvMin.y);
+
                                         clipped1 = new Vector2(clipped.x, offsetY);
 
                                     }
@@ -618,7 +610,6 @@ namespace ReunionMovement.UI.ImageExtensions
                                 case MirrorTypes.Quarter:
                                     if (j % 2 == 1 && i % 2 == 1)
                                     {
-
                                         float offsetX = uvMin.x;
                                         if (x2e > xMax)
                                         {
@@ -641,9 +632,7 @@ namespace ReunionMovement.UI.ImageExtensions
                                         {
                                             offsetY = uvMax.y - (uvMax.y - uvMin.y) * (yMax - y1) / (y2e - y1);
                                         }
-                                        //uvMin1 = new Vector2(uvMin.x, clipped.y);
                                         uvMin1 = new Vector2(uvMin.x, uvMax.y);
-                                        //clipped1 = new Vector2(clipped.x, uvMin.y);
                                         clipped1 = new Vector2(clipped.x, offsetY);
                                     }
                                     else if (i % 2 == 1)
@@ -654,14 +643,12 @@ namespace ReunionMovement.UI.ImageExtensions
                                             offsetX = uvMax.x - (uvMax.x - uvMin.x) * (xMax - x1) / (x2e - x1);
                                         }
                                         uvMin1 = new Vector2(uvMax.x, uvMin.y);
-                                        //clipped1 = new Vector2(uvMin.x, clipped.y);
                                         clipped1 = new Vector2(offsetX, clipped.y);
                                     }
                                     break;
                                 default:
                                     break;
                             }
-
 
                             AddQuad(toFill, new Vector2(x1, y1) + rect.position, new Vector2(x2, y2) + rect.position, color, uvMin1, clipped1);
                         }

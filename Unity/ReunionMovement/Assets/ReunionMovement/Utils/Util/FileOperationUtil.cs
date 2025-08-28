@@ -184,7 +184,7 @@ namespace ReunionMovement.Common.Util
                         yield return www.SendWebRequest();
                         if (www.result != UnityWebRequest.Result.Success)
                         {
-                            Debug.Log($"复制文件失败：{www.error}");
+                            Log.Debug($"复制文件失败：{www.error}");
                         }
                         else
                         {

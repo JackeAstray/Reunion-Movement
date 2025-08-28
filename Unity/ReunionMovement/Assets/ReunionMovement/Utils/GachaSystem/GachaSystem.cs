@@ -272,15 +272,15 @@ namespace ReunionMovement.Common.Util
                 singlePullStarCount[item.starRating]++;
                 if (item.starRating == 5)
                 {
-                    Debug.Log($"<color=#ffd32a>第 {last5StarPullCount} 抽抽到了5星: {item.itemName}| 是否UP: {isLastPullUp}</color>");
+                    Log.Debug($"<color=#ffd32a>第 {last5StarPullCount} 抽抽到了5星: {item.itemName}| 是否UP: {isLastPullUp}</color>");
                 }
                 //else
                 //{
                 //    Debug.Log($"第 {i + 1} 抽: {item.itemName} | 星级: {item.starRating} | 是否UP: {isLastPullUp}");
                 //}
             }
-            Debug.Log($"单抽统计: 三星: {singlePullStarCount[3]} | 四星: {singlePullStarCount[4]} | 五星: {singlePullStarCount[5]}");
-            Debug.Log($"-------------------------");
+            Log.Debug($"单抽统计: 三星: {singlePullStarCount[3]} | 四星: {singlePullStarCount[4]} | 五星: {singlePullStarCount[5]}");
+            Log.Debug($"-------------------------");
 
             // 统计十连抽星级数量
             Dictionary<int, int> tenPullStarCount = new Dictionary<int, int> { { 3, 0 }, { 4, 0 }, { 5, 0 } };
@@ -292,7 +292,7 @@ namespace ReunionMovement.Common.Util
                     tenPullStarCount[item.starRating]++;
                     if (item.starRating == 5)
                     {
-                        Debug.Log($"<color=#ffd32a>第 {last5StarPullCount} 抽抽到了5星: {item.itemName}| 是否UP: {isLastPullUp}</color>");
+                        Log.Debug($"<color=#ffd32a>第 {last5StarPullCount} 抽抽到了5星: {item.itemName}| 是否UP: {isLastPullUp}</color>");
                     }
                     //else
                     //{
@@ -300,7 +300,7 @@ namespace ReunionMovement.Common.Util
                     //}
                 }
             }
-            Debug.Log($"十连抽统计: 三星: {tenPullStarCount[3]} | 四星: {tenPullStarCount[4]} | 五星: {tenPullStarCount[5]}");
+            Log.Debug($"十连抽统计: 三星: {tenPullStarCount[3]} | 四星: {tenPullStarCount[4]} | 五星: {tenPullStarCount[5]}");
         }
 
         [ContextMenu("TestPull1")]
@@ -314,15 +314,15 @@ namespace ReunionMovement.Common.Util
                 singlePullStarCount[item.starRating]++;
                 if (item.starRating == 5)
                 {
-                    Debug.Log($"<color=#ffd32a>第 {last5StarPullCount} 抽抽到了5星: {item.itemName}| 是否UP: {isLastPullUp}</color>");
+                    Log.Debug($"<color=#ffd32a>第 {last5StarPullCount} 抽抽到了5星: {item.itemName}| 是否UP: {isLastPullUp}</color>");
                 }
                 //else
                 //{
                 //    Debug.Log($"第 {i + 1} 抽: {item.itemName} | 星级: {item.starRating} | 是否UP: {isLastPullUp}");
                 //}
             }
-            Debug.Log($"单抽统计: 三星: {singlePullStarCount[3]} | 四星: {singlePullStarCount[4]} | 五星: {singlePullStarCount[5]}");
-            Debug.Log($"-------------------------");
+            Log.Debug($"单抽统计: 三星: {singlePullStarCount[3]} | 四星: {singlePullStarCount[4]} | 五星: {singlePullStarCount[5]}");
+            Log.Debug($"-------------------------");
         }
 
         [ContextMenu("TestPull10")]
@@ -338,7 +338,7 @@ namespace ReunionMovement.Common.Util
                     tenPullStarCount[item.starRating]++;
                     if (item.starRating == 5)
                     {
-                        Debug.Log($"<color=#ffd32a>第 {last5StarPullCount} 抽抽到了5星: {item.itemName}| 是否UP: {isLastPullUp}</color>");
+                        Log.Debug($"<color=#ffd32a>第 {last5StarPullCount} 抽抽到了5星: {item.itemName}| 是否UP: {isLastPullUp}</color>");
                     }
                     //else
                     //{
@@ -346,7 +346,7 @@ namespace ReunionMovement.Common.Util
                     //}
                 }
             }
-            Debug.Log($"十连抽统计: 三星: {tenPullStarCount[3]} | 四星: {tenPullStarCount[4]} | 五星: {tenPullStarCount[5]}");
+            Log.Debug($"十连抽统计: 三星: {tenPullStarCount[3]} | 四星: {tenPullStarCount[4]} | 五星: {tenPullStarCount[5]}");
         }
     }
 }

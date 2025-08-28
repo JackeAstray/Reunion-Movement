@@ -1,3 +1,4 @@
+using ReunionMovement.Common;
 using ReunionMovement.Common.Util;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -33,7 +34,7 @@ public class RaycastExample : MonoBehaviour
             Vector2 mousePosition = mouse.position.ReadValue();
             if (raycastBase.CastRayFromScreenPoint(mousePosition, out RaycastHit hitInfo))
             {
-                Debug.Log("Hit: " + hitInfo.collider.name);
+                Log.Debug("Hit: " + hitInfo.collider.name);
             }
         }
     }

@@ -1,3 +1,4 @@
+using ReunionMovement.Common;
 using ReunionMovement.UI.ButtonClick;
 using System.Collections;
 using System.Collections.Generic;
@@ -12,11 +13,11 @@ public class DoubleLongClickButton : MonoBehaviour
     {
         DoubleClickButton.onDoubleClick.AddListener(() =>
         {
-            Debug.Log("双击按钮");
+            Log.Debug("双击按钮");
         });
         LongClickButton.onLongClick.AddListener(() =>
         {
-            Debug.Log("长按按钮");
+            Log.Debug("长按按钮");
         });
     }
 }

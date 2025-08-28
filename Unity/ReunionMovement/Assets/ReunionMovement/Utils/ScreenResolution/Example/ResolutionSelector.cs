@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using ReunionMovement.Common.Util;
+using ReunionMovement.Common;
 
 namespace ReunionMovement.Example
 {
@@ -35,7 +36,7 @@ namespace ReunionMovement.Example
             if (GUILayout.Button("获取当前分辨率"))
             {
                 Resolution r = Screen.currentResolution;
-                Debug.Log("显示分辨率为 " + r.width + " x " + r.height);
+                Log.Debug("显示分辨率为 " + r.width + " x " + r.height);
             }
 
             GUILayout.EndArea();

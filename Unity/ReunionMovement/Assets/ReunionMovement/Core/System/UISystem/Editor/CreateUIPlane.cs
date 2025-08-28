@@ -297,7 +297,7 @@ namespace ReunionMovement.Common.Util.EditorTools
             EditorUtility.SetDirty(prefab);
 
             AssetDatabase.ImportAsset(uiPrefabPath, ImportAssetOptions.ForceSynchronousImport);
-            Debug.Log("Create UIWindowAsset to prfab: " + uiPrefabPath);
+            Log.Debug("Create UIWindowAsset to prfab: " + uiPrefabPath);
         }
 
         /// <summary>
