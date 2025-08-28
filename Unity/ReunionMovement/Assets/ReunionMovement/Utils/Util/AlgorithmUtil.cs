@@ -439,7 +439,7 @@ namespace ReunionMovement.Common.Util
         /// <param name="source">源数据集合</param>
         /// <param name="keySelector">键选择器</param>
         /// <returns>构建的字典</returns>
-        public static Dictionary<TKey, TValue>? BuildDictionary<TKey, TValue>(IEnumerable<TValue>? source, Func<TValue, TKey>? keySelector) where TKey : notnull
+        public static Dictionary<TKey, TValue> BuildDictionary<TKey, TValue>(IEnumerable<TValue> source, Func<TValue, TKey> keySelector) where TKey : notnull
         {
             if (source == null || keySelector == null)
             {
