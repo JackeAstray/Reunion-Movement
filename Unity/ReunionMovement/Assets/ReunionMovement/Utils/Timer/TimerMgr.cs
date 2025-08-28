@@ -10,11 +10,18 @@ namespace ReunionMovement.Common.Util.Timer
     /// <summary>
     /// 通用计时器管理器（用于管理多个计时器实例）
     /// </summary>
-    public class TimerMgr : MonoBehaviour
+    public class TimerMgr : SingletonMgr<TimerMgr>
     {
         private readonly List<Timer> timers = new List<Timer>();
 
-        // 创建并注册一个计时器
+        /// <summary>
+        /// 创建并注册一个计时器
+        /// </summary>
+        /// <param name="duration">持续时间</param>
+        /// <param name="isCountingDown">是否倒计时</param>
+        /// <param name="isLoop">是否循环</param>
+        /// <param name="maxLoop">最大循环次数</param>
+        /// <returns></returns>
         public Timer CreateTimer(float duration, bool isCountingDown = true, bool isLoop = false, int maxLoop = 0)
         {
             var timer = new Timer(duration, isCountingDown, isLoop, maxLoop);
@@ -22,7 +29,10 @@ namespace ReunionMovement.Common.Util.Timer
             return timer;
         }
 
-        // 移除计时器
+        /// <summary>
+        /// 移除计时器
+        /// </summary>
+        /// <param name="timer"></param>
         public void RemoveTimer(Timer timer)
         {
             timers.Remove(timer);
@@ -62,7 +72,9 @@ namespace ReunionMovement.Common.Util.Timer
             }
         }
 
-        // 更新所有计时器
+        /// <summary>
+        /// 更新所有计时器
+        /// </summary>
         private void Update()
         {
             // 用ToArray防止遍历时移除
@@ -77,7 +89,9 @@ namespace ReunionMovement.Common.Util.Timer
             }
         }
 
-        // 可选：清空所有计时器
+        /// <summary>
+        /// 可选：清空所有计时器
+        /// </summary>
         public void ClearAll()
         {
             timers.Clear();
@@ -87,28 +101,6 @@ namespace ReunionMovement.Common.Util.Timer
         {
             // 清理所有计时器
             ClearAll();
-        }
-
-        /// <summary>
-        /// 示例：创建一个计时器并注册事件
-        /// </summary>
-
-        [ContextMenu("Example")]
-        public void Example()
-        {
-            // 创建一个计时器，5秒后完成
-            Timer timer = CreateTimer(5f, true);
-            timer.OnCompleted += () => Debug.Log("Timer 1 completed!");
-            timer.OnTick += (elapsed) => Debug.Log($"1 Elapsed time: {elapsed} seconds");
-            // 启动计时器
-            timer.Start();
-
-            // 创建一个计时器，5秒后完成
-            Timer timer2 = CreateTimer(5f, false);
-            timer2.OnCompleted += () => Debug.Log("Timer 2 completed!");
-            timer2.OnTick += (elapsed) => Debug.Log($"2 Elapsed time: {elapsed} seconds");
-            // 启动计时器
-            timer2.Start();
         }
     }
 }

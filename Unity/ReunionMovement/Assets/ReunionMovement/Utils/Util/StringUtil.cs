@@ -135,7 +135,7 @@ namespace ReunionMovement.Common.Util
         /// <returns>分割后的字段</returns>
         public static string StringSplit(this string fullString, string[] separator, bool removeEmptyEntries, int subStringIndex)
         {
-            string[]? stringArray = null;
+            string[] stringArray = null;
             if (removeEmptyEntries)
             {
                 stringArray = fullString.Split(separator, StringSplitOptions.RemoveEmptyEntries);
