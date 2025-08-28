@@ -10,7 +10,7 @@ namespace ReunionMovement.Common.Util
     /// <summary>
     /// 碰撞器线框
     /// </summary>
-    public class ColliderGizmo : MonoBehaviour
+    public class ColliderUtil : MonoBehaviour
     {
 #if UNITY_EDITOR
         public Presets Preset;
@@ -185,7 +185,6 @@ namespace ReunionMovement.Common.Util
         }
 
         #endregion
-
 
         #region Drawers
 
@@ -509,7 +508,7 @@ namespace ReunionMovement.Common.Util
 
 #if UNITY_EDITOR
 
-    [CustomEditor(typeof(ColliderGizmo)), CanEditMultipleObjects]
+    [CustomEditor(typeof(ColliderUtil)), CanEditMultipleObjects]
     public class ColliderGizmoEditor : Editor
     {
         private SerializedProperty enabledProperty;
@@ -524,13 +523,13 @@ namespace ReunionMovement.Common.Util
 
         private SerializedProperty includeChilds;
 
-        private new ColliderGizmo target;
+        private new ColliderUtil target;
 
         private int collidersCount;
 
         private void OnEnable()
         {
-            target = base.target as ColliderGizmo;
+            target = base.target as ColliderUtil;
 
             enabledProperty = serializedObject.FindProperty("m_Enabled");
             alphaProperty = serializedObject.FindProperty("alpha");
@@ -560,12 +559,12 @@ namespace ReunionMovement.Common.Util
             EditorGUILayout.PropertyField(enabledProperty);
 
             EditorGUI.BeginChangeCheck();
-            target.Preset = (ColliderGizmo.Presets)EditorGUILayout.EnumPopup("Color Preset", target.Preset);
+            target.Preset = (ColliderUtil.Presets)EditorGUILayout.EnumPopup("Color Preset", target.Preset);
             if (EditorGUI.EndChangeCheck())
             {
                 foreach (var singleTarget in targets)
                 {
-                    var gizmo = (ColliderGizmo)singleTarget;
+                    var gizmo = (ColliderUtil)singleTarget;
                     gizmo.ChangePreset(target.Preset);
                     EditorUtility.SetDirty(gizmo);
                 }
@@ -605,7 +604,7 @@ namespace ReunionMovement.Common.Util
                 var customFillColor = serializedObject.FindProperty("customFillColor");
                 var customCenterColor = serializedObject.FindProperty("customCenterColor");
 
-                presetProp.enumValueIndex = (int)ColliderGizmo.Presets.Custom;
+                presetProp.enumValueIndex = (int)ColliderUtil.Presets.Custom;
                 customWireColor.colorValue = wireColorProperty.colorValue;
                 customFillColor.colorValue = fillColorProperty.colorValue;
                 customCenterColor.colorValue = centerColorProperty.colorValue;
