@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace ReunionMovement.Common.Util.EditorTools
 {
-    public class ColliderGizmoEditor
+    public class ColliderUtilEditor
     {
         // 导航网格
         private const string EnabledNavMesh = "UNITY_NAVMESH_ENABLED";
