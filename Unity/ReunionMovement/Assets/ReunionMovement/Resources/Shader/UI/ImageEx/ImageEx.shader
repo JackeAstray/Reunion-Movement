@@ -27,7 +27,7 @@ Shader "ReunionMovement/UI/Procedural Image"
         _HexagonTipRadius ("六边形顶部尖角的圆角半径", Vector) = (0, 0, 0, 0)
         _HexagonCornerRadius ("六边形六个角的圆角半径", Vector) = (0, 0, 0, 0)
         _ChamferBoxSize ("倒角盒子尺寸", Vector) = (0.8, 0.4, 0, 0)
-        _ChamferBoxRadius ("倒角半径", Float) = 0.15
+        _ChamferBoxRadius ("倒角半径", Vector) = (0.15, 0.15, 0.15, 0.15)
         _ParallelogramValue ("平行四边形值", Float) = 0
         _NStarPolygonSideCount ("星形多边形的边数", float) = 3
         _NStarPolygonInset ("星形多边形的内凹程度", float) = 2
@@ -195,7 +195,7 @@ Shader "ReunionMovement/UI/Procedural Image"
 
             #if CHAMFERBOX
                 float2 _ChamferBoxSize;
-                float _ChamferBoxRadius;
+                float4 _ChamferBoxRadius;
             #endif
 
             #if PARALLELOGRAM
@@ -522,22 +522,18 @@ Shader "ReunionMovement/UI/Procedural Image"
                 {
                     float2 texcoord = additionalData.xy;
                     float2 size = float2(additionalData.z, additionalData.w);
-
-                    // 归一化到中心
                     float2 p = (2.0 * texcoord - size) / size.y;
-
-                    // 动态倒角半径（可选：可加动画/时间参数）
-                    float chamfer = _ChamferBoxRadius;
-
-                    // box参数
                     float2 box = _ChamferBoxSize;
+                    float4 chamfer = _ChamferBoxRadius;
+                    chamfer = min(chamfer, float4(min(box.x, box.y), min(box.x, box.y), min(box.x, box.y), min(box.x, box.y)));
 
-                    // 防御性检查，防止倒角过大
-                    chamfer = min(chamfer, min(box.x, box.y));
+                    float big = 1e5;
+                    float d0 = (p.x <= 0 && p.y <= 0) ? sdChamferBox(p, box, chamfer.x) : big;                // 左下
+                    float d1 = (p.x >= 0 && p.y <= 0) ? sdChamferBox(float2(-p.x,  p.y), box, chamfer.y) : big; // 右下
+                    float d2 = (p.x >= 0 && p.y >= 0) ? sdChamferBox(float2(-p.x, -p.y), box, chamfer.z) : big; // 右上
+                    float d3 = (p.x <= 0 && p.y >= 0) ? sdChamferBox(float2( p.x, -p.y), box, chamfer.w) : big; // 左上
 
-                    float d = sdChamferBox(p, box, chamfer);
-
-                    // 放大SDF以适配像素空间
+                    float d = min(min(d0, d1), min(d2, d3));
                     return d * 80.0;
                 }
             #endif
