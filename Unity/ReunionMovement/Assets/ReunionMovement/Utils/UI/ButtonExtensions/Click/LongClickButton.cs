@@ -145,7 +145,7 @@ namespace ReunionMovement.UI.ButtonClick
         }
 
         /// <summary>
-        /// 长按未抬起协程
+        /// 长按协程
         /// </summary>
         private async void StartLongPressingCoroutine(CancellationToken token)
         {
@@ -156,7 +156,7 @@ namespace ReunionMovement.UI.ButtonClick
             }
             catch (TaskCanceledException)
             {
-                Log.Debug("[LongClickButton] 长按未抬起协程被取消。");
+                Log.Debug("[LongClickButton] 长按协程被取消。");
             }
         }
 
