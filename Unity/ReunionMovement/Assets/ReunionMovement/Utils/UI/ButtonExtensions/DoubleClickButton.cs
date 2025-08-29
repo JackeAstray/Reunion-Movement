@@ -1,3 +1,4 @@
+using ReunionMovement.Common;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -27,6 +28,7 @@ namespace ReunionMovement.UI.ButtonClick
         /// </summary>
         private void Press()
         {
+            Log.Debug($"[DoubleClickButton] 双击事件触发。");
             if (onDoubleClick != null)
             {
                 onDoubleClick.Invoke();
@@ -62,6 +64,7 @@ namespace ReunionMovement.UI.ButtonClick
             {
                 var intervalTime = secondTime - firstTime;
                 float milliSeconds = intervalTime.Seconds * 1000 + intervalTime.Milliseconds;
+                Log.Debug($"[DoubleClickButton] 两次点击间隔：{milliSeconds} 毫秒");
                 if (milliSeconds < 400)
                 {
                     Press();
