@@ -223,7 +223,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -600,7 +600,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -916,7 +916,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -1305,7 +1305,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -1597,7 +1597,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: -1
   nStarPolygon:
@@ -1763,7 +1763,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -1929,7 +1929,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -2095,7 +2095,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -2261,7 +2261,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -2584,7 +2584,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -2840,7 +2840,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -3082,7 +3082,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -3340,7 +3340,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0.5
+    chamferBoxRadius: {x: 0.35, y: 0.55, z: 0.55, w: 0.35}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -3506,7 +3506,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -3672,7 +3672,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0.5
+    chamferBoxRadius: {x: 0.35, y: 0.55, z: 0.55, w: 0.35}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -3883,7 +3883,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -4278,7 +4278,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -4519,7 +4519,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -4685,7 +4685,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -4926,7 +4926,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -5092,7 +5092,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -5258,7 +5258,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -5424,7 +5424,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -5665,7 +5665,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -5907,7 +5907,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:
@@ -6223,7 +6223,7 @@ MonoBehaviour:
     uniformTipRadius: 0
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
-    chamferBoxRadius: 0
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
   parallelogram:
     parallelogramValue: 0
   nStarPolygon:

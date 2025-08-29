@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using ReunionMovement.Common;
 using ReunionMovement.Common.Util.StateMachine;
+using UnityEngine.InputSystem;
 
 namespace ReunionMovement.Example
 {
@@ -32,10 +33,13 @@ namespace ReunionMovement.Example
             stateMachine.CurrentState = StateMachineExampleState.Idle;
             stateMachine.SetDefaultState(StateMachineExampleState.Idle);
 
-            stateMachine.AddTransitionCondition(StateMachineExampleState.Idle, StateMachineExampleState.Running, () => Input.GetKey(KeyCode.W));
-            stateMachine.AddTransitionCondition(StateMachineExampleState.Running, StateMachineExampleState.Idle, () => !Input.GetKey(KeyCode.W));
-            stateMachine.AddTransitionCondition(StateMachineExampleState.Running, StateMachineExampleState.Jumping, () => Input.GetKeyDown(KeyCode.Space));
-            stateMachine.AddTransitionCondition(StateMachineExampleState.Idle, StateMachineExampleState.Attacking, () => Input.GetMouseButtonDown(0));
+            stateMachine.AddTransitionCondition(StateMachineExampleState.Idle, StateMachineExampleState.Running, () => Keyboard.current.wKey.isPressed);
+            stateMachine.AddTransitionCondition(StateMachineExampleState.Running, StateMachineExampleState.Idle, () => !Keyboard.current.wKey.isPressed);
+            stateMachine.AddTransitionCondition(StateMachineExampleState.Running, StateMachineExampleState.Jumping, () => Keyboard.current.spaceKey.wasPressedThisFrame);
+            stateMachine.AddTransitionCondition(StateMachineExampleState.Idle, StateMachineExampleState.Attacking, () => Mouse.current.leftButton.wasPressedThisFrame);
+            stateMachine.AddTransitionCondition(StateMachineExampleState.Attacking, StateMachineExampleState.Attacking, () => Mouse.current.leftButton.wasPressedThisFrame);
+            stateMachine.AddTransitionCondition(StateMachineExampleState.Attacking, StateMachineExampleState.Running, () => Keyboard.current.wKey.isPressed);
+            stateMachine.AddTransitionCondition(StateMachineExampleState.Attacking, StateMachineExampleState.Idle, () => !Keyboard.current.wKey.isPressed);
         }
 
         void Update()
@@ -45,19 +49,24 @@ namespace ReunionMovement.Example
                 stateMachine.Update();
             }
 
-            if (Input.GetKeyDown(KeyCode.W))
+            if (Keyboard.current.wKey.wasPressedThisFrame)
             {
                 stateMachine.CurrentState = StateMachineExampleState.Running;
             }
 
-            if (Input.GetKeyUp(KeyCode.W))
+            if (Keyboard.current.wKey.wasReleasedThisFrame)
             {
                 stateMachine.CurrentState = StateMachineExampleState.Idle;
             }
 
-            if (Input.GetKey(KeyCode.Space))
+            if (Keyboard.current.spaceKey.isPressed)
             {
+                stateMachine.CurrentState = StateMachineExampleState.Jumping;
+            }
 
+            if (Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                stateMachine.CurrentState = StateMachineExampleState.Attacking;
             }
         }
 
