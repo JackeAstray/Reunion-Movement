@@ -45,10 +45,24 @@ namespace ReunionMovement.UI.ButtonClick
             set { longPressing = value; }
         }
 
+        // 进度条（需在Inspector拖拽绑定，类型为Image，FillMethod建议Horizontal/Vertical/Radial）
+        [SerializeField]
+        public Image progressBar;
+
         //按下时间
         private DateTime pressStartTime;
         //长按取消令牌
         private CancellationTokenSource longPressCts;
+        //进度条动画取消令牌
+        private CancellationTokenSource progressCts;
+        //长按判定时长
+        [SerializeField]
+        private float longPressDuration = 0.6f;
+        public float LongPressDuration
+        {
+            get => longPressDuration;
+            set => longPressDuration = value;
+        }
 
         /// <summary>
         /// 长按
@@ -71,7 +85,9 @@ namespace ReunionMovement.UI.ButtonClick
             {
                 pressStartTime = DateTime.Now;
                 longPressCts = new CancellationTokenSource();
+                progressCts = new CancellationTokenSource();
                 StartLongPressingCoroutine(longPressCts.Token);
+                StartProgressBarCoroutine(progressCts.Token);
             }
         }
 
@@ -84,11 +100,14 @@ namespace ReunionMovement.UI.ButtonClick
             base.OnPointerUp(eventData);
             longPressCts?.Cancel();
             longPressCts = null;
+            progressCts?.Cancel();
+            progressCts = null;
+            ResetProgressBar();
 
             if (pressStartTime != default)
             {
                 var pressDuration = DateTime.Now - pressStartTime;
-                if (pressDuration.TotalMilliseconds > 600)
+                if (pressDuration.TotalMilliseconds > longPressDuration * 1000f)
                 {
                     TriggerLongClick();
                 }
@@ -111,6 +130,9 @@ namespace ReunionMovement.UI.ButtonClick
             base.OnPointerExit(eventData);
             longPressCts?.Cancel();
             longPressCts = null;
+            progressCts?.Cancel();
+            progressCts = null;
+            ResetProgressBar();
             ResetPressTime();
         }
 
@@ -129,12 +151,44 @@ namespace ReunionMovement.UI.ButtonClick
         {
             try
             {
-                await Task.Delay(600, token);
+                await Task.Delay((int)(longPressDuration * 1000f), token);
                 onLongPressing?.Invoke();
             }
             catch (TaskCanceledException)
             {
                 Log.Debug("[LongClickButton] 长按未抬起协程被取消。");
+            }
+        }
+
+        /// <summary>
+        /// 进度条动画协程
+        /// </summary>
+        private async void StartProgressBarCoroutine(CancellationToken token)
+        {
+            if (progressBar == null) return;
+            progressBar.gameObject.SetActive(true);
+            progressBar.fillAmount = 0f;
+            float t = 0f;
+            while (t < longPressDuration)
+            {
+                if (token.IsCancellationRequested) break;
+                t += Time.unscaledDeltaTime;
+                progressBar.fillAmount = Mathf.Clamp01(t / longPressDuration);
+                await Task.Yield();
+            }
+            if (!token.IsCancellationRequested)
+                progressBar.fillAmount = 1f;
+        }
+
+        /// <summary>
+        /// 重置进度条
+        /// </summary>
+        private void ResetProgressBar()
+        {
+            if (progressBar != null)
+            {
+                progressBar.fillAmount = 0f;
+                progressBar.gameObject.SetActive(false);
             }
         }
     }
