@@ -2,6 +2,7 @@ using ReunionMovement.Common.Util;
 using ReunionMovement.Common;
 using System;
 using UnityEngine;
+using System.Threading.Tasks;
 
 namespace ReunionMovement.Core.UI
 {
@@ -10,7 +11,10 @@ namespace ReunionMovement.Core.UI
     /// </summary>
     public class UIController : MonoBehaviour
     {
+        // 界面名称，必须唯一
         public string UIName = "";
+        // 界面优先级，数值越大优先级越高
+        public int Priority { get; set; } = 0;
 
         #region 每个界面都有一个Canvas
         private Canvas canvas;
@@ -167,6 +171,45 @@ namespace ReunionMovement.Core.UI
         protected T GetFromArgs<T>(object[] openArgs, int offset, bool isLog = true)
         {
             return openArgs.Get<T>(offset, isLog);
+        }
+
+        /// <summary>
+        /// 淡入效果
+        /// </summary>
+        /// <param name="duration"></param>
+        /// <returns></returns>
+        public virtual async Task FadeIn(float duration = 0.2f)
+        {
+            var canvasGroup = gameObject.GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
+            canvasGroup.alpha = 0;
+            gameObject.SetActive(true);
+            float t = 0;
+            while (t < duration)
+            {
+                canvasGroup.alpha = t / duration;
+                t += Time.deltaTime;
+                await Task.Yield();
+            }
+            canvasGroup.alpha = 1;
+        }
+
+        /// <summary>
+        /// 淡出效果
+        /// </summary>
+        /// <param name="duration"></param>
+        /// <returns></returns>
+        public virtual async Task FadeOut(float duration = 0.2f)
+        {
+            var canvasGroup = gameObject.GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
+            float t = 0;
+            while (t < duration)
+            {
+                canvasGroup.alpha = 1 - t / duration;
+                t += Time.deltaTime;
+                await Task.Yield();
+            }
+            canvasGroup.alpha = 0;
+            gameObject.SetActive(false);
         }
         #endregion
     }

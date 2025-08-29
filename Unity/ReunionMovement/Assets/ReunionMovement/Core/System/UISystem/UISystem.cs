@@ -4,6 +4,7 @@ using ReunionMovement.Core.Resources;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -24,12 +25,15 @@ namespace ReunionMovement.Core.UI
         public double InitProgress { get { return initProgress; } }
         #endregion
 
+        // UI窗口对象池（用于复用UI窗口，减少资源消耗）
         private UIWindowPool windowPool = new UIWindowPool();
+        // UI加载状态缓存（用于跟踪每个UI窗口的加载状态）
         private Dictionary<string, UILoadState> uiStateCache = new Dictionary<string, UILoadState>();
 
-        public static Action<UIController> onInitEvent;
-        public static Action<UIController> onOpenEvent;
-        public static Action<UIController> onCloseEvent;
+        public static event Action<UIController> onInitEvent;
+        public static event Action<UIController> onOpenEvent;
+        public static event Action<UIController> onSetEvent;
+        public static event Action<UIController> onCloseEvent;
 
         public EventSystem EventSystem;
         public GameObject uiRoot { get; private set; }
@@ -283,8 +287,12 @@ namespace ReunionMovement.Core.UI
             if (!uiState.isOnInit)
             {
                 uiState.isOnInit = true;
-                if (uiState.uiWindow != null) uiState.uiWindow.OnInit();
+                if (uiState.uiWindow != null)
+                {
+                    uiState.uiWindow.OnInit();
+                }
             }
+
             OnOpen(uiState, args);
             return uiState;
         }
@@ -341,8 +349,7 @@ namespace ReunionMovement.Core.UI
 
                     Log.Debug(string.Format("OnOpen UI {0}, cost {1}", uiBase.gameObject.name, stopwatch.Elapsed.TotalMilliseconds * 0.001f));
 
-                    if (onOpenEvent != null)
-                        onOpenEvent(uiBase);
+                    onSetEvent?.Invoke(uiBase);
                 });
             }
         }
@@ -465,7 +472,129 @@ namespace ReunionMovement.Core.UI
         }
         #endregion
 
-        #region 工具
+        #region 公共方法 判断
+        /// <summary>
+        /// 是否被加载了
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public bool IsLoad(string name)
+        {
+            if (uiStateCache.ContainsKey(name))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// 是否已经打开
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public bool IsOpen(string name)
+        {
+            UIController uiBase = GetUIBase(name);
+            return uiBase == null ? false : uiBase.gameObject.activeSelf;
+        }
+
+        /// <summary>
+        /// 判断指定类型窗口是否已打开
+        /// </summary>
+        public bool IsOpen<T>() where T : UIController
+        {
+            string uiName = typeof(T).Name.Remove(0, 3);
+            return IsOpen(uiName);
+        }
+
+        /// <summary>
+        /// 判断窗口是否存在且可见
+        /// </summary>
+        /// <param name="uiName"></param>
+        /// <returns></returns>
+        public bool IsWindowVisible(string uiName)
+        {
+            var uiBase = GetUIBase(uiName);
+            return uiBase != null && uiBase.IsVisiable;
+        }
+        #endregion
+
+        #region 公共方法 Get
+        /// <summary>
+        /// 获取所有已打开窗口的名称
+        /// </summary>
+        /// <returns></returns>
+        public List<string> GetAllOpenWindowNames()
+        {
+            List<string> openNames = new List<string>();
+            foreach (var kv in uiStateCache)
+            {
+                if (IsOpen(kv.Key))
+                    openNames.Add(kv.Key);
+            }
+            return openNames;
+        }
+
+        /// <summary>
+        /// 获取所有已打开窗口的UIController实例
+        /// </summary>
+        /// <returns></returns>
+        public List<UIController> GetAllOpenWindows()
+        {
+            List<UIController> openWindows = new List<UIController>();
+            foreach (var kv in uiStateCache)
+            {
+                if (IsOpen(kv.Key) && kv.Value.uiWindow != null)
+                    openWindows.Add(kv.Value.uiWindow);
+            }
+            return openWindows;
+        }
+
+        /// <summary>
+        /// 根据名称模糊查找窗口
+        /// </summary>
+        /// <param name="partialName"></param>
+        /// <returns></returns>
+        public List<string> FindWindowsByName(string partialName)
+        {
+            var result = new List<string>();
+            foreach (var key in uiStateCache.Keys)
+            {
+                if (key.Contains(partialName))
+                    result.Add(key);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 获取指定类型的所有窗口名称
+        /// </summary>
+        /// <param name="panelType"></param>
+        /// <returns></returns>
+        public List<string> GetWindowNamesByPanelType(PanelType panelType)
+        {
+            var result = new List<string>();
+            foreach (var kv in uiStateCache)
+            {
+                if (kv.Value.uiWindow != null && kv.Value.uiWindow.WindowAsset.panelType == panelType)
+                    result.Add(kv.Key);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 获取UI控制器
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+
+        private UIController GetUIBase(string name)
+        {
+            return uiStateCache.TryGetValue(name, out var uiState) ? uiState.uiWindow : null;
+        }
+        #endregion
+
+        #region 公共方法 Set
         /// <summary>
         /// 切换 - 打开的隐藏，隐藏的打开
         /// </summary>
@@ -495,38 +624,28 @@ namespace ReunionMovement.Core.UI
         }
 
         /// <summary>
-        /// 是否被加载了
+        /// 根据UI名称设置窗口优先级，并重新排序
         /// </summary>
-        /// <param name="name"></param>
-        /// <returns></returns>
-        public bool IsLoad(string name)
+        /// <param name="uiName"></param>
+        /// <param name="priority"></param>
+        public void SetWindowPriority(string uiName, int priority)
         {
-            if (uiStateCache.ContainsKey(name))
-                return true;
-            return false;
+            var ui = GetUIBase(uiName);
+            if (ui != null)
+            {
+                ui.Priority = priority;
+                // 按优先级排序
+                var siblings = ui.transform.parent.Cast<Transform>().OrderBy(t => (t.GetComponent<UIController>()?.Priority) ?? 0).ToList();
+                for (int i = 0; i < siblings.Count; i++)
+                {
+                    siblings[i].SetSiblingIndex(i);
+                }
+            }
         }
 
-        /// <summary>
-        /// 是否已经打开
-        /// </summary>
-        /// <param name="name"></param>
-        /// <returns></returns>
-        public bool IsOpen(string name)
-        {
-            UIController uiBase = GetUIBase(name);
-            return uiBase == null ? false : uiBase.gameObject.activeSelf;
-        }
+        #endregion
 
-        /// <summary>
-        /// 获取UI控制器
-        /// </summary>
-        /// <param name="name"></param>
-        /// <returns></returns>
-
-        private UIController GetUIBase(string name)
-        {
-            return uiStateCache.TryGetValue(name, out var uiState) ? uiState.uiWindow : null;
-        }
+        #region 公共方法 工具
 
         /// <summary>
         /// 给打开的UI添加脚本（脚本从程序集查找）
@@ -555,6 +674,96 @@ namespace ReunionMovement.Core.UI
 
             Log.Debug($"{message}, cost {stopwatch.ElapsedMilliseconds * 0.001f}");
         }
+
+        /// <summary>
+        /// 关闭指定类型的所有窗口
+        /// </summary>
+        /// <param name="panelType"></param>
+        public void CloseAllWindowsByPanelType(PanelType panelType)
+        {
+            var toClose = new List<string>();
+            foreach (var kv in uiStateCache)
+            {
+                if (kv.Value.uiWindow != null && kv.Value.uiWindow.WindowAsset.panelType == panelType && IsOpen(kv.Key))
+                    toClose.Add(kv.Key);
+            }
+            foreach (var name in toClose)
+            {
+                CloseWindow(name);
+            }
+        }
+
+        /// <summary>
+        /// 关闭除指定窗口外的所有窗口
+        /// </summary>
+        public void CloseAllExcept(params string[] exceptNames)
+        {
+            HashSet<string> exceptSet = new HashSet<string>(exceptNames);
+            foreach (var kv in uiStateCache)
+            {
+                if (IsOpen(kv.Key) && !exceptSet.Contains(kv.Key))
+                {
+                    CloseWindow(kv.Key);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 将指定窗口置于同层级最前
+        /// </summary>
+        /// <param name="uiName"></param>
+        public void BringToFront(string uiName)
+        {
+            var uiBase = GetUIBase(uiName);
+            if (uiBase != null)
+            {
+                uiBase.transform.SetAsLastSibling();
+            }
+        }
+
+        /// <summary>
+        /// 隐藏所有窗口（可选按类型）
+        /// </summary>
+        /// <param name="panelType"></param>
+        public void HideAllWindows(PanelType? panelType = null)
+        {
+            foreach (var kv in uiStateCache)
+            {
+                if (kv.Value.uiWindow != null && (panelType == null || kv.Value.uiWindow.WindowAsset.panelType == panelType))
+                {
+                    kv.Value.uiWindow.IsVisiable = false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 显示所有窗口（可选按类型）
+        /// </summary>
+        /// <param name="panelType"></param>
+        public void ShowAllWindows(PanelType? panelType = null)
+        {
+            foreach (var kv in uiStateCache)
+            {
+                if (kv.Value.uiWindow != null && (panelType == null || kv.Value.uiWindow.WindowAsset.panelType == panelType))
+                {
+                    kv.Value.uiWindow.IsVisiable = true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 关闭指定组的所有窗口
+        /// </summary>
+        /// <param name="groupName"></param>
+        public void CloseGroup(string groupName)
+        {
+            foreach (var kv in uiStateCache)
+            {
+                if (kv.Value.uiWindow != null && kv.Value.uiWindow.WindowAsset.GroupName == groupName)
+                    CloseWindow(kv.Key);
+            }
+        }
+
         #endregion
     }
 
