@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using ReunionMovement.Common;
 
 namespace ReunionMovement.UI.ButtonClick
 {
@@ -54,6 +55,7 @@ namespace ReunionMovement.UI.ButtonClick
         /// </summary>
         private void TriggerLongClick()
         {
+            Log.Debug($"[LongClickButton] 长按事件触发。");
             onLongClick?.Invoke();
             ResetPressTime();
         }
@@ -132,7 +134,7 @@ namespace ReunionMovement.UI.ButtonClick
             }
             catch (TaskCanceledException)
             {
-                // Ignore the exception if the task is canceled
+                Log.Debug("[LongClickButton] 长按未抬起协程被取消。");
             }
         }
     }
