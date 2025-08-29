@@ -19,9 +19,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                 SerializedProperty chamferBoxRadius = property.FindPropertyRelative("chamferBoxRadius");
 
                 Vector2 chamferBoxSizeVectorValue = chamferBoxSize.vector2Value;
-                float chamferBoxSizeFloatValueX = chamferBoxSizeVectorValue.x;
-                float chamferBoxSizeFloatValueY = chamferBoxSizeVectorValue.y;
-                float chamferBoxRadiusValue = chamferBoxRadius.floatValue;
+                Vector4 chamferBoxRadiusValue = chamferBoxRadius.vector4Value;
 
                 Rect line = position;
                 line.height = EditorGUIUtility.singleLineHeight;
@@ -30,7 +28,6 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                 {
                     EditorGUI.showMixedValue = chamferBoxSize.hasMultipleDifferentValues;
                     chamferBoxSizeVectorValue = EditorGUI.Vector2Field(line, "宽高", chamferBoxSizeVectorValue);
-
                     EditorGUI.showMixedValue = false;
                 }
                 if (EditorGUI.EndChangeCheck())
@@ -42,12 +39,12 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                 EditorGUI.BeginChangeCheck();
                 {
                     EditorGUI.showMixedValue = chamferBoxRadius.hasMultipleDifferentValues;
-                    chamferBoxRadiusValue = EditorGUI.FloatField(line, "倒角值", chamferBoxRadiusValue);
+                    chamferBoxRadiusValue = EditorGUI.Vector4Field(line, "四角倒角", chamferBoxRadiusValue);
                     EditorGUI.showMixedValue = false;
                 }
                 if (EditorGUI.EndChangeCheck())
                 {
-                    chamferBoxRadius.floatValue = chamferBoxRadiusValue;
+                    chamferBoxRadius.vector4Value = chamferBoxRadiusValue;
                 }
             }
             EditorGUI.EndProperty();

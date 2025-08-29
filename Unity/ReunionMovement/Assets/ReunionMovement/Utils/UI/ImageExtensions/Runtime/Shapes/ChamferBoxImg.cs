@@ -14,7 +14,7 @@ namespace ReunionMovement.UI.ImageExtensions
     public class ChamferBoxImg : UIImgComponent
     {
         [SerializeField] private Vector2 chamferBoxSize;
-        [SerializeField] private float chamferBoxRadius;
+        [SerializeField] private Vector4 chamferBoxRadius;
 
         private static readonly int chamferBoxSize_Sp = Shader.PropertyToID("_ChamferBoxSize");
         private static readonly int chamferBoxRadius_Sp = Shader.PropertyToID("_ChamferBoxRadius");
@@ -39,15 +39,21 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
-        public float ChamferBoxRadius
+        public Vector4 ChamferBoxRadius
         {
             get => chamferBoxRadius;
             set
             {
-                chamferBoxRadius = Mathf.Clamp(value, 0f, 1f);
+                // Clamp每个分量在0~1
+                chamferBoxRadius = new Vector4(
+                    Mathf.Clamp01(value.x),
+                    Mathf.Clamp01(value.y),
+                    Mathf.Clamp01(value.z),
+                    Mathf.Clamp01(value.w)
+                );
                 if (shouldModifySharedMat)
                 {
-                    sharedMat.SetFloat(chamferBoxRadius_Sp, chamferBoxRadius);
+                    sharedMat.SetVector(chamferBoxRadius_Sp, chamferBoxRadius);
                 }
                 onComponentSettingsChanged?.Invoke(this, EventArgs.Empty);
             }
@@ -82,7 +88,7 @@ namespace ReunionMovement.UI.ImageExtensions
         public void InitValuesFromMaterial(ref Material material)
         {
             chamferBoxSize = material.GetVector(chamferBoxSize_Sp);
-            chamferBoxRadius = material.GetFloat(chamferBoxRadius_Sp);
+            chamferBoxRadius = material.GetVector(chamferBoxRadius_Sp);
         }
 
         /// <summary>
@@ -93,7 +99,7 @@ namespace ReunionMovement.UI.ImageExtensions
         public void ModifyMaterial(ref Material material, params object[] otherProperties)
         {
             material.SetVector(chamferBoxSize_Sp, chamferBoxSize);
-            material.SetFloat(chamferBoxRadius_Sp, chamferBoxRadius);
+            material.SetVector(chamferBoxRadius_Sp, chamferBoxRadius);
         }
     }
 }
