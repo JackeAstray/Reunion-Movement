@@ -1,8 +1,9 @@
 using System.Collections;
-using UnityEngine;
-using UnityEngine.UI;
 using TMPro;
+using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 namespace ReunionMovement.UI.ButtonAnimated
 {
@@ -43,6 +44,10 @@ namespace ReunionMovement.UI.ButtonAnimated
         private Image image;
         private TextMeshProUGUI tmpText;
         private Coroutine animCoroutine;
+        private Coroutine submitCoroutine;
+
+        // 支持键盘与手柄触发（Space/Enter / Gamepad South 按钮）
+        private bool submitPressed = false;
 
         protected override void Awake()
         {
@@ -78,6 +83,93 @@ namespace ReunionMovement.UI.ButtonAnimated
             }
         }
 #endif
+
+        /// <summary>
+        /// 使用 Input System 支持键盘与手柄触发（Space / Enter / Gamepad South）
+        /// 当按钮为当前选中项时，监听按下与抬起以触发动画和提交。
+        /// </summary>
+        private void Update()
+        {
+            if (EventSystem.current == null) return;
+
+            bool isSelected = EventSystem.current.currentSelectedGameObject == gameObject;
+
+            if (isSelected)
+            {
+                // 检查按下（键盘或手柄）
+                if (!submitPressed)
+                {
+                    bool pressedThisFrame = false;
+
+                    if (Keyboard.current != null)
+                    {
+                        var space = Keyboard.current.spaceKey;
+                        var enter = Keyboard.current.enterKey;
+                        if (space.wasPressedThisFrame || enter.wasPressedThisFrame) pressedThisFrame = true;
+                    }
+
+                    if (!pressedThisFrame && Gamepad.current != null)
+                    {
+                        // Gamepad 的主按键通常为 buttonSouth（A 键）
+                        if (Gamepad.current.buttonSouth.wasPressedThisFrame) pressedThisFrame = true;
+                    }
+
+                    if (pressedThisFrame)
+                    {
+                        submitPressed = true;
+                        if (interactable)
+                        {
+                            // 先表现按下状态
+                            ApplyState(ButtonAniState.Pressed);
+                        }
+                        else
+                        {
+                            ApplyState(ButtonAniState.Disabled, true);
+                        }
+                    }
+                }
+
+                // 检查抬起（键盘或手柄）
+                if (submitPressed)
+                {
+                    bool releasedThisFrame = false;
+
+                    if (Keyboard.current != null)
+                    {
+                        var space = Keyboard.current.spaceKey;
+                        var enter = Keyboard.current.enterKey;
+                        if (space.wasReleasedThisFrame || enter.wasReleasedThisFrame) releasedThisFrame = true;
+                    }
+
+                    if (!releasedThisFrame && Gamepad.current != null)
+                    {
+                        if (Gamepad.current.buttonSouth.wasReleasedThisFrame) releasedThisFrame = true;
+                    }
+
+                    if (releasedThisFrame)
+                    {
+                        submitPressed = false;
+                        OnPress();
+                    }
+                }
+            }
+            else
+            {
+                // 失去选中时清理状态
+                if (submitPressed)
+                {
+                    submitPressed = false;
+                    if (interactable)
+                    {
+                        ApplyState(ButtonAniState.Normal);
+                    }
+                    else
+                    {
+                        ApplyState(ButtonAniState.Disabled, true);
+                    }
+                }
+            }
+        }
 
         /// <summary>
         /// 鼠标移入时调用
@@ -184,19 +276,21 @@ namespace ReunionMovement.UI.ButtonAnimated
         /// <summary>
         /// 提交按钮时调用
         /// </summary>
-        /// <param name="eventData"></param>
-        public override void OnSubmit(BaseEventData eventData)
+        public void OnPress()
         {
-            base.OnSubmit(eventData);
             if (interactable)
             {
+                // 先切到 Pressed 动画（AnimateTo 会使用 transitionDuration）
                 ApplyState(ButtonAniState.Pressed);
-                // 延迟一帧或动画时长后切回Normal
-                if (animCoroutine != null)
+
+                // 不要停止 animCoroutine（会导致 Pressed 动画立即中止）。
+                // 使用单独的 submitCoroutine 来等待 transitionDuration 后切回 Normal。
+                if (submitCoroutine != null)
                 {
-                    StopCoroutine(animCoroutine);
+                    StopCoroutine(submitCoroutine);
+                    submitCoroutine = null;
                 }
-                animCoroutine = StartCoroutine(SubmitAnimationCoroutine());
+                submitCoroutine = StartCoroutine(SubmitAnimationCoroutine());
             }
             else
             {
@@ -210,7 +304,9 @@ namespace ReunionMovement.UI.ButtonAnimated
         /// <returns></returns>
         private IEnumerator SubmitAnimationCoroutine()
         {
+            // 等待完整的 transitionDuration（使用实时时间以防 timeScale 被改变）
             yield return new WaitForSecondsRealtime(transitionDuration > 0 ? transitionDuration : 0.05f);
+
             if (interactable)
             {
                 ApplyState(ButtonAniState.Normal);
@@ -219,11 +315,24 @@ namespace ReunionMovement.UI.ButtonAnimated
             {
                 ApplyState(ButtonAniState.Disabled, true);
             }
+
+            submitCoroutine = null;
         }
 
         protected override void OnDisable()
         {
             base.OnDisable();
+
+            // 停止未完成的提交协程，避免失活时协程继续执行
+            if (submitCoroutine != null)
+            {
+                StopCoroutine(submitCoroutine);
+                submitCoroutine = null;
+            }
+
+            // 清理按键/手柄状态
+            submitPressed = false;
+
             // 直接同步设置属性，避免失活时启动协程
             var setting = GetSetting(ButtonAniState.Disabled);
             transform.localScale = setting.scale;
@@ -237,7 +346,6 @@ namespace ReunionMovement.UI.ButtonAnimated
                 tmpText.color = setting.textColor;
                 if (!string.IsNullOrEmpty(setting.text)) tmpText.text = setting.text;
             }
-            // 不再调用 ApplyState 或启动协程
         }
 
         /// <summary>

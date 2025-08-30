@@ -1,13 +1,14 @@
+using ReunionMovement.Common;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
-using ReunionMovement.Common;
 
 namespace ReunionMovement.UI.ButtonClick
 {
@@ -64,6 +65,9 @@ namespace ReunionMovement.UI.ButtonClick
             set => longPressDuration = value;
         }
 
+        // 输入按下标识（支持键盘 Space/Enter 与手柄 Gamepad.buttonSouth）
+        private bool inputPressed = false;
+
         /// <summary>
         /// 长按
         /// </summary>
@@ -75,12 +79,101 @@ namespace ReunionMovement.UI.ButtonClick
         }
 
         /// <summary>
-        /// 按下
+        /// 按下（鼠标）
         /// </summary>
         /// <param name="eventData"></param>
         public override void OnPointerDown(PointerEventData eventData)
         {
             base.OnPointerDown(eventData);
+            StartPressIfNeeded();
+        }
+
+        /// <summary>
+        /// 抬起（鼠标）
+        /// </summary>
+        /// <param name="eventData"></param>
+        public override void OnPointerUp(PointerEventData eventData)
+        {
+            base.OnPointerUp(eventData);
+            EndPressAndHandle();
+        }
+
+        /// <summary>
+        /// 离开（鼠标）
+        /// </summary>
+        /// <param name="eventData"></param>
+        public override void OnPointerExit(PointerEventData eventData)
+        {
+            base.OnPointerExit(eventData);
+            CancelPress();
+            ResetPressTime();
+        }
+
+        /// <summary>
+        /// Update 用于检测键盘与手柄长按（当该按钮为当前选中时）
+        /// 使用 Unity 新 Input System
+        /// </summary>
+        private void Update()
+        {
+            if (EventSystem.current == null) return;
+
+            bool isSelected = EventSystem.current.currentSelectedGameObject == gameObject;
+
+            if (isSelected)
+            {
+                bool pressedThisFrame = false;
+                bool releasedThisFrame = false;
+
+                // 键盘检测（Space / Enter）
+                if (Keyboard.current != null)
+                {
+                    var space = Keyboard.current.spaceKey;
+                    var enter = Keyboard.current.enterKey;
+                    if (space.wasPressedThisFrame || enter.wasPressedThisFrame) pressedThisFrame = true;
+                    if (space.wasReleasedThisFrame || enter.wasReleasedThisFrame) releasedThisFrame = true;
+                }
+
+                // 手柄检测（Gamepad 主键 buttonSouth，通常为 A）
+                if (!pressedThisFrame && Gamepad.current != null)
+                {
+                    if (Gamepad.current.buttonSouth.wasPressedThisFrame) pressedThisFrame = true;
+                }
+                if (!releasedThisFrame && Gamepad.current != null)
+                {
+                    if (Gamepad.current.buttonSouth.wasReleasedThisFrame) releasedThisFrame = true;
+                }
+
+                // 按下开始（仅在之前未按下时触发）
+                if (pressedThisFrame && !inputPressed)
+                {
+                    inputPressed = true;
+                    StartPressIfNeeded();
+                }
+
+                // 抬起结束（仅在之前已按下时触发）
+                if (releasedThisFrame && inputPressed)
+                {
+                    inputPressed = false;
+                    EndPressAndHandle();
+                }
+            }
+            else
+            {
+                // 如果失去选中且仍处于按下状态，则取消
+                if (inputPressed)
+                {
+                    inputPressed = false;
+                    CancelPress();
+                    ResetPressTime();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 开始按下行为（用于鼠标和键盘/手柄）
+        /// </summary>
+        private void StartPressIfNeeded()
+        {
             if (pressStartTime == default)
             {
                 pressStartTime = DateTime.Now;
@@ -92,12 +185,10 @@ namespace ReunionMovement.UI.ButtonClick
         }
 
         /// <summary>
-        /// 抬起
+        /// 结束按下并根据时长处理（用于鼠标和键盘/手柄抬起）
         /// </summary>
-        /// <param name="eventData"></param>
-        public override void OnPointerUp(PointerEventData eventData)
+        private void EndPressAndHandle()
         {
-            base.OnPointerUp(eventData);
             longPressCts?.Cancel();
             longPressCts = null;
             progressCts?.Cancel();
@@ -122,18 +213,15 @@ namespace ReunionMovement.UI.ButtonClick
         }
 
         /// <summary>
-        /// 离开
+        /// 取消按下（用于鼠标移出或键盘/手柄取消场景）
         /// </summary>
-        /// <param name="eventData"></param>
-        public override void OnPointerExit(PointerEventData eventData)
+        private void CancelPress()
         {
-            base.OnPointerExit(eventData);
             longPressCts?.Cancel();
             longPressCts = null;
             progressCts?.Cancel();
             progressCts = null;
             ResetProgressBar();
-            ResetPressTime();
         }
 
         /// <summary>
@@ -190,6 +278,16 @@ namespace ReunionMovement.UI.ButtonClick
                 progressBar.fillAmount = 0f;
                 progressBar.gameObject.SetActive(false);
             }
+        }
+
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+            // 失活时取消所有正在进行的按下/进度逻辑，避免残留状态
+            inputPressed = false;
+            CancelPress();
+            ResetPressTime();
+            ResetProgressBar();
         }
     }
 }
