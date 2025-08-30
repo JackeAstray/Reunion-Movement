@@ -65,6 +65,34 @@ namespace ReunionMovement.UI.ButtonClick
             set => longPressDuration = value;
         }
 
+        // 新增：是否启用输入与键表（支持键盘 Space/Enter 与手柄 Gamepad.buttonSouth 为默认）
+        [SerializeField]
+        private bool enableInput = true;
+        [SerializeField]
+        private bool enableKeyboard = true;
+        [SerializeField]
+        private bool enableGamepad = true;
+
+        [SerializeField]
+        private UnityEngine.InputSystem.Key[] keyboardTriggerKeys = new UnityEngine.InputSystem.Key[] { UnityEngine.InputSystem.Key.Space, UnityEngine.InputSystem.Key.Enter };
+
+        public enum GamepadButtonType
+        {
+            South,
+            North,
+            West,
+            East,
+            LeftShoulder,
+            RightShoulder,
+            LeftTrigger,
+            RightTrigger,
+            Start,
+            Select
+        }
+
+        [SerializeField]
+        private GamepadButtonType[] gamepadTriggerButtons = new GamepadButtonType[] { GamepadButtonType.South };
+
         // 输入按下标识（支持键盘 Space/Enter 与手柄 Gamepad.buttonSouth）
         private bool inputPressed = false;
 
@@ -109,6 +137,92 @@ namespace ReunionMovement.UI.ButtonClick
             ResetPressTime();
         }
 
+        private bool KeyboardPressedThisFrame()
+        {
+            if (!enableInput || !enableKeyboard) return false;
+            if (UnityEngine.InputSystem.Keyboard.current == null) return false;
+            foreach (var k in keyboardTriggerKeys)
+            {
+                var kc = UnityEngine.InputSystem.Keyboard.current[k];
+                if (kc != null && kc.wasPressedThisFrame) return true;
+            }
+            return false;
+        }
+
+        private bool KeyboardReleasedThisFrame()
+        {
+            if (!enableInput || !enableKeyboard) return false;
+            if (UnityEngine.InputSystem.Keyboard.current == null) return false;
+            foreach (var k in keyboardTriggerKeys)
+            {
+                var kc = UnityEngine.InputSystem.Keyboard.current[k];
+                if (kc != null && kc.wasReleasedThisFrame) return true;
+            }
+            return false;
+        }
+
+        private bool IsGamepadButtonPressed(GamepadButtonType btn)
+        {
+            if (UnityEngine.InputSystem.Gamepad.current == null) return false;
+            var g = UnityEngine.InputSystem.Gamepad.current;
+            switch (btn)
+            {
+                case GamepadButtonType.South: return g.buttonSouth.wasPressedThisFrame;
+                case GamepadButtonType.North: return g.buttonNorth.wasPressedThisFrame;
+                case GamepadButtonType.West: return g.buttonWest.wasPressedThisFrame;
+                case GamepadButtonType.East: return g.buttonEast.wasPressedThisFrame;
+                case GamepadButtonType.LeftShoulder: return g.leftShoulder.wasPressedThisFrame;
+                case GamepadButtonType.RightShoulder: return g.rightShoulder.wasPressedThisFrame;
+                case GamepadButtonType.LeftTrigger: return g.leftTrigger.wasPressedThisFrame;
+                case GamepadButtonType.RightTrigger: return g.rightTrigger.wasPressedThisFrame;
+                case GamepadButtonType.Start: return g.startButton != null && g.startButton.wasPressedThisFrame;
+                case GamepadButtonType.Select: return g.selectButton != null && g.selectButton.wasPressedThisFrame;
+                default: return false;
+            }
+        }
+
+        private bool IsGamepadButtonReleased(GamepadButtonType btn)
+        {
+            if (UnityEngine.InputSystem.Gamepad.current == null) return false;
+            var g = UnityEngine.InputSystem.Gamepad.current;
+            switch (btn)
+            {
+                case GamepadButtonType.South: return g.buttonSouth.wasReleasedThisFrame;
+                case GamepadButtonType.North: return g.buttonNorth.wasReleasedThisFrame;
+                case GamepadButtonType.West: return g.buttonWest.wasReleasedThisFrame;
+                case GamepadButtonType.East: return g.buttonEast.wasReleasedThisFrame;
+                case GamepadButtonType.LeftShoulder: return g.leftShoulder.wasReleasedThisFrame;
+                case GamepadButtonType.RightShoulder: return g.rightShoulder.wasReleasedThisFrame;
+                case GamepadButtonType.LeftTrigger: return g.leftTrigger.wasReleasedThisFrame;
+                case GamepadButtonType.RightTrigger: return g.rightTrigger.wasReleasedThisFrame;
+                case GamepadButtonType.Start: return g.startButton != null && g.startButton.wasReleasedThisFrame;
+                case GamepadButtonType.Select: return g.selectButton != null && g.selectButton.wasReleasedThisFrame;
+                default: return false;
+            }
+        }
+
+        private bool GamepadPressedThisFrame()
+        {
+            if (!enableInput || !enableGamepad) return false;
+            if (UnityEngine.InputSystem.Gamepad.current == null) return false;
+            foreach (var b in gamepadTriggerButtons)
+            {
+                if (IsGamepadButtonPressed(b)) return true;
+            }
+            return false;
+        }
+
+        private bool GamepadReleasedThisFrame()
+        {
+            if (!enableInput || !enableGamepad) return false;
+            if (UnityEngine.InputSystem.Gamepad.current == null) return false;
+            foreach (var b in gamepadTriggerButtons)
+            {
+                if (IsGamepadButtonReleased(b)) return true;
+            }
+            return false;
+        }
+
         /// <summary>
         /// Update 用于检测键盘与手柄长按（当该按钮为当前选中时）
         /// 使用 Unity 新 Input System
@@ -124,24 +238,12 @@ namespace ReunionMovement.UI.ButtonClick
                 bool pressedThisFrame = false;
                 bool releasedThisFrame = false;
 
-                // 键盘检测（Space / Enter）
-                if (Keyboard.current != null)
-                {
-                    var space = Keyboard.current.spaceKey;
-                    var enter = Keyboard.current.enterKey;
-                    if (space.wasPressedThisFrame || enter.wasPressedThisFrame) pressedThisFrame = true;
-                    if (space.wasReleasedThisFrame || enter.wasReleasedThisFrame) releasedThisFrame = true;
-                }
+                // 使用配置的键表进行检测
+                if (KeyboardPressedThisFrame()) pressedThisFrame = true;
+                if (KeyboardReleasedThisFrame()) releasedThisFrame = true;
 
-                // 手柄检测（Gamepad 主键 buttonSouth，通常为 A）
-                if (!pressedThisFrame && Gamepad.current != null)
-                {
-                    if (Gamepad.current.buttonSouth.wasPressedThisFrame) pressedThisFrame = true;
-                }
-                if (!releasedThisFrame && Gamepad.current != null)
-                {
-                    if (Gamepad.current.buttonSouth.wasReleasedThisFrame) releasedThisFrame = true;
-                }
+                if (!pressedThisFrame && GamepadPressedThisFrame()) pressedThisFrame = true;
+                if (!releasedThisFrame && GamepadReleasedThisFrame()) releasedThisFrame = true;
 
                 // 按下开始（仅在之前未按下时触发）
                 if (pressedThisFrame && !inputPressed)

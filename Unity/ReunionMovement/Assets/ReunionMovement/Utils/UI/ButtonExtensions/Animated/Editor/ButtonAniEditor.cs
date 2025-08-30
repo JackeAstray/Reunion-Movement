@@ -14,6 +14,13 @@ namespace ReunionMovement.EditorTools
         SerializedProperty disabled;
         SerializedProperty transitionDuration;
 
+        SerializedProperty enableInput;
+        SerializedProperty enableKeyboard;
+        SerializedProperty enableGamepad;
+
+        SerializedProperty keyboardTriggerKeys;
+        SerializedProperty gamepadTriggerButtons;
+
         protected override void OnEnable()
         {
             base.OnEnable();
@@ -23,6 +30,13 @@ namespace ReunionMovement.EditorTools
             selected = serializedObject.FindProperty("selected");
             disabled = serializedObject.FindProperty("disabled");
             transitionDuration = serializedObject.FindProperty("transitionDuration");
+
+            enableInput = serializedObject.FindProperty("enableInput");
+            enableKeyboard = serializedObject.FindProperty("enableKeyboard");
+            enableGamepad = serializedObject.FindProperty("enableGamepad");
+
+            keyboardTriggerKeys = serializedObject.FindProperty("keyboardTriggerKeys");
+            gamepadTriggerButtons = serializedObject.FindProperty("gamepadTriggerButtons");
         }
 
         public override void OnInspectorGUI()
@@ -40,6 +54,13 @@ namespace ReunionMovement.EditorTools
             EditorGUILayout.PropertyField(pressed, true);
             EditorGUILayout.PropertyField(selected, true);
             EditorGUILayout.PropertyField(disabled, true);
+            EditorGUILayout.Space();
+            EditorGUILayout.PropertyField(enableInput, true);
+            EditorGUILayout.PropertyField(enableKeyboard, true);
+            EditorGUILayout.PropertyField(enableGamepad, true);
+            EditorGUILayout.Space();
+            EditorGUILayout.PropertyField(keyboardTriggerKeys, true);
+            EditorGUILayout.PropertyField(gamepadTriggerButtons, true);
             EditorGUI.EndDisabledGroup();
             serializedObject.ApplyModifiedProperties();
         }
