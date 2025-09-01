@@ -60,13 +60,138 @@ namespace ReunionMovement.Core.Terminal
             Log.Debug("TerminalSystem 清除数据");
         }
 
+        #region 打开指定UI
+        [RegisterCommand(Help = "OpenWindow 1-6 String", MinArgCount = 1, MaxArgCount = 6)]
+        static void OpenWindow(CommandArg[] args)
+        {
+            int count = args.Length;
+
+            switch (count)
+            {
+                case 1:
+                    {
+                        string windowName = args[0].String;
+                        if (!string.IsNullOrEmpty(windowName))
+                        {
+                            if (!UISystem.Instance.IsOpen(windowName))
+                            {
+                                UISystem.Instance.OpenWindow(windowName);
+                            }
+                            else
+                            {
+                                Log.Error("窗口已打开!");
+                            }
+                        }
+                        else
+                        {
+                            Log.Error("窗口名称不能为空.");
+                        }
+                    }
+                    break;
+                case 2:
+                    {
+                        string windowName = args[0].String;
+                        string str1 = args[1].String;
+                        if (!string.IsNullOrEmpty(windowName))
+                        {
+                            if (!UISystem.Instance.IsOpen(windowName))
+                            {
+                                UISystem.Instance.OpenWindow(windowName, str1);
+                            }
+                            else
+                            {
+                                Log.Error("窗口已打开!");
+                            }
+                        }
+                        else
+                        {
+                            Log.Error("窗口名称不能为空.");
+                        }
+                    }
+                    break;
+                case 3:
+                    {
+                        string windowName = args[0].String;
+                        string str1 = args[1].String;
+                        string str2 = args[2].String;
+                        if (!string.IsNullOrEmpty(windowName))
+                        {
+                            if (!UISystem.Instance.IsOpen(windowName))
+                            {
+                                UISystem.Instance.OpenWindow(windowName, str1, str2);
+                            }
+                            else
+                            {
+                                Log.Error("窗口已打开!");
+                            }
+                        }
+                        else
+                        {
+                            Log.Error("窗口名称不能为空.");
+                        }
+                    }
+                    break;
+                case 4:
+                    {
+                        string windowName = args[0].String;
+                        string str1 = args[1].String;
+                        string str2 = args[2].String;
+                        string str3 = args[3].String;
+                        if (!string.IsNullOrEmpty(windowName))
+                        {
+                            if (!UISystem.Instance.IsOpen(windowName))
+                            {
+                                UISystem.Instance.OpenWindow(windowName, str1, str2, str3);
+                            }
+                            else
+                            {
+                                Log.Error("窗口已打开!");
+                            }
+                        }
+                        else
+                        {
+                            Log.Error("窗口名称不能为空.");
+                        }
+                    }
+                    break;
+                case 5:
+                    {
+                        string windowName = args[0].String;
+                        string str1 = args[1].String;
+                        string str2 = args[2].String;
+                        string str3 = args[3].String;
+                        string str4 = args[4].String;
+                        if (!string.IsNullOrEmpty(windowName))
+                        {
+                            if (!UISystem.Instance.IsOpen(windowName))
+                            {
+                                UISystem.Instance.OpenWindow(windowName, str1, str2, str3, str4);
+                            }
+                            else
+                            {
+                                Log.Error("窗口已打开!");
+                            }
+                        }
+                        else
+                        {
+                            Log.Error("窗口名称不能为空.");
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+        }
+        #endregion
+
         #region 例子
         [RegisterCommand(Help = "TestTerminal 2 String", MinArgCount = 2, MaxArgCount = 2)]
         static void TestTerminal(CommandArg[] args)
         {
             if (args.Length >= 2)
             {
-                string str = "TestTerminal " + args[0].String + " | " + args[0].String;
+                string str = "使用测试命令： " + "值1:" + args[0].String + " | " + "值2:" + args[0].String;
 
                 Log.Debug(str);
 
