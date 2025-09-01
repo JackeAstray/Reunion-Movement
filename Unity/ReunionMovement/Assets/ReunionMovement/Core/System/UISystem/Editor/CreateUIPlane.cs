@@ -91,7 +91,7 @@ namespace ReunionMovement.Common.Util.EditorTools
 
             if (mainCamera != null)
             {
-                Destroy(mainCamera);
+                DestroyImmediate(mainCamera);
             }
 
             scriptName = className + "UIPlane";
