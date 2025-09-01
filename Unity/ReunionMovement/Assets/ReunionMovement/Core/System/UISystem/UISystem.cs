@@ -50,7 +50,7 @@ namespace ReunionMovement.Core.UI
 
             initProgress = 100;
             IsInited = true;
-            Log.Debug("UIModule 初始化完成");
+            Log.Debug("UISystem 初始化完成");
         }
 
         public void Update(float logicTime, float realTime)
@@ -60,7 +60,7 @@ namespace ReunionMovement.Core.UI
 
         public void Clear()
         {
-            Log.Debug("UIModule 清除数据");
+            Log.Debug("UISystem 清除数据");
         }
 
         /// <summary>
