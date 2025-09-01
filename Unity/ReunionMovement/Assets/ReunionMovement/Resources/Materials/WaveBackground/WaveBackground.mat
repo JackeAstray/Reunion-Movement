@@ -97,7 +97,7 @@ Material:
     - _AlphaClip: 0
     - _AlphaToMask: 0
     - _BaseAmplitude: 0
-    - _BaseY: 0.63
+    - _BaseY: 0.55
     - _BlackTransparency: 0
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
@@ -135,7 +135,7 @@ Material:
     - _TimeSpeed: 1
     - _Transparency: 1
     - _Wave1Amplitude: 0.04
-    - _Wave1Frequency: 4
+    - _Wave1Frequency: 5
     - _Wave1Phase: 0
     - _Wave1Speed: 0.5
     - _Wave2Amplitude: 0.08
@@ -172,3 +172,4 @@ Material:
     - _WaveColorBottom: {r: 0.29999998, g: 0.9, b: 0.29999998, a: 1}
     - _WaveColorTop: {r: 0.45, g: 1, b: 0.5, a: 1}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1
