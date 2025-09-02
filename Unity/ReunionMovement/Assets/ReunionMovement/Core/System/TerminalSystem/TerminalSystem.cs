@@ -61,6 +61,7 @@ namespace ReunionMovement.Core.Terminal
         }
 
         #region 打开指定UI
+        //测试指令： OpenWindow PopupUIPlane 提示 测试 Ok No 
         [RegisterCommand(Help = "OpenWindow 1-6 String", MinArgCount = 1, MaxArgCount = 6)]
         static void OpenWindow(CommandArg[] args)
         {
@@ -187,6 +188,7 @@ namespace ReunionMovement.Core.Terminal
 
         #region 例子
         [RegisterCommand(Help = "TestTerminal 2 String", MinArgCount = 2, MaxArgCount = 2)]
+        //测试指令： TestTerminal 测试1 测试2
         static void TestTerminal(CommandArg[] args)
         {
             if (args.Length >= 2)
