@@ -1,6 +1,7 @@
 //此脚本是由工具自动生成，请勿手动创建
 
 using ReunionMovement.Common;
+using ReunionMovement.Common.Util;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -36,6 +37,9 @@ namespace ReunionMovement.Core.UI
         {
             base.OnOpen(args);
 
+            confirmBtn.gameObject.SetActive(false);
+            cancelBtn.gameObject.SetActive(false);
+
             switch (args.Length)
             {
                 case 1:
@@ -49,12 +53,15 @@ namespace ReunionMovement.Core.UI
                     titleStr.text = args[0] as string;
                     containerStr.text = args[1] as string;
                     confirmStr.text = args[2] as string;
+                    confirmBtn.gameObject.SetActive(true);
                     break;
                 case 4:
                     titleStr.text = args[0] as string;
                     containerStr.text = args[1] as string;
                     confirmStr.text = args[2] as string;
                     cancelStr.text = args[3] as string;
+                    confirmBtn.gameObject.SetActive(true);
+                    cancelBtn.gameObject.SetActive(true);
                     break;
                 case 5:
                     titleStr.text = args[0] as string;
@@ -62,6 +69,8 @@ namespace ReunionMovement.Core.UI
                     confirmStr.text = args[2] as string;
                     cancelStr.text = args[3] as string;
                     confirmAction = args[4] as Action;
+                    confirmBtn.gameObject.SetActive(true);
+                    cancelBtn.gameObject.SetActive(true);
                     break;
                 case 6:
                     titleStr.text = args[0] as string;
@@ -70,6 +79,8 @@ namespace ReunionMovement.Core.UI
                     cancelStr.text = args[3] as string;
                     confirmAction = args[4] as Action;
                     cancelAction = args[5] as Action;
+                    confirmBtn.gameObject.SetActive(true);
+                    cancelBtn.gameObject.SetActive(true);
                     break;
                 default:
                     Log.Error("参数错误");
@@ -115,7 +126,7 @@ namespace ReunionMovement.Core.UI
         {
 
         }
-        
+
         //打开窗口
         public void OpenWindow()
         {
