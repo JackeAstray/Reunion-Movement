@@ -129,11 +129,6 @@ namespace ReunionMovement.Core.Terminal
 
             foreach (var type in AssemblyUtil.GetExecutingAssemblyTypes())
             {
-                //Log.Debug(type);
-                //if (type.ToString() == "ReunionMovement.Core.Terminal.TerminalSystem")
-                //{
-                //    Log.Debug(type);
-                //}
                 foreach (var method in type.GetMethods(method_flags))
                 {
                     var attribute = Attribute.GetCustomAttribute(method, typeof(RegisterCommandAttribute)) as RegisterCommandAttribute;

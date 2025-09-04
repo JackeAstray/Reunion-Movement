@@ -26,6 +26,7 @@ ResourcesSystem<br>
 SceneSystem<br>
 SoundSystem<br>
 UISystem<br>
+TerminalSystem<br>
 
 ## Example：<a name="Example"></a>
 项目的例子在Assets->ReunionMovement->Scenes->Example中。<br>

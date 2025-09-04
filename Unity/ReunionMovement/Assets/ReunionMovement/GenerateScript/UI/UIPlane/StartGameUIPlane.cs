@@ -25,12 +25,12 @@ namespace ReunionMovement.Core.UI
         {
             base.OnInit();
 
-            logo1.DOFade(1, 1f).OnComplete(() =>
+            logo1.DOFade(1, 0.45f).OnComplete(() =>
             {
-                logo2.DOFade(1, 1f).OnComplete(() =>
+                logo2.DOFade(1, 0.25f).OnComplete(() =>
                 {
-                    logo1.DOFade(0, 1f);
-                    logo2.DOFade(0, 1f).OnComplete(() =>
+                    logo1.DOFade(0, 0.5f);
+                    logo2.DOFade(0, 0.5f).OnComplete(() =>
                     {
 
                     });
