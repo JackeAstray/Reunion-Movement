@@ -23,8 +23,7 @@ namespace ReunionMovement.Example
         void Awake()
         {
             if (target == null) target = transform;
-            commandManager = new GameObject("CommandManager")
-                .AddComponent<CommandManager>();
+            commandManager = new GameObject("CommandManager").AddComponent<CommandManager>();
             // 把 manager 放到本对象下以便层级清晰（可选）
             commandManager.transform.SetParent(transform);
 
