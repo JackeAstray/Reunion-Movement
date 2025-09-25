@@ -175,3 +175,4 @@ Material:
     - _WaveColorBottom: {r: 0.29999998, g: 0.9, b: 0.29999998, a: 1}
     - _WaveColorTop: {r: 0.45, g: 1, b: 0.5, a: 1}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1

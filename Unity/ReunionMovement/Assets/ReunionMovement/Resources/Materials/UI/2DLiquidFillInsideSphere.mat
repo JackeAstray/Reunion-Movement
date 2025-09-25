@@ -99,11 +99,11 @@ Material:
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
-    - _FillHeight: 0.471
+    - _FillHeight: 0.529
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _LiquidBackgroundColor: 0.472
+    - _LiquidBackgroundColor: 0.062
     - _LiquidEdgeColor: 0
     - _Metallic: 0
     - _OcclusionStrength: 1
@@ -131,6 +131,7 @@ Material:
     - _Resolution: {r: 1, g: 1, b: 1, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!114 &8938196641025863968
 MonoBehaviour:
   m_ObjectHideFlags: 11
