@@ -451,5 +451,16 @@ namespace ReunionMovement.Common.Util
             RefreshVisible();
             scrollCoroutine = null;
         }
+
+        /// <summary>
+        /// 通知数据集已改变（如 totalCount 变化后调用以刷新）。
+        /// </summary>
+        public void NotifyDataSetChanged()
+        {
+            // 重新从 dataSource 更新 totalCount，并重建池和刷新视图
+            totalCount = dataSource?.GetItemCount() ?? totalCount;
+            Build();
+            ForceRefresh();
+        }
     }
 }
