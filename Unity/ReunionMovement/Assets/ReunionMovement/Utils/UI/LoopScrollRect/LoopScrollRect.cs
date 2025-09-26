@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Events;
+using UnityEngine.EventSystems;
 
 namespace ReunionMovement.Common.Util
 {
@@ -13,8 +15,12 @@ namespace ReunionMovement.Common.Util
     /// 使用方式：
     /// - 在场景中把此组件挂到包含 ScrollRect 的对象（或任意对象），
     ///   指定 ScrollRect、itemPrefab，调用 Initialize(dataSource) 或在 Inspector 设置 totalCount 并在 Start 前调用 Initialize.
+    /// 
+    /// 新增：
+    /// - 支持上拉加载 / 下拉刷新（竖直）以及 左拉刷新 / 右拉加载（横向）
+    /// - 通过 UnityEvent 回调触发，暴露阈值与启用开关，并提供完成通知接口以重置状态
     /// </summary>
-    public class LoopScrollRect : MonoBehaviour
+    public class LoopScrollRect : MonoBehaviour, IBeginDragHandler, IEndDragHandler
     {
         public enum Direction { Vertical, Horizontal }
 
@@ -33,6 +39,16 @@ namespace ReunionMovement.Common.Util
         // 多创建几个作缓冲（当 autoCalculateExtraBuffer 为 true 时会被覆盖）
         public int extraBuffer = 2;
 
+        [Header("下拉/上拉 / 左拉/右拉 设置")]
+        // 启用各方向的拉动触发
+        public bool enablePullStart = true; // 对竖直为下拉刷新、横向为左拉刷新（视 content 起始端）
+        public bool enablePullEnd = true;   // 对竖直为上拉加载、横向为右拉加载（视 content 末端）
+        // 判定阈值（像素）
+        public float pullThreshold = 50f;
+        // 回调事件
+        public UnityEvent onPullStart; // 下拉刷新 / 左拉刷新
+        public UnityEvent onPullEnd;   // 上拉加载 / 右拉加载
+
         // DataSource 用于外部绑定数据和数量
         public interface IDataSource
         {
@@ -50,6 +66,12 @@ namespace ReunionMovement.Common.Util
         List<RectTransform> pooledItems = new List<RectTransform>();
         // 当前第一个可见项对应的数据索引
         int currentFirstIndex = -1;
+
+        // 拖拽与拉动状态
+        bool isDragging = false;
+        // 正在进行的刷新/加载（防止重复触发），start/end 分开
+        bool isActionInProgressStart = false;
+        bool isActionInProgressEnd = false;
 
         void Awake()
         {
@@ -270,6 +292,64 @@ namespace ReunionMovement.Common.Util
                     item.gameObject.SetActive(false);
                 }
             }
+        }
+
+        // IBeginDragHandler / IEndDragHandler 用于检测用户拖拽释放以判断是否触发拉动动作
+        public void OnBeginDrag(PointerEventData eventData)
+        {
+            isDragging = true;
+        }
+
+        public void OnEndDrag(PointerEventData eventData)
+        {
+            isDragging = false;
+            TryTriggerPullOnRelease();
+        }
+
+        /// <summary>
+        /// 计算当前 content 偏移并基于阈值判定是否触发拉动回调（在释放时调用）
+        /// 使用统一的 offset 计算： offset = content 轴向偏移（起点为 0），其中竖直使用 content.anchoredPosition.y，横向使用 -content.anchoredPosition.x（与 Refresh 逻辑一致）
+        /// 当 offset < -threshold 表示在起始端超出阈值（下拉或左拉）
+        /// 当 offset > maxOffset + threshold 表示在末端超出阈值（上拉或右拉）
+        /// </summary>
+        void TryTriggerPullOnRelease()
+        {
+            if (totalCount == 0) return;
+
+            float viewSize = (direction == Direction.Vertical) ? viewport.rect.height : viewport.rect.width;
+            float contentSize = (direction == Direction.Vertical) ? content.rect.height : content.rect.width;
+            float maxOffset = Mathf.Max(0f, contentSize - viewSize);
+
+            float offset = (direction == Direction.Vertical) ? content.anchoredPosition.y : -content.anchoredPosition.x;
+
+            // 起始端（顶部/左侧）超出
+            if (offset < -pullThreshold && enablePullStart && !isActionInProgressStart)
+            {
+                isActionInProgressStart = true;
+                onPullStart?.Invoke();
+            }
+            // 末端（底部/右侧）超出
+            else if (offset > maxOffset + pullThreshold && enablePullEnd && !isActionInProgressEnd)
+            {
+                isActionInProgressEnd = true;
+                onPullEnd?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// 外部在刷新/加载完成后调用以允许下一次触发。
+        /// - CompletePullStart(): 完成起始端（下拉/左拉）动作
+        /// - CompletePullEnd(): 完成末端（上拉/右拉）动作
+        /// 调用后可以选择刷新数据源（如 totalCount 改变后调用 Initialize/ForceRefresh）
+        /// </summary>
+        public void CompletePullStart()
+        {
+            isActionInProgressStart = false;
+        }
+
+        public void CompletePullEnd()
+        {
+            isActionInProgressEnd = false;
         }
     }
 }

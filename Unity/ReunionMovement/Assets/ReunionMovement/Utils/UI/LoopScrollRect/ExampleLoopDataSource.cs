@@ -16,6 +16,14 @@ namespace ReunionMovement.Common.Util
         void Start()
         {
             loop.Initialize(this);
+            loop.onPullStart.AddListener(Refresh);
+            loop.onPullEnd.AddListener(Load);
+        }
+
+        public void OnDestroy()
+        {
+            loop.onPullStart.RemoveListener(Refresh);
+            loop.onPullEnd.RemoveListener(Load);
         }
 
         public int GetItemCount() => itemTotal;
@@ -27,6 +35,24 @@ namespace ReunionMovement.Common.Util
             {
                 loopItem.Set(dataIndex, $"Item {dataIndex}");
             }
+        }
+
+        /// <summary>
+        /// 刷新
+        /// </summary>
+        public void Refresh()
+        {
+            Log.Info("Refresh");
+            loop.CompletePullStart();
+        }
+
+        /// <summary>
+        /// 加载
+        /// </summary>
+        public void Load()
+        {
+            Log.Info("Load");
+            loop.CompletePullEnd();
         }
     }
 }
