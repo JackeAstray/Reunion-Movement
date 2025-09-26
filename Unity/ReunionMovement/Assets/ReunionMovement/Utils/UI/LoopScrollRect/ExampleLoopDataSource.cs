@@ -54,5 +54,11 @@ namespace ReunionMovement.Common.Util
             Log.Info("Load");
             loop.CompletePullEnd();
         }
+
+
+        public void JumpToIndex(int index)
+        {
+            loop.JumpToIndex(index);
+        }
     }
 }

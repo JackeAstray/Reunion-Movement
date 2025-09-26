@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -72,6 +73,9 @@ namespace ReunionMovement.Common.Util
         // 正在进行的刷新/加载（防止重复触发），start/end 分开
         bool isActionInProgressStart = false;
         bool isActionInProgressEnd = false;
+
+        // 用于平滑滚动的协程引用（跳转时可选）
+        Coroutine scrollCoroutine = null;
 
         void Awake()
         {
@@ -350,6 +354,102 @@ namespace ReunionMovement.Common.Util
         public void CompletePullEnd()
         {
             isActionInProgressEnd = false;
+        }
+
+        /// <summary>
+        /// 根据 data index 跳转到对应位置。
+        /// index: 目标数据索引（以数据项为基准的第一个可见项索引）
+        /// animated: 是否使用平滑滚动（协程），false 则立即跳转并刷新可见项。
+        /// duration: 平滑滚动时的时长（秒）。
+        /// 说明：跳转会将第一个可见项设置为 index（若 index 太大，会被限制为可用的最大 firstIndex）。
+        /// </summary>
+        public void JumpToIndex(int index, bool animated = false, float duration = 0.25f)
+        {
+            if (totalCount == 0 || pooledItems.Count == 0) return;
+
+            int maxFirst = Math.Max(0, totalCount - visibleCount);
+            int targetFirst = Mathf.Clamp(index, 0, maxFirst);
+
+            Vector2 targetPos = content.anchoredPosition;
+            if (direction == Direction.Vertical)
+            {
+                targetPos.y = targetFirst * (itemSize + spacing);
+            }
+            else
+            {
+                targetPos.x = -targetFirst * (itemSize + spacing);
+            }
+
+            // 立即生效
+            if (!animated || duration <= 0f)
+            {
+                StopScrollCoroutineIfAny();
+                content.anchoredPosition = targetPos;
+                // 停止惯性
+                if (scrollRect != null)
+                {
+                    scrollRect.velocity = Vector2.zero;
+                }
+                currentFirstIndex = targetFirst;
+                RefreshVisible();
+            }
+            else
+            {
+                // 平滑滚动
+                StopScrollCoroutineIfAny();
+                scrollCoroutine = StartCoroutine(SmoothScrollTo(targetPos, targetFirst, duration));
+            }
+        }
+
+        /// <summary>
+        /// 停止当前的滚动协程（若有）。
+        /// </summary>
+        void StopScrollCoroutineIfAny()
+        {
+            if (scrollCoroutine != null)
+            {
+                try
+                {
+                    StopCoroutine(scrollCoroutine);
+                }
+                catch { }
+                scrollCoroutine = null;
+            }
+        }
+
+        /// <summary>
+        /// 平滑滚动协程。
+        /// </summary>
+        /// <param name="targetAnchoredPos"></param>
+        /// <param name="finalFirstIndex"></param>
+        /// <param name="duration"></param>
+        /// <returns></returns>
+        IEnumerator SmoothScrollTo(Vector2 targetAnchoredPos, int finalFirstIndex, float duration)
+        {
+            Vector2 start = content.anchoredPosition;
+            float elapsed = 0f;
+
+            // 停止惯性
+            if (scrollRect != null)
+            {
+                scrollRect.velocity = Vector2.zero;
+            }
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                // 平滑插值（可替换为其他 easing）
+                float eased = Mathf.SmoothStep(0f, 1f, t);
+                content.anchoredPosition = Vector2.Lerp(start, targetAnchoredPos, eased);
+                yield return null;
+            }
+
+            // 最终确定位置
+            content.anchoredPosition = targetAnchoredPos;
+            currentFirstIndex = finalFirstIndex;
+            RefreshVisible();
+            scrollCoroutine = null;
         }
     }
 }
