@@ -807,6 +807,7 @@ MonoBehaviour:
   spacing: 10
   autoCalculateExtraBuffer: 0
   extraBuffer: 2
+  enableLooping: 0
   enablePullStart: 1
   enablePullEnd: 1
   pullThreshold: 50
@@ -1105,6 +1106,7 @@ MonoBehaviour:
   spacing: 10
   autoCalculateExtraBuffer: 0
   extraBuffer: 2
+  enableLooping: 0
   enablePullStart: 1
   enablePullEnd: 1
   pullThreshold: 50
@@ -4450,6 +4452,7 @@ MonoBehaviour:
   spacing: 10
   autoCalculateExtraBuffer: 0
   extraBuffer: 2
+  enableLooping: 0
   enablePullStart: 0
   enablePullEnd: 0
   pullThreshold: 50
