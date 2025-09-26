@@ -11,8 +11,9 @@ GameObject:
   - component: {fileID: 7730641035107024193}
   - component: {fileID: 2147066141473662350}
   - component: {fileID: 190120019051389574}
+  - component: {fileID: 5177602047921082206}
   m_Layer: 5
-  m_Name: Item H
+  m_Name: LoopItem
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -36,7 +37,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 400, y: 600}
+  m_SizeDelta: {x: 400, y: 400}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &2147066141473662350
 CanvasRenderer:
@@ -76,6 +77,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &5177602047921082206
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 252827085711964232}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7373e79ba6f927e469b193bb1e1ce2fa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  index: -1
+  itemName: {fileID: 3826405350734941741}
 --- !u!1 &3097631122113301971
 GameObject:
   m_ObjectHideFlags: 0
