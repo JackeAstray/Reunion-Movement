@@ -21,6 +21,7 @@ namespace ReunionMovement.Common.Util
     /// - 支持上拉加载 / 下拉刷新（竖直）以及 左拉刷新 / 右拉加载（横向）
     /// - 通过 UnityEvent 回调触发，暴露阈值与启用开关，并提供完成通知接口以重置状态
     /// - 新增 PageView 支持：按页对齐（可配置项数/每页），释放时自动吸附并触发页变更事件
+    /// - 新增 循环模式（enableLooping），启用后会在内容中构建三倍循环并在必要时重心化以实现视觉上的无限循环
     /// </summary>
     public class LoopScrollRect : MonoBehaviour, IBeginDragHandler, IEndDragHandler
     {
@@ -40,6 +41,10 @@ namespace ReunionMovement.Common.Util
         public bool autoCalculateExtraBuffer = true;
         // 多创建几个作缓冲（当 autoCalculateExtraBuffer 为 true 时会被覆盖）
         public int extraBuffer = 2;
+
+        [Header("循环设置")]
+        // 开启无限循环（视觉上）
+        public bool enableLooping = false;
 
         [Header("下拉/上拉 / 左拉/右拉 设置")]
         // 启用各方向的拉动触发
@@ -78,7 +83,7 @@ namespace ReunionMovement.Common.Util
         float itemSize;
         int visibleCount;
         List<RectTransform> pooledItems = new List<RectTransform>();
-        // 当前第一个可见项对应的数据索引
+        // 当前第一个可见项对应的虚拟索引（可跨 cycle）
         int currentFirstIndex = -1;
 
         // Paging 状态
@@ -92,6 +97,12 @@ namespace ReunionMovement.Common.Util
 
         // 用于平滑滚动的协程引用（跳转时可选）
         Coroutine scrollCoroutine = null;
+
+        // 当启用循环时使用的 cycle 倍数（固定为 3, 中间为初始显示区）
+        const int LOOP_CYCLES = 3;
+
+        // 标记在程序化调整 content 时忽略 OnScroll 回调，防止重入/抖动
+        bool isRecentering = false;
 
         void Awake()
         {
@@ -174,18 +185,21 @@ namespace ReunionMovement.Common.Util
                 extraBuffer = Mathf.Clamp(Mathf.CeilToInt(itemsInView * 0.5f), 1, 10);
             }
 
+            // 当启用循环时，我们在 content 中创建多份循环（LOOP_CYCLES），并从中间一份开始显示
+            int effectiveTotal = enableLooping && totalCount > 0 ? totalCount * LOOP_CYCLES : totalCount;
+
             visibleCount = Mathf.CeilToInt(viewSize / (itemSize + spacing)) + extraBuffer;
-            visibleCount = Mathf.Min(visibleCount, Mathf.Max(0, totalCount));
+            visibleCount = Mathf.Min(visibleCount, Mathf.Max(0, effectiveTotal));
 
             // 设置 content 大小以允许滚动（使用 SetSizeWithCurrentAnchors 更可靠）
             if (direction == Direction.Vertical)
             {
-                float contentHeight = totalCount * (itemSize + spacing) - spacing;
+                float contentHeight = effectiveTotal * (itemSize + spacing) - spacing;
                 content.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, contentHeight);
             }
             else
             {
-                float contentWidth = totalCount * (itemSize + spacing) - spacing;
+                float contentWidth = effectiveTotal * (itemSize + spacing) - spacing;
                 content.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, contentWidth);
             }
 
@@ -234,6 +248,29 @@ namespace ReunionMovement.Common.Util
 
                 pooledItems.Add(rt);
             }
+
+            // 如果启用了循环并且有数据，初始定位到中间 cycle 的起点，避免立刻到达边缘
+            if (enableLooping && totalCount > 0)
+            {
+                int startFirst = totalCount; // middle cycle
+                currentFirstIndex = startFirst;
+                Vector2 pos = content.anchoredPosition;
+
+                // 在程序化设置位置时忽略 OnScroll 回调以避免重入
+                isRecentering = true;
+                if (direction == Direction.Vertical)
+                {
+                    pos.y = startFirst * (itemSize + spacing);
+                }
+                else
+                {
+                    pos.x = -startFirst * (itemSize + spacing);
+                }
+                content.anchoredPosition = pos;
+                if (scrollRect != null) scrollRect.velocity = Vector2.zero;
+                RefreshVisible();
+                isRecentering = false;
+            }
         }
         /// <summary>
         /// 滚动时回调，计算新的 firstIndex 并刷新可见项。
@@ -241,6 +278,9 @@ namespace ReunionMovement.Common.Util
         /// <param name="v2"></param>
         void OnScroll(Vector2 v2)
         {
+            // 如果正在程序化重心化，忽略本次回调，避免重入/抖动
+            if (isRecentering) return;
+
             // 计算应该显示的 firstIndex（基于 content.anchoredPosition）
             if (totalCount == 0 || pooledItems.Count == 0)
             {
@@ -260,14 +300,68 @@ namespace ReunionMovement.Common.Util
                 newFirst = Mathf.FloorToInt(x / (itemSize + spacing));
             }
 
-            newFirst = Mathf.Clamp(newFirst, 0, Math.Max(0, totalCount - visibleCount));
+            int effectiveTotal = enableLooping && totalCount > 0 ? totalCount * LOOP_CYCLES : totalCount;
+            newFirst = Mathf.Clamp(newFirst, 0, Math.Max(0, effectiveTotal - visibleCount));
             if (newFirst != currentFirstIndex)
             {
                 currentFirstIndex = newFirst;
                 RefreshVisible();
 
+                // 如果启用循环，检测是否接近边缘（进入第一份或第三份），若是则把 content 重新重心化到中间一份
+                if (enableLooping && totalCount > 0)
+                {
+                    int firstBoundary = totalCount;
+                    int secondBoundary = totalCount * 2;
+                    if (currentFirstIndex < firstBoundary)
+                    {
+                        // 向右移动一个 cycle 以回到中间
+                        float shift = totalCount * (itemSize + spacing);
+
+                        isRecentering = true;
+                        StopScrollCoroutineIfAny();
+                        if (scrollRect != null) scrollRect.velocity = Vector2.zero;
+
+                        if (direction == Direction.Vertical)
+                        {
+                            content.anchoredPosition = new Vector2(content.anchoredPosition.x, content.anchoredPosition.y + shift);
+                        }
+                        else
+                        {
+                            content.anchoredPosition = new Vector2(content.anchoredPosition.x - shift, content.anchoredPosition.y);
+                        }
+
+                        currentFirstIndex += totalCount;
+                        RefreshVisible();
+
+                        isRecentering = false;
+                    }
+                    else if (currentFirstIndex >= secondBoundary)
+                    {
+                        // 向左移动一个 cycle
+                        float shift = totalCount * (itemSize + spacing);
+
+                        isRecentering = true;
+                        StopScrollCoroutineIfAny();
+                        if (scrollRect != null) scrollRect.velocity = Vector2.zero;
+
+                        if (direction == Direction.Vertical)
+                        {
+                            content.anchoredPosition = new Vector2(content.anchoredPosition.x, content.anchoredPosition.y - shift);
+                        }
+                        else
+                        {
+                            content.anchoredPosition = new Vector2(content.anchoredPosition.x + shift, content.anchoredPosition.y);
+                        }
+
+                        currentFirstIndex -= totalCount;
+                        RefreshVisible();
+
+                        isRecentering = false;
+                    }
+                }
+
                 // 当不是由分页主动设置时，也可以计算当前页（用于初始化或直接滚动后的回调）
-                if (enablePaging && itemsPerPage > 0)
+                if (enablePaging && itemsPerPage > 0 && !enableLooping)
                 {
                     int page = currentFirstIndex / itemsPerPage;
                     if (page != currentPage)
@@ -300,22 +394,23 @@ namespace ReunionMovement.Common.Util
         {
             for (int i = 0; i < pooledItems.Count; i++)
             {
-                int dataIndex = currentFirstIndex + i;
+                int virtualIndex = currentFirstIndex + i;
                 var item = pooledItems[i];
-                if (dataIndex >= 0 && dataIndex < totalCount)
+                if (virtualIndex >= 0 && totalCount > 0)
                 {
+                    int dataIndex = ((virtualIndex % totalCount) + totalCount) % totalCount; // modulo
                     item.gameObject.SetActive(true);
                     // 绑定数据
                     dataSource?.BindItem(item, dataIndex);
-                    // 定位 item
+                    // 定位 item 使用虚拟索引，以支持循环中间重心化
                     if (direction == Direction.Vertical)
                     {
-                        float posY = -dataIndex * (itemSize + spacing);
+                        float posY = -virtualIndex * (itemSize + spacing);
                         item.anchoredPosition = new Vector2(item.anchoredPosition.x, posY);
                     }
                     else
                     {
-                        float posX = dataIndex * (itemSize + spacing);
+                        float posX = virtualIndex * (itemSize + spacing);
                         item.anchoredPosition = new Vector2(posX, item.anchoredPosition.y);
                     }
                 }
@@ -338,7 +433,7 @@ namespace ReunionMovement.Common.Util
             TryTriggerPullOnRelease();
 
             // Page snapping：在释放时按页吸附（如果启用）
-            if (enablePaging && snapToPageOnRelease && totalCount > 0 && pooledItems.Count > 0)
+            if (enablePaging && snapToPageOnRelease && totalCount > 0 && pooledItems.Count > 0 && !enableLooping)
             {
                 float viewSize = (direction == Direction.Vertical) ? viewport.rect.height : viewport.rect.width;
                 float contentSize = (direction == Direction.Vertical) ? content.rect.height : content.rect.width;
@@ -375,6 +470,9 @@ namespace ReunionMovement.Common.Util
         void TryTriggerPullOnRelease()
         {
             if (totalCount == 0) return;
+
+            // 在循环模式下禁用拉动刷新/加载以避免与循环重心化逻辑冲突
+            if (enableLooping) return;
 
             float viewSize = (direction == Direction.Vertical) ? viewport.rect.height : viewport.rect.width;
             float contentSize = (direction == Direction.Vertical) ? content.rect.height : content.rect.width;
@@ -423,20 +521,31 @@ namespace ReunionMovement.Common.Util
         {
             if (totalCount == 0 || pooledItems.Count == 0) return;
 
+            int effectiveTotal = enableLooping && totalCount > 0 ? totalCount * LOOP_CYCLES : totalCount;
+
             // 当启用分页时，最大 firstIndex 应基于每页显示的项数（itemsPerPage），
             // 而不是 pooledItems/visibleCount。否则当 pooledItems > itemsPerPage 时，
             // 最后一页可能被错误地 clamp 掉，导致无法到达最后一页。
             int maxFirst;
-            if (enablePaging && itemsPerPage > 0)
+            if (enablePaging && itemsPerPage > 0 && !enableLooping)
             {
                 int safeItemsPerPage = Mathf.Max(1, itemsPerPage);
                 maxFirst = Math.Max(0, totalCount - safeItemsPerPage);
             }
             else
             {
-                maxFirst = Math.Max(0, totalCount - visibleCount);
+                maxFirst = Math.Max(0, effectiveTotal - visibleCount);
             }
+
             int targetFirst = Mathf.Clamp(index, 0, maxFirst);
+
+            // 如果启用了循环并且传入的是数据索引（0..totalCount-1），我们应该把目标放到中间 cycle
+            if (enableLooping)
+            {
+                // 把目标 index 放到中间 cycle
+                int middleBase = totalCount;
+                targetFirst = Mathf.Clamp(middleBase + index, 0, maxFirst);
+            }
 
             Vector2 targetPos = content.anchoredPosition;
             if (direction == Direction.Vertical)
@@ -452,6 +561,8 @@ namespace ReunionMovement.Common.Util
             if (!animated || duration <= 0f)
             {
                 StopScrollCoroutineIfAny();
+                // 在程序化设置位置时忽略 OnScroll 回调
+                isRecentering = true;
                 content.anchoredPosition = targetPos;
                 // 停止惯性
                 if (scrollRect != null)
@@ -460,9 +571,10 @@ namespace ReunionMovement.Common.Util
                 }
                 currentFirstIndex = targetFirst;
                 RefreshVisible();
+                isRecentering = false;
 
-                // 更新 page 并通知
-                if (enablePaging && itemsPerPage > 0)
+                // 更新 page 并通知（循环模式下不启用 page 回调）
+                if (enablePaging && itemsPerPage > 0 && !enableLooping)
                 {
                     int page = currentFirstIndex / Mathf.Max(1, itemsPerPage);
                     if (page != currentPage)
@@ -550,12 +662,15 @@ namespace ReunionMovement.Common.Util
             }
 
             // 最终确定位置
+            // 在程序化设置位置时忽略 OnScroll 回调
+            isRecentering = true;
             content.anchoredPosition = targetAnchoredPos;
             currentFirstIndex = finalFirstIndex;
             RefreshVisible();
+            isRecentering = false;
 
             // 更新 page 并通知
-            if (enablePaging && itemsPerPage > 0)
+            if (enablePaging && itemsPerPage > 0 && !enableLooping)
             {
                 int page = currentFirstIndex / Mathf.Max(1, itemsPerPage);
                 if (page != currentPage)
