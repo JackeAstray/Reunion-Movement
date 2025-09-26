@@ -20,6 +20,7 @@ namespace ReunionMovement.Common.Util
     /// 新增：
     /// - 支持上拉加载 / 下拉刷新（竖直）以及 左拉刷新 / 右拉加载（横向）
     /// - 通过 UnityEvent 回调触发，暴露阈值与启用开关，并提供完成通知接口以重置状态
+    /// - 新增 PageView 支持：按页对齐（可配置项数/每页），释放时自动吸附并触发页变更事件
     /// </summary>
     public class LoopScrollRect : MonoBehaviour, IBeginDragHandler, IEndDragHandler
     {
@@ -50,6 +51,18 @@ namespace ReunionMovement.Common.Util
         public UnityEvent onPullStart; // 下拉刷新 / 左拉刷新
         public UnityEvent onPullEnd;   // 上拉加载 / 右拉加载
 
+        [Header("PageView 设置")]
+        // 启用按页对齐（PageView）
+        public bool enablePaging = false;
+        // 每页显示多少个 item（>=1）
+        public int itemsPerPage = 1;
+        // 释放时是否吸附到页（true）或仅通过 JumpToIndex 控制翻页（false）
+        public bool snapToPageOnRelease = true;
+        // 吸附平滑时长
+        public float pageSnapDuration = 0.25f;
+        // 页变化事件（参数：当前页索引，从0开始）
+        public UnityEvent<int> onPageChanged;
+
         // DataSource 用于外部绑定数据和数量
         public interface IDataSource
         {
@@ -67,6 +80,9 @@ namespace ReunionMovement.Common.Util
         List<RectTransform> pooledItems = new List<RectTransform>();
         // 当前第一个可见项对应的数据索引
         int currentFirstIndex = -1;
+
+        // Paging 状态
+        int currentPage = -1;
 
         // 拖拽与拉动状态
         bool isDragging = false;
@@ -134,6 +150,7 @@ namespace ReunionMovement.Common.Util
             }
             pooledItems.Clear();
             currentFirstIndex = -1;
+            currentPage = -1;
 
             // 计算单项大小（使用 prefab 的 rect）
             if (direction == Direction.Vertical)
@@ -248,6 +265,17 @@ namespace ReunionMovement.Common.Util
             {
                 currentFirstIndex = newFirst;
                 RefreshVisible();
+
+                // 当不是由分页主动设置时，也可以计算当前页（用于初始化或直接滚动后的回调）
+                if (enablePaging && itemsPerPage > 0)
+                {
+                    int page = currentFirstIndex / itemsPerPage;
+                    if (page != currentPage)
+                    {
+                        currentPage = page;
+                        onPageChanged?.Invoke(currentPage);
+                    }
+                }
             }
         }
 
@@ -308,6 +336,34 @@ namespace ReunionMovement.Common.Util
         {
             isDragging = false;
             TryTriggerPullOnRelease();
+
+            // Page snapping：在释放时按页吸附（如果启用）
+            if (enablePaging && snapToPageOnRelease && totalCount > 0 && pooledItems.Count > 0)
+            {
+                float viewSize = (direction == Direction.Vertical) ? viewport.rect.height : viewport.rect.width;
+                float contentSize = (direction == Direction.Vertical) ? content.rect.height : content.rect.width;
+                float maxOffset = Mathf.Max(0f, contentSize - viewSize);
+
+                float offset = (direction == Direction.Vertical) ? content.anchoredPosition.y : -content.anchoredPosition.x;
+
+                // 如果用户触发了拉动刷新/加载（越界超过阈值），不进行分页吸附（让外部处理）
+                if (offset < -pullThreshold || offset > maxOffset + pullThreshold)
+                {
+                    return;
+                }
+
+                // 以 itemsPerPage 和 itemSize 计算页大小（像素）
+                int safeItemsPerPage = Mathf.Max(1, itemsPerPage);
+                float pageSizePixels = safeItemsPerPage * (itemSize + spacing);
+
+                // 计算最接近的页
+                int pageIndex = Mathf.RoundToInt(offset / pageSizePixels);
+                int maxPageIndex = Mathf.Max(0, Mathf.CeilToInt((float)totalCount / safeItemsPerPage) - 1);
+                pageIndex = Mathf.Clamp(pageIndex, 0, maxPageIndex);
+
+                int targetFirst = pageIndex * safeItemsPerPage;
+                JumpToIndex(targetFirst, true, pageSnapDuration);
+            }
         }
 
         /// <summary>
@@ -367,7 +423,19 @@ namespace ReunionMovement.Common.Util
         {
             if (totalCount == 0 || pooledItems.Count == 0) return;
 
-            int maxFirst = Math.Max(0, totalCount - visibleCount);
+            // 当启用分页时，最大 firstIndex 应基于每页显示的项数（itemsPerPage），
+            // 而不是 pooledItems/visibleCount。否则当 pooledItems > itemsPerPage 时，
+            // 最后一页可能被错误地 clamp 掉，导致无法到达最后一页。
+            int maxFirst;
+            if (enablePaging && itemsPerPage > 0)
+            {
+                int safeItemsPerPage = Mathf.Max(1, itemsPerPage);
+                maxFirst = Math.Max(0, totalCount - safeItemsPerPage);
+            }
+            else
+            {
+                maxFirst = Math.Max(0, totalCount - visibleCount);
+            }
             int targetFirst = Mathf.Clamp(index, 0, maxFirst);
 
             Vector2 targetPos = content.anchoredPosition;
@@ -392,6 +460,17 @@ namespace ReunionMovement.Common.Util
                 }
                 currentFirstIndex = targetFirst;
                 RefreshVisible();
+
+                // 更新 page 并通知
+                if (enablePaging && itemsPerPage > 0)
+                {
+                    int page = currentFirstIndex / Mathf.Max(1, itemsPerPage);
+                    if (page != currentPage)
+                    {
+                        currentPage = page;
+                        onPageChanged?.Invoke(currentPage);
+                    }
+                }
             }
             else
             {
@@ -399,6 +478,31 @@ namespace ReunionMovement.Common.Util
                 StopScrollCoroutineIfAny();
                 scrollCoroutine = StartCoroutine(SmoothScrollTo(targetPos, targetFirst, duration));
             }
+        }
+
+        /// <summary>
+        /// 跳到下一页
+        /// </summary>
+        public void NextPage(bool animated = true)
+        {
+            if (!enablePaging || totalCount == 0) return;
+            int safeItemsPerPage = Mathf.Max(1, itemsPerPage);
+            int maxPageIndex = Mathf.Max(0, Mathf.CeilToInt((float)totalCount / safeItemsPerPage) - 1);
+            int nextPage = Mathf.Clamp(currentPage + 1, 0, maxPageIndex);
+            int targetFirst = nextPage * safeItemsPerPage;
+            JumpToIndex(targetFirst, animated, pageSnapDuration);
+        }
+
+        /// <summary>
+        /// 跳到上一页
+        /// </summary>
+        public void PrevPage(bool animated = true)
+        {
+            if (!enablePaging || totalCount == 0) return;
+            int safeItemsPerPage = Mathf.Max(1, itemsPerPage);
+            int prevPage = Mathf.Clamp(currentPage - 1, 0, Mathf.Max(0, Mathf.CeilToInt((float)totalCount / safeItemsPerPage) - 1));
+            int targetFirst = prevPage * safeItemsPerPage;
+            JumpToIndex(targetFirst, animated, pageSnapDuration);
         }
 
         /// <summary>
@@ -449,6 +553,18 @@ namespace ReunionMovement.Common.Util
             content.anchoredPosition = targetAnchoredPos;
             currentFirstIndex = finalFirstIndex;
             RefreshVisible();
+
+            // 更新 page 并通知
+            if (enablePaging && itemsPerPage > 0)
+            {
+                int page = currentFirstIndex / Mathf.Max(1, itemsPerPage);
+                if (page != currentPage)
+                {
+                    currentPage = page;
+                    onPageChanged?.Invoke(currentPage);
+                }
+            }
+
             scrollCoroutine = null;
         }
 
