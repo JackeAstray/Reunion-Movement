@@ -28,7 +28,9 @@ namespace ReunionMovement.Common.Util
         public int totalCount = 0;
         // 项间距
         public float spacing = 0f;
-        // 多创建几个作缓冲
+        // 是否自动计算 extraBuffer（开启时会覆盖 Inspector 中的值）
+        public bool autoCalculateExtraBuffer = true;
+        // 多创建几个作缓冲（当 autoCalculateExtraBuffer 为 true 时会被覆盖）
         public int extraBuffer = 2;
 
         // DataSource 用于外部绑定数据和数量
@@ -120,6 +122,15 @@ namespace ReunionMovement.Common.Util
             // 视口可见数（向上取整） + buffer
             if (itemSize <= 0) itemSize = 1;
             float viewSize = (direction == Direction.Vertical) ? viewport.rect.height : viewport.rect.width;
+
+            // 自动计算 extraBuffer（基于可见项数的比例），可避免在快速滚动时频繁重用导致闪烁
+            if (autoCalculateExtraBuffer)
+            {
+                int itemsInView = Mathf.CeilToInt(viewSize / (itemSize + spacing));
+                // 取可见项数的一半作为缓冲（经验值），保证至少 1，限制一个合理上限以避免创建过多对象
+                extraBuffer = Mathf.Clamp(Mathf.CeilToInt(itemsInView * 0.5f), 1, 10);
+            }
+
             visibleCount = Mathf.CeilToInt(viewSize / (itemSize + spacing)) + extraBuffer;
             visibleCount = Mathf.Min(visibleCount, Mathf.Max(0, totalCount));
 
@@ -134,10 +145,6 @@ namespace ReunionMovement.Common.Util
                 float contentWidth = totalCount * (itemSize + spacing) - spacing;
                 content.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, contentWidth);
             }
-
-            // 如果 content 有布局组件并且你希望手动控制大小，可能需要强制重建布局后再次设置尺寸：
-            // LayoutRebuilder.ForceRebuildLayoutImmediate(content);
-            // （或者禁用 HorizontalLayoutGroup/ContentSizeFitter，或让布局组件负责尺寸）
 
             // 生成池内初始可见项（reuse prefab）
             for (int i = 0; i < visibleCount; i++)
@@ -162,14 +169,24 @@ namespace ReunionMovement.Common.Util
                     rt.anchoredPosition = new Vector2(i * (itemSize + spacing), rt.anchoredPosition.y);
                 }
 
-                // 可根据需要显式设置尺寸，确保与 itemSize 对齐（当 prefab 使用 LayoutElement 时，这一步视情况而定）
+                // 在生成池内初始可见项的循环中，根据 direction 决定主轴与非主轴尺寸：
+                // - 主轴尺寸使用计算得到的 itemSize（保持固定项高/宽）
+                // - 非主轴尺寸使用 content 的当前宽/高以填满 content（若 content 为 0 则回退到 prefab 原始尺寸）
                 if (direction == Direction.Vertical)
                 {
+                    // 主轴：高度已设置为 itemSize；非主轴：使用 content 宽度（fallback 到 prefab 宽度）
                     rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, itemSize);
+                    float width = content.rect.width;
+                    if (width <= 0) width = itemPrefab.rect.width;
+                    rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
                 }
                 else
                 {
+                    // 主轴：宽度已设置为 itemSize；非主轴：使用 content 高度（fallback 到 prefab 高度）
                     rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, itemSize);
+                    float height = content.rect.height;
+                    if (height <= 0) height = itemPrefab.rect.height;
+                    rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
                 }
 
                 pooledItems.Add(rt);
