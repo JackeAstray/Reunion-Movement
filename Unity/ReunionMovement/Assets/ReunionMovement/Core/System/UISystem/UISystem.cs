@@ -883,26 +883,49 @@ namespace ReunionMovement.Core.UI
         /// <param name="obj"></param>
         public void Return(string name, GameObject obj)
         {
-            if (!obj.activeSelf)
+            if (obj == null)
             {
-                return; // 已经是非激活状态，避免重复回收
+                Log.Warning($"[UIWindowPool.Return] 试图回收空对象: {name}");
+                return;
             }
 
-            obj.SetActive(false);
-
-            foreach (var comp in obj.GetComponents<MonoBehaviour>())
-            {
-                if (comp is UIController controller)
-                {
-                    controller.OnClose();
-                }
-            }
-
+            // 确保池存在
             if (!pool.ContainsKey(name))
             {
                 pool[name] = new Stack<GameObject>();
             }
-            pool[name].Push(obj);
+
+            var stack = pool[name];
+
+            // 防止重复回收同一个实例
+            if (stack.Contains(obj))
+            {
+                Log.Warning($"[UIWindowPool.Return] 尝试重复回收对象: {name} ({obj.GetInstanceID()})");
+                return;
+            }
+
+            // 仅当对象处于激活状态时调用 OnClose，避免重复调用导致副作用
+            if (obj.activeSelf)
+            {
+                foreach (var comp in obj.GetComponents<MonoBehaviour>())
+                {
+                    if (comp is UIController controller)
+                    {
+                        try
+                        {
+                            controller.OnClose();
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Error($"[UIWindowPool.Return] OnClose 异常: {controller?.UIName} -> {ex}");
+                        }
+                    }
+                }
+            }
+
+            // 保证对象处于非激活状态后入池
+            obj.SetActive(false);
+            stack.Push(obj);
         }
 
         /// <summary>
