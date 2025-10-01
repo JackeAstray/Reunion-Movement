@@ -25,8 +25,6 @@ namespace ReunionMovement.Core.UI
         public double InitProgress { get { return initProgress; } }
         #endregion
 
-        // UI窗口对象池（用于复用UI窗口，减少资源消耗）
-        private UIWindowPool windowPool = new UIWindowPool();
         // UI加载状态缓存（用于跟踪每个UI窗口的加载状态）
         private Dictionary<string, UILoadState> uiStateCache = new Dictionary<string, UILoadState>();
 
@@ -143,7 +141,7 @@ namespace ReunionMovement.Core.UI
                 return existingState;
             }
 
-            GameObject uiObj = windowPool.Get(name) ?? ResourcesSystem.Instance.InstantiateAsset<GameObject>(Config.UIPath + name);
+            GameObject uiObj = ResourcesSystem.Instance.InstantiateAsset<GameObject>(Config.UIPath + name);
             if (uiObj == null)
             {
                 return null;
@@ -464,8 +462,7 @@ namespace ReunionMovement.Core.UI
                 return;
             }
 
-            // 回收到对象池而不是直接销毁
-            windowPool.Return(uiName, uiState.uiWindow.gameObject);
+            UnityEngine.Object.Destroy(uiState.uiWindow.gameObject);
 
             uiState.uiWindow = null;
             uiStateCache.Remove(uiName);
@@ -850,90 +847,6 @@ namespace ReunionMovement.Core.UI
                 object[] args = uiState.callbacksArgsWhenFinish.Dequeue();
                 DoCallback(callback, args);
             }
-        }
-    }
-
-    /// <summary>
-    /// UIWindowPool是一个简单的对象池，用于管理UI窗口的复用
-    /// </summary>
-    public class UIWindowPool
-    {
-        private readonly Dictionary<string, Stack<GameObject>> pool = new();
-
-        /// <summary>
-        /// 获取一个对象池中的对象，如果没有可用对象则返回null
-        /// </summary>
-        /// <param name="name"></param>
-        /// <returns></returns>
-        public GameObject Get(string name)
-        {
-            if (pool.TryGetValue(name, out var stack) && stack.Count > 0)
-            {
-                var obj = stack.Pop();
-                obj.SetActive(true);
-                return obj;
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// 将一个对象返回到对象池中，设置为非激活状态
-        /// </summary>
-        /// <param name="name"></param>
-        /// <param name="obj"></param>
-        public void Return(string name, GameObject obj)
-        {
-            if (obj == null)
-            {
-                Log.Warning($"[UIWindowPool.Return] 试图回收空对象: {name}");
-                return;
-            }
-
-            // 确保池存在
-            if (!pool.ContainsKey(name))
-            {
-                pool[name] = new Stack<GameObject>();
-            }
-
-            var stack = pool[name];
-
-            // 防止重复回收同一个实例
-            if (stack.Contains(obj))
-            {
-                Log.Warning($"[UIWindowPool.Return] 尝试重复回收对象: {name} ({obj.GetInstanceID()})");
-                return;
-            }
-
-            // 仅当对象处于激活状态时调用 OnClose，避免重复调用导致副作用
-            if (obj.activeSelf)
-            {
-                foreach (var comp in obj.GetComponents<MonoBehaviour>())
-                {
-                    if (comp is UIController controller)
-                    {
-                        try
-                        {
-                            controller.OnClose();
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.Error($"[UIWindowPool.Return] OnClose 异常: {controller?.UIName} -> {ex}");
-                        }
-                    }
-                }
-            }
-
-            // 保证对象处于非激活状态后入池
-            obj.SetActive(false);
-            stack.Push(obj);
-        }
-
-        /// <summary>
-        /// 清空对象池中的所有对象
-        /// </summary>
-        public void Clear()
-        {
-            pool.Clear();
         }
     }
 }
