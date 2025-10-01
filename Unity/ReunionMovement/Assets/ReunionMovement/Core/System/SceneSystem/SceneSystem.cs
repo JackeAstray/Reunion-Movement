@@ -256,10 +256,29 @@ namespace ReunionMovement.Core.Scene
         /// <param name="progress"></param>
         public void CallbackProgress(float progress)
         {
+            // 增强：保护性调用所有订阅者，单个订阅者异常不会中断流程
             Log.Debug("加载场景进度：" + progress);
-            if (getProgress != null)
+            try
             {
-                getProgress(progress);
+                var handlers = getProgress;
+                if (handlers == null) return;
+
+                // 逐个调用订阅者，捕获并记录每个订阅者的异常，避免抛出到调用方（特别是在 WebGL 下激活场景可能销毁订阅者）
+                foreach (var del in handlers.GetInvocationList())
+                {
+                    try
+                    {
+                        ((Action<float>)del).Invoke(progress);
+                    }
+                    catch (Exception exInner)
+                    {
+                        Log.Error($"getProgress 回调异常（忽略）：{exInner}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"CallbackProgress 异常：{ex}");
             }
         }
 
