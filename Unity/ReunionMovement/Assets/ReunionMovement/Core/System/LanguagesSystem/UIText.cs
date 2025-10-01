@@ -16,7 +16,7 @@ namespace ReunionMovement.Core.Languages
     public class UIText : ObserverBase
     {
         // 语言文本ID
-        [SerializeField] private int id;
+        [SerializeField] private int number;
 
         private TMP_Text tmpTextComponent;
         private Text textComponent;
@@ -61,7 +61,7 @@ namespace ReunionMovement.Core.Languages
                 return;
             }
 
-            string value = LanguagesSystem.Instance.GetTextById(id);
+            string value = LanguagesSystem.Instance.GetTextById(number);
 
             if (!string.IsNullOrEmpty(value))
             {
@@ -78,7 +78,7 @@ namespace ReunionMovement.Core.Languages
             }
             else
             {
-                Log.Debug("GetTextLanguage() " + id + "是空的");
+                Log.Debug("GetTextLanguage() " + number + "是空的");
             }
         }
     }

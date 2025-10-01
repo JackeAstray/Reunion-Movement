@@ -232,7 +232,6 @@ namespace ReunionMovement.Core.Scene
             currentSceneName = targetSceneName;
             targetSceneName = null;
             beforeSceneLoadingCompletionCallback = null;
-            sceneLoadingCompletionCallback = null;
         }
 
         /// <summary>
@@ -248,6 +247,7 @@ namespace ReunionMovement.Core.Scene
         private void ExecuteSlcc()
         {
             sceneLoadingCompletionCallback?.Invoke();
+            sceneLoadingCompletionCallback = null;
         }
 
         /// <summary>

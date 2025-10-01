@@ -75,13 +75,13 @@ namespace ReunionMovement.Core.Languages
         /// <summary>
         /// 根据ID获取对应的文本
         /// </summary>
-        /// <param name="id"></param>
+        /// <param name="number"></param>
         /// <returns></returns>
-        public string GetTextById(int id)
+        public string GetTextById(int number)
         {
             if (languagesContainer != null && languagesContainer.configs != null)
             {
-                ReunionMovement.Languages language = languagesContainer.configs.Find(l => l.Id == id);
+                ReunionMovement.Languages language = languagesContainer.configs.Find(l => l.Number == number);
                 if (language != null)
                 {
                     // 根据当前多语言设置返回对应的文本
@@ -102,7 +102,7 @@ namespace ReunionMovement.Core.Languages
                 }
                 else
                 {
-                    Log.Error($"未找到ID为{id}的语言配置");
+                    Log.Error($"未找到ID为{number}的语言配置");
                 }
             }
             else
