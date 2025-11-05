@@ -36,6 +36,13 @@ namespace ReunionMovement.UI.ImageExtensions
         [SerializeField] private bool flipVertical;
         [SerializeField] private float alphaThreshold = 0f;
 
+        // Shadow serialized fields (new)
+        [SerializeField] private int enableShadow = 0;
+        [SerializeField] private Color shadowColor = new Color(0, 0, 0, 0.5f);
+        [SerializeField] private Vector2 shadowOffset = new Vector2(0.01f, -0.01f);
+        [SerializeField] private float shadowSoftness = 0f;
+        [SerializeField] private int shadowUseShapeMask = 1;
+
         [SerializeField] private TriangleImg triangle = new TriangleImg();
         [SerializeField] private RectangleImg rectangle = new RectangleImg();
         [SerializeField] private CircleImg circle = new CircleImg();
@@ -68,6 +75,13 @@ namespace ReunionMovement.UI.ImageExtensions
         private static readonly int constrainedRotation_Sp = Shader.PropertyToID("_ConstrainRotation");
         private static readonly int flipHorizontal_Sp = Shader.PropertyToID("_FlipHorizontal");
         private static readonly int flipVertical_Sp = Shader.PropertyToID("_FlipVertical");
+
+        // Shadow property IDs (new)
+        private static readonly int enableShadow_Sp = Shader.PropertyToID("_EnableShadow");
+        private static readonly int shadowColor_Sp = Shader.PropertyToID("_ShadowColor");
+        private static readonly int shadowOffset_Sp = Shader.PropertyToID("_ShadowOffset");
+        private static readonly int shadowSoftness_Sp = Shader.PropertyToID("_ShadowSoftness");
+        private static readonly int shadowUseShapeMask_Sp = Shader.PropertyToID("_ShadowUseShapeMask");
         #endregion
 
         #region 公共属性
@@ -776,7 +790,6 @@ namespace ReunionMovement.UI.ImageExtensions
 
             DisableAllMaterialKeywords(mat);
 
-
             RectTransform rt = rectTransform;
             if (DrawShape != DrawShape.None)
             {
@@ -816,6 +829,15 @@ namespace ReunionMovement.UI.ImageExtensions
                 }
             }
 
+            // Ensure shadow properties are passed to the material
+            if (mat != null)
+            {
+                if (mat.HasProperty(enableShadow_Sp)) mat.SetInt(enableShadow_Sp, enableShadow);
+                if (mat.HasProperty(shadowColor_Sp)) mat.SetColor(shadowColor_Sp, shadowColor);
+                if (mat.HasProperty(shadowOffset_Sp)) mat.SetVector(shadowOffset_Sp, new Vector4(shadowOffset.x, shadowOffset.y, 0f, 0f));
+                if (mat.HasProperty(shadowSoftness_Sp)) mat.SetFloat(shadowSoftness_Sp, shadowSoftness);
+                if (mat.HasProperty(shadowUseShapeMask_Sp)) mat.SetInt(shadowUseShapeMask_Sp, shadowUseShapeMask);
+            }
 
             triangle.ModifyMaterial(ref mat);
             circle.ModifyMaterial(ref mat, falloffDistance);
@@ -956,6 +978,13 @@ namespace ReunionMovement.UI.ImageExtensions
             flipVertical = mat.GetInt(flipVertical_Sp) == 1;
             constrainRotation = mat.GetInt(constrainedRotation_Sp) == 1;
             shapeRotation = mat.GetFloat(shapeRotation_Sp);
+
+            // read shadow values from material
+            if (mat.HasProperty(enableShadow_Sp)) enableShadow = mat.GetInt(enableShadow_Sp);
+            if (mat.HasProperty(shadowColor_Sp)) shadowColor = mat.GetColor(shadowColor_Sp);
+            if (mat.HasProperty(shadowOffset_Sp)) { Vector4 v = mat.GetVector(shadowOffset_Sp); shadowOffset = new Vector2(v.x, v.y); }
+            if (mat.HasProperty(shadowSoftness_Sp)) shadowSoftness = mat.GetFloat(shadowSoftness_Sp);
+            if (mat.HasProperty(shadowUseShapeMask_Sp)) shadowUseShapeMask = mat.GetInt(shadowUseShapeMask_Sp);
 
             triangle.InitValuesFromMaterial(ref mat);
             circle.InitValuesFromMaterial(ref mat);
