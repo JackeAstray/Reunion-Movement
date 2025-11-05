@@ -865,6 +865,9 @@ MonoBehaviour:
       m_Calls: []
   pullStartIndicatorPrefab: {fileID: 8203041348319187781, guid: 4854495e9457b604cbb034fe042fd626, type: 3}
   pullEndIndicatorPrefab: {fileID: 7800853841312195819, guid: 55e3fc9eaddf05941815f1c1e0e166c5, type: 3}
+  onItemSelected:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &292574535
 GameObject:
   m_ObjectHideFlags: 0
@@ -1164,8 +1167,11 @@ MonoBehaviour:
   onPageChanged:
     m_PersistentCalls:
       m_Calls: []
-  pullStartIndicatorPrefab: {fileID: 0}
-  pullEndIndicatorPrefab: {fileID: 0}
+  pullStartIndicatorPrefab: {fileID: 8203041348319187781, guid: 7d4f8ba12f2c6ff448d083173fa29c7e, type: 3}
+  pullEndIndicatorPrefab: {fileID: 7800853841312195819, guid: d937b9d860db41c458278c839edb18d0, type: 3}
+  onItemSelected:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &407769344
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4382,6 +4388,9 @@ MonoBehaviour:
       m_Calls: []
   pullStartIndicatorPrefab: {fileID: 0}
   pullEndIndicatorPrefab: {fileID: 0}
+  onItemSelected:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &2087614385
 MonoBehaviour:
   m_ObjectHideFlags: 0

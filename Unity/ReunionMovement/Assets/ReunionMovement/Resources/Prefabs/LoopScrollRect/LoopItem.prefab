@@ -91,6 +91,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   index: -1
   itemName: {fileID: 3826405350734941741}
+  normalColor: {r: 0, g: 0, b: 0, a: 1}
+  selectedColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1 &3097631122113301971
 GameObject:
   m_ObjectHideFlags: 0
