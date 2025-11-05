@@ -76,6 +76,10 @@ namespace ReunionMovement.Example
             StartCoroutine(DoRefresh());
         }
 
+        /// <summary>
+        /// 模拟刷新过程
+        /// </summary>
+        /// <returns></returns>
         IEnumerator DoRefresh()
         {
             // 模拟耗时操作（例如网络请求），期间 pullStartIndicator 保持显示
@@ -95,6 +99,10 @@ namespace ReunionMovement.Example
             StartCoroutine(DoLoad());
         }
 
+        /// <summary>
+        /// 模拟加载过程
+        /// </summary>
+        /// <returns></returns>
         IEnumerator DoLoad()
         {
             // 模拟耗时操作，期间 pullEndIndicator 保持显示

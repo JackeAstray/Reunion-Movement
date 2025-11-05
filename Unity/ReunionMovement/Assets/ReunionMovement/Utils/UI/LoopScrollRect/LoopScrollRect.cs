@@ -765,6 +765,9 @@ namespace ReunionMovement.Common.Util
             // 固定在 viewport 下边缘
         }
 
+        /// <summary>
+        /// 隐藏并销毁起始端指示器实例。
+        /// </summary>
         void HidePullStartIndicator()
         {
             if (pullStartIndicatorInstance != null)
@@ -775,6 +778,9 @@ namespace ReunionMovement.Common.Util
             }
         }
 
+        /// <summary>
+        /// 隐藏并销毁末端指示器实例。
+        /// </summary>
         void HidePullEndIndicator()
         {
             if (pullEndIndicatorInstance != null)
@@ -785,7 +791,9 @@ namespace ReunionMovement.Common.Util
             }
         }
 
-        // 指示器固定在 viewport 边缘，不随 pooledItems 调整位置
+        /// <summary>
+        /// 指示器固定在 viewport 边缘，不随 pooledItems 调整位置
+        /// </summary>
         void UpdatePullIndicatorPositions()
         {
             // 对于现在的实现，指示器固定锚点在 viewport 的上下边缘，通常不需要在此更新位置。

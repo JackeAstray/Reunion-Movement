@@ -30,6 +30,10 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         public virtual void SetSelected(bool selected) { }
 
+        /// <summary>
+        /// 点击事件处理
+        /// </summary>
+        /// <param name="eventData"></param>
         public void OnPointerClick(PointerEventData eventData)
         {
             onClick?.Invoke(index);
