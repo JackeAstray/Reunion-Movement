@@ -52,6 +52,16 @@ namespace ReunionMovement.Core.Languages
         }
 
         /// <summary>
+        /// 设置文本ID
+        /// </summary>
+        /// <param name="id"></param>
+        public void SetNumber(int number)
+        {
+            this.number = number;
+            GetTextLanguage();
+        }
+
+        /// <summary>
         /// 获取当前语言的文本
         /// </summary>
         public void GetTextLanguage()
