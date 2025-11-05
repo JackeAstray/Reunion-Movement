@@ -13,7 +13,6 @@ namespace ReunionMovement.Example
 
         public void Init(SubjectBase subject)
         {
-            this.subject = subject;
             this.subject.Attach(this);
         }
 
