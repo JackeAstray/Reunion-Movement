@@ -14,6 +14,11 @@ namespace ReunionMovement.Common.Util
         public Color selectedColor = Color.yellow;
         bool isSelected = false;
 
+        /// <summary>
+        /// 绑定数据到项
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="name"></param>
         public override void Set(int index, string name)
         {
             this.index = index;
@@ -26,12 +31,19 @@ namespace ReunionMovement.Common.Util
             UpdateVisual();
         }
 
+        /// <summary>
+        /// 设置选中状态
+        /// </summary>
+        /// <param name="selected"></param>
         public override void SetSelected(bool selected)
         {
             isSelected = selected;
             UpdateVisual();
         }
 
+        /// <summary>
+        /// 更新视觉效果
+        /// </summary>
         void UpdateVisual()
         {
             if (itemName != null)
