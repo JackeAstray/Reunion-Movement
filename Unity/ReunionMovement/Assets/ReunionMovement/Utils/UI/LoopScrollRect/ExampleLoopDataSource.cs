@@ -1,4 +1,6 @@
-﻿using System;
+﻿using ReunionMovement.Common;
+using ReunionMovement.Common.Util;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +9,7 @@ using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 
-namespace ReunionMovement.Common.Util
+namespace ReunionMovement.Example
 {
     /// <summary>
     /// LoopScrollRect 数据源例子

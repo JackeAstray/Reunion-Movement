@@ -1,18 +1,43 @@
+using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace ReunionMovement.Common.Util
 {
-    public class LoopItem : MonoBehaviour
+    public class LoopItem : LoopItemBase
     {
-        public int index = -1;
         public TextMeshProUGUI itemName;
 
-        public void Set(int index, string name)
+        // Selection visuals
+        public Color normalColor = Color.white;
+        public Color selectedColor = Color.yellow;
+        bool isSelected = false;
+
+        public override void Set(int index, string name)
         {
             this.index = index;
-            itemName.text = name;
+            if (itemName != null)
+            {
+                itemName.text = name;
+            }
             gameObject.name = name;
+            // 确保视觉效果反映当前的选择状态
+            UpdateVisual();
+        }
+
+        public override void SetSelected(bool selected)
+        {
+            isSelected = selected;
+            UpdateVisual();
+        }
+
+        void UpdateVisual()
+        {
+            if (itemName != null)
+            {
+                itemName.color = isSelected ? selectedColor : normalColor;
+            }
         }
     }
 }

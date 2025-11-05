@@ -76,6 +76,9 @@ namespace ReunionMovement.Common.Util
         // 运行时实例
         RectTransform pullStartIndicatorInstance = null;
         RectTransform pullEndIndicatorInstance = null;
+        // 指示器脚本引用
+        PullIndicatorBase pullStartIndicatorComp = null;
+        PullIndicatorBase pullEndIndicatorComp = null;
 
         // DataSource 用于外部绑定数据和数量
         public interface IDataSource
@@ -97,6 +100,11 @@ namespace ReunionMovement.Common.Util
 
         // Paging 状态
         int currentPage = -1;
+
+        // 选中项（以数据索引为准，-1 表示无选中）
+        int selectedDataIndex = -1;
+        // 选中回调（参数：数据索引）
+        public UnityEvent<int> onItemSelected;
 
         // 拖拽与拉动状态
         bool isDragging = false;
@@ -228,11 +236,13 @@ namespace ReunionMovement.Common.Util
                 // 显式设置位置，防止初始位置为 (0,0) 导致错位
                 if (direction == Direction.Vertical)
                 {
-                    rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, -i * (itemSize + spacing));
+                    // 保证主轴在 y，非主轴 x 固定为 0（左对齐）
+                    rt.anchoredPosition = new Vector2(0f, -i * (itemSize + spacing));
                 }
                 else
                 {
-                    rt.anchoredPosition = new Vector2(i * (itemSize + spacing), rt.anchoredPosition.y);
+                    // 保证主轴在 x，非主轴 y 固定为 0（顶对齐）
+                    rt.anchoredPosition = new Vector2(i * (itemSize + spacing), 0f);
                 }
 
                 // 在生成池内初始可见项的循环中，根据 direction 决定主轴与非主轴尺寸：
@@ -394,6 +404,12 @@ namespace ReunionMovement.Common.Util
                 if (offset < 0f && enablePullStart)
                 {
                     ShowPullStartIndicator();
+                    // 仅在未进入刷新动作时更新进度
+                    if (!isActionInProgressStart && pullStartIndicatorComp != null)
+                    {
+                        float progress = Mathf.Clamp01(-offset / pullThreshold);
+                        pullStartIndicatorComp.OnPulling(progress);
+                    }
                 }
                 else
                 {
@@ -406,6 +422,11 @@ namespace ReunionMovement.Common.Util
                 if (offset > maxOffset && enablePullEnd)
                 {
                     ShowPullEndIndicator();
+                    if (!isActionInProgressEnd && pullEndIndicatorComp != null)
+                    {
+                        float progress = Mathf.Clamp01((offset - maxOffset) / pullThreshold);
+                        pullEndIndicatorComp.OnPulling(progress);
+                    }
                 }
                 else
                 {
@@ -444,20 +465,38 @@ namespace ReunionMovement.Common.Util
                     item.gameObject.SetActive(true);
                     // 绑定数据
                     dataSource?.BindItem(item, dataIndex);
+
+                    // 绑定点击/选中回调（如果 Item 上有 LoopItemBase）
+                    var loopItemComp = item.GetComponent<LoopItemBase>();
+                    if (loopItemComp != null)
+                    {
+                        loopItemComp.onClick = OnItemClicked;
+                        loopItemComp.SetSelected(dataIndex == selectedDataIndex);
+                    }
+
                     // 定位 item 使用虚拟索引，以支持循环中间重心化
                     if (direction == Direction.Vertical)
                     {
                         float posY = -virtualIndex * (itemSize + spacing);
-                        item.anchoredPosition = new Vector2(item.anchoredPosition.x, posY);
+                        // 非主轴 x 定位为 0，保证对齐
+                        item.anchoredPosition = new Vector2(0f, posY);
                     }
                     else
                     {
                         float posX = virtualIndex * (itemSize + spacing);
-                        item.anchoredPosition = new Vector2(posX, item.anchoredPosition.y);
+                        // 非主轴 y 定位为 0，保证对齐
+                        item.anchoredPosition = new Vector2(posX, 0f);
                     }
                 }
                 else
                 {
+                    // 若不可见，确保移除回调并隐藏
+                    var loopItemComp = item.GetComponent<LoopItemBase>();
+                    if (loopItemComp != null)
+                    {
+                        loopItemComp.onClick = null;
+                        loopItemComp.SetSelected(false);
+                    }
                     item.gameObject.SetActive(false);
                 }
             }
@@ -465,6 +504,66 @@ namespace ReunionMovement.Common.Util
             // 更新指示器位置（若存在）
             UpdatePullIndicatorPositions();
         }
+
+        void OnItemClicked(int dataIndex)
+        {
+            // 选择数据索引（不自动滚动）
+            selectedDataIndex = dataIndex;
+            // 更新可见项的选中状态
+            for (int i = 0; i < pooledItems.Count; i++)
+            {
+                var item = pooledItems[i];
+                var li = item.GetComponent<LoopItemBase>();
+                if (li != null)
+                {
+                    // 获取当前绑定的索引（LoopItemBase.index）与 selectedDataIndex 比较
+                    li.SetSelected(li.index == selectedDataIndex);
+                }
+            }
+
+            onItemSelected?.Invoke(dataIndex);
+        }
+
+        /// <summary>
+        /// 外部接口：以数据索引选择一个项（可选是否使其可见）
+        /// </summary>
+        public void SelectDataIndex(int dataIndex, bool ensureVisible = false, bool animated = false)
+        {
+            if (totalCount == 0) return;
+            dataIndex = Mathf.Clamp(dataIndex, 0, totalCount - 1);
+            selectedDataIndex = dataIndex;
+
+            // 更新可见项状态
+            for (int i = 0; i < pooledItems.Count; i++)
+            {
+                var item = pooledItems[i];
+                var li = item.GetComponent<LoopItemBase>();
+                if (li != null)
+                {
+                    li.SetSelected(li.index == selectedDataIndex);
+                }
+            }
+
+            onItemSelected?.Invoke(dataIndex);
+
+            if (ensureVisible)
+            {
+                // 将目标索引移动为第一个可见项（JumpToIndex 使用数据索引时会放到中间 cycle）
+                JumpToIndex(dataIndex, animated, pageSnapDuration);
+            }
+        }
+
+        public void ClearSelection()
+        {
+            selectedDataIndex = -1;
+            for (int i = 0; i < pooledItems.Count; i++)
+            {
+                var li = pooledItems[i].GetComponent<LoopItemBase>();
+                if (li != null) li.SetSelected(false);
+            }
+        }
+
+        public int GetSelectedIndex() => selectedDataIndex;
 
         // IBeginDragHandler / IEndDragHandler 用于检测用户拖拽释放以判断是否触发拉动动作
         public void OnBeginDrag(PointerEventData eventData)
@@ -476,6 +575,16 @@ namespace ReunionMovement.Common.Util
         {
             isDragging = false;
             TryTriggerPullOnRelease();
+
+            // 如果松手时并未触发刷新/加载动作，则需要隐藏实时指示器
+            if (!isActionInProgressStart)
+            {
+                HidePullStartIndicator();
+            }
+            if (!isActionInProgressEnd)
+            {
+                HidePullEndIndicator();
+            }
 
             // Page snapping：在释放时按页吸附（如果启用）
             if (enablePaging && snapToPageOnRelease && totalCount > 0 && pooledItems.Count > 0 && !enableLooping)
@@ -531,6 +640,8 @@ namespace ReunionMovement.Common.Util
                 isActionInProgressStart = true;
                 // 显示起始端指示器（如果设置了预制体）
                 ShowPullStartIndicator();
+                // 切换指示器到刷新状态
+                pullStartIndicatorComp?.OnRefreshing();
                 onPullStart?.Invoke();
             }
             // 末端（底部/右侧）超出
@@ -539,6 +650,7 @@ namespace ReunionMovement.Common.Util
                 isActionInProgressEnd = true;
                 // 显示末端指示器（如果设置了预制体）
                 ShowPullEndIndicator();
+                pullEndIndicatorComp?.OnRefreshing();
                 onPullEnd?.Invoke();
             }
         }
@@ -552,12 +664,15 @@ namespace ReunionMovement.Common.Util
         public void CompletePullStart()
         {
             isActionInProgressStart = false;
+            // 通知指示器完成动画
+            pullStartIndicatorComp?.OnComplete();
             HidePullStartIndicator();
         }
 
         public void CompletePullEnd()
         {
             isActionInProgressEnd = false;
+            pullEndIndicatorComp?.OnComplete();
             HidePullEndIndicator();
         }
 
@@ -574,6 +689,8 @@ namespace ReunionMovement.Common.Util
             LayoutGroup lg = pullStartIndicatorInstance.GetComponentInParent<LayoutGroup>();
             if (lg != null) { /* keep as simple; parent is viewport which normally has no LayoutGroup */ }
             pullStartIndicatorInstance.gameObject.SetActive(true);
+            // 获取脚本引用（如果存在）
+            pullStartIndicatorComp = pullStartIndicatorInstance.GetComponent<PullIndicatorBase>();
             // 保证对齐
             // 将起始指示器固定在 viewport 的上边缘
             pullStartIndicatorInstance.pivot = new Vector2(0.5f, 1f);
@@ -593,66 +710,80 @@ namespace ReunionMovement.Common.Util
             }
             else
             {
+                // Horizontal: 固定在左侧中间
                 float height = viewport.rect.height;
                 if (height <= 0) height = pullStartIndicatorPrefab.rect.height;
                 pullStartIndicatorInstance.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
                 float w = pullStartIndicatorPrefab.rect.width > 0 ? pullStartIndicatorPrefab.rect.width : itemSize;
                 pullStartIndicatorInstance.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, w);
+                // 左侧中间
+                pullStartIndicatorInstance.pivot = new Vector2(0f, 0.5f);
+                pullStartIndicatorInstance.anchorMin = new Vector2(0f, 0.5f);
+                pullStartIndicatorInstance.anchorMax = new Vector2(0f, 0.5f);
                 pullStartIndicatorInstance.anchoredPosition = new Vector2(0f, 0f);
             }
             // 不依赖 pooledItems 的位置来定位；它固定在 viewport 边缘
-         }
+        }
 
-         void ShowPullEndIndicator()
-         {
-             if (pullEndIndicatorPrefab == null) return;
-             if (pullEndIndicatorInstance != null) return;
-             RectTransform parent = viewport != null ? viewport : content;
-             pullEndIndicatorInstance = Instantiate(pullEndIndicatorPrefab, parent);
-             pullEndIndicatorInstance.SetAsLastSibling();
-             pullEndIndicatorInstance.gameObject.SetActive(true);
-             // 将末端指示器固定在 viewport 的下边缘
-             pullEndIndicatorInstance.pivot = new Vector2(0.5f, 0f);
-             pullEndIndicatorInstance.anchorMin = new Vector2(0.5f, 0f);
-             pullEndIndicatorInstance.anchorMax = new Vector2(0.5f, 0f);
-             if (direction == Direction.Vertical)
-             {
-                 float width = viewport.rect.width;
-                 if (width <= 0) width = pullEndIndicatorPrefab.rect.width;
-                 pullEndIndicatorInstance.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
-                 float h = pullEndIndicatorPrefab.rect.height > 0 ? pullEndIndicatorPrefab.rect.height : itemSize;
-                 pullEndIndicatorInstance.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, h);
-                 pullEndIndicatorInstance.anchoredPosition = new Vector2(0f, 0f);
-             }
-             else
-             {
-                 float height = viewport.rect.height;
-                 if (height <= 0) height = pullEndIndicatorPrefab.rect.height;
-                 pullEndIndicatorInstance.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
-                 float w = pullEndIndicatorPrefab.rect.width > 0 ? pullEndIndicatorPrefab.rect.width : itemSize;
-                 pullEndIndicatorInstance.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, w);
-                 pullEndIndicatorInstance.anchoredPosition = new Vector2(0f, 0f);
-             }
-             // 固定在 viewport 下边缘
-         }
+        void ShowPullEndIndicator()
+        {
+            if (pullEndIndicatorPrefab == null) return;
+            if (pullEndIndicatorInstance != null) return;
+            RectTransform parent = viewport != null ? viewport : content;
+            pullEndIndicatorInstance = Instantiate(pullEndIndicatorPrefab, parent);
+            pullEndIndicatorInstance.SetAsLastSibling();
+            pullEndIndicatorInstance.gameObject.SetActive(true);
+            // 获取脚本引用
+            pullEndIndicatorComp = pullEndIndicatorInstance.GetComponent<PullIndicatorBase>();
+            // 将末端指示器固定在 viewport 的下边缘
+            pullEndIndicatorInstance.pivot = new Vector2(0.5f, 0f);
+            pullEndIndicatorInstance.anchorMin = new Vector2(0.5f, 0f);
+            pullEndIndicatorInstance.anchorMax = new Vector2(0.5f, 0f);
+            if (direction == Direction.Vertical)
+            {
+                float width = viewport.rect.width;
+                if (width <= 0) width = pullEndIndicatorPrefab.rect.width;
+                pullEndIndicatorInstance.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
+                float h = pullEndIndicatorPrefab.rect.height > 0 ? pullEndIndicatorPrefab.rect.height : itemSize;
+                pullEndIndicatorInstance.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, h);
+                pullEndIndicatorInstance.anchoredPosition = new Vector2(0f, 0f);
+            }
+            else
+            {
+                // Horizontal: 固定在右侧中间
+                float height = viewport.rect.height;
+                if (height <= 0) height = pullEndIndicatorPrefab.rect.height;
+                pullEndIndicatorInstance.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
+                float w = pullEndIndicatorPrefab.rect.width > 0 ? pullEndIndicatorPrefab.rect.width : itemSize;
+                pullEndIndicatorInstance.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, w);
+                // 右侧中间
+                pullEndIndicatorInstance.pivot = new Vector2(1f, 0.5f);
+                pullEndIndicatorInstance.anchorMin = new Vector2(1f, 0.5f);
+                pullEndIndicatorInstance.anchorMax = new Vector2(1f, 0.5f);
+                pullEndIndicatorInstance.anchoredPosition = new Vector2(0f, 0f);
+            }
+            // 固定在 viewport 下边缘
+        }
 
-         void HidePullStartIndicator()
-         {
-             if (pullStartIndicatorInstance != null)
-             {
-                 try { Destroy(pullStartIndicatorInstance.gameObject); } catch { }
-                 pullStartIndicatorInstance = null;
-             }
-         }
+        void HidePullStartIndicator()
+        {
+            if (pullStartIndicatorInstance != null)
+            {
+                try { Destroy(pullStartIndicatorInstance.gameObject); } catch { }
+                pullStartIndicatorInstance = null;
+                pullStartIndicatorComp = null;
+            }
+        }
 
-         void HidePullEndIndicator()
-         {
-             if (pullEndIndicatorInstance != null)
-             {
-                 try { Destroy(pullEndIndicatorInstance.gameObject); } catch { }
-                 pullEndIndicatorInstance = null;
-             }
-         }
+        void HidePullEndIndicator()
+        {
+            if (pullEndIndicatorInstance != null)
+            {
+                try { Destroy(pullEndIndicatorInstance.gameObject); } catch { }
+                pullEndIndicatorInstance = null;
+                pullEndIndicatorComp = null;
+            }
+        }
 
         // 指示器固定在 viewport 边缘，不随 pooledItems 调整位置
         void UpdatePullIndicatorPositions()
