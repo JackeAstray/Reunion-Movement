@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,6 +9,9 @@ using UnityEngine;
 
 namespace ReunionMovement.Common.Util
 {
+    /// <summary>
+    /// LoopScrollRect 数据源例子
+    /// </summary>
     public class ExampleLoopDataSource : MonoBehaviour, LoopScrollRect.IDataSource
     {
         public LoopScrollRect loop;
@@ -61,20 +65,40 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 刷新
+        /// 刷新（仅显示指示器，完成后隐藏）
         /// </summary>
         public void Refresh()
         {
             Log.Info("Refresh");
+            // 启动协程模拟异步刷新，仅用于展示指示器
+            StartCoroutine(DoRefresh());
+        }
+
+        IEnumerator DoRefresh()
+        {
+            // 模拟耗时操作（例如网络请求），期间 pullStartIndicator 保持显示
+            yield return new WaitForSeconds(1f);
+
+            // 不修改数据，仅在完成后隐藏指示器
             loop.CompletePullStart();
         }
 
         /// <summary>
-        /// 加载
+        /// 加载（仅显示指示器，完成后隐藏）
         /// </summary>
         public void Load()
         {
             Log.Info("Load");
+            // 启动协程模拟异步加载，仅用于展示指示器
+            StartCoroutine(DoLoad());
+        }
+
+        IEnumerator DoLoad()
+        {
+            // 模拟耗时操作，期间 pullEndIndicator 保持显示
+            yield return new WaitForSeconds(1f);
+
+            // 不修改数据，仅在完成后隐藏指示器
             loop.CompletePullEnd();
         }
 
