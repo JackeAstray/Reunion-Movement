@@ -56,16 +56,13 @@ namespace ReunionMovement.Common.Util.Download
             Log.Debug("DownloadManagerModule 清除数据");
         }
 
-        public void OnDestroy()
+        // Use protected so Unity will still call it, and to avoid exposing destruction publicly
+        protected void OnDestroy()
         {
-            foreach (var tex in imageCache.Values)
-            {
-                if (tex != null)
-                {
-                    UnityEngine.Object.Destroy(tex);
-                }
-            }
-            imageCache.Clear();
+            // reuse ClearData to ensure textures are destroyed and cache cleared
+            ClearData();
+
+            // clear mappings
             mimeTypeToExtension.Clear();
         }
 
@@ -107,6 +104,8 @@ namespace ReunionMovement.Common.Util.Download
                             UnityEngine.Object.Destroy(oldTex);
                         }
                         imageCache[url] = response.Texture;
+
+                        // 保存到本地（确保目录存在于SaveToLocal中）
                         SaveToLocal(response.Texture, localPath);
                         onComplete?.Invoke(response.Texture);
                     }
@@ -219,6 +218,8 @@ namespace ReunionMovement.Common.Util.Download
                 byte[] imageBytes = File.ReadAllBytes(filePath);
                 texture = new Texture2D(2, 2);
                 texture.LoadImage(imageBytes);
+                // 设置一个名称以帮助调试和跟踪
+                try { texture.name = Path.GetFileName(filePath); } catch { }
                 return true;
             }
             catch (Exception ex)
@@ -237,6 +238,13 @@ namespace ReunionMovement.Common.Util.Download
         {
             try
             {
+                // 确保目录存在
+                var dir = Path.GetDirectoryName(filePath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
                 byte[] bytes = texture.EncodeToPNG();
                 File.WriteAllBytes(filePath, bytes);
                 Log.Debug($"保存到本地成功: {filePath}");
