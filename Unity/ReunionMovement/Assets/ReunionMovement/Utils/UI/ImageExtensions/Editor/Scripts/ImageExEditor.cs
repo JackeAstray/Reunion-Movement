@@ -24,7 +24,6 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
         private SerializedProperty spMaterialSettings, spMaterial, spImageType;
 
         private SerializedProperty spGradient;
-        private SerializedProperty spEnableShadow, spShadowColor, spShadowOffset, spShadowSoftness, spShadowUseShapeMask;
 
         private bool gsInitialized, shaderChannelsNeedUpdate;
 
@@ -80,12 +79,6 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             spPreserveAspect = serializedObject.FindProperty("m_PreserveAspect");
 
             spGradient = serializedObject.FindProperty("gradientEffect");
-            // shadow properties
-            spEnableShadow = serializedObject.FindProperty("enableShadow");
-            spShadowColor = serializedObject.FindProperty("shadowColor");
-            spShadowOffset = serializedObject.FindProperty("shadowOffset");
-            spShadowSoftness = serializedObject.FindProperty("shadowSoftness");
-            spShadowUseShapeMask = serializedObject.FindProperty("shadowUseShapeMask");
         }
 
         public override void OnInspectorGUI()
@@ -180,9 +173,6 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                 EditorGUILayout.PropertyField(spGradient);
             }
             EditorGUILayout.EndVertical();
-
-            // Shadow controls
-            ShadowGUI();
 
             //刷新
             serializedObject.ApplyModifiedProperties();
@@ -328,73 +318,6 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             EditorGUILayout.Space();
 
             RotationGUI();
-        }
-
-        private void ShadowGUI()
-        {
-            EditorGUILayout.Space();
-            EditorGUILayout.BeginVertical("Box");
-            EditorGUILayout.LabelField("阴影", EditorStyles.boldLabel);
-
-            // Use serialized properties so values persist and don't get overwritten by GetModifiedMaterial
-            bool currentEnable = spEnableShadow != null && spEnableShadow.intValue == 1;
-            Color currentColor = spShadowColor != null ? spShadowColor.colorValue : new Color(0, 0, 0, 0.5f);
-            Vector2 currentOffset = spShadowOffset != null ? spShadowOffset.vector2Value : new Vector2(0.01f, -0.01f);
-            float currentSoftness = spShadowSoftness != null ? spShadowSoftness.floatValue : 0f;
-            bool currentUseMask = spShadowUseShapeMask != null && spShadowUseShapeMask.intValue == 1;
-
-            EditorGUI.BeginChangeCheck();
-            bool newEnable = EditorGUILayout.Toggle("启用阴影", currentEnable);
-            Color newColor = EditorGUILayout.ColorField("阴影颜色", currentColor);
-            Vector2 newOffset = EditorGUILayout.Vector2Field("阴影偏移 (UV)", currentOffset);
-            float newSoft = EditorGUILayout.Slider("阴影柔化", currentSoftness, 0f, 1f);
-            bool newUseMask = EditorGUILayout.Toggle("阴影使用形状遮罩", currentUseMask);
-
-            if (EditorGUI.EndChangeCheck())
-            {
-                // Write back to serialized properties
-                if (spEnableShadow != null) spEnableShadow.intValue = newEnable ? 1 : 0;
-                if (spShadowColor != null) spShadowColor.colorValue = newColor;
-                if (spShadowOffset != null) spShadowOffset.vector2Value = newOffset;
-                if (spShadowSoftness != null) spShadowSoftness.floatValue = newSoft;
-                if (spShadowUseShapeMask != null) spShadowUseShapeMask.intValue = newUseMask ? 1 : 0;
-
-                serializedObject.ApplyModifiedProperties();
-
-                foreach (Object obj in targets)
-                {
-                    ImageEx ie = obj as ImageEx;
-                    if (ie == null) continue;
-                    Material mat = ie.material;
-                    if (mat == null) continue;
-
-                    if (mat.HasProperty("_EnableShadow")) mat.SetInt("_EnableShadow", newEnable ? 1 : 0);
-                    if (mat.HasProperty("_ShadowColor")) mat.SetColor("_ShadowColor", newColor);
-                    if (mat.HasProperty("_ShadowOffset")) mat.SetVector("_ShadowOffset", new Vector4(newOffset.x, newOffset.y, 0f, 0f));
-                    if (mat.HasProperty("_ShadowSoftness")) mat.SetFloat("_ShadowSoftness", newSoft);
-                    if (mat.HasProperty("_ShadowUseShapeMask")) mat.SetInt("_ShadowUseShapeMask", newUseMask ? 1 : 0);
-
-                    // Mark material and component dirty and request redraw so changes appear immediately
-                    UnityEditor.EditorUtility.SetDirty(mat);
-                    UnityEditor.EditorUtility.SetDirty(ie);
-                    try
-                    {
-                        ie.SetMaterialDirty();
-                        ie.SetAllDirty();
-                    }
-                    catch (Exception)
-                    {
-                        // Ignore if methods are not available for some versions
-                    }
-                }
-
-                // Force editor repaint and scene update
-                Repaint();
-                UnityEditor.SceneView.RepaintAll();
-                UnityEditor.EditorApplication.QueuePlayerLoopUpdate();
-            }
-
-            EditorGUILayout.EndVertical();
         }
 
         private void RotationGUI()
