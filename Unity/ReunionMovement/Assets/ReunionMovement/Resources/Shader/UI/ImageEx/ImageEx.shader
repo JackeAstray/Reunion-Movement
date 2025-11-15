@@ -16,13 +16,6 @@ Shader "ReunionMovement/UI/Procedural Image"
         _FlipHorizontal ("水平翻转", int) = 0
         _FlipVertical ("垂直翻转", int) = 0
         
-        // Shadow properties
-        _EnableShadow ("启用阴影", Float) = 0
-        _ShadowColor ("阴影颜色", Color) = (0,0,0,0.5)
-        _ShadowOffset ("阴影偏移 (UV)", Vector) = (0.01,-0.01,0,0)
-        _ShadowSoftness ("阴影柔化", Range(0,1)) = 0.0
-        _ShadowUseShapeMask ("阴影使用形状遮罩", Float) = 1
-
         _RectangleCornerRadius ("矩形四个角的圆角半径", Vector) = (0, 0, 0, 0)
         _CircleRadius ("圆半径", float) = 0
         _CircleFitRadius ("拟合圆半径", float) = 0
@@ -174,13 +167,6 @@ Shader "ReunionMovement/UI/Procedural Image"
             half _ConstrainRotation;
             half _FlipHorizontal;
             half _FlipVertical;
-
-            // Shadow uniforms
-            half _EnableShadow;
-            half4 _ShadowColor;
-            float4 _ShadowOffset;
-            half _ShadowSoftness;
-            half _ShadowUseShapeMask;
 
             #if RECTANGLE
                 float4 _RectangleCornerRadius;
@@ -763,6 +749,7 @@ Shader "ReunionMovement/UI/Procedural Image"
                 shapeUv = rotateUV(shapeUv, shapeRotation, _ConstrainRotation > 0? float2(0.5, 0.5) : size * 0.5);
                 shapeUv*= _ConstrainRotation > 0.0? size : 1.0;
                 
+                // Apply flipping
                 shapeUv.x = lerp(shapeUv.x, abs(size.x - shapeUv.x), _FlipHorizontal);
                 shapeUv.y = lerp(shapeUv.y, abs(size.y - shapeUv.y), _FlipVertical);
                 
@@ -781,6 +768,8 @@ Shader "ReunionMovement/UI/Procedural Image"
             {
                 half4 color = IN.color;
                 half2 texcoord = IN.texcoord;
+                float2 effectsUv = IN.effectsUv;
+
                 color = (tex2D(_MainTex, texcoord) + _TextureSampleAdd) * color;
 
                 // keep original base sample
@@ -808,21 +797,21 @@ Shader "ReunionMovement/UI/Procedural Image"
                 
                 #if GRADIENT_LINEAR
                     half gradientRotation = radians(_GradientRotation);
-                    half t = cos(gradientRotation) * (IN.effectsUv.x - 0.5) + 
-                             sin(gradientRotation) * (IN.effectsUv.y - 0.5) + 0.5;
+                    half t = cos(gradientRotation) * (effectsUv.x -0.5) + 
+                             sin(gradientRotation) * (effectsUv.y -0.5) +0.5;
                     half4 grad = SampleGradient(t);
                     color *= grad;
                 #endif
                 #if GRADIENT_RADIAL
-                    half fac = saturate(length(IN.effectsUv - float2(.5, .5)) * 2);
-                    half4 grad = SampleGradient(clamp(fac, 0, 1));
+                    half fac = saturate(length(effectsUv - float2(.5, .5)) *2);
+                    half4 grad = SampleGradient(clamp(fac,0,1));
                     color *= grad;
                 #endif
                 
                 #if GRADIENT_CORNER
-                    half4 topCol = lerp(_CornerGradientColor2, _CornerGradientColor3, IN.effectsUv.x);
-                    half4 bottomCol = lerp(_CornerGradientColor0, _CornerGradientColor1, IN.effectsUv.x);
-                    half4 finalCol = lerp(topCol, bottomCol, IN.effectsUv.y);
+                    half4 topCol = lerp(_CornerGradientColor2, _CornerGradientColor3, effectsUv.x);
+                    half4 bottomCol = lerp(_CornerGradientColor0, _CornerGradientColor1, effectsUv.x);
+                    half4 finalCol = lerp(topCol, bottomCol, effectsUv.y);
                     
                     color *= finalCol;
                 #endif
@@ -911,80 +900,6 @@ Shader "ReunionMovement/UI/Procedural Image"
                 #ifdef UNITY_UI_ALPHACLIP
                     clip(color.a - 0.001);
                 #endif
-
-                // Shadow compositing: improved method
-                if (_EnableShadow > 0.5)
-                {
-                    float2 offsetUV = _ShadowOffset.xy;
-                    float shadowMask = 0.0;
-
-                    // If a procedural shape is being drawn, sample its SDF at the offset position to generate shadow mask
-                    if (_DrawShape != 0)
-                    {
-                        float sdfDataOffset = 0.0;
-                        float pixelScaleShadow = clamp(1.0/_FalloffDistance, 1.0/2048.0, 2048.0);
-
-                        #if RECTANGLE
-                            sdfDataOffset = rectangleScene(IN.shapeData + float4(offsetUV.x, offsetUV.y, 0, 0));
-                        #elif CIRCLE
-                            sdfDataOffset = circleScene(IN.shapeData + float4(offsetUV.x, offsetUV.y, 0, 0));
-                        #elif PENTAGON
-                            sdfDataOffset = pentagonScene(IN.shapeData + float4(offsetUV.x, offsetUV.y, 0, 0));
-                        #elif TRIANGLE
-                            sdfDataOffset = triangleScene(IN.shapeData + float4(offsetUV.x, offsetUV.y, 0, 0));
-                        #elif HEXAGON
-                            sdfDataOffset = hexagonScene(IN.shapeData + float4(offsetUV.x, offsetUV.y, 0, 0));
-                        #elif CHAMFERBOX
-                            sdfDataOffset = chamferBoxScene(IN.shapeData + float4(offsetUV.x, offsetUV.y, 0, 0));
-                        #elif PARALLELOGRAM
-                            sdfDataOffset = parallelogramScene(IN.shapeData + float4(offsetUV.x, offsetUV.y, 0, 0));
-                        #elif NSTAR_POLYGON
-                            sdfDataOffset = nStarPolygonScene(IN.shapeData + float4(offsetUV.x, offsetUV.y, 0, 0));
-                        #elif HEART
-                            sdfDataOffset = heartScene(IN.shapeData + float4(offsetUV.x, offsetUV.y, 0, 0));
-                        #elif BLOBBYCROSS
-                            sdfDataOffset = blobbyCrossScene(IN.shapeData + float4(offsetUV.x, offsetUV.y, 0, 0));
-                        #elif SQUIRCLE
-                            sdfDataOffset = squircleScene(IN.shapeData + float4(offsetUV.x, offsetUV.y, 0, 0));
-                        #elif NTRIANGLE_ROUNDED
-                            sdfDataOffset = nTriangleRoundedScene(IN.shapeData + float4(offsetUV.x, offsetUV.y, 0, 0));
-                        #else
-                            // No procedural shape functions available for current compile; fallback to texture alpha
-                            fixed4 tmp = tex2D(_MainTex, texcoord + offsetUV) + _TextureSampleAdd;
-                            shadowMask = tmp.a;
-                        #endif
-
-                        #if (defined(RECTANGLE) || defined(CIRCLE) || defined(PENTAGON) || defined(TRIANGLE) || defined(HEXAGON) || defined(CHAMFERBOX) || defined(PARALLELOGRAM) || defined(NSTAR_POLYGON) || defined(HEART) || defined(BLOBBYCROSS) || defined(SQUIRCLE) || defined(NTRIANGLE_ROUNDED))
-                            shadowMask = sampleSdf(sdfDataOffset, pixelScaleShadow);
-                        #endif
-                    }
-                    else
-                    {
-                        // No procedural shape - sample texture alpha at offset (use raw texture alpha so tint doesn't affect shadow mask)
-                        fixed4 shadowTex = tex2D(_MainTex, texcoord + offsetUV) + _TextureSampleAdd;
-                        shadowMask = shadowTex.a;
-                    }
-
-                    // Optionally use shape mask (if shape SDF produced color.a earlier, use it to refine shadow)
-                    if (_ShadowUseShapeMask > 0.5)
-                    {
-                        // use the already computed final alpha for destination
-                        float destAlpha = color.a;
-                        shadowMask *= 1.0 - destAlpha;
-                    }
-
-                    // Apply shadow softness as simple power curve (softness 0 = hard, 1 = softer)
-                    shadowMask = pow(saturate(shadowMask), lerp(1.0, 0.5, _ShadowSoftness));
-
-                    // Shadow color and alpha
-                    float3 shadowRgb = _ShadowColor.rgb;
-                    float shadowAlpha = shadowMask * _ShadowColor.a;
-
-                    // Composite shadow behind the current pixel using lerp so shadow RGB remains independent of tint
-                    // Lerp between shadow color (premultiplied by its alpha) and the final tinted color using final alpha
-                    color.rgb = lerp(shadowRgb * shadowAlpha, color.rgb, color.a);
-                    color.a = max(color.a, shadowAlpha);
-                }
 
                 return fixed4(color);
             }
