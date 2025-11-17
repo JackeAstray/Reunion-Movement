@@ -7001,14 +7001,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0, b: 0.3372549, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 9beda9d05efddea4d829e287ad614bda, type: 3}
+  m_Sprite: {fileID: 21300000, guid: edf7aedd63eb93d419b47d574d883b43, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -7018,12 +7018,12 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  drawShape: 3
+  drawShape: 0
   imageType: 0
   materialMode: 0
   strokeWidth: 0
   outlineWidth: 0
-  outlineColor: {r: 0, g: 0, b: 0, a: 1}
+  outlineColor: {r: 1, g: 0, b: 0, a: 1}
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
