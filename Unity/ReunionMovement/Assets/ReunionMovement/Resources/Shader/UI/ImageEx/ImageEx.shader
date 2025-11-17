@@ -897,36 +897,36 @@ Shader "ReunionMovement/UI/Procedural Image"
                 #if !RECTANGLE && !CIRCLE && !PENTAGON && !TRIANGLE && !HEXAGON && !CHAMFERBOX && !PARALLELOGRAM && !NSTAR_POLYGON && !HEART && !BLOBBYCROSS && !SQUIRCLE && !NTRIANGLE_ROUNDED
                      #if OUTLINED || STROKE || OUTLINED_STROKE
                          float2 texelSize = _MainTex_TexelSize.xy;
-                         float px = max(texelSize.x, texelSize.y);
+                         float px = max(texelSize.x, texelSize.y); // UV per pixel
                          float sdf = sdSprite(_MainTex, texcoord, texelSize,0.5);
 
-                         // 宽度（以UV为单位）与抗锯齿范围
-                         float wOutline = _OutlineWidth * texelSize.x;
-                         float wStroke = _StrokeWidth * texelSize.x;
-                         float aa = px *1.5;
+                         // 转换到像素距离空间（使 _StrokeWidth/_OutlineWidth以“像素”理解）
+                         float sdfPx = sdf / px; //负值: 内部 (单位: 像素)
+                         float aa =1.5; // 抗锯齿过渡宽度 (像素)
 
-                         // 区域掩码
-                         float outlineOutside = saturate(smoothstep(0.0, aa, sdf) - smoothstep(wOutline, wOutline + aa, sdf));
-                         //线条以边界为中心，宽度为 StrokeWidth（对称分布）
-                         float wHalf = max(0.0, wStroke *0.5);
-                         float strokeMask =1.0 - smoothstep(wHalf, wHalf + aa, abs(sdf));
+                         // 外轮廓（向外）: 从0 到 _OutlineWidth
+                         float outlineOutside = saturate( smoothstep(0.0, aa, sdfPx) - smoothstep(_OutlineWidth, _OutlineWidth + aa, sdfPx) );
+
+                         // 内描边（向内扩张 _StrokeWidth 像素）
+                         float strokeInner = smoothstep(-_StrokeWidth - aa, -_StrokeWidth, sdfPx);
+                         float strokeOuter = smoothstep(-aa,0.0, sdfPx);
+                         float strokeMask = saturate(strokeInner - strokeOuter);
  
                          float4 baseCol = color;
  
                          #if OUTLINED && !STROKE
-                             //仅外轮廓：只给外侧涂色，并把外侧透明区域抬升到轮廓颜色的不透明度
+                             //仅外轮廓
                              color.rgb = lerp(baseCol.rgb, _OutlineColor.rgb, outlineOutside);
                              color.a = max(baseCol.a, outlineOutside * _OutlineColor.a);
                          #elif STROKE && !OUTLINED
-                             //仅线条：完全独立于轮廓，显示位于边界两侧的等宽环（使用原精灵颜色）
-                            color.rgb = baseCol.rgb;
-                            color.a = strokeMask;
+                             //仅线条（向内扩张 _StrokeWidth 像素）
+                             color.rgb = baseCol.rgb;
+                             color.a = strokeMask * IN.color.a;
                          #elif OUTLINED_STROKE
-                             //轮廓 +线条：
-                             //1) 外侧轮廓着色
-                             float3 rgbAfterOutline = lerp(baseCol.rgb, _OutlineColor.rgb, outlineOutside);
-                             //2) Alpha：取线条环与外侧轮廓的并集。线条不使用轮廓颜色，完全独立
-                             color.a = max(strokeMask, outlineOutside * _OutlineColor.a);
+                             // 外轮廓 + 内描边
+                             color.rgb = lerp(baseCol.rgb, _OutlineColor.rgb, outlineOutside); //先外轮廓
+                             color.rgb = lerp(color.rgb, baseCol.rgb, strokeMask); // 再内描边保持原色
+                             color.a = max(strokeMask * IN.color.a, outlineOutside * _OutlineColor.a);
                          #endif
                      #endif
                 #endif
