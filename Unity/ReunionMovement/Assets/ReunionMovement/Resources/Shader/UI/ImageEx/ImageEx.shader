@@ -907,29 +907,26 @@ Shader "ReunionMovement/UI/Procedural Image"
 
                          // 区域掩码
                          float outlineOutside = saturate(smoothstep(0.0, aa, sdf) - smoothstep(wOutline, wOutline + aa, sdf));
-                         float strokeBand =1.0 - smoothstep(wStroke, wStroke + aa, abs(sdf));
-                         float strokeInside = strokeBand * (1.0 - step(0.0, sdf)); // 边线在形状内部的一半
-                         float strokeOutside = strokeBand * step(0.0, sdf); // 边线在形状外部的一半
-
+                         //线条以边界为中心，宽度为 StrokeWidth（对称分布）
+                         float wHalf = max(0.0, wStroke *0.5);
+                         float strokeMask =1.0 - smoothstep(wHalf, wHalf + aa, abs(sdf));
+ 
                          float4 baseCol = color;
-
+ 
                          #if OUTLINED && !STROKE
                              //仅外轮廓：只给外侧涂色，并把外侧透明区域抬升到轮廓颜色的不透明度
                              color.rgb = lerp(baseCol.rgb, _OutlineColor.rgb, outlineOutside);
                              color.a = max(baseCol.a, outlineOutside * _OutlineColor.a);
-                             #elif STROKE && !OUTLINED
-                             //仅线条：内侧沿边显示原精灵颜色，外侧沿边显示轮廓颜色
-                             color.rgb = lerp(baseCol.rgb, _OutlineColor.rgb, strokeOutside);
-                             color.a = max(baseCol.a * strokeInside, strokeOutside * _OutlineColor.a);
-                             #elif OUTLINED_STROKE
+                         #elif STROKE && !OUTLINED
+                             //仅线条：完全独立于轮廓，显示位于边界两侧的等宽环（使用原精灵颜色）
+                            color.rgb = baseCol.rgb;
+                            color.a = strokeMask;
+                         #elif OUTLINED_STROKE
                              //轮廓 +线条：
                              //1) 外侧轮廓着色
                              float3 rgbAfterOutline = lerp(baseCol.rgb, _OutlineColor.rgb, outlineOutside);
-                             //2) 外侧线条着色（优先级不低于轮廓）
-                             rgbAfterOutline = lerp(rgbAfterOutline, _OutlineColor.rgb, strokeOutside);
-                             color.rgb = rgbAfterOutline;
-                             //3) Alpha：保留原图，同时抬升外侧轮廓与外侧线条的透明度
-                             color.a = max(baseCol.a, max(outlineOutside * _OutlineColor.a, strokeOutside * _OutlineColor.a));
+                             //2) Alpha：取线条环与外侧轮廓的并集。线条不使用轮廓颜色，完全独立
+                             color.a = max(strokeMask, outlineOutside * _OutlineColor.a);
                          #endif
                      #endif
                 #endif

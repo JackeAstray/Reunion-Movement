@@ -36,5 +36,9 @@ ShaderVariantCollection:
       variants:
       - keywords: 
         passType: 0
+      - keywords: COLOR_FILTER
+        passType: 0
       - keywords: SAMPLING_BLUR_DETAIL
+        passType: 0
+      - keywords: SAMPLING_EDGE_LUMINANCE
         passType: 0
