@@ -141,17 +141,13 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                     }
                 }
 
-                EditorGUILayout.Space();
-
-                if (spShape.enumValueIndex != (int)DrawShape.None)
-                {
-                    AdditionalShapeDataGUI();
-                }
-
                 EditorGUILayout.EndVertical();
             }
 
             EditorGUILayout.Space();
+            AdditionalShapeDataGUI();
+            EditorGUILayout.Space();
+
             ImageTypeGUI();
 
             SpriteGUI();
@@ -193,7 +189,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
 
             float h = 2;
 
-            if (spShape.enumValueIndex == (int)DrawShape.Circle || spShape.enumValueIndex == (int)DrawShape.Rectangle)
+            if (!spShape.hasMultipleDifferentValues && (spShape.enumValueIndex == (int)DrawShape.Circle || spShape.enumValueIndex == (int)DrawShape.Rectangle))
             {
                 h = 3;
             }
@@ -224,6 +220,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             }
             line.x += fieldWidth + 10;
             line.width = labelWidth;
+            EditorGUI.BeginDisabledGroup(spShape.enumValueIndex == (int)DrawShape.None);
             EditorGUI.LabelField(line, "衰减");
             dragZone = line;
             line.x += labelWidth;
@@ -240,6 +237,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             {
                 spFalloffDistance.floatValue = falloff;
             }
+            EditorGUI.EndDisabledGroup();
             line.y += EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
             line.x = r.x;
             line.width = labelWidth;
@@ -275,7 +273,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             }
 
             // ---------------------
-            if (spShape.enumValueIndex == (int)DrawShape.Circle || spShape.enumValueIndex == (int)DrawShape.Rectangle)
+            if (!spShape.hasMultipleDifferentValues && (spShape.enumValueIndex == (int)DrawShape.Circle || spShape.enumValueIndex == (int)DrawShape.Rectangle))
             {
                 line.y += EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
                 line.x = r.x;
