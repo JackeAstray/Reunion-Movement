@@ -104,3 +104,76 @@ float generateDashedPattern(float x, float l, float r)
         return 1.0; // 实线部分
     }
 }
+
+// RGB 转 HSV
+float3 rgb_to_hsv(float3 c)
+{
+    const float4 K = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    const float4 p = lerp(float4(c.bg, K.wz), float4(c.gb, K.xy), step(c.b, c.g));
+    const float4 q = lerp(float4(p.xyw, c.r), float4(c.r, p.yzx), step(p.x, c.r));
+    const float d = q.x - min(q.w, q.y);
+    const float e = 1.0e-4;
+    return float3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+}
+
+// HSV 转 RGB
+float3 hsv_to_rgb(float3 c)
+{
+    const float4 K = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    const float3 p = abs(frac(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * lerp(K.xxx, saturate(p - K.xxx), c.y);
+}
+
+// 反线性插值
+float inv_lerp(const float from, const float to, const float value)
+{
+    return saturate(max(0, value - from) / max(0.001, to - from));
+}
+
+// SDF for sprite
+float sdSprite(sampler2D tex, float2 uv, float2 texelSize, float threshold)
+{
+    float dist = 0.0;
+    float4 center = tex2D(tex, uv);
+    
+    if (center.a > threshold)
+    {
+        dist = -1.0; // Inside
+        float min_dist = 1.0;
+        for (int x = -1; x <= 1; ++x)
+        {
+            for (int y = -1; y <= 1; ++y)
+            {
+                if (x == 0 && y == 0)
+                    continue;
+                float2 offset = float2(x, y) * texelSize;
+                if (tex2D(tex, uv + offset).a <= threshold)
+                {
+                    min_dist = min(min_dist, length(offset));
+                }
+            }
+        }
+        dist = -min_dist;
+    }
+    else
+    {
+        dist = 1.0; // Outside
+        float min_dist = 1.0;
+        for (int x = -3; x <= 3; ++x)
+        {
+            for (int y = -3; y <= 3; ++y)
+            {
+                if (x == 0 && y == 0)
+                    continue;
+                float2 offset = float2(x, y) * texelSize;
+                if (tex2D(tex, uv + offset).a > threshold)
+                {
+                    min_dist = min(min_dist, length(offset));
+                }
+            }
+        }
+        dist = min_dist;
+    }
+    
+    return dist;
+}

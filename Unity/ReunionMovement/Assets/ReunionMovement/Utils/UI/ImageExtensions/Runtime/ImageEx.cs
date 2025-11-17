@@ -778,42 +778,42 @@ namespace ReunionMovement.UI.ImageExtensions
             DisableAllMaterialKeywords(mat);
 
             RectTransform rt = rectTransform;
-            if (DrawShape != DrawShape.None)
+            
+            mat.SetFloat(outlineWidth_Sp, outlineWidth);
+            mat.SetInt(enableDashedOutline_Sp, enableDashedOutline);
+            mat.SetFloat(customTime_Sp, customTime);
+
+            mat.SetFloat(strokeWidth_Sp, strokeWidth);
+
+            mat.SetColor(outlineColor_Sp, OutlineColor);
+            mat.SetFloat(falloffDistance_Sp, FalloffDistance);
+
+            if (strokeWidth > 0 && outlineWidth > 0)
             {
-                mat.SetFloat(outlineWidth_Sp, outlineWidth);
-                mat.SetInt(enableDashedOutline_Sp, enableDashedOutline);
-                mat.SetFloat(customTime_Sp, customTime);
-
-                mat.SetFloat(strokeWidth_Sp, strokeWidth);
-
-                mat.SetColor(outlineColor_Sp, OutlineColor);
-                mat.SetFloat(falloffDistance_Sp, FalloffDistance);
-
-                float pixelSize = 1 / Mathf.Max(0, FalloffDistance);
-                mat.SetFloat(pixelWorldScale_Sp, Mathf.Clamp(pixelSize, 0f, 999999f));
-
-
-                if (strokeWidth > 0 && outlineWidth > 0)
+                mat.EnableKeyword("OUTLINED_STROKE");
+            }
+            else
+            {
+                if (strokeWidth > 0)
                 {
-                    mat.EnableKeyword("OUTLINED_STROKE");
+                    mat.EnableKeyword("STROKE");
+                }
+                else if (outlineWidth > 0)
+                {
+                    mat.EnableKeyword("OUTLINED");
                 }
                 else
                 {
-                    if (strokeWidth > 0)
-                    {
-                        mat.EnableKeyword("STROKE");
-                    }
-                    else if (outlineWidth > 0)
-                    {
-                        mat.EnableKeyword("OUTLINED");
-                    }
-                    else
-                    {
-                        mat.DisableKeyword("OUTLINED_STROKE");
-                        mat.DisableKeyword("STROKE");
-                        mat.DisableKeyword("OUTLINED");
-                    }
+                    mat.DisableKeyword("OUTLINED_STROKE");
+                    mat.DisableKeyword("STROKE");
+                    mat.DisableKeyword("OUTLINED");
                 }
+            }
+            
+            if (DrawShape != DrawShape.None)
+            {
+                float pixelSize = 1 / Mathf.Max(0, FalloffDistance);
+                mat.SetFloat(pixelWorldScale_Sp, Mathf.Clamp(pixelSize, 0f, 999999f));
             }
 
             triangle.ModifyMaterial(ref mat);

@@ -156,7 +156,8 @@ Shader "ReunionMovement/UI/Procedural Image"
             float4 _ClipRect;
             half _PixelWorldScale;
             half _StrokeWidth;
-            
+            float4 _MainTex_TexelSize;
+ 
             half _OutlineWidth;
             half4 _OutlineColor;
             int _EnableDashedOutline;
@@ -891,6 +892,46 @@ Shader "ReunionMovement/UI/Procedural Image"
                         color = half4(lerp(_OutlineColor.rgb, color.rgb, lerpFac), lerp(_OutlineColor.a * color.a, color.a, lerpFac));
                         color.a *= alpha;
                     #endif
+                #endif
+
+                #if !RECTANGLE && !CIRCLE && !PENTAGON && !TRIANGLE && !HEXAGON && !CHAMFERBOX && !PARALLELOGRAM && !NSTAR_POLYGON && !HEART && !BLOBBYCROSS && !SQUIRCLE && !NTRIANGLE_ROUNDED
+                     #if OUTLINED || STROKE || OUTLINED_STROKE
+                         float2 texelSize = _MainTex_TexelSize.xy;
+                         float px = max(texelSize.x, texelSize.y);
+                         float sdf = sdSprite(_MainTex, texcoord, texelSize,0.5);
+
+                         // 宽度（以UV为单位）与抗锯齿范围
+                         float wOutline = _OutlineWidth * texelSize.x;
+                         float wStroke = _StrokeWidth * texelSize.x;
+                         float aa = px *1.5;
+
+                         // 区域掩码
+                         float outlineOutside = saturate(smoothstep(0.0, aa, sdf) - smoothstep(wOutline, wOutline + aa, sdf));
+                         float strokeBand =1.0 - smoothstep(wStroke, wStroke + aa, abs(sdf));
+                         float strokeInside = strokeBand * (1.0 - step(0.0, sdf)); // 边线在形状内部的一半
+                         float strokeOutside = strokeBand * step(0.0, sdf); // 边线在形状外部的一半
+
+                         float4 baseCol = color;
+
+                         #if OUTLINED && !STROKE
+                             //仅外轮廓：只给外侧涂色，并把外侧透明区域抬升到轮廓颜色的不透明度
+                             color.rgb = lerp(baseCol.rgb, _OutlineColor.rgb, outlineOutside);
+                             color.a = max(baseCol.a, outlineOutside * _OutlineColor.a);
+                             #elif STROKE && !OUTLINED
+                             //仅线条：内侧沿边显示原精灵颜色，外侧沿边显示轮廓颜色
+                             color.rgb = lerp(baseCol.rgb, _OutlineColor.rgb, strokeOutside);
+                             color.a = max(baseCol.a * strokeInside, strokeOutside * _OutlineColor.a);
+                             #elif OUTLINED_STROKE
+                             //轮廓 +线条：
+                             //1) 外侧轮廓着色
+                             float3 rgbAfterOutline = lerp(baseCol.rgb, _OutlineColor.rgb, outlineOutside);
+                             //2) 外侧线条着色（优先级不低于轮廓）
+                             rgbAfterOutline = lerp(rgbAfterOutline, _OutlineColor.rgb, strokeOutside);
+                             color.rgb = rgbAfterOutline;
+                             //3) Alpha：保留原图，同时抬升外侧轮廓与外侧线条的透明度
+                             color.a = max(baseCol.a, max(outlineOutside * _OutlineColor.a, strokeOutside * _OutlineColor.a));
+                         #endif
+                     #endif
                 #endif
 
                 #ifdef UNITY_UI_CLIP_RECT
