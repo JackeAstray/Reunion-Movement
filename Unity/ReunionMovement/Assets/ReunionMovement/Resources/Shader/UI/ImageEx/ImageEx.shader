@@ -9,6 +9,7 @@ Shader "ReunionMovement/UI/Procedural Image"
         _DrawShape ("绘制形状", int) = 2
         
         _StrokeWidth ("线条宽度", float) = 0
+        _StrokeFill ("描边填充比例", Range(0,1)) = 0
         _FalloffDistance ("衰减距离", float) = 0.5
         _PixelWorldScale ("像素与世界单位之间的缩放比例", Range(0.01, 5)) = 1
         _ShapeRotation ("形状旋转", float) = 0
@@ -156,6 +157,7 @@ Shader "ReunionMovement/UI/Procedural Image"
             float4 _ClipRect;
             half _PixelWorldScale;
             half _StrokeWidth;
+            half _StrokeFill;
             float4 _MainTex_TexelSize;
  
             half _OutlineWidth;
@@ -895,40 +897,52 @@ Shader "ReunionMovement/UI/Procedural Image"
                 #endif
 
                 #if !RECTANGLE && !CIRCLE && !PENTAGON && !TRIANGLE && !HEXAGON && !CHAMFERBOX && !PARALLELOGRAM && !NSTAR_POLYGON && !HEART && !BLOBBYCROSS && !SQUIRCLE && !NTRIANGLE_ROUNDED
-                     #if OUTLINED || STROKE || OUTLINED_STROKE
-                         float2 texelSize = _MainTex_TexelSize.xy;
-                         float px = max(texelSize.x, texelSize.y); // UV per pixel
-                         float sdf = sdSprite(_MainTex, texcoord, texelSize,0.5);
+                    #if OUTLINED || STROKE || OUTLINED_STROKE
+                        // Use atlas texel size to convert sdSprite (UV units) to pixels.
+                        // _MainTex_TexelSize.xy is (1/width,1/height) in UV per pixel.
+                        float2 atlasTexelUV = _MainTex_TexelSize.xy;
+                        float sdf = sdSprite(_MainTex, texcoord, atlasTexelUV,0.5);
+                
+                        // Convert SDF (in UV units) to pixels: divide by UV-per-pixel (atlasTexelUV).
+                        float sdfPx = sdf / max(atlasTexelUV.x, atlasTexelUV.y); // negative: inside (pixels)
+                        float aa =1.5; // 抗锯齿过渡宽度 (像素)
 
-                         // 转换到像素距离空间（使 _StrokeWidth/_OutlineWidth以“像素”理解）
-                         float sdfPx = sdf / px; //负值: 内部 (单位: 像素)
-                         float aa =1.5; // 抗锯齿过渡宽度 (像素)
+                        // 外轮廓（向外）: 从0 到 _OutlineWidth
+                        float outlineOutside = saturate( smoothstep(0.0, aa, sdfPx) - smoothstep(_OutlineWidth, _OutlineWidth + aa, sdfPx) );
 
-                         // 外轮廓（向外）: 从0 到 _OutlineWidth
-                         float outlineOutside = saturate( smoothstep(0.0, aa, sdfPx) - smoothstep(_OutlineWidth, _OutlineWidth + aa, sdfPx) );
+                        // 内描边（向内扩张 _StrokeWidth 像素）
+                        float strokeInner = smoothstep(-_StrokeWidth - aa, -_StrokeWidth, sdfPx);
+                        float strokeOuter = smoothstep(-aa,0.0, sdfPx);
+                        float strokeMaskOld = saturate(strokeInner - strokeOuter);
 
-                         // 内描边（向内扩张 _StrokeWidth 像素）
-                         float strokeInner = smoothstep(-_StrokeWidth - aa, -_StrokeWidth, sdfPx);
-                         float strokeOuter = smoothstep(-aa,0.0, sdfPx);
-                         float strokeMask = saturate(strokeInner - strokeOuter);
+                        // 新：支持从边缘根据 _StrokeFill 值向中心填充
+                        // 使用 _TextureSize估计最大内部半径（像素）来计算填充深度
+                        float maxInnerEstimate = min(_TextureSize.x, _TextureSize.y) *0.5;
+                        float innerExtend = maxInnerEstimate * saturate(_StrokeFill);
+
+                        // 填充蒙版：从边缘(0)到内部阈值(-innerExtend)
+                        float strokeFillMask = saturate( smoothstep(0.0, aa, sdfPx) - smoothstep(-innerExtend - aa, -innerExtend + aa, sdfPx) );
+
+                        // 根据 _StrokeFill 在原始描边（仅有限宽度）和填充描边之间混合
+                        float strokeMask = lerp(strokeMaskOld, strokeFillMask, saturate(_StrokeFill));
  
-                         float4 baseCol = color;
+                        float4 baseCol = color;
  
-                         #if OUTLINED && !STROKE
-                             //仅外轮廓
-                             color.rgb = lerp(baseCol.rgb, _OutlineColor.rgb, outlineOutside);
-                             color.a = max(baseCol.a, outlineOutside * _OutlineColor.a);
-                         #elif STROKE && !OUTLINED
-                             //仅线条（向内扩张 _StrokeWidth 像素）
-                             color.rgb = baseCol.rgb;
-                             color.a = strokeMask * IN.color.a;
-                         #elif OUTLINED_STROKE
-                             // 外轮廓 + 内描边
-                             color.rgb = lerp(baseCol.rgb, _OutlineColor.rgb, outlineOutside); //先外轮廓
-                             color.rgb = lerp(color.rgb, baseCol.rgb, strokeMask); // 再内描边保持原色
-                             color.a = max(strokeMask * IN.color.a, outlineOutside * _OutlineColor.a);
-                         #endif
-                     #endif
+                        #if OUTLINED && !STROKE
+                            //仅外轮廓
+                            color.rgb = lerp(baseCol.rgb, _OutlineColor.rgb, outlineOutside);
+                            color.a = max(baseCol.a, outlineOutside * _OutlineColor.a);
+                        #elif STROKE && !OUTLINED
+                            //仅线条（向内扩张 _StrokeWidth 像素）
+                            color.rgb = baseCol.rgb;
+                            color.a = strokeMask * IN.color.a;
+                        #elif OUTLINED_STROKE
+                            // 外轮廓 + 内描边
+                            color.rgb = lerp(baseCol.rgb, _OutlineColor.rgb, outlineOutside); //先外轮廓
+                            color.rgb = lerp(color.rgb, baseCol.rgb, strokeMask); // 再内描边保持原色
+                            color.a = max(strokeMask * IN.color.a, outlineOutside * _OutlineColor.a);
+                        #endif
+                    #endif
                 #endif
 
                 #ifdef UNITY_UI_CLIP_RECT
