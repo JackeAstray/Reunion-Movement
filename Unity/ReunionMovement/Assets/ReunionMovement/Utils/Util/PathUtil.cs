@@ -69,11 +69,33 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         public static string GetReadOnlyPath(string path, bool isUwrPath = false)
         {
-            string result = GetRegularPath(Path.Combine(Application.streamingAssetsPath, path));
+            string tempPath;
+
+            if (string.IsNullOrEmpty(path))
+            {
+                tempPath = Application.streamingAssetsPath;
+            }
+            else
+            {
+                if (path.IndexOf("://", StringComparison.Ordinal) >= 0)
+                {
+                    tempPath = path;
+                }
+                else if (path.StartsWith("/") || path.StartsWith("\\"))
+                {
+                    tempPath = Application.streamingAssetsPath.TrimEnd('/', '\\') + "/" + path.TrimStart('/', '\\');
+                }
+                else
+                {
+                    tempPath = Path.Combine(Application.streamingAssetsPath, path);
+                }
+            }
+
+            string result = GetRegularPath(tempPath);
 
             if (isUwrPath && !path.Contains("file://"))
             {
-                //使用UnityWebRequest访问 统一加file://头
+                //使用UnityWebRequest访问统一加file://头
                 result = "file://" + result;
             }
 
@@ -85,11 +107,33 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         public static string GetReadWritePath(string path, bool isUwrPath = false)
         {
-            string result = GetRegularPath(Path.Combine(Application.persistentDataPath, path));
+            string tempPath;
+
+            if (string.IsNullOrEmpty(path))
+            {
+                tempPath = Application.persistentDataPath;
+            }
+            else
+            {
+                if (path.IndexOf("://", StringComparison.Ordinal) >= 0)
+                {
+                    tempPath = path;
+                }
+                else if (path.StartsWith("/") || path.StartsWith("\\"))
+                {
+                    tempPath = Application.persistentDataPath.TrimEnd('/', '\\') + "/" + path.TrimStart('/', '\\');
+                }
+                else
+                {
+                    tempPath = Path.Combine(Application.persistentDataPath, path);
+                }
+            }
+
+            string result = GetRegularPath(tempPath);
 
             if (isUwrPath && !path.Contains("file://"))
             {
-                //使用UnityWebRequest访问 统一加file://头
+                //使用UnityWebRequest访问统一加file://头
                 result = "file://" + result;
             }
 
