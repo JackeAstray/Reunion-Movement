@@ -71,18 +71,22 @@ namespace ReunionMovement.Common.Util
         {
             string tempPath;
 
+            // If path is empty use streamingAssetsPath
             if (string.IsNullOrEmpty(path))
             {
                 tempPath = Application.streamingAssetsPath;
             }
             else
             {
+                // If the provided path already contains a URI scheme (e.g. "http://", "file://"), don't try to combine with streamingAssetsPath
                 if (path.IndexOf("://", StringComparison.Ordinal) >= 0)
                 {
                     tempPath = path;
                 }
                 else if (path.StartsWith("/") || path.StartsWith("\\"))
                 {
+                    // Path.Combine will treat a leading directory separator as rooted and ignore the first part.
+                    // Manually concatenate to preserve streamingAssetsPath.
                     tempPath = Application.streamingAssetsPath.TrimEnd('/', '\\') + "/" + path.TrimStart('/', '\\');
                 }
                 else
@@ -93,10 +97,14 @@ namespace ReunionMovement.Common.Util
 
             string result = GetRegularPath(tempPath);
 
-            if (isUwrPath && !path.Contains("file://"))
+            if (isUwrPath)
             {
-                //使用UnityWebRequest访问统一加file://头
-                result = "file://" + result;
+                // Only prefix with file:// when the computed result does not already contain a URI scheme
+                // e.g. on Android streamingAssetsPath may already be "jar:file://..." so don't add another prefix
+                if (!result.Contains("://") && !result.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+                {
+                    result = "file://" + result;
+                }
             }
 
             return result;
@@ -131,10 +139,13 @@ namespace ReunionMovement.Common.Util
 
             string result = GetRegularPath(tempPath);
 
-            if (isUwrPath && !path.Contains("file://"))
+            if (isUwrPath)
             {
-                //使用UnityWebRequest访问统一加file://头
-                result = "file://" + result;
+                // Only prefix with file:// when the computed result does not already contain a URI scheme
+                if (!result.Contains("://") && !result.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+                {
+                    result = "file://" + result;
+                }
             }
 
             return result;
