@@ -235,7 +235,12 @@ namespace ReunionMovement.Common.Util.StateMachine
         /// <returns></returns>
         private bool IsTransitionConditionsMet(TLabel newState)
         {
-            return transitionConditions.TryGetValue((currentState.label, newState), out var condition) && condition();
+            // 若未注册条件，默认允许转换；若注册了条件，则按条件判断
+            if (transitionConditions.TryGetValue((currentState.label, newState), out var condition))
+            {
+                return condition();
+            }
+            return true;
         }
 
         /// <summary>
