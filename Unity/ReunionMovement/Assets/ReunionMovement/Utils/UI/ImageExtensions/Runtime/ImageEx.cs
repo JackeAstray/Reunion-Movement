@@ -778,7 +778,7 @@ namespace ReunionMovement.UI.ImageExtensions
             DisableAllMaterialKeywords(mat);
 
             RectTransform rt = rectTransform;
-            
+
             mat.SetFloat(outlineWidth_Sp, outlineWidth);
             mat.SetInt(enableDashedOutline_Sp, enableDashedOutline);
             mat.SetFloat(customTime_Sp, customTime);
@@ -809,7 +809,7 @@ namespace ReunionMovement.UI.ImageExtensions
                     mat.DisableKeyword("OUTLINED");
                 }
             }
-            
+
             if (DrawShape != DrawShape.None)
             {
                 float pixelSize = 1 / Mathf.Max(0, FalloffDistance);
