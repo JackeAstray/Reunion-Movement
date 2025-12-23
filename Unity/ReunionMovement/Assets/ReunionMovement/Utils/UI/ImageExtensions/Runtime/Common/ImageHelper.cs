@@ -4,9 +4,6 @@ namespace UnityEngine.UI.ImageExtensions
 {
     public static class ImageHelper
     {
-        private static readonly Vector3[] sxy = new Vector3[4];
-        private static readonly Vector3[] suv = new Vector3[4];
-
         public static void GenerateSimpleSprite(VertexHelper vh, bool preserveAspect, Canvas canvas,
             RectTransform rectTransform, Sprite activeSprite, Color32 color, float falloffDistance)
         {
@@ -17,40 +14,22 @@ namespace UnityEngine.UI.ImageExtensions
                 ? Sprites.DataUtility.GetOuterUV(activeSprite)
                 : new Vector4(0, 0, 1, 1);
 
-            Color32 color32 = color;
-            vh.Clear();
-
-            Vector3[] pos = {
-                new Vector3(v.x, v.y),
-                new Vector3(v.x, v.w),
-                new Vector3(v.z, v.w),
-                new Vector3(v.z, v.y),
-            };
-
-            Vector2[] uvs = {
-                new Vector2(uv.x, uv.y),
-                new Vector2(uv.x, uv.w),
-                new Vector2(uv.z, uv.w),
-                new Vector2(uv.z, uv.y),
-            };
-
-            Vector2[] uv1s =
-            {
-                new Vector2(0, 0),
-                new Vector2(0, 1),
-                new Vector2(1, 1),
-                new Vector2(1, 0),
-            };
-
             Vector2 size = new Vector2(v.z - v.x, v.w - v.y);
+            Vector4 fullBounds = v;
 
-            vh.AddVert(pos[0], color32, uvs[0], uv1s[0], size, Vector2.zero, Vector3.zero, Vector4.zero);
-            vh.AddVert(pos[1], color32, uvs[1], uv1s[1], size, Vector2.zero, Vector3.zero, Vector4.zero);
-            vh.AddVert(pos[2], color32, uvs[2], uv1s[2], size, Vector2.zero, Vector3.zero, Vector4.zero);
-            vh.AddVert(pos[3], color32, uvs[3], uv1s[3], size, Vector2.zero, Vector3.zero, Vector4.zero);
+            Vector3[] sxy = new Vector3[4];
+            sxy[0] = new Vector2(v.x, v.y);
+            sxy[1] = new Vector2(v.x, v.w);
+            sxy[2] = new Vector2(v.z, v.w);
+            sxy[3] = new Vector2(v.z, v.y);
 
-            vh.AddTriangle(0, 1, 2);
-            vh.AddTriangle(2, 3, 0);
+            Vector3[] suv = new Vector3[4];
+            suv[0] = new Vector2(uv.x, uv.y);
+            suv[1] = new Vector2(uv.x, uv.w);
+            suv[2] = new Vector2(uv.z, uv.w);
+            suv[3] = new Vector2(uv.z, uv.y);
+
+            AddQuad(vh, sxy, color, suv, size, fullBounds);
         }
 
         public static void GenerateFilledSprite(VertexHelper toFill,
@@ -72,12 +51,11 @@ namespace UnityEngine.UI.ImageExtensions
 
             Vector4 v = GetDrawingDimensions(preserveAspect, activeSprite, canvas, rectTransform);
             Vector2 size = new Vector2(v.z - v.x, v.w - v.y);
+            Vector4 fullBounds = v;
 
             Vector4 outer = activeSprite != null
                 ? Sprites.DataUtility.GetOuterUV(activeSprite)
                 : new Vector4(0, 0, 1, 1);
-            UIVertex uiv = UIVertex.simpleVert;
-            uiv.color = color;
 
             float tx0 = outer.x;
             float ty0 = outer.y;
@@ -119,25 +97,27 @@ namespace UnityEngine.UI.ImageExtensions
                 }
             }
 
+            Vector3[] sxy = new Vector3[4];
             sxy[0] = new Vector2(v.x, v.y);
             sxy[1] = new Vector2(v.x, v.w);
             sxy[2] = new Vector2(v.z, v.w);
             sxy[3] = new Vector2(v.z, v.y);
 
+            Vector3[] suv = new Vector3[4];
             suv[0] = new Vector2(tx0, ty0);
             suv[1] = new Vector2(tx0, ty1);
             suv[2] = new Vector2(tx1, ty1);
             suv[3] = new Vector2(tx1, ty0);
 
 
-            if (fillAmount < 1f && 
+            if (fillAmount < 1f &&
                 fillMethod != Image.FillMethod.Horizontal &&
                 fillMethod != Image.FillMethod.Vertical)
             {
                 if (fillMethod == Image.FillMethod.Radial90)
                 {
                     if (RadialCut(sxy, suv, fillAmount, fillClockwise, fillOrigin))
-                        AddQuad(toFill, sxy, color, suv, size);
+                        AddQuad(toFill, sxy, color, suv, size, fullBounds);
                 }
                 else if (fillMethod == Image.FillMethod.Radial180)
                 {
@@ -202,7 +182,7 @@ namespace UnityEngine.UI.ImageExtensions
                         if (RadialCut(sxy, suv, Mathf.Clamp01(val), fillClockwise,
                             ((side + fillOrigin + 3) % 4)))
                         {
-                            AddQuad(toFill, sxy, color, suv, size);
+                            AddQuad(toFill, sxy, color, suv, size, fullBounds);
                         }
                     }
                 }
@@ -259,13 +239,13 @@ namespace UnityEngine.UI.ImageExtensions
                             : fillAmount * 4f - (3 - ((corner + fillOrigin) % 4));
 
                         if (RadialCut(sxy, suv, Mathf.Clamp01(val), fillClockwise, ((corner + 2) % 4)))
-                            AddQuad(toFill, sxy, color, suv, size);
+                            AddQuad(toFill, sxy, color, suv, size, fullBounds);
                     }
                 }
             }
             else
             {
-                AddQuad(toFill, sxy, color, suv, size);
+                AddQuad(toFill, sxy, color, suv, size, fullBounds);
             }
         }
 
@@ -281,16 +261,25 @@ namespace UnityEngine.UI.ImageExtensions
             Vector3[] quadPositions,
             Color32 color,
             Vector3[] quadUVs,
-            Vector2 size)
+            Vector2 size,
+            Vector4 bounds)
         {
             int startIndex = vertexHelper.currentVertCount;
+            // Inset UVs slightly to avoid texture wrapping artifacts at edges (e.g. bilinear filtering with Repeat mode)
+            float epsilon = 0.001f;
 
-            StringBuilder sr = new StringBuilder();
             for (int i = 0; i < 4; ++i)
             {
-                vertexHelper.AddVert(quadPositions[i], color, quadUVs[i], quadUVs[i], size, Vector2.zero,
+                float u = Mathf.InverseLerp(bounds.x, bounds.z, quadPositions[i].x);
+                float v = Mathf.InverseLerp(bounds.y, bounds.w, quadPositions[i].y);
+
+                u = Mathf.Lerp(epsilon, 1 - epsilon, u);
+                v = Mathf.Lerp(epsilon, 1 - epsilon, v);
+
+                Vector2 uv1 = new Vector2(u, v);
+
+                vertexHelper.AddVert(quadPositions[i], color, quadUVs[i], uv1, size, Vector2.zero,
                     Vector3.zero, Vector4.zero);
-                sr.AppendLine($"Pos: {quadPositions[i]}, uv: {quadUVs[i]}");
             }
 
 
@@ -306,7 +295,7 @@ namespace UnityEngine.UI.ImageExtensions
         /// <param name="canvas"></param>
         /// <param name="rectTransform"></param>
         /// <returns></returns>
-        private static Vector4 GetDrawingDimensions(bool shouldPreserveAspect, 
+        private static Vector4 GetDrawingDimensions(bool shouldPreserveAspect,
             Sprite activeSprite,
             Canvas canvas,
             RectTransform rectTransform)
@@ -319,7 +308,7 @@ namespace UnityEngine.UI.ImageExtensions
             if (size.x <= 0) size.x = 1;
             if (size.y <= 0) size.y = 1;
             Rect r = GetPixelAdjustedRect(canvas, rectTransform);
-            
+
             int spriteW = Mathf.RoundToInt(size.x);
             int spriteH = Mathf.RoundToInt(size.y);
 

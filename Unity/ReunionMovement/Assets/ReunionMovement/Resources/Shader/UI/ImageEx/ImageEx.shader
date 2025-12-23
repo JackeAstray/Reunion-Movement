@@ -86,6 +86,9 @@ Shader "ReunionMovement/UI/Procedural Image"
         _TransitionColorGlow ("Transition Color Glow", int) = 0
         _TransitionGradientTex ("Transition Gradient Texture", 2D) = "white" {}
         _TransitionRange ("Transition Range", Vector) = (0, 1, 0, 0)
+        [Toggle] _TransitionClamp ("Clamp Transition Texture", Float) = 1
+        _TransitionTexClampPadding ("Transition Tile Clamp Padding (px)", Range(0, 4)) = 1
+        [Toggle] _TransitionUseUv0 ("Transition Use Sprite UV0", Float) = 1
 
         _BlobbyCrossTime ("水滴十字形状的动态时间参数", Float) = 0
         _SquircleTime ("方圆形形状的动态时间参数", Float) = 1
@@ -191,6 +194,7 @@ Shader "ReunionMovement/UI/Procedural Image"
 
             int _TransitionMode;
             sampler2D _TransitionTex; float4 _TransitionTex_ST;
+            float4 _TransitionTex_TexelSize;
             half _TransitionTexRotation;
             half _TransitionRate;
             half4 _TransitionColor;
@@ -204,6 +208,9 @@ Shader "ReunionMovement/UI/Procedural Image"
             int _TransitionColorGlow;
             sampler2D _TransitionGradientTex;
             half2 _TransitionRange;
+            half _TransitionClamp;
+            half _TransitionTexClampPadding;
+            half _TransitionUseUv0;
 
             half _FalloffDistance;
             half _ShapeRotation;
@@ -832,7 +839,9 @@ Shader "ReunionMovement/UI/Procedural Image"
 
             float transition_rate()
             {
-                return frac(_TransitionAutoPlaySpeed * _Time.y + _TransitionRate * 0.9999);
+                if (abs(_TransitionAutoPlaySpeed) > 0.001)
+                    return frac(_TransitionAutoPlaySpeed * _Time.y + _TransitionRate);
+                return _TransitionRate;
             }
 
             float transition_alpha(float2 uvLocal)
@@ -842,8 +851,44 @@ Shader "ReunionMovement/UI/Procedural Image"
                     uv = rotateUV(uv, radians(_TransitionTexRotation), float2(0.5, 0.5));
                 
                 uv = uv * _TransitionTex_ST.xy + _TransitionTex_ST.zw;
-                const float alpha = tex2D(_TransitionTex, uv + _Time.y * _TransitionTex_Speed).a;
-                return _TransitionReverse ? 1 - alpha : alpha;
+
+                // Notes:
+                // - Shiny/Mask/Melt/Burn are visually sensitive to wrap artifacts.
+                // - When _TransitionTexRotation is used, UVs can leave [0,1]. With Repeat wrap + bilinear
+                //   filtering this causes seams that move with rotation.
+                // For these transition modes we clamp UVs unconditionally.
+                #if TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN
+                    uv = saturate(uv);
+                #else
+                    if (_TransitionClamp > 0.5)
+                    {
+                        uv = saturate(uv);
+                    }
+                #endif
+                
+                float2 uvSample = uv + _Time.y * _TransitionTex_Speed;
+
+                // When WrapMode=Repeat + FilterMode=Bilinear, sampling near the tile border blends with the
+                // opposite border, creating seams that move with rotation.
+                // Instead of snapping to texels (breaks smooth motion), clamp UVs *inside each repeat tile*
+                // by a small padding in pixels.
+                #if TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN
+                    float2 pad = _TransitionTex_TexelSize.xy * max(_TransitionTexClampPadding, 0);
+                    float2 tileUv = frac(uvSample);
+                    tileUv = clamp(tileUv, pad, 1.0 - pad);
+                    uvSample = floor(uvSample) + tileUv;
+                #endif
+
+                // Force LOD 0 to avoid mip bleeding which can cause seams on sharp transition patterns.
+                float alpha = tex2Dlod(_TransitionTex, float4(uvSample, 0, 0)).a;
+                alpha = _TransitionReverse ? 1 - alpha : alpha;
+
+                // Avoid exact 0/1 values for modes that amplify edge precision artifacts.
+                #if TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN
+                    alpha = clamp(alpha, 1e-4, 1.0 - 1e-4);
+                #endif
+
+                return alpha;
             }
 
 
@@ -896,15 +941,9 @@ Shader "ReunionMovement/UI/Procedural Image"
                         color.a *= 1 - inv_lerp(0.85, 1.0, bandLerp * 1.25);
                         color.rgb *= (1 - inv_lerp(0.85, 1.0, bandLerp * 1.3)) * color.a;
                         return color;
-                    #elif TRANSITION_SHINY
-                        // Simplified shiny logic
                     #endif
 
                     half lerpFactor = bandLerp * softLerp;
-                    #if TRANSITION_SHINY
-                        lerpFactor *= lerpFactor;
-                    #endif
-
                     color = lerp(color, bandColor, lerpFactor);
 
                     #if TRANSITION_DISSOLVE
@@ -1006,8 +1045,9 @@ Shader "ReunionMovement/UI/Procedural Image"
                 half4 color = IN.color;
                 half2 texcoord = IN.texcoord;
                 float2 effectsUv = IN.effectsUv;
-                float2 transitionUv = effectsUv;
-                float2 transitionFilterUv = effectsUv;
+                float2 transitionBaseUv = (_TransitionUseUv0 > 0.5) ? texcoord : effectsUv;
+                float2 transitionUv = transitionBaseUv;
+                float2 transitionFilterUv = transitionBaseUv;
 
                 // Transition Logic
                 #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
@@ -1027,7 +1067,7 @@ Shader "ReunionMovement/UI/Procedural Image"
                         alpha = tex2D(_TransitionTex, transitionUv).a;
                         alpha = _TransitionReverse ? 1 - alpha : alpha;
                     #else
-                        alpha = transition_alpha(effectsUv);
+                        alpha = transition_alpha(transitionBaseUv);
                     #endif
 
                     // Move UVs for Melt/Burn

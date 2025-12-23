@@ -240,7 +240,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
 
                     if (mode == ImageEx.TransitionMode.Dissolve || mode == ImageEx.TransitionMode.Shiny || 
                         mode == ImageEx.TransitionMode.Melt || mode == ImageEx.TransitionMode.Burn || 
-                        mode == ImageEx.TransitionMode.Blaze)
+                        mode == ImageEx.TransitionMode.Blaze || mode == ImageEx.TransitionMode.Mask)
                     {
                         EditorGUILayout.PropertyField(spTransitionWidth, new GUIContent("过渡宽度"));
                     }
@@ -250,12 +250,13 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                     }
 
                     if (mode == ImageEx.TransitionMode.Dissolve || mode == ImageEx.TransitionMode.Shiny || 
-                        mode == ImageEx.TransitionMode.Melt || mode == ImageEx.TransitionMode.Burn)
+                        mode == ImageEx.TransitionMode.Melt || mode == ImageEx.TransitionMode.Burn ||
+                        mode == ImageEx.TransitionMode.Mask)
                     {
                         EditorGUILayout.PropertyField(spTransitionSoftness, new GUIContent("过渡柔和度"));
                     }
 
-                    if (mode == ImageEx.TransitionMode.Mask || mode == ImageEx.TransitionMode.Pattern)
+                    if (mode == ImageEx.TransitionMode.Pattern)
                     {
                         Vector2 range = spTransitionRange.vector2Value;
                         float min = range.x;
@@ -269,7 +270,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                         EditorGUILayout.PropertyField(spTransitionPatternReverse, new GUIContent("图案反向"));
                     }
 
-                    if (mode != ImageEx.TransitionMode.Fade && mode != ImageEx.TransitionMode.Cutoff && mode != ImageEx.TransitionMode.Mask)
+                    if (mode != ImageEx.TransitionMode.Fade && mode != ImageEx.TransitionMode.Cutoff)
                     {
                         EditorGUILayout.PropertyField(spTransitionColorFilter, new GUIContent("颜色滤镜"));
                         EditorGUILayout.PropertyField(spTransitionColor, new GUIContent("过渡颜色"));

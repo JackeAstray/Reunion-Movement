@@ -78,6 +78,9 @@ namespace ReunionMovement.UI.ImageExtensions
         [SerializeField] private bool transitionColorGlow;
         [SerializeField] private Texture transitionGradient;
         [SerializeField] private Vector2 transitionRange;
+        [SerializeField] private bool transitionClamp = true;
+        [SerializeField] [Range(0, 4)] private float transitionTexClampPadding = 1f;
+        [SerializeField] private bool transitionUseUv0 = true;
 
         [SerializeField] private float strokeWidth;
 
@@ -134,6 +137,9 @@ namespace ReunionMovement.UI.ImageExtensions
         private static readonly int transitionColorGlow_Sp = Shader.PropertyToID("_TransitionColorGlow");
         private static readonly int transitionGradientTex_Sp = Shader.PropertyToID("_TransitionGradientTex");
         private static readonly int transitionRange_Sp = Shader.PropertyToID("_TransitionRange");
+        private static readonly int transitionClamp_Sp = Shader.PropertyToID("_TransitionClamp");
+        private static readonly int transitionTexClampPadding_Sp = Shader.PropertyToID("_TransitionTexClampPadding");
+        private static readonly int transitionUseUv0_Sp = Shader.PropertyToID("_TransitionUseUv0");
 
         private static readonly int outlineWidth_Sp = Shader.PropertyToID("_OutlineWidth");
         private static readonly int outlineColor_Sp = Shader.PropertyToID("_OutlineColor");
@@ -369,7 +375,11 @@ namespace ReunionMovement.UI.ImageExtensions
             set
             {
                 alphaThreshold = value;
-                alphaHitTestMinimumThreshold = alphaThreshold;
+                try
+                {
+                    alphaHitTestMinimumThreshold = alphaThreshold;
+                }
+                catch (InvalidOperationException) { }
             }
         }
 
@@ -789,6 +799,36 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        public bool TransitionClamp
+        {
+            get => transitionClamp;
+            set
+            {
+                transitionClamp = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public float TransitionTexClampPadding
+        {
+            get => transitionTexClampPadding;
+            set
+            {
+                transitionTexClampPadding = Mathf.Clamp(value, 0, 4);
+                SetMaterialDirty();
+            }
+        }
+
+        public bool TransitionUseUv0
+        {
+            get => transitionUseUv0;
+            set
+            {
+                transitionUseUv0 = value;
+                SetMaterialDirty();
+            }
+        }
+
         #endregion
 
         #region 私有变量
@@ -891,6 +931,9 @@ namespace ReunionMovement.UI.ImageExtensions
             TransitionColorGlow = transitionColorGlow;
             TransitionGradient = transitionGradient;
             TransitionRange = transitionRange;
+            TransitionClamp = transitionClamp;
+            TransitionTexClampPadding = transitionTexClampPadding;
+            TransitionUseUv0 = transitionUseUv0;
 
             base.OnValidate();
             base.SetMaterialDirty();
@@ -1127,6 +1170,12 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.SetInt(transitionColorGlow_Sp, transitionColorGlow ? 1 : 0);
             mat.SetTexture(transitionGradientTex_Sp, transitionGradient);
             mat.SetVector(transitionRange_Sp, transitionRange);
+            bool runtimeClamp = transitionClamp;
+            if (transitionMode == TransitionMode.Shiny || transitionMode == TransitionMode.Mask || transitionMode == TransitionMode.Melt || transitionMode == TransitionMode.Burn)
+                runtimeClamp = true;
+            mat.SetFloat(transitionClamp_Sp, runtimeClamp ? 1 : 0);
+            mat.SetFloat(transitionTexClampPadding_Sp, transitionTexClampPadding);
+            mat.SetFloat(transitionUseUv0_Sp, transitionUseUv0 ? 1 : 0);
 
             switch (transitionMode)
             {
@@ -1378,6 +1427,9 @@ namespace ReunionMovement.UI.ImageExtensions
             transitionColorGlow = mat.GetInt(transitionColorGlow_Sp) == 1;
             transitionGradient = mat.GetTexture(transitionGradientTex_Sp);
             transitionRange = mat.GetVector(transitionRange_Sp);
+            transitionClamp = mat.GetFloat(transitionClamp_Sp) == 1;
+            transitionTexClampPadding = mat.GetFloat(transitionTexClampPadding_Sp);
+            transitionUseUv0 = mat.GetFloat(transitionUseUv0_Sp) == 1;
 
             strokeWidth = mat.GetFloat(strokeWidth_Sp);
             falloffDistance = mat.GetFloat(falloffDistance_Sp);
