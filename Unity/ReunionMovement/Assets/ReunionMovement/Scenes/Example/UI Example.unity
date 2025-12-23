@@ -189,11 +189,11 @@ MonoBehaviour:
   drawShape: 1
   imageType: 0
   materialMode: 0
-  strokeWidth: 15
-  outlineWidth: 0
-  outlineColor: {r: 0, g: 0, b: 0, a: 1}
+  strokeWidth: 0
+  outlineWidth: 1
+  outlineColor: {r: 0, g: 1, b: 0.24778461, a: 1}
   customTime: 0
-  enableDashedOutline: 0
+  enableDashedOutline: 1
   falloffDistance: 0
   constrainRotation: 1
   shapeRotation: 0
@@ -662,6 +662,172 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 193350051}
   m_CullTransparentMesh: 1
+--- !u!1 &228356459
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 228356460}
+  - component: {fileID: 228356462}
+  - component: {fileID: 228356461}
+  m_Layer: 0
+  m_Name: ImageEx
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &228356460
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 228356459}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1961290207}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &228356461
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 228356459}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4041ee2aabac59f4589e76bac1cb0e81, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: 2ee815c0807434e9091770d1c6cdc70b, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 1
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+  drawShape: 0
+  imageType: 0
+  materialMode: 0
+  strokeWidth: 0
+  outlineWidth: 1
+  outlineColor: {r: 1, g: 1, b: 1, a: 1}
+  customTime: 0
+  enableDashedOutline: 0
+  falloffDistance: 0
+  constrainRotation: 0
+  shapeRotation: 0
+  flipHorizontal: 0
+  flipVertical: 0
+  alphaThreshold: 0
+  triangle:
+    cornerRadius: {x: 0, y: 0, z: 0}
+    uniformCornerRadius: 0
+  rectangle:
+    cornerRadius: {x: 0, y: 0, z: 0, w: 0}
+    uniformCornerRadius: 0
+  circle:
+    radius: 100
+    fitRadius: 0
+  pentagon:
+    cornerRadius: {x: 0, y: 0, z: 0, w: 0}
+    uniformCornerRadius: 0
+    tipRadius: 0.001
+    tipSize: 1
+  hexagon:
+    cornerRadius: {x: 1, y: 1, z: 1, w: 1}
+    uniformCornerRadius: 0
+    tipSize: {x: 1, y: 1}
+    uniformTipSize: 0
+    tipRadius: {x: 1, y: 1}
+    uniformTipRadius: 0
+  chamferBox:
+    chamferBoxSize: {x: 1, y: 1}
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
+  parallelogram:
+    parallelogramValue: 0
+  nStarPolygon:
+    sideCount: 3
+    inset: 2
+    cornerRadius: 0
+    offset: {x: 0, y: 0}
+  blobbyCross:
+    blobbyCrossTime: 0
+  squircle:
+    squircleTime: 0
+  nTriangleRounded:
+    nTriangleRoundedTime: 0
+    nTriangleRoundedNumber: 0
+  gradientEffect:
+    enabled: 0
+    gradientType: 0
+    gradient:
+      serializedVersion: 2
+      key0: {r: 1, g: 1, b: 1, a: 1}
+      key1: {r: 1, g: 1, b: 1, a: 1}
+      key2: {r: 0, g: 0, b: 0, a: 0}
+      key3: {r: 0, g: 0, b: 0, a: 0}
+      key4: {r: 0, g: 0, b: 0, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 65535
+      ctime2: 0
+      ctime3: 0
+      ctime4: 0
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: -1
+      m_NumColorKeys: 2
+      m_NumAlphaKeys: 2
+    cornerGradientColors:
+    - {r: 0, g: 0, b: 0, a: 0}
+    - {r: 0, g: 0, b: 0, a: 0}
+    - {r: 0, g: 0, b: 0, a: 0}
+    - {r: 0, g: 0, b: 0, a: 0}
+    rotation: 0
+--- !u!222 &228356462
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 228356459}
+  m_CullTransparentMesh: 1
 --- !u!1 &307112959
 GameObject:
   m_ObjectHideFlags: 0
@@ -732,11 +898,11 @@ MonoBehaviour:
   drawShape: 3
   imageType: 0
   materialMode: 0
-  strokeWidth: 0
+  strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
-  enableDashedOutline: 1
+  enableDashedOutline: 0
   falloffDistance: 0.5
   constrainRotation: 1
   shapeRotation: 0
@@ -1048,8 +1214,8 @@ MonoBehaviour:
   drawShape: 8
   imageType: 0
   materialMode: 0
-  strokeWidth: 9
-  outlineWidth: 3
+  strokeWidth: 10
+  outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
   enableDashedOutline: 0
@@ -1438,7 +1604,7 @@ MonoBehaviour:
   imageType: 0
   materialMode: 0
   strokeWidth: 0
-  outlineWidth: 1
+  outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
   enableDashedOutline: 0
@@ -1616,7 +1782,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1479144323}
   m_Direction: 2
   m_Value: 1
-  m_Size: 0.5011601
+  m_Size: 0.4556962
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -1729,7 +1895,7 @@ MonoBehaviour:
   drawShape: 7
   imageType: 0
   materialMode: 0
-  strokeWidth: 0
+  strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
@@ -1895,8 +2061,8 @@ MonoBehaviour:
   drawShape: 11
   imageType: 0
   materialMode: 0
-  strokeWidth: 0
-  outlineWidth: 1
+  strokeWidth: 5
+  outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
   enableDashedOutline: 0
@@ -2061,11 +2227,11 @@ MonoBehaviour:
   drawShape: 3
   imageType: 0
   materialMode: 0
-  strokeWidth: 15
+  strokeWidth: 0
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
-  enableDashedOutline: 0
+  enableDashedOutline: 1
   falloffDistance: 0.5
   constrainRotation: 1
   shapeRotation: 0
@@ -2228,7 +2394,7 @@ MonoBehaviour:
   imageType: 0
   materialMode: 0
   strokeWidth: 0
-  outlineWidth: 5
+  outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
   enableDashedOutline: 0
@@ -2393,8 +2559,8 @@ MonoBehaviour:
   drawShape: 5
   imageType: 0
   materialMode: 0
-  strokeWidth: 0
-  outlineWidth: 0
+  strokeWidth: 25
+  outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
   enableDashedOutline: 0
@@ -2716,7 +2882,7 @@ MonoBehaviour:
   drawShape: 5
   imageType: 0
   materialMode: 0
-  strokeWidth: 0
+  strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
@@ -2858,7 +3024,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 939927898}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 31a19414c41e5ae4aae2af33fee712f6, type: 3}
   m_Name: 
@@ -2972,8 +3138,8 @@ MonoBehaviour:
   drawShape: 1
   imageType: 0
   materialMode: 0
-  strokeWidth: 0
-  outlineWidth: 0
+  strokeWidth: 25
+  outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
   enableDashedOutline: 0
@@ -3215,8 +3381,8 @@ MonoBehaviour:
   imageType: 0
   materialMode: 0
   strokeWidth: 0
-  outlineWidth: 5
-  outlineColor: {r: 1, g: 0.6399195, b: 0, a: 1}
+  outlineWidth: 11.520002
+  outlineColor: {r: 1, g: 0.5, b: 0, a: 1}
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -3735,6 +3901,172 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1226673019
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1226673020}
+  - component: {fileID: 1226673022}
+  - component: {fileID: 1226673021}
+  m_Layer: 0
+  m_Name: ImageEx
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1226673020
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1226673019}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1961290207}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1226673021
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1226673019}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4041ee2aabac59f4589e76bac1cb0e81, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 0, b: 0.33849812, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+  drawShape: 12
+  imageType: 0
+  materialMode: 0
+  strokeWidth: 5
+  outlineWidth: 5
+  outlineColor: {r: 0, g: 0, b: 0, a: 1}
+  customTime: 0
+  enableDashedOutline: 0
+  falloffDistance: 0.5
+  constrainRotation: 1
+  shapeRotation: 0
+  flipHorizontal: 0
+  flipVertical: 0
+  alphaThreshold: 0
+  triangle:
+    cornerRadius: {x: 0, y: 0, z: 0}
+    uniformCornerRadius: 0
+  rectangle:
+    cornerRadius: {x: 0, y: 0, z: 0, w: 0}
+    uniformCornerRadius: 0
+  circle:
+    radius: 0
+    fitRadius: 0
+  pentagon:
+    cornerRadius: {x: 0, y: 0, z: 0, w: 0}
+    uniformCornerRadius: 0
+    tipRadius: 0.001
+    tipSize: 1
+  hexagon:
+    cornerRadius: {x: 1, y: 1, z: 1, w: 1}
+    uniformCornerRadius: 0
+    tipSize: {x: 1, y: 1}
+    uniformTipSize: 0
+    tipRadius: {x: 1, y: 1}
+    uniformTipRadius: 0
+  chamferBox:
+    chamferBoxSize: {x: 1, y: 1}
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
+  parallelogram:
+    parallelogramValue: 0
+  nStarPolygon:
+    sideCount: 3
+    inset: 2
+    cornerRadius: 0
+    offset: {x: 0, y: 0}
+  blobbyCross:
+    blobbyCrossTime: 7.5
+  squircle:
+    squircleTime: 1.078
+  nTriangleRounded:
+    nTriangleRoundedTime: 5.5
+    nTriangleRoundedNumber: 25
+  gradientEffect:
+    enabled: 0
+    gradientType: 0
+    gradient:
+      serializedVersion: 2
+      key0: {r: 1, g: 1, b: 1, a: 1}
+      key1: {r: 1, g: 1, b: 1, a: 1}
+      key2: {r: 0, g: 0, b: 0, a: 0}
+      key3: {r: 0, g: 0, b: 0, a: 0}
+      key4: {r: 0, g: 0, b: 0, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 65535
+      ctime2: 0
+      ctime3: 0
+      ctime4: 0
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: -1
+      m_NumColorKeys: 2
+      m_NumAlphaKeys: 2
+    cornerGradientColors:
+    - {r: 0, g: 0, b: 0, a: 0}
+    - {r: 0, g: 0, b: 0, a: 0}
+    - {r: 0, g: 0, b: 0, a: 0}
+    - {r: 0, g: 0, b: 0, a: 0}
+    rotation: 0
+--- !u!222 &1226673022
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1226673019}
+  m_CullTransparentMesh: 1
 --- !u!1 &1243792509
 GameObject:
   m_ObjectHideFlags: 0
@@ -3805,8 +4137,8 @@ MonoBehaviour:
   drawShape: 6
   imageType: 0
   materialMode: 0
-  strokeWidth: 0
-  outlineWidth: 0
+  strokeWidth: 25
+  outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
   enableDashedOutline: 0
@@ -4138,8 +4470,8 @@ MonoBehaviour:
   drawShape: 3
   imageType: 0
   materialMode: 0
-  strokeWidth: 0
-  outlineWidth: 0
+  strokeWidth: 25
+  outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
   enableDashedOutline: 0
@@ -4304,8 +4636,8 @@ MonoBehaviour:
   drawShape: 6
   imageType: 0
   materialMode: 0
-  strokeWidth: 15
-  outlineWidth: 5
+  strokeWidth: 25
+  outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
   enableDashedOutline: 0
@@ -4515,8 +4847,8 @@ MonoBehaviour:
   drawShape: 5
   imageType: 0
   materialMode: 0
-  strokeWidth: 15
-  outlineWidth: 5
+  strokeWidth: 0
+  outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
   enableDashedOutline: 0
@@ -5151,7 +5483,7 @@ MonoBehaviour:
   drawShape: 5
   imageType: 0
   materialMode: 0
-  strokeWidth: 0
+  strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
@@ -5317,8 +5649,8 @@ MonoBehaviour:
   drawShape: 2
   imageType: 0
   materialMode: 0
-  strokeWidth: 0
-  outlineWidth: 0
+  strokeWidth: 25
+  outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
   enableDashedOutline: 0
@@ -5558,11 +5890,11 @@ MonoBehaviour:
   drawShape: 1
   imageType: 0
   materialMode: 0
-  strokeWidth: 0
-  outlineWidth: 5
+  strokeWidth: 10
+  outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
-  enableDashedOutline: 1
+  enableDashedOutline: 0
   falloffDistance: 0
   constrainRotation: 1
   shapeRotation: 0
@@ -5724,7 +6056,7 @@ MonoBehaviour:
   drawShape: 9
   imageType: 0
   materialMode: 0
-  strokeWidth: 0
+  strokeWidth: 9.54
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
@@ -5890,8 +6222,8 @@ MonoBehaviour:
   drawShape: 10
   imageType: 0
   materialMode: 0
-  strokeWidth: 0
-  outlineWidth: 1
+  strokeWidth: 5
+  outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
   enableDashedOutline: 0
@@ -6056,8 +6388,8 @@ MonoBehaviour:
   drawShape: 4
   imageType: 0
   materialMode: 0
-  strokeWidth: 0
-  outlineWidth: 0
+  strokeWidth: 25
+  outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
   enableDashedOutline: 0
@@ -6297,8 +6629,8 @@ MonoBehaviour:
   drawShape: 4
   imageType: 0
   materialMode: 0
-  strokeWidth: 15
-  outlineWidth: 5
+  strokeWidth: 0
+  outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
   enableDashedOutline: 0
@@ -6539,8 +6871,8 @@ MonoBehaviour:
   drawShape: 2
   imageType: 0
   materialMode: 0
-  strokeWidth: 15
-  outlineWidth: 5
+  strokeWidth: 0
+  outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
   enableDashedOutline: 0
@@ -6855,8 +7187,8 @@ MonoBehaviour:
   drawShape: 2
   imageType: 0
   materialMode: 0
-  strokeWidth: 15
-  outlineWidth: 0
+  strokeWidth: 0
+  outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   customTime: 0
   enableDashedOutline: 0
@@ -7165,6 +7497,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2101935646}
+  - {fileID: 228356460}
   - {fileID: 840304}
   - {fileID: 1525572497}
   - {fileID: 966567568}
@@ -7192,6 +7525,7 @@ RectTransform:
   - {fileID: 1548677173}
   - {fileID: 632584474}
   - {fileID: 479420042}
+  - {fileID: 1226673020}
   - {fileID: 1802531996}
   - {fileID: 440582981}
   - {fileID: 309606848}
@@ -7306,9 +7640,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 3c46be730f4ec284faee8bb39079ea26, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 2ee815c0807434e9091770d1c6cdc70b, type: 3}
   m_Type: 0
-  m_PreserveAspect: 0
+  m_PreserveAspect: 1
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1
@@ -7319,13 +7653,13 @@ MonoBehaviour:
   drawShape: 0
   imageType: 0
   materialMode: 0
-  strokeWidth: 0
+  strokeWidth: 1
   outlineWidth: 0
-  outlineColor: {r: 0.086274385, g: 1, b: 0, a: 1}
+  outlineColor: {r: 1, g: 1, b: 1, a: 1}
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
-  constrainRotation: 1
+  constrainRotation: 0
   shapeRotation: 0
   flipHorizontal: 0
   flipVertical: 0
