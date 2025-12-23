@@ -73,37 +73,37 @@ Shader "ReunionMovement/UI/Procedural Image"
 
         _TransitionMode ("过渡模式", int) = 0
         _TransitionTex ("过渡纹理", 2D) = "white" {}
-        _TransitionTexRotation ("Transition Texture Rotation", Float) = 0
+        _TransitionTexRotation ("过渡纹理旋转", Float) = 0
         _TransitionRate ("过渡进度", Range(0, 1)) = 0
         [HDR] _TransitionColor ("过渡颜色", Color) = (1, 1, 1, 1)
         _TransitionWidth ("过渡宽度", Range(0, 1)) = 0.1
         _TransitionSoftness ("过渡柔和度", Range(0, 1)) = 0.1
         _TransitionReverse ("反向过渡", int) = 0
-        _TransitionTex_Speed ("Transition Texture Speed", Vector) = (0, 0, 0, 0)
-        _TransitionPatternReverse ("Transition Pattern Reverse", int) = 0
-        _TransitionAutoPlaySpeed ("Transition Auto Play Speed", float) = 0
-        _TransitionColorFilter ("Transition Color Filter", int) = 0
-        _TransitionColorGlow ("Transition Color Glow", int) = 0
-        _TransitionGradientTex ("Transition Gradient Texture", 2D) = "white" {}
-        _TransitionRange ("Transition Range", Vector) = (0, 1, 0, 0)
-        [Toggle] _TransitionClamp ("Clamp Transition Texture", Float) = 1
-        _TransitionTexClampPadding ("Transition Tile Clamp Padding (px)", Range(0, 4)) = 1
-        [Toggle] _TransitionUseUv0 ("Transition Use Sprite UV0", Float) = 1
+        _TransitionTex_Speed ("过渡纹理速度", Vector) = (0, 0, 0, 0)
+        _TransitionPatternReverse ("过渡模式反转", int) = 0
+        _TransitionAutoPlaySpeed ("过渡自动播放速度", float) = 0
+        _TransitionColorFilter ("过渡色滤镜", int) = 0
+        _TransitionColorGlow ("过渡颜色发光", int) = 0
+        _TransitionGradientTex ("过渡渐变纹理", 2D) = "white" {}
+        _TransitionRange ("过渡范围", Vector) = (0, 1, 0, 0)
+        [Toggle] _TransitionClamp ("夹过渡纹理", Float) = 1
+        _TransitionTexClampPadding ("过渡图块夹边距（像素）", Range(0, 4)) = 1
+        [Toggle] _TransitionUseUv0 ("过渡使用精灵 UV0", Float) = 1
 
         _BlobbyCrossTime ("水滴十字形状的动态时间参数", Float) = 0
         _SquircleTime ("方圆形形状的动态时间参数", Float) = 1
         _NTriangleRoundedTime ("N三角形圆角形状的动态时间参数", Float) = 0
         _NTriangleRoundedNumber ("N三角形圆角形状的边数", Float) = 0
 
-        _StencilComp ("Stencil Comparison", Float) = 8
-        _Stencil ("Stencil ID", Float) = 0
-        _StencilOp ("Stencil Operation", Float) = 0
-        _StencilWriteMask ("Stencil Write Mask", Float) = 255
-        _StencilReadMask ("Stencil Read Mask", Float) = 255
+        _StencilComp ("模板比较", Float) = 8
+        _Stencil ("模板ID", Float) = 0
+        _StencilOp ("模板操作", Float) = 0
+        _StencilWriteMask ("模板写入掩码", Float) = 255
+        _StencilReadMask ("模板读取掩码", Float) = 255
         
-        _ColorMask ("Color Mask", Float) = 15
+        _ColorMask ("颜色掩码", Float) = 15
         
-        [Toggle(UNITY_UI_ALPHACLIP)] _UseUIAlphaClip ("Use Alpha Clip", Float) = 0
+        [Toggle(UNITY_UI_ALPHACLIP)] _UseUIAlphaClip ("使用Alpha剪辑", Float) = 0
     }
     
     SubShader
