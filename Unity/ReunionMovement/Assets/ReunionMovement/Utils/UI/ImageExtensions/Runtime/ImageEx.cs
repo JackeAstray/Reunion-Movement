@@ -12,6 +12,14 @@ namespace ReunionMovement.UI.ImageExtensions
     [AddComponentMenu("UI/ReunionMovement/ImageEx")]
     public class ImageEx : Image
     {
+        public enum BlurType
+        {
+            None = 0,
+            Fast = 1,
+            Medium = 2,
+            Detail = 3
+        }
+
         #region 常量
         public const string shaderName = "ReunionMovement/UI/Procedural Image";
         #endregion
@@ -21,6 +29,9 @@ namespace ReunionMovement.UI.ImageExtensions
         [SerializeField] private DrawShape drawShape = DrawShape.None;
         [SerializeField] private Type imageType = Type.Simple;
         [SerializeField] private MaterialMode materialMode;
+
+        [SerializeField] private BlurType blurType = BlurType.None;
+        [SerializeField] [Range(0, 1)] private float blurIntensity = 1f;
 
         [SerializeField] private float strokeWidth;
 
@@ -57,6 +68,9 @@ namespace ReunionMovement.UI.ImageExtensions
         private static readonly int pixelWorldScale_Sp = Shader.PropertyToID("_PixelWorldScale");
         private static readonly int drawShape_Sp = Shader.PropertyToID("_DrawShape");
         private static readonly int strokeWidth_Sp = Shader.PropertyToID("_StrokeWidth");
+
+        private static readonly int blurType_Sp = Shader.PropertyToID("_BlurType");
+        private static readonly int blurIntensity_Sp = Shader.PropertyToID("_BlurIntensity");
 
         private static readonly int outlineWidth_Sp = Shader.PropertyToID("_OutlineWidth");
         private static readonly int outlineColor_Sp = Shader.PropertyToID("_OutlineColor");
@@ -512,6 +526,26 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        public BlurType Blur
+        {
+            get => blurType;
+            set
+            {
+                blurType = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public float BlurIntensity
+        {
+            get => blurIntensity;
+            set
+            {
+                blurIntensity = value;
+                SetMaterialDirty();
+            }
+        }
+
         #endregion
 
         #region 私有变量
@@ -592,6 +626,9 @@ namespace ReunionMovement.UI.ImageExtensions
             nTriangleRounded.OnValidate();
 
             gradientEffect.OnValidate();
+
+            Blur = blurType;
+            BlurIntensity = blurIntensity;
 
             base.OnValidate();
             base.SetMaterialDirty();
@@ -788,6 +825,27 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.SetColor(outlineColor_Sp, OutlineColor);
             mat.SetFloat(falloffDistance_Sp, FalloffDistance);
 
+            mat.SetInt(blurType_Sp, (int)blurType);
+            mat.SetFloat(blurIntensity_Sp, blurIntensity);
+
+            switch (blurType)
+            {
+                case BlurType.None:
+                    mat.DisableKeyword("BLUR_FAST");
+                    mat.DisableKeyword("BLUR_MEDIUM");
+                    mat.DisableKeyword("BLUR_DETAIL");
+                    break;
+                case BlurType.Fast:
+                    mat.EnableKeyword("BLUR_FAST");
+                    break;
+                case BlurType.Medium:
+                    mat.EnableKeyword("BLUR_MEDIUM");
+                    break;
+                case BlurType.Detail:
+                    mat.EnableKeyword("BLUR_DETAIL");
+                    break;
+            }
+
             if (strokeWidth > 0 && outlineWidth > 0)
             {
                 mat.EnableKeyword("OUTLINED_STROKE");
@@ -930,6 +988,10 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.DisableKeyword("GRADIENT_LINEAR");
             mat.DisableKeyword("GRADIENT_CORNER");
             mat.DisableKeyword("GRADIENT_RADIAL");
+
+            mat.DisableKeyword("BLUR_FAST");
+            mat.DisableKeyword("BLUR_MEDIUM");
+            mat.DisableKeyword("BLUR_DETAIL");
         }
 
         /// <summary>
@@ -942,6 +1004,9 @@ namespace ReunionMovement.UI.ImageExtensions
 
             //Basic Settings
             drawShape = (DrawShape)mat.GetInt(drawShape_Sp);
+
+            blurType = (BlurType)mat.GetInt(blurType_Sp);
+            blurIntensity = mat.GetFloat(blurIntensity_Sp);
 
             strokeWidth = mat.GetFloat(strokeWidth_Sp);
             falloffDistance = mat.GetFloat(falloffDistance_Sp);

@@ -68,6 +68,9 @@ Shader "ReunionMovement/UI/Procedural Image"
         _EnableDashedOutline ("启用虚线轮廓", int) = 0 
         _CustomTime ("自定义时间值", Float) = 0
 
+        _BlurType ("模糊类型", int) = 0
+        _BlurIntensity ("模糊强度", Range(0, 1)) = 0
+
         _BlobbyCrossTime ("水滴十字形状的动态时间参数", Float) = 0
         _SquircleTime ("方圆形形状的动态时间参数", Float) = 1
         _NTriangleRoundedTime ("N三角形圆角形状的动态时间参数", Float) = 0
@@ -124,6 +127,7 @@ Shader "ReunionMovement/UI/Procedural Image"
             
             #pragma multi_compile_local _ STROKE OUTLINED OUTLINED_STROKE
             #pragma multi_compile_local _ GRADIENT_LINEAR GRADIENT_RADIAL GRADIENT_CORNER
+            #pragma multi_compile_local _ BLUR_FAST BLUR_MEDIUM BLUR_DETAIL
 
             struct appdata_t
             {
@@ -164,6 +168,9 @@ Shader "ReunionMovement/UI/Procedural Image"
             half4 _OutlineColor;
             int _EnableDashedOutline;
             float _CustomTime;
+
+            int _BlurType;
+            half _BlurIntensity;
 
             half _FalloffDistance;
             half _ShapeRotation;
@@ -696,11 +703,15 @@ Shader "ReunionMovement/UI/Procedural Image"
 
                     // 计算当前点到中心的距离
                     float distance = length(float2(IN.shapeData.x - center.x, IN.shapeData.y - center.y));
-                    //float radius = min(IN.shapeData.z, IN.shapeData.w) * 0.5; // 圆的半径
+                    
+                    float width = IN.shapeData.z;
+                    float height = IN.shapeData.w;
+                    float radius = lerp(_CircleRadius, min(width, height) / 2.0, _CircleFitRadius);
 
                     // 定义内外边界
-                    float innerRadius = _CircleRadius * 0.95; // 内边界半径（裁剪中间部分）
-                    float outerRadius = _CircleRadius;       // 外边界半径（边缘部分）
+                    float outerRadius = radius;       // 外边界半径（边缘部分）
+                    float innerRadius = radius - _OutlineWidth; // 内边界半径（裁剪中间部分）
+                    
                     float edgeMask = smoothstep(innerRadius, innerRadius + 0.01, distance) * 
                                      (1.0 - smoothstep(outerRadius - 0.01, outerRadius, distance));
 
@@ -720,10 +731,11 @@ Shader "ReunionMovement/UI/Procedural Image"
                     float dashedLeft = generateDashedPattern(uv.y + time, wavelength, dashRatio);
                     float dashedRight = generateDashedPattern(uv.y - time, wavelength, dashRatio);
 
-                    float edgeTop = getEdge(1.0 - uv.y, 0.02, 1.0);
-                    float edgeBottom = getEdge(uv.y, 0.02, 1.0);
-                    float edgeLeft = getEdge(uv.x, 0.02, aspectRatio);
-                    float edgeRight = getEdge(1.0 - uv.x, 0.02, aspectRatio);
+                    float edgeWidth = _OutlineWidth / IN.shapeData.w;
+                    float edgeTop = getEdge(1.0 - uv.y, edgeWidth, 1.0);
+                    float edgeBottom = getEdge(uv.y, edgeWidth, 1.0);
+                    float edgeLeft = getEdge(uv.x, edgeWidth, aspectRatio);
+                    float edgeRight = getEdge(1.0 - uv.x, edgeWidth, aspectRatio);
 
                     dashedEffect = edgeTop * dashedTop +
                                    edgeBottom * dashedBottom +
@@ -733,6 +745,45 @@ Shader "ReunionMovement/UI/Procedural Image"
                 return saturate(dashedEffect);
             }
             // --------------------RECTANGLE End---------------------
+            half4 ApplyBlur(float2 uv)
+            {
+                #if BLUR_FAST || BLUR_MEDIUM || BLUR_DETAIL
+                    if (_BlurIntensity > 0)
+                    {
+                        #if BLUR_FAST
+                            const int KERNEL_SIZE = 5;
+                            const float KERNEL_[5] = {0.2486, 0.7046, 1.0, 0.7046, 0.2486};
+                        #elif BLUR_MEDIUM
+                            const int KERNEL_SIZE = 9;
+                            const float KERNEL_[9] = { 0.0438, 0.1719, 0.4566, 0.8204, 1.0, 0.8204, 0.4566, 0.1719, 0.0438};
+                        #elif BLUR_DETAIL
+                            const int KERNEL_SIZE = 13;
+                            const float KERNEL_[13] = { 0.0438, 0.1138, 0.2486, 0.4566, 0.7046, 0.9141, 1.0, 0.9141, 0.7046, 0.4566, 0.2486, 0.1138, 0.0438};
+                        #endif
+
+                        float4 o = 0;
+                        float sum = 0;
+                        float2 shift = 0;
+                        const half2 blurStep = _MainTex_TexelSize.xy * _BlurIntensity * 2;
+
+                        for (int x = 0; x < KERNEL_SIZE; x++)
+                        {
+                            shift.x = blurStep.x * (float(x) - KERNEL_SIZE / 2);
+                            for (int y = 0; y < KERNEL_SIZE; y++)
+                            {
+                                shift.y = blurStep.y * (float(y) - KERNEL_SIZE / 2);
+                                float2 bluredUv = uv + shift;
+                                float weight = KERNEL_[x] * KERNEL_[y];
+                                o += (tex2D(_MainTex, bluredUv) + _TextureSampleAdd) * weight;
+                                sum += weight;
+                            }
+                        }
+                        return sum > 0 ? o / sum : (tex2D(_MainTex, uv) + _TextureSampleAdd);
+                    }
+                #endif
+                return (tex2D(_MainTex, uv) + _TextureSampleAdd);
+            }
+
             //顶点着色器
             v2f vert(appdata_t v)
             {
@@ -773,7 +824,7 @@ Shader "ReunionMovement/UI/Procedural Image"
                 half2 texcoord = IN.texcoord;
                 float2 effectsUv = IN.effectsUv;
 
-                color = (tex2D(_MainTex, texcoord) + _TextureSampleAdd) * color;
+                color = ApplyBlur(texcoord) * color;
 
                 // keep original base sample
                 fixed4 baseSample = (tex2D(_MainTex, texcoord) + _TextureSampleAdd) * IN.color;
@@ -925,9 +976,6 @@ Shader "ReunionMovement/UI/Procedural Image"
                             sobel = saturate(sobel);
 
                             #if STROKE
-                                // color = _OutlineColor * IN.color;
-                                // color.a *= sobel;
-
                                 color.a = sobel * _OutlineColor.a * IN.color.a;
                             #else
                                 color.rgb = lerp(color.rgb, _OutlineColor.rgb, sobel);
