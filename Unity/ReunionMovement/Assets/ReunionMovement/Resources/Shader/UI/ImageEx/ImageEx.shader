@@ -75,7 +75,7 @@ Shader "ReunionMovement/UI/Procedural Image"
         _TransitionTex ("过渡纹理", 2D) = "white" {}
         _TransitionTexRotation ("Transition Texture Rotation", Float) = 0
         _TransitionRate ("过渡进度", Range(0, 1)) = 0
-        _TransitionColor ("过渡颜色", Color) = (1, 1, 1, 1)
+        [HDR] _TransitionColor ("过渡颜色", Color) = (1, 1, 1, 1)
         _TransitionWidth ("过渡宽度", Range(0, 1)) = 0.1
         _TransitionSoftness ("过渡柔和度", Range(0, 1)) = 0.1
         _TransitionReverse ("反向过渡", int) = 0
