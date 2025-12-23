@@ -25,6 +25,9 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
 
         private SerializedProperty spGradient;
         private SerializedProperty spBlurType, spBlurIntensity;
+        private SerializedProperty spTransitionMode, spTransitionTex, spTransitionRate, spTransitionColor, spTransitionWidth, spTransitionSoftness, spTransitionReverse;
+        private SerializedProperty spTransitionTexScale, spTransitionTexOffset, spTransitionTexRotation, spTransitionKeepAspectRatio;
+        private SerializedProperty spTransitionSpeed, spTransitionPatternReverse, spTransitionAutoPlaySpeed, spTransitionColorFilter, spTransitionColorGlow, spTransitionGradient, spTransitionRange;
 
         private bool gsInitialized, shaderChannelsNeedUpdate;
 
@@ -82,6 +85,25 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             spGradient = serializedObject.FindProperty("gradientEffect");
             spBlurType = serializedObject.FindProperty("blurType");
             spBlurIntensity = serializedObject.FindProperty("blurIntensity");
+
+            spTransitionMode = serializedObject.FindProperty("transitionMode");
+            spTransitionTex = serializedObject.FindProperty("transitionTexture");
+            spTransitionTexScale = serializedObject.FindProperty("transitionTexScale");
+            spTransitionTexOffset = serializedObject.FindProperty("transitionTexOffset");
+            spTransitionTexRotation = serializedObject.FindProperty("transitionTexRotation");
+            spTransitionKeepAspectRatio = serializedObject.FindProperty("transitionKeepAspectRatio");
+            spTransitionRate = serializedObject.FindProperty("transitionRate");
+            spTransitionColor = serializedObject.FindProperty("transitionColor");
+            spTransitionWidth = serializedObject.FindProperty("transitionWidth");
+            spTransitionSoftness = serializedObject.FindProperty("transitionSoftness");
+            spTransitionReverse = serializedObject.FindProperty("transitionReverse");
+            spTransitionSpeed = serializedObject.FindProperty("transitionSpeed");
+            spTransitionPatternReverse = serializedObject.FindProperty("transitionPatternReverse");
+            spTransitionAutoPlaySpeed = serializedObject.FindProperty("transitionAutoPlaySpeed");
+            spTransitionColorFilter = serializedObject.FindProperty("transitionColorFilter");
+            spTransitionColorGlow = serializedObject.FindProperty("transitionColorGlow");
+            spTransitionGradient = serializedObject.FindProperty("transitionGradient");
+            spTransitionRange = serializedObject.FindProperty("transitionRange");
         }
 
         public override void OnInspectorGUI()
@@ -180,6 +202,81 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                 if (spBlurType.enumValueIndex != (int)ImageEx.BlurType.None)
                 {
                     EditorGUILayout.PropertyField(spBlurIntensity, new GUIContent("模糊强度"));
+                }
+            }
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spTransitionMode, new GUIContent("过渡模式"));
+                if (spTransitionMode.enumValueIndex != (int)ImageEx.TransitionMode.None)
+                {
+                    ImageEx.TransitionMode mode = (ImageEx.TransitionMode)spTransitionMode.enumValueIndex;
+
+                    EditorGUILayout.PropertyField(spTransitionRate, new GUIContent("过渡进度"));
+                    
+                    if (mode == ImageEx.TransitionMode.Cutoff || mode == ImageEx.TransitionMode.Dissolve || 
+                        mode == ImageEx.TransitionMode.Mask || mode == ImageEx.TransitionMode.Melt || 
+                        mode == ImageEx.TransitionMode.Burn || mode == ImageEx.TransitionMode.Pattern ||
+                        mode == ImageEx.TransitionMode.Fade || mode == ImageEx.TransitionMode.Shiny)
+                    {
+                        EditorGUILayout.LabelField("过渡纹理", EditorStyles.boldLabel);
+                        EditorGUI.indentLevel++;
+                        EditorGUILayout.PropertyField(spTransitionTex, new GUIContent("纹理"));
+                        EditorGUILayout.PropertyField(spTransitionTexScale, new GUIContent("缩放"));
+                        EditorGUILayout.PropertyField(spTransitionTexOffset, new GUIContent("偏移"));
+                        EditorGUILayout.PropertyField(spTransitionSpeed, new GUIContent("速度"));
+                        EditorGUILayout.PropertyField(spTransitionTexRotation, new GUIContent("旋转"));
+                        EditorGUILayout.PropertyField(spTransitionKeepAspectRatio, new GUIContent("保持纵横比"));
+                        EditorGUILayout.PropertyField(spTransitionReverse, new GUIContent("反向"));
+                        EditorGUI.indentLevel--;
+                    }
+                    
+                    if (mode == ImageEx.TransitionMode.Blaze)
+                    {
+                        EditorGUILayout.PropertyField(spTransitionGradient, new GUIContent("过渡渐变"));
+                    }
+
+                    if (mode == ImageEx.TransitionMode.Dissolve || mode == ImageEx.TransitionMode.Shiny || 
+                        mode == ImageEx.TransitionMode.Melt || mode == ImageEx.TransitionMode.Burn || 
+                        mode == ImageEx.TransitionMode.Blaze)
+                    {
+                        EditorGUILayout.PropertyField(spTransitionWidth, new GUIContent("过渡宽度"));
+                    }
+                    else if (mode == ImageEx.TransitionMode.Pattern)
+                    {
+                        EditorGUILayout.PropertyField(spTransitionWidth, new GUIContent("图案大小"));
+                    }
+
+                    if (mode == ImageEx.TransitionMode.Dissolve || mode == ImageEx.TransitionMode.Shiny || 
+                        mode == ImageEx.TransitionMode.Melt || mode == ImageEx.TransitionMode.Burn)
+                    {
+                        EditorGUILayout.PropertyField(spTransitionSoftness, new GUIContent("过渡柔和度"));
+                    }
+
+                    if (mode == ImageEx.TransitionMode.Mask || mode == ImageEx.TransitionMode.Pattern)
+                    {
+                        Vector2 range = spTransitionRange.vector2Value;
+                        float min = range.x;
+                        float max = range.y;
+                        EditorGUILayout.MinMaxSlider(new GUIContent("图案范围"), ref min, ref max, 0f, 1f);
+                        spTransitionRange.vector2Value = new Vector2(min, max);
+                    }
+
+                    if (mode == ImageEx.TransitionMode.Pattern)
+                    {
+                        EditorGUILayout.PropertyField(spTransitionPatternReverse, new GUIContent("图案反向"));
+                    }
+
+                    if (mode != ImageEx.TransitionMode.Fade && mode != ImageEx.TransitionMode.Cutoff && mode != ImageEx.TransitionMode.Mask)
+                    {
+                        EditorGUILayout.PropertyField(spTransitionColorFilter, new GUIContent("颜色滤镜"));
+                        EditorGUILayout.PropertyField(spTransitionColor, new GUIContent("过渡颜色"));
+                        EditorGUILayout.PropertyField(spTransitionColorGlow, new GUIContent("发光"));
+                    }
+
+                    EditorGUILayout.PropertyField(spTransitionAutoPlaySpeed, new GUIContent("自动播放速度"));
                 }
             }
             EditorGUILayout.EndVertical();

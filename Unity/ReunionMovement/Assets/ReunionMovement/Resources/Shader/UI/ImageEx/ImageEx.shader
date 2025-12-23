@@ -71,6 +71,22 @@ Shader "ReunionMovement/UI/Procedural Image"
         _BlurType ("模糊类型", int) = 0
         _BlurIntensity ("模糊强度", Range(0, 1)) = 0
 
+        _TransitionMode ("过渡模式", int) = 0
+        _TransitionTex ("过渡纹理", 2D) = "white" {}
+        _TransitionTexRotation ("Transition Texture Rotation", Float) = 0
+        _TransitionRate ("过渡进度", Range(0, 1)) = 0
+        _TransitionColor ("过渡颜色", Color) = (1, 1, 1, 1)
+        _TransitionWidth ("过渡宽度", Range(0, 1)) = 0.1
+        _TransitionSoftness ("过渡柔和度", Range(0, 1)) = 0.1
+        _TransitionReverse ("反向过渡", int) = 0
+        _TransitionTex_Speed ("Transition Texture Speed", Vector) = (0, 0, 0, 0)
+        _TransitionPatternReverse ("Transition Pattern Reverse", int) = 0
+        _TransitionAutoPlaySpeed ("Transition Auto Play Speed", float) = 0
+        _TransitionColorFilter ("Transition Color Filter", int) = 0
+        _TransitionColorGlow ("Transition Color Glow", int) = 0
+        _TransitionGradientTex ("Transition Gradient Texture", 2D) = "white" {}
+        _TransitionRange ("Transition Range", Vector) = (0, 1, 0, 0)
+
         _BlobbyCrossTime ("水滴十字形状的动态时间参数", Float) = 0
         _SquircleTime ("方圆形形状的动态时间参数", Float) = 1
         _NTriangleRoundedTime ("N三角形圆角形状的动态时间参数", Float) = 0
@@ -128,6 +144,7 @@ Shader "ReunionMovement/UI/Procedural Image"
             #pragma multi_compile_local _ STROKE OUTLINED OUTLINED_STROKE
             #pragma multi_compile_local _ GRADIENT_LINEAR GRADIENT_RADIAL GRADIENT_CORNER
             #pragma multi_compile_local _ BLUR_FAST BLUR_MEDIUM BLUR_DETAIL
+            #pragma multi_compile_local _ TRANSITION_FADE TRANSITION_CUTOFF TRANSITION_DISSOLVE TRANSITION_SHINY TRANSITION_MASK TRANSITION_MELT TRANSITION_BURN TRANSITION_PATTERN TRANSITION_BLAZE
 
             struct appdata_t
             {
@@ -171,6 +188,22 @@ Shader "ReunionMovement/UI/Procedural Image"
 
             int _BlurType;
             half _BlurIntensity;
+
+            int _TransitionMode;
+            sampler2D _TransitionTex; float4 _TransitionTex_ST;
+            half _TransitionTexRotation;
+            half _TransitionRate;
+            half4 _TransitionColor;
+            half _TransitionWidth;
+            half _TransitionSoftness;
+            int _TransitionReverse;
+            half2 _TransitionTex_Speed;
+            int _TransitionPatternReverse;
+            half _TransitionAutoPlaySpeed;
+            int _TransitionColorFilter;
+            int _TransitionColorGlow;
+            sampler2D _TransitionGradientTex;
+            half2 _TransitionRange;
 
             half _FalloffDistance;
             half _ShapeRotation;
@@ -745,6 +778,156 @@ Shader "ReunionMovement/UI/Procedural Image"
                 return saturate(dashedEffect);
             }
             // --------------------RECTANGLE End---------------------
+            // --------------------TRANSITION Start---------------------
+
+            half4 apply_color_filter(int mode, half4 inColor, half4 factor, float intensity, float glow)
+            {
+                half4 color = inColor;
+                if (mode == 1) // Color.Multiply
+                {
+                    color.rgb = color.rgb * factor.rgb;
+                    color *= factor.a;
+                }
+                else if (mode == 2) // Color.Additive
+                {
+                    color.rgb = color.rgb + factor.rgb * color.a * factor.a;
+                }
+                else if (mode == 3) // Color.Subtractive
+                {
+                    color.rgb = color.rgb - factor.rgb * color.a * factor.a;
+                }
+                else if (mode == 4) // Color.Replace
+                {
+                    color.rgb = factor.rgb * color.a;
+                    color *= factor.a;
+                }
+                else if (mode == 5) // Color.MultiplyLuminance
+                {
+                    color.rgb = (1 + Luminance(color.rgb)) * factor.rgb * factor.a / 2 * color.a;
+                }
+                else if (mode == 6) // Color.MultiplyAdditive
+                {
+                    color.rgb = color.rgb * (1 + factor.rgb * factor.a);
+                }
+                else if (mode == 7) // Color.HsvModifier
+                {
+                    const float3 hsv = rgb_to_hsv(color.rgb);
+                    color.rgb = hsv_to_rgb(hsv + factor.rgb) * color.a * factor.a;
+                    color.a = inColor.a * factor.a;
+                }
+                else if (mode == 8) // Color.Contrast
+                {
+                    color.rgb = ((color.rgb - 0.5) * (factor.r + 1) + 0.5 + factor.g * 1.5) * color.a * factor.a;
+                    color.a = color.a * factor.a;
+                }
+
+                if (0 < mode)
+                {
+                    color = lerp(inColor, color, intensity);
+                    color.a *= 1 - glow * intensity;
+                }
+
+                return color;
+            }
+
+            float transition_rate()
+            {
+                return frac(_TransitionAutoPlaySpeed * _Time.y + _TransitionRate * 0.9999);
+            }
+
+            float transition_alpha(float2 uvLocal)
+            {
+                float2 uv = uvLocal;
+                if (_TransitionTexRotation != 0)
+                    uv = rotateUV(uv, radians(_TransitionTexRotation), float2(0.5, 0.5));
+                
+                uv = uv * _TransitionTex_ST.xy + _TransitionTex_ST.zw;
+                const float alpha = tex2D(_TransitionTex, uv + _Time.y * _TransitionTex_Speed).a;
+                return _TransitionReverse ? 1 - alpha : alpha;
+            }
+
+
+            float2 move_transition_filter(float4 uvMask, float alpha)
+            {
+                #if !TRANSITION_MELT && !TRANSITION_BURN
+                    return 0;
+                #endif
+
+                const float factor = alpha - transition_rate() * (1 + _TransitionWidth * 1.5) + _TransitionWidth;
+                const float band = max(0, _TransitionWidth - factor);
+
+                #if TRANSITION_MELT
+                    return float2(0, +band * band * (uvMask.w - uvMask.y) / max(0.01, _TransitionWidth));
+                #elif TRANSITION_BURN
+                    return float2(0, -band * band * (uvMask.w - uvMask.y) / max(0.01, _TransitionWidth));
+                #endif
+
+                return 0;
+            }
+
+            half4 apply_transition_filter(half4 color, float alpha, float2 uvLocal)
+            {
+                #if TRANSITION_FADE
+                    color *= saturate(alpha + 1 - transition_rate() * 2);
+                #elif TRANSITION_CUTOFF
+                    color *= step(0.001, alpha - transition_rate());
+                #elif TRANSITION_PATTERN
+                    const half4 patternColor = apply_color_filter(_TransitionColorFilter, half4(color.rgb, 1), half4(_TransitionColor.rgb * color.a, 1), _TransitionColor.a, _TransitionColorGlow);
+                    
+                    float isPattern = min(inv_lerp(_TransitionRange.x, _TransitionRange.y, uvLocal.x), 0.995) < (_TransitionPatternReverse ? alpha : 1 - alpha);
+                    isPattern = _TransitionPatternReverse ? isPattern : 1 - isPattern;
+                    
+                    color.rgb = lerp(color.rgb, patternColor.rgb, isPattern);
+                #elif TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN
+                    const float factor = alpha - transition_rate() * (1 + _TransitionWidth) + _TransitionWidth;
+                    const float softness = max(0.0001, _TransitionWidth * _TransitionSoftness);
+                    const half bandLerp = saturate((_TransitionWidth - factor) * 2 / softness);
+                    const half softLerp = saturate(factor * 2 / softness);
+                    
+                    half4 bandColor = apply_color_filter(_TransitionColorFilter, half4(color.rgb, 1),
+                                             half4(_TransitionColor.rgb, 1), _TransitionColor.a, _TransitionColorGlow);
+                    bandColor *= color.a;
+
+                    #if TRANSITION_MELT
+                        color = lerp(color, bandColor, bandLerp);
+                        return color;
+                    #elif TRANSITION_BURN
+                        color = lerp(color, bandColor, bandLerp * 1.25);
+                        color.a *= 1 - inv_lerp(0.85, 1.0, bandLerp * 1.25);
+                        color.rgb *= (1 - inv_lerp(0.85, 1.0, bandLerp * 1.3)) * color.a;
+                        return color;
+                    #elif TRANSITION_SHINY
+                        // Simplified shiny logic
+                    #endif
+
+                    half lerpFactor = bandLerp * softLerp;
+                    #if TRANSITION_SHINY
+                        lerpFactor *= lerpFactor;
+                    #endif
+
+                    color = lerp(color, bandColor, lerpFactor);
+
+                    #if TRANSITION_DISSOLVE
+                        color *= softLerp;
+                    #elif TRANSITION_MASK
+                        color *= bandLerp * softLerp;
+                    #endif
+                #elif TRANSITION_BLAZE
+                    const float maxValue = transition_rate();
+                    const float minValue = maxValue - _TransitionWidth / 2;
+                    const float rate = 1 - inv_lerp(minValue, maxValue, alpha * (1 - _TransitionWidth / 2));
+                    const float4 gradColor = tex2D(_TransitionGradientTex, float2(rate, 0.5)); // Use TransitionTex as gradient
+                    const float4 burntColor = gradColor * color;
+                    const float4 flameColor = float4(gradColor.rgb, gradColor.a * color.a);
+
+                    color = lerp(burntColor, flameColor, step(0.5, rate));
+                    color.rgb *= color.a;
+                #endif
+
+                return color;
+            }
+            // --------------------TRANSITION End---------------------
+
             half4 ApplyBlur(float2 uv)
             {
                 #if BLUR_FAST || BLUR_MEDIUM || BLUR_DETAIL
@@ -823,6 +1006,34 @@ Shader "ReunionMovement/UI/Procedural Image"
                 half4 color = IN.color;
                 half2 texcoord = IN.texcoord;
                 float2 effectsUv = IN.effectsUv;
+                float2 transitionUv = effectsUv;
+                float2 transitionFilterUv = effectsUv;
+
+                // Transition Logic
+                #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
+                    float alpha = 1;
+                    #if TRANSITION_PATTERN
+                        // UIEffect scaling logic
+                        const half scale = lerp(100, 1, _TransitionWidth);
+                        const half2 time = half2(-transition_rate() * 2, 0);
+                        
+                        if (_TransitionTexRotation != 0)
+                            transitionUv = rotateUV(transitionUv, radians(_TransitionTexRotation), float2(0.5, 0.5));
+                        
+                        transitionFilterUv = transitionUv;
+
+                        transitionUv = transitionUv * _TransitionTex_ST.xy * scale + _TransitionTex_ST.zw + time;
+                        
+                        alpha = tex2D(_TransitionTex, transitionUv).a;
+                        alpha = _TransitionReverse ? 1 - alpha : alpha;
+                    #else
+                        alpha = transition_alpha(effectsUv);
+                    #endif
+
+                    // Move UVs for Melt/Burn
+                    float4 uvMask = float4(0, 0, 1, 1); // Simplified mask for full rect
+                    texcoord += move_transition_filter(uvMask, alpha);
+                #endif
 
                 color = ApplyBlur(texcoord) * color;
 
@@ -946,6 +1157,11 @@ Shader "ReunionMovement/UI/Procedural Image"
                         color = half4(lerp(_OutlineColor.rgb, color.rgb, lerpFac), lerp(_OutlineColor.a * color.a, color.a, lerpFac));
                         color.a *= alpha;
                     #endif
+                #endif
+
+                // Apply Transition Filter
+                #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
+                    color = apply_transition_filter(color, alpha, transitionFilterUv);
                 #endif
 
                 #if !RECTANGLE && !CIRCLE && !PENTAGON && !TRIANGLE && !HEXAGON && !CHAMFERBOX && !PARALLELOGRAM && !NSTAR_POLYGON && !HEART && !BLOBBYCROSS && !SQUIRCLE && !NTRIANGLE_ROUNDED

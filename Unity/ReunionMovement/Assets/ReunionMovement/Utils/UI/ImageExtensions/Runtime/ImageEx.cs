@@ -20,6 +20,33 @@ namespace ReunionMovement.UI.ImageExtensions
             Detail = 3
         }
 
+        public enum TransitionMode
+        {
+            None = 0,
+            Fade = 1,
+            Cutoff = 2,
+            Dissolve = 3,
+            Shiny = 4,
+            Mask = 5,
+            Melt = 6,
+            Burn = 7,
+            Pattern = 8,
+            Blaze = 9
+        }
+
+        public enum ColorMode
+        {
+            None = 0,
+            Multiply = 1,
+            Additive = 2,
+            Subtractive = 3,
+            Replace = 4,
+            MultiplyLuminance = 5,
+            MultiplyAdditive = 6,
+            HsvModifier = 7,
+            Contrast = 8,
+        }
+
         #region 常量
         public const string shaderName = "ReunionMovement/UI/Procedural Image";
         #endregion
@@ -32,6 +59,25 @@ namespace ReunionMovement.UI.ImageExtensions
 
         [SerializeField] private BlurType blurType = BlurType.None;
         [SerializeField] [Range(0, 1)] private float blurIntensity = 1f;
+
+        [SerializeField] private TransitionMode transitionMode = TransitionMode.None;
+        [SerializeField] private Texture transitionTexture;
+        [SerializeField] private Vector2 transitionTexScale = Vector2.one;
+        [SerializeField] private Vector2 transitionTexOffset = Vector2.zero;
+        [SerializeField] private float transitionTexRotation = 0;
+        [SerializeField] private bool transitionKeepAspectRatio;
+        [SerializeField] [Range(0, 1)] private float transitionRate = 0f;
+        [SerializeField] private Color transitionColor = Color.white;
+        [SerializeField] [Range(0, 1)] private float transitionWidth = 0.1f;
+        [SerializeField] [Range(0, 1)] private float transitionSoftness = 0.1f;
+        [SerializeField] private bool transitionReverse;
+        [SerializeField] private Vector2 transitionSpeed;
+        [SerializeField] private bool transitionPatternReverse;
+        [SerializeField] private float transitionAutoPlaySpeed;
+        [SerializeField] private ColorMode transitionColorFilter;
+        [SerializeField] private bool transitionColorGlow;
+        [SerializeField] private Texture transitionGradient;
+        [SerializeField] private Vector2 transitionRange;
 
         [SerializeField] private float strokeWidth;
 
@@ -71,6 +117,23 @@ namespace ReunionMovement.UI.ImageExtensions
 
         private static readonly int blurType_Sp = Shader.PropertyToID("_BlurType");
         private static readonly int blurIntensity_Sp = Shader.PropertyToID("_BlurIntensity");
+
+        private static readonly int transitionMode_Sp = Shader.PropertyToID("_TransitionMode");
+        private static readonly int transitionTex_Sp = Shader.PropertyToID("_TransitionTex");
+        private static readonly int transitionTex_ST_Sp = Shader.PropertyToID("_TransitionTex_ST");
+        private static readonly int transitionTexRotation_Sp = Shader.PropertyToID("_TransitionTexRotation");
+        private static readonly int transitionRate_Sp = Shader.PropertyToID("_TransitionRate");
+        private static readonly int transitionColor_Sp = Shader.PropertyToID("_TransitionColor");
+        private static readonly int transitionWidth_Sp = Shader.PropertyToID("_TransitionWidth");
+        private static readonly int transitionSoftness_Sp = Shader.PropertyToID("_TransitionSoftness");
+        private static readonly int transitionReverse_Sp = Shader.PropertyToID("_TransitionReverse");
+        private static readonly int transitionTexSpeed_Sp = Shader.PropertyToID("_TransitionTex_Speed");
+        private static readonly int transitionPatternReverse_Sp = Shader.PropertyToID("_TransitionPatternReverse");
+        private static readonly int transitionAutoPlaySpeed_Sp = Shader.PropertyToID("_TransitionAutoPlaySpeed");
+        private static readonly int transitionColorFilter_Sp = Shader.PropertyToID("_TransitionColorFilter");
+        private static readonly int transitionColorGlow_Sp = Shader.PropertyToID("_TransitionColorGlow");
+        private static readonly int transitionGradientTex_Sp = Shader.PropertyToID("_TransitionGradientTex");
+        private static readonly int transitionRange_Sp = Shader.PropertyToID("_TransitionRange");
 
         private static readonly int outlineWidth_Sp = Shader.PropertyToID("_OutlineWidth");
         private static readonly int outlineColor_Sp = Shader.PropertyToID("_OutlineColor");
@@ -546,6 +609,186 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        public TransitionMode Transition
+        {
+            get => transitionMode;
+            set
+            {
+                transitionMode = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public Texture TransitionTexture
+        {
+            get => transitionTexture;
+            set
+            {
+                transitionTexture = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public Vector2 TransitionTexScale
+        {
+            get => transitionTexScale;
+            set
+            {
+                transitionTexScale = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public Vector2 TransitionTexOffset
+        {
+            get => transitionTexOffset;
+            set
+            {
+                transitionTexOffset = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public float TransitionTexRotation
+        {
+            get => transitionTexRotation;
+            set
+            {
+                transitionTexRotation = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public bool TransitionKeepAspectRatio
+        {
+            get => transitionKeepAspectRatio;
+            set
+            {
+                transitionKeepAspectRatio = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public float TransitionRate
+        {
+            get => transitionRate;
+            set
+            {
+                transitionRate = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public Color TransitionColor
+        {
+            get => transitionColor;
+            set
+            {
+                transitionColor = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public float TransitionWidth
+        {
+            get => transitionWidth;
+            set
+            {
+                transitionWidth = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public float TransitionSoftness
+        {
+            get => transitionSoftness;
+            set
+            {
+                transitionSoftness = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public bool TransitionReverse
+        {
+            get => transitionReverse;
+            set
+            {
+                transitionReverse = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public Vector2 TransitionSpeed
+        {
+            get => transitionSpeed;
+            set
+            {
+                transitionSpeed = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public bool TransitionPatternReverse
+        {
+            get => transitionPatternReverse;
+            set
+            {
+                transitionPatternReverse = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public float TransitionAutoPlaySpeed
+        {
+            get => transitionAutoPlaySpeed;
+            set
+            {
+                transitionAutoPlaySpeed = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public ColorMode TransitionColorFilter
+        {
+            get => transitionColorFilter;
+            set
+            {
+                transitionColorFilter = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public bool TransitionColorGlow
+        {
+            get => transitionColorGlow;
+            set
+            {
+                transitionColorGlow = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public Texture TransitionGradient
+        {
+            get => transitionGradient;
+            set
+            {
+                transitionGradient = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public Vector2 TransitionRange
+        {
+            get => transitionRange;
+            set
+            {
+                transitionRange = value;
+                SetMaterialDirty();
+            }
+        }
+
         #endregion
 
         #region 私有变量
@@ -629,6 +872,25 @@ namespace ReunionMovement.UI.ImageExtensions
 
             Blur = blurType;
             BlurIntensity = blurIntensity;
+
+            Transition = transitionMode;
+            TransitionTexture = transitionTexture;
+            TransitionTexScale = transitionTexScale;
+            TransitionTexOffset = transitionTexOffset;
+            TransitionTexRotation = transitionTexRotation;
+            TransitionKeepAspectRatio = transitionKeepAspectRatio;
+            TransitionRate = transitionRate;
+            TransitionColor = transitionColor;
+            TransitionWidth = transitionWidth;
+            TransitionSoftness = transitionSoftness;
+            TransitionReverse = transitionReverse;
+            TransitionSpeed = transitionSpeed;
+            TransitionPatternReverse = transitionPatternReverse;
+            TransitionAutoPlaySpeed = transitionAutoPlaySpeed;
+            TransitionColorFilter = transitionColorFilter;
+            TransitionColorGlow = transitionColorGlow;
+            TransitionGradient = transitionGradient;
+            TransitionRange = transitionRange;
 
             base.OnValidate();
             base.SetMaterialDirty();
@@ -828,6 +1090,86 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.SetInt(blurType_Sp, (int)blurType);
             mat.SetFloat(blurIntensity_Sp, blurIntensity);
 
+            mat.SetInt(transitionMode_Sp, (int)transitionMode);
+            mat.SetTexture(transitionTex_Sp, transitionTexture);
+            
+            Vector2 scale = transitionTexScale;
+            Vector2 offset = transitionTexOffset;
+
+            if (transitionKeepAspectRatio && transitionTexture != null && rectTransform != null)
+            {
+                float rectAspect = rectTransform.rect.width / rectTransform.rect.height;
+                float texAspect = (float)transitionTexture.width / transitionTexture.height;
+                
+                if (texAspect > rectAspect)
+                {
+                    scale.y *= rectAspect / texAspect;
+                    offset.y += (1 - rectAspect / texAspect) * 0.5f;
+                }
+                else
+                {
+                    scale.x *= texAspect / rectAspect;
+                    offset.x += (1 - texAspect / rectAspect) * 0.5f;
+                }
+            }
+
+            mat.SetVector(transitionTex_ST_Sp, new Vector4(scale.x, scale.y, offset.x, offset.y));
+            mat.SetFloat(transitionTexRotation_Sp, transitionTexRotation);
+            mat.SetFloat(transitionRate_Sp, transitionRate);
+            mat.SetColor(transitionColor_Sp, transitionColor);
+            mat.SetFloat(transitionWidth_Sp, transitionWidth);
+            mat.SetFloat(transitionSoftness_Sp, transitionSoftness);
+            mat.SetInt(transitionReverse_Sp, transitionReverse ? 1 : 0);
+            mat.SetVector(transitionTexSpeed_Sp, transitionSpeed);
+            mat.SetInt(transitionPatternReverse_Sp, transitionPatternReverse ? 1 : 0);
+            mat.SetFloat(transitionAutoPlaySpeed_Sp, transitionAutoPlaySpeed);
+            mat.SetInt(transitionColorFilter_Sp, (int)transitionColorFilter);
+            mat.SetInt(transitionColorGlow_Sp, transitionColorGlow ? 1 : 0);
+            mat.SetTexture(transitionGradientTex_Sp, transitionGradient);
+            mat.SetVector(transitionRange_Sp, transitionRange);
+
+            switch (transitionMode)
+            {
+                case TransitionMode.None:
+                    mat.DisableKeyword("TRANSITION_FADE");
+                    mat.DisableKeyword("TRANSITION_CUTOFF");
+                    mat.DisableKeyword("TRANSITION_DISSOLVE");
+                    mat.DisableKeyword("TRANSITION_SHINY");
+                    mat.DisableKeyword("TRANSITION_MASK");
+                    mat.DisableKeyword("TRANSITION_MELT");
+                    mat.DisableKeyword("TRANSITION_BURN");
+                    mat.DisableKeyword("TRANSITION_PATTERN");
+                    mat.DisableKeyword("TRANSITION_BLAZE");
+                    break;
+                case TransitionMode.Fade:
+                    mat.EnableKeyword("TRANSITION_FADE");
+                    break;
+                case TransitionMode.Cutoff:
+                    mat.EnableKeyword("TRANSITION_CUTOFF");
+                    break;
+                case TransitionMode.Dissolve:
+                    mat.EnableKeyword("TRANSITION_DISSOLVE");
+                    break;
+                case TransitionMode.Shiny:
+                    mat.EnableKeyword("TRANSITION_SHINY");
+                    break;
+                case TransitionMode.Mask:
+                    mat.EnableKeyword("TRANSITION_MASK");
+                    break;
+                case TransitionMode.Melt:
+                    mat.EnableKeyword("TRANSITION_MELT");
+                    break;
+                case TransitionMode.Burn:
+                    mat.EnableKeyword("TRANSITION_BURN");
+                    break;
+                case TransitionMode.Pattern:
+                    mat.EnableKeyword("TRANSITION_PATTERN");
+                    break;
+                case TransitionMode.Blaze:
+                    mat.EnableKeyword("TRANSITION_BLAZE");
+                    break;
+            }
+
             switch (blurType)
             {
                 case BlurType.None:
@@ -992,6 +1334,16 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.DisableKeyword("BLUR_FAST");
             mat.DisableKeyword("BLUR_MEDIUM");
             mat.DisableKeyword("BLUR_DETAIL");
+
+            mat.DisableKeyword("TRANSITION_FADE");
+            mat.DisableKeyword("TRANSITION_CUTOFF");
+            mat.DisableKeyword("TRANSITION_DISSOLVE");
+            mat.DisableKeyword("TRANSITION_SHINY");
+            mat.DisableKeyword("TRANSITION_MASK");
+            mat.DisableKeyword("TRANSITION_MELT");
+            mat.DisableKeyword("TRANSITION_BURN");
+            mat.DisableKeyword("TRANSITION_PATTERN");
+            mat.DisableKeyword("TRANSITION_BLAZE");
         }
 
         /// <summary>
@@ -1007,6 +1359,25 @@ namespace ReunionMovement.UI.ImageExtensions
 
             blurType = (BlurType)mat.GetInt(blurType_Sp);
             blurIntensity = mat.GetFloat(blurIntensity_Sp);
+
+            transitionMode = (TransitionMode)mat.GetInt(transitionMode_Sp);
+            transitionTexture = mat.GetTexture(transitionTex_Sp);
+            Vector4 st = mat.GetVector(transitionTex_ST_Sp);
+            transitionTexScale = new Vector2(st.x, st.y);
+            transitionTexOffset = new Vector2(st.z, st.w);
+            transitionTexRotation = mat.GetFloat(transitionTexRotation_Sp);
+            transitionRate = mat.GetFloat(transitionRate_Sp);
+            transitionColor = mat.GetColor(transitionColor_Sp);
+            transitionWidth = mat.GetFloat(transitionWidth_Sp);
+            transitionSoftness = mat.GetFloat(transitionSoftness_Sp);
+            transitionReverse = mat.GetInt(transitionReverse_Sp) == 1;
+            transitionSpeed = mat.GetVector(transitionTexSpeed_Sp);
+            transitionPatternReverse = mat.GetInt(transitionPatternReverse_Sp) == 1;
+            transitionAutoPlaySpeed = mat.GetFloat(transitionAutoPlaySpeed_Sp);
+            transitionColorFilter = (ColorMode)mat.GetInt(transitionColorFilter_Sp);
+            transitionColorGlow = mat.GetInt(transitionColorGlow_Sp) == 1;
+            transitionGradient = mat.GetTexture(transitionGradientTex_Sp);
+            transitionRange = mat.GetVector(transitionRange_Sp);
 
             strokeWidth = mat.GetFloat(strokeWidth_Sp);
             falloffDistance = mat.GetFloat(falloffDistance_Sp);
