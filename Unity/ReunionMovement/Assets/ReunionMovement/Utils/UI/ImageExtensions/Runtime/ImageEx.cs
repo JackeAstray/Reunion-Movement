@@ -2,7 +2,9 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.UI.ImageExtensions;
-using Unity.VisualScripting;
+using System.Collections.Generic;
+
+
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -34,6 +36,12 @@ namespace ReunionMovement.UI.ImageExtensions
             Blaze = 9
         }
 
+        public enum ShadowStyle
+        {
+            None = 0,
+            Shadow = 1,
+        }
+
         public enum ColorMode
         {
             None = 0,
@@ -58,7 +66,7 @@ namespace ReunionMovement.UI.ImageExtensions
         [SerializeField] private MaterialMode materialMode;
 
         [SerializeField] private BlurType blurType = BlurType.None;
-        [SerializeField] [Range(0, 1)] private float blurIntensity = 1f;
+        [SerializeField][Range(0, 1)] private float blurIntensity = 1f;
 
         [SerializeField] private TransitionMode transitionMode = TransitionMode.None;
         [SerializeField] private Texture transitionTexture;
@@ -66,10 +74,10 @@ namespace ReunionMovement.UI.ImageExtensions
         [SerializeField] private Vector2 transitionTexOffset = Vector2.zero;
         [SerializeField] private float transitionTexRotation = 0;
         [SerializeField] private bool transitionKeepAspectRatio;
-        [SerializeField] [Range(0, 1)] private float transitionRate = 0f;
-        [SerializeField] [ColorUsage(true, true)] private Color transitionColor = Color.white;
-        [SerializeField] [Range(0, 1)] private float transitionWidth = 0.1f;
-        [SerializeField] [Range(0, 1)] private float transitionSoftness = 0.1f;
+        [SerializeField][Range(0, 1)] private float transitionRate = 0f;
+        [SerializeField][ColorUsage(true, true)] private Color transitionColor = Color.white;
+        [SerializeField][Range(0, 1)] private float transitionWidth = 0.1f;
+        [SerializeField][Range(0, 1)] private float transitionSoftness = 0.1f;
         [SerializeField] private bool transitionReverse;
         [SerializeField] private Vector2 transitionSpeed;
         [SerializeField] private bool transitionPatternReverse;
@@ -77,11 +85,16 @@ namespace ReunionMovement.UI.ImageExtensions
         [SerializeField] private ColorMode transitionColorFilter;
         [SerializeField] private bool transitionColorGlow;
         [SerializeField] private Texture transitionGradient;
-        [SerializeField] [GradientUsage(true)] private Gradient transitionGradientValue;
+        [SerializeField][GradientUsage(true)] private Gradient transitionGradientValue;
         [SerializeField] private Vector2 transitionRange;
         [SerializeField] private bool transitionClamp = true;
-        [SerializeField] [Range(0, 4)] private float transitionTexClampPadding = 1f;
+        [SerializeField][Range(0, 4)] private float transitionTexClampPadding = 1f;
         [SerializeField] private bool transitionUseUv0 = true;
+
+        [SerializeField] private ShadowStyle shadowStyleMode = ShadowStyle.None;
+        [SerializeField] private Color shadowColor = Color.black;
+        [SerializeField] private Vector2 shadowDistance = new Vector2(1, -1);
+        [SerializeField][Range(0, 1)] private float shadowBlur = 0f;
 
         [SerializeField] private float strokeWidth;
 
@@ -141,6 +154,9 @@ namespace ReunionMovement.UI.ImageExtensions
         private static readonly int transitionClamp_Sp = Shader.PropertyToID("_TransitionClamp");
         private static readonly int transitionTexClampPadding_Sp = Shader.PropertyToID("_TransitionTexClampPadding");
         private static readonly int transitionUseUv0_Sp = Shader.PropertyToID("_TransitionUseUv0");
+
+        private static readonly int shadowColor_Sp = Shader.PropertyToID("_ShadowColor");
+        private static readonly int shadowBlur_Sp = Shader.PropertyToID("_ShadowBlur");
 
         private static readonly int outlineWidth_Sp = Shader.PropertyToID("_OutlineWidth");
         private static readonly int outlineColor_Sp = Shader.PropertyToID("_OutlineColor");
@@ -840,6 +856,47 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        public ShadowStyle ShadowStyleMode
+        {
+            get => shadowStyleMode;
+            set
+            {
+                shadowStyleMode = value;
+                SetVerticesDirty();
+                SetMaterialDirty();
+            }
+        }
+
+        public Color ShadowColor
+        {
+            get => shadowColor;
+            set
+            {
+                shadowColor = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public Vector2 ShadowDistance
+        {
+            get => shadowDistance;
+            set
+            {
+                shadowDistance = value;
+                SetVerticesDirty();
+            }
+        }
+
+        public float ShadowBlur
+        {
+            get => shadowBlur;
+            set
+            {
+                shadowBlur = value;
+                SetMaterialDirty();
+            }
+        }
+
         #endregion
 
         #region 私有变量
@@ -945,6 +1002,11 @@ namespace ReunionMovement.UI.ImageExtensions
             TransitionClamp = transitionClamp;
             TransitionTexClampPadding = transitionTexClampPadding;
             TransitionUseUv0 = transitionUseUv0;
+
+            ShadowStyleMode = shadowStyleMode;
+            ShadowColor = shadowColor;
+            ShadowDistance = shadowDistance;
+            ShadowBlur = shadowBlur;
 
             base.OnValidate();
             base.SetMaterialDirty();
@@ -1145,6 +1207,25 @@ namespace ReunionMovement.UI.ImageExtensions
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+
+            if (shadowStyleMode != ShadowStyle.None)
+            {
+                var output = new List<UIVertex>();
+                vh.GetUIVertexStream(output);
+                vh.Clear();
+
+                var shadowVerts = new List<UIVertex>(output.Count);
+                for (int i = 0; i < output.Count; i++)
+                {
+                    var v = output[i];
+                    v.position += (Vector3)shadowDistance;
+                    v.uv2.x = -Mathf.Abs(v.uv2.x);
+                    shadowVerts.Add(v);
+                }
+
+                vh.AddUIVertexTriangleStream(shadowVerts);
+                vh.AddUIVertexTriangleStream(output);
+            }
         }
 
         /// <summary>
@@ -1182,7 +1263,7 @@ namespace ReunionMovement.UI.ImageExtensions
 
             mat.SetInt(transitionMode_Sp, (int)transitionMode);
             mat.SetTexture(transitionTex_Sp, transitionTexture);
-            
+
             Vector2 scale = transitionTexScale;
             Vector2 offset = transitionTexOffset;
 
@@ -1190,7 +1271,7 @@ namespace ReunionMovement.UI.ImageExtensions
             {
                 float rectAspect = rectTransform.rect.width / rectTransform.rect.height;
                 float texAspect = (float)transitionTexture.width / transitionTexture.height;
-                
+
                 if (texAspect > rectAspect)
                 {
                     scale.y *= rectAspect / texAspect;
@@ -1223,6 +1304,12 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.SetFloat(transitionClamp_Sp, runtimeClamp ? 1 : 0);
             mat.SetFloat(transitionTexClampPadding_Sp, transitionTexClampPadding);
             mat.SetFloat(transitionUseUv0_Sp, transitionUseUv0 ? 1 : 0);
+
+            if (shadowStyleMode != ShadowStyle.None)
+            {
+                mat.SetColor(shadowColor_Sp, shadowColor);
+                mat.SetFloat(shadowBlur_Sp, shadowBlur);
+            }
 
             switch (transitionMode)
             {
@@ -1477,6 +1564,9 @@ namespace ReunionMovement.UI.ImageExtensions
             transitionClamp = mat.GetFloat(transitionClamp_Sp) == 1;
             transitionTexClampPadding = mat.GetFloat(transitionTexClampPadding_Sp);
             transitionUseUv0 = mat.GetFloat(transitionUseUv0_Sp) == 1;
+
+            shadowColor = mat.GetColor(shadowColor_Sp);
+            shadowBlur = mat.GetFloat(shadowBlur_Sp);
 
             strokeWidth = mat.GetFloat(strokeWidth_Sp);
             falloffDistance = mat.GetFloat(falloffDistance_Sp);

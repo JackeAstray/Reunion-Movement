@@ -29,6 +29,8 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
         private SerializedProperty spTransitionTexScale, spTransitionTexOffset, spTransitionTexRotation, spTransitionKeepAspectRatio;
         private SerializedProperty spTransitionSpeed, spTransitionPatternReverse, spTransitionAutoPlaySpeed, spTransitionColorFilter, spTransitionColorGlow, spTransitionGradient, spTransitionGradientValue, spTransitionRange;
 
+        private SerializedProperty spShadowStyleMode, spShadowColor, spShadowDistance, spShadowBlur;
+
         private bool gsInitialized, shaderChannelsNeedUpdate;
 
         protected override void OnEnable()
@@ -105,6 +107,11 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             spTransitionGradient = serializedObject.FindProperty("transitionGradient");
             spTransitionGradientValue = serializedObject.FindProperty("transitionGradientValue");
             spTransitionRange = serializedObject.FindProperty("transitionRange");
+
+            spShadowStyleMode = serializedObject.FindProperty("shadowStyleMode");
+            spShadowColor = serializedObject.FindProperty("shadowColor");
+            spShadowDistance = serializedObject.FindProperty("shadowDistance");
+            spShadowBlur = serializedObject.FindProperty("shadowBlur");
         }
 
         public override void OnInspectorGUI()
@@ -216,9 +223,9 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                     ImageEx.TransitionMode mode = (ImageEx.TransitionMode)spTransitionMode.enumValueIndex;
 
                     EditorGUILayout.PropertyField(spTransitionRate, new GUIContent("过渡进度"));
-                    
-                    if (mode == ImageEx.TransitionMode.Cutoff || mode == ImageEx.TransitionMode.Dissolve || 
-                        mode == ImageEx.TransitionMode.Mask || mode == ImageEx.TransitionMode.Melt || 
+
+                    if (mode == ImageEx.TransitionMode.Cutoff || mode == ImageEx.TransitionMode.Dissolve ||
+                        mode == ImageEx.TransitionMode.Mask || mode == ImageEx.TransitionMode.Melt ||
                         mode == ImageEx.TransitionMode.Burn || mode == ImageEx.TransitionMode.Pattern ||
                         mode == ImageEx.TransitionMode.Fade || mode == ImageEx.TransitionMode.Shiny ||
                         mode == ImageEx.TransitionMode.Blaze)
@@ -234,9 +241,9 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                         EditorGUILayout.PropertyField(spTransitionReverse, new GUIContent("反向"));
                         EditorGUI.indentLevel--;
                     }
-                    
-                    if (mode == ImageEx.TransitionMode.Dissolve || mode == ImageEx.TransitionMode.Shiny || 
-                        mode == ImageEx.TransitionMode.Melt || mode == ImageEx.TransitionMode.Burn || 
+
+                    if (mode == ImageEx.TransitionMode.Dissolve || mode == ImageEx.TransitionMode.Shiny ||
+                        mode == ImageEx.TransitionMode.Melt || mode == ImageEx.TransitionMode.Burn ||
                         mode == ImageEx.TransitionMode.Blaze || mode == ImageEx.TransitionMode.Mask)
                     {
                         EditorGUILayout.PropertyField(spTransitionWidth, new GUIContent("过渡宽度"));
@@ -260,7 +267,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                         }
                     }
 
-                    if (mode == ImageEx.TransitionMode.Dissolve || mode == ImageEx.TransitionMode.Shiny || 
+                    if (mode == ImageEx.TransitionMode.Dissolve || mode == ImageEx.TransitionMode.Shiny ||
                         mode == ImageEx.TransitionMode.Melt || mode == ImageEx.TransitionMode.Burn ||
                         mode == ImageEx.TransitionMode.Mask)
                     {
@@ -289,6 +296,19 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                     }
 
                     EditorGUILayout.PropertyField(spTransitionAutoPlaySpeed, new GUIContent("自动播放速度"));
+                }
+            }
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spShadowStyleMode, new GUIContent("阴影样式"));
+                if (spShadowStyleMode.enumValueIndex != (int)ImageEx.ShadowStyle.None)
+                {
+                    EditorGUILayout.PropertyField(spShadowColor, new GUIContent("阴影颜色"));
+                    EditorGUILayout.PropertyField(spShadowDistance, new GUIContent("阴影距离"));
+                    EditorGUILayout.PropertyField(spShadowBlur, new GUIContent("阴影模糊"));
                 }
             }
             EditorGUILayout.EndVertical();
