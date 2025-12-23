@@ -38,6 +38,8 @@ ShaderVariantCollection:
         passType: 0
       - keywords: COLOR_FILTER
         passType: 0
+      - keywords: COLOR_FILTER TRANSITION_MELT
+        passType: 0
       - keywords: SAMPLING_BLUR_DETAIL
         passType: 0
       - keywords: SAMPLING_EDGE_LUMINANCE

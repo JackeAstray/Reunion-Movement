@@ -246,6 +246,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 5
   outlineColor: {r: 0, g: 1, b: 0.24778461, a: 1}
@@ -334,6 +338,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &840306
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -341,7 +346,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 840303}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &50312924
 GameObject:
   m_ObjectHideFlags: 0
@@ -544,6 +549,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -632,6 +641,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &104643847
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -639,7 +649,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 104643844}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &176662608
 GameObject:
   m_ObjectHideFlags: 0
@@ -767,6 +777,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -855,6 +869,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &176662611
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -862,7 +877,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 176662608}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &193350051
 GameObject:
   m_ObjectHideFlags: 0
@@ -958,6 +973,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -1126,6 +1142,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 5
   outlineColor: {r: 1, g: 0.2699381, b: 0, a: 1}
@@ -1214,6 +1234,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &228356462
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1221,7 +1242,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 228356459}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &307112959
 GameObject:
   m_ObjectHideFlags: 0
@@ -1349,6 +1370,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -1437,6 +1462,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &307112962
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1444,7 +1470,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 307112959}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &309606847
 GameObject:
   m_ObjectHideFlags: 0
@@ -1674,7 +1700,7 @@ MonoBehaviour:
   transitionTexRotation: 0
   transitionKeepAspectRatio: 1
   transitionRate: 0
-  transitionColor: {r: 0, g: 1, b: 0, a: 1}
+  transitionColor: {r: 0, g: 32, b: 0, a: 1}
   transitionWidth: 0.25
   transitionSoftness: 0.5
   transitionReverse: 0
@@ -1722,6 +1748,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -1810,6 +1840,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &389057313
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1817,7 +1848,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 389057310}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &391404683
 GameObject:
   m_ObjectHideFlags: 0
@@ -1945,6 +1976,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 10
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -2033,6 +2068,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &391404686
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2040,7 +2076,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 391404683}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &426990150
 GameObject:
   m_ObjectHideFlags: 0
@@ -2391,6 +2427,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -2479,6 +2519,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &479420044
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2486,7 +2527,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 479420041}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &515931147
 GameObject:
   m_ObjectHideFlags: 0
@@ -2579,15 +2620,15 @@ MonoBehaviour:
   transitionGradientValue:
     serializedVersion: 2
     key0: {r: 1, g: 1, b: 1, a: 0}
-    key1: {r: 0.4056604, g: 0.4056604, b: 0.4056604, a: 1}
-    key2: {r: 0, g: 0, b: 0, a: 1}
-    key3: {r: 1, g: 0.37254903, b: 0, a: 0}
+    key1: {r: 2.745098, g: 2.745098, b: 2.745098, a: 1}
+    key2: {r: 1, g: 0.078431375, b: 0, a: 1}
+    key3: {r: 2, g: 0.5032389, b: 0, a: 0}
     key4: {r: 1, g: 1, b: 1, a: 0}
     key5: {r: 1, g: 1, b: 1, a: 0}
     key6: {r: 0, g: 0, b: 0, a: 0}
     key7: {r: 0, g: 0, b: 0, a: 0}
     ctime0: 0
-    ctime1: 26214
+    ctime1: 26021
     ctime2: 32768
     ctime3: 39321
     ctime4: 65342
@@ -2613,7 +2654,11 @@ MonoBehaviour:
   shadowStyleMode: 0
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
+  shadowBlur: 1
+  shadowIteration: 5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -2702,6 +2747,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &515931150
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2709,7 +2755,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 515931147}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &582972142
 GameObject:
   m_ObjectHideFlags: 0
@@ -2837,6 +2883,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -2925,6 +2975,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &582972145
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2932,7 +2983,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 582972142}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &597461412
 GameObject:
   m_ObjectHideFlags: 0
@@ -3186,6 +3237,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -3274,6 +3329,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &604812177
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3281,7 +3337,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 604812174}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &632584473
 GameObject:
   m_ObjectHideFlags: 0
@@ -3409,6 +3465,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 5
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -3497,6 +3557,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &632584476
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3504,7 +3565,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 632584473}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &635677600
 GameObject:
   m_ObjectHideFlags: 0
@@ -3632,6 +3693,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -3720,6 +3785,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &635677603
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3727,7 +3793,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 635677600}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &659240146
 GameObject:
   m_ObjectHideFlags: 0
@@ -3855,6 +3921,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -3943,6 +4013,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &659240149
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3950,7 +4021,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 659240146}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &680362032
 GameObject:
   m_ObjectHideFlags: 0
@@ -4078,6 +4149,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -4166,6 +4241,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &680362035
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4173,7 +4249,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 680362032}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &680526465
 GameObject:
   m_ObjectHideFlags: 0
@@ -4284,17 +4360,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Version: 3
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
-  m_LightLayerMask: 1
-  m_RenderingLayers: 1
   m_CustomShadowLayers: 0
-  m_ShadowLayerMask: 1
-  m_ShadowRenderingLayers: 1
   m_LightCookieSize: {x: 1, y: 1}
   m_LightCookieOffset: {x: 0, y: 0}
   m_SoftShadowQuality: 0
+  m_RenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_ShadowRenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_Version: 4
+  m_LightLayerMask: 1
+  m_ShadowLayerMask: 1
+  m_RenderingLayers: 1
+  m_ShadowRenderingLayers: 1
 --- !u!1 &687910523
 GameObject:
   m_ObjectHideFlags: 0
@@ -4422,6 +4504,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -4510,6 +4596,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &687910526
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4517,7 +4604,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 687910523}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &718500219
 GameObject:
   m_ObjectHideFlags: 0
@@ -4681,6 +4768,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -4769,6 +4860,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &781452804
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4776,7 +4868,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 781452801}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &939927898
 GameObject:
   m_ObjectHideFlags: 0
@@ -4994,6 +5086,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 30
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -5082,6 +5178,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &966567570
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -5089,7 +5186,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 966567567}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1010331436
 GameObject:
   m_ObjectHideFlags: 0
@@ -5293,6 +5390,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 11.520002
   outlineColor: {r: 1, g: 0.5, b: 0, a: 1}
@@ -5381,6 +5482,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1055933270
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -5388,7 +5490,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1055933267}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1087552786
 GameObject:
   m_ObjectHideFlags: 0
@@ -5517,6 +5619,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -5605,6 +5711,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1087552789
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -5612,7 +5719,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1087552786}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1138596008
 GameObject:
   m_ObjectHideFlags: 0
@@ -5625,7 +5732,7 @@ GameObject:
   - component: {fileID: 1138596011}
   - component: {fileID: 1138596010}
   m_Layer: 0
-  m_Name: "\u63CF\u8FB9 (1)"
+  m_Name: "\u9634\u5F71"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5672,7 +5779,7 @@ MonoBehaviour:
       m_Calls: []
   m_Sprite: {fileID: 21300000, guid: f168bd78da5483647b8e123f79a1fca0, type: 3}
   m_Type: 0
-  m_PreserveAspect: 1
+  m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1
@@ -5737,9 +5844,13 @@ MonoBehaviour:
   transitionTexClampPadding: 1
   transitionUseUv0: 1
   shadowStyleMode: 1
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 5, y: -5}
+  shadowColor: {r: 0.25490198, g: 1, b: 0, a: 1}
+  shadowDistance: {x: 3, y: -3}
   shadowBlur: 0
+  shadowIteration: 5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 0.2699381, b: 0, a: 1}
@@ -5758,7 +5869,7 @@ MonoBehaviour:
     cornerRadius: {x: 0, y: 0, z: 0, w: 0}
     uniformCornerRadius: 0
   circle:
-    radius: 100
+    radius: 65.8
     fitRadius: 0
   pentagon:
     cornerRadius: {x: 0, y: 0, z: 0, w: 0}
@@ -5828,6 +5939,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1138596011
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -5835,7 +5947,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1138596008}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1166791350
 GameObject:
   m_ObjectHideFlags: 0
@@ -5963,6 +6075,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -6051,6 +6167,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1166791353
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -6058,7 +6175,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1166791350}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1221921365
 GameObject:
   m_ObjectHideFlags: 0
@@ -6188,7 +6305,6 @@ MonoBehaviour:
   m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
   m_RequiresDepthTexture: 0
   m_RequiresColorTexture: 0
-  m_Version: 2
   m_TaaSettings:
     m_Quality: 3
     m_FrameInfluence: 0.1
@@ -6196,6 +6312,7 @@ MonoBehaviour:
     m_MipBias: 0
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
+  m_Version: 2
 --- !u!1 &1226673019
 GameObject:
   m_ObjectHideFlags: 0
@@ -6323,6 +6440,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 5
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -6411,6 +6532,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1226673022
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -6418,7 +6540,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1226673019}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1243792509
 GameObject:
   m_ObjectHideFlags: 0
@@ -6546,6 +6668,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -6634,6 +6760,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1243792512
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -6641,7 +6768,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1243792509}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!28 &1254441227
 Texture2D:
   m_ObjectHideFlags: 0
@@ -6682,7 +6809,7 @@ Texture2D:
   m_ColorSpace: 1
   m_PlatformBlob: 
   image data: 1024
-  _typelessdata: ffffff00fefefe0afcfcfc14fbfbfb1ef9f9f928f8f8f832f6f6f63cf5f5f546f3f3f350f2f2f25af0f0f064efefef6eededed78ececec82eaeaea8ce9e9e996e7e7e7a0e6e6e6aae4e4e4b4e3e3e3bee1e1e1c8e0e0e0d2dedededcdddddde6dbdbdbf0dadadafad8d8d8ffd7d7d7ffd5d5d5ffd4d4d4ffd2d2d2ffd1d1d1ffcfcfcfffcececeffccccccffcbcbcbffcacacaffc8c8c8ffc7c7c7ffc5c5c5ffc4c4c4ffc2c2c2ffc1c1c1ffbfbfbfffbebebeffbcbcbcffbbbbbbffb9b9b9ffb8b8b8ffb6b6b6ffb5b5b5ffb3b3b3ffb2b2b2ffb0b0b0ffafafafffadadadffacacacffaaaaaaffa9a9a9ffa7a7a7ffa6a6a6ffa4a4a4ffa3a3a3ffa1a1a1ffa0a0a0ff9e9e9eff9d9d9dff9b9b9bff9a9a9aff989898ff979797ff969696ff949494ff939393ff919191ff909090ff8e8e8eff8d8d8dff8b8b8bff8a8a8aff888888ff878787ff858585ff848484ff828282ff818181ff7f7f7fff7e7e7eff7c7c7cff7b7b7bff797979ff787878ff767676ff757575ff737373ff727272ff707070ff6f6f6fff6d6d6dff6c6c6cff6a6a6aff696969ff676767ff636363ff5f5f5fff5b5b5bff575757ff535353ff4f4f4fff4b4b4bff474747ff434343ff3f3f3fff3b3b3bff373737ff333333ff2f2f2fff2b2b2bff272727ff222222ff1e1e1eff1a1a1aff161616ff121212ff0e0e0eff0a0a0aff060606ff020202ff050200ff0f0600ff190900ff230d00ff2d1100ff371400ff411800ff4b1c00ff552000ff5f2300ff692700ff732b00ff7d2f00ff873200ff913600ff9b3a00ffa53d00ffaf4100ffb94500ffc34900ffcd4c00ffd75000ffe15400ffeb5800fff55b00ffff5f00ffff6103ffff6205ffff6408ffff650affff670dffff680fffff6a12ffff6c14ffff6d17ffff6f19ffff701cffff721effff7421ffff7523ffff7726ffff7828ffff7a2bffff7b2dffff7d30ffff7f32ffff8035ffff8237ffff833affff853cffff873fffff8841ffff8a44ffff8b47ffff8d49ffff8e4cffff904effff9251ffff9353ffff9556ffff9658ffff985bffff995dffff9b60ffff9d62ffff9e65ffffa067ffffa16affffa36cffffa56fffffa671ffffa874ffffa976ffffab79ffffac7bffffae7effffb080ffffb183ffffb385ffffb488ffffb68bffffb78dffffb990ffffbb92ffffbc95ffffbe97ffffbf9affffc19cffffc39fffffc4a1ffffc6a4ffffc7a6ffffc9a9ffffcaabffffccaeffffceb0ffffcfb3ffffd1b5ffffd2b8ffffd4baffffd6bdffffd7bfffffd9c2faffdac4f0ffdcc7e6ffddc9dcffdfccd2ffe1cfc8ffe2d1beffe4d4b4ffe5d6aaffe7d9a0ffe8db96ffeade8cffece082ffede378ffefe56efff0e864fff2ea5afff4ed50fff5ef46fff7f23cfff8f432fffaf728fffbf91efffdfc14fffffe0affffff00
+  _typelessdata: ffffff00ffffff0affffff14ffffff1effffff28ffffff32ffffff3cffffff46ffffff50ffffff5affffff64ffffff6effffff78ffffff82ffffff8cffffff96ffffffa0ffffffaaffffffb4ffffffbeffffffc8ffffffd2ffffffdcffffffe6fffffff0fffffffafffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdfffff0e3ffffd6c8ffffbcadffffa393ffff8978ffff6f5dffff5543ffff3b28ffff210dffff1600ffff1a00ffff1f00ffff2300ffff2700ffff2b00ffff3000ffff3400ffff3800ffff3c00ffff4100ffff4500ffff4900ffff4d00ffff5200ffff5600ffff5a00ffff5e00ffff6300ffff6700ffff6b00ffff6f00ffff7400ffff7800ffff7c00ffff8000ffff8203ffff8305ffff8408ffff850affff870dffff880fffff8912ffff8a14ffff8c17ffff8d19ffff8e1cffff8f1effff9121ffff9223ffff9326ffff9428ffff962bffff972dffff9830ffff9932ffff9b35ffff9c37ffff9d3affff9e3cffffa03fffffa141ffffa244ffffa347ffffa549ffffa64cffffa74effffa851ffffaa53ffffab56ffffac58ffffad5bffffaf5dffffb060ffffb162ffffb265ffffb467ffffb56affffb66cffffb76fffffb971ffffba74ffffbb76ffffbc79ffffbe7bffffbf7effffc080ffffc183ffffc385ffffc488ffffc58bffffc68dffffc890ffffc992ffffca95ffffcb97ffffcd9affffce9cffffcf9fffffd0a1ffffd2a4ffffd3a6ffffd4a9ffffd5abffffd7aeffffd8b0ffffd9b3ffffdab5ffffdcb8ffffddbaffffdebdffffdfbfffffe1c2faffe2c4f0ffe3c7e6ffe4c9dcffe6ccd2ffe7cfc8ffe8d1beffe9d4b4ffebd6aaffecd9a0ffeddb96ffeede8cfff0e082fff1e378fff2e56efff3e864fff5ea5afff6ed50fff7ef46fff8f23cfffaf432fffbf728fffcf91efffdfc14fffffe0affffff00
   m_StreamData:
     serializedVersion: 2
     offset: 0
@@ -6816,6 +6943,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -6904,6 +7035,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1261893692
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -6911,7 +7043,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1261893689}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1263647967
 GameObject:
   m_ObjectHideFlags: 0
@@ -7039,6 +7171,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -7127,6 +7263,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1263647970
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7134,7 +7271,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1263647967}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1281163960
 GameObject:
   m_ObjectHideFlags: 0
@@ -7195,6 +7332,8 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -7216,6 +7355,7 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
@@ -7370,6 +7510,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -7458,6 +7602,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1283611869
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7465,7 +7610,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1283611866}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1309871980
 GameObject:
   m_ObjectHideFlags: 0
@@ -7593,6 +7738,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -7681,6 +7830,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1309871983
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7688,7 +7838,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1309871980}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1344072092
 GameObject:
   m_ObjectHideFlags: 0
@@ -7816,6 +7966,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -7904,6 +8058,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1344072095
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7911,7 +8066,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1344072092}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1351046503
 GameObject:
   m_ObjectHideFlags: 0
@@ -8084,6 +8239,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -8172,6 +8331,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1370966741
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -8179,7 +8339,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1370966738}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1392620869
 GameObject:
   m_ObjectHideFlags: 0
@@ -8536,6 +8696,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -8624,6 +8788,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1431679125
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -8631,7 +8796,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1431679122}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1443110331
 GameObject:
   m_ObjectHideFlags: 0
@@ -8834,6 +8999,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -8922,6 +9091,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1451069955
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -8929,7 +9099,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1451069952}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1451664774
 GameObject:
   m_ObjectHideFlags: 0
@@ -9057,6 +9227,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -9145,6 +9319,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1451664777
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -9152,7 +9327,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1451664774}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1479144322
 GameObject:
   m_ObjectHideFlags: 0
@@ -9355,6 +9530,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 30
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -9443,6 +9622,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1525572499
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -9450,7 +9630,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1525572496}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1544569382
 GameObject:
   m_ObjectHideFlags: 0
@@ -9578,6 +9758,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 9.54
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -9666,6 +9850,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1544569385
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -9673,7 +9858,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1544569382}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1548677172
 GameObject:
   m_ObjectHideFlags: 0
@@ -9801,6 +9986,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 5
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -9889,6 +10078,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1548677175
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -9896,7 +10086,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1548677172}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1567395376
 GameObject:
   m_ObjectHideFlags: 0
@@ -10024,6 +10214,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -10112,6 +10306,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1567395379
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -10119,7 +10314,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1567395376}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1625540591
 GameObject:
   m_ObjectHideFlags: 0
@@ -10180,6 +10375,8 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -10201,6 +10398,7 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
@@ -10430,6 +10628,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -10518,6 +10720,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1681060974
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -10525,7 +10728,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1681060971}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1717551686
 GameObject:
   m_ObjectHideFlags: 0
@@ -10729,6 +10932,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -10817,6 +11024,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1795617802
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -10824,7 +11032,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1795617799}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1802531995
 GameObject:
   m_ObjectHideFlags: 0
@@ -11102,6 +11310,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -11190,6 +11402,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1864547435
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -11197,7 +11410,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1864547432}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1911001200
 GameObject:
   m_ObjectHideFlags: 0
@@ -11306,6 +11519,302 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1911001200}
   m_CullTransparentMesh: 1
+--- !u!1001 &1920012909
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1961290207}
+    m_Modifications:
+    - target: {fileID: 603320123414190803, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_Text
+      value: 'Shadow
+
+        Shadow'
+      objectReference: {fileID: 0}
+    - target: {fileID: 2374886929518706459, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_Name
+      value: Shadow Shadow
+      objectReference: {fileID: 0}
+    - target: {fileID: 2381434932886513042, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_Pivot.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_Pivot.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_RootOrder
+      value: 35
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5537784035359440648, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5537784035359440648, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_CullingMask
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_Color.b
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_Color.g
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_Color.r
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_BlendType
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_ShadowFade
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_ShadowMode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_ColorFilter
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_TargetRange
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_DstBlendMode
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_SrcBlendMode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_TransitionTex
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_SamplingFilter
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_TransitionRate
+      value: 0.107
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_TransitionWidth
+      value: 0.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_ShadowDistance.x
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_ShadowDistance.y
+      value: -3
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_TransitionFilter
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_SamplingIntensity
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_TransitionColor.b
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_TransitionColor.g
+      value: 0.7372549
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_TransitionColor.r
+      value: 2.9960785
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_TransitionSoftness
+      value: 0.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_ShadowEffectOnOrigin
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_TransitionTexScale.x
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_TransitionTexScale.y
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_TransitionColorFilter
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_TransitionTexOffset.x
+      value: -0.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 6611560657749526626, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_TransitionTexOffset.y
+      value: -2.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8169916092684545235, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_Color.b
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8169916092684545235, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_Color.g
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8169916092684545235, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_Color.r
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8169916092684545235, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_ShadowFade
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8169916092684545235, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_ShadowMode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8169916092684545235, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_ColorFilter
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8169916092684545235, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_ShadowColor.b
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8169916092684545235, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_ShadowColor.r
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8169916092684545235, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_ColorIntensity
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8169916092684545235, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_SamplingFilter
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8169916092684545235, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_ShadowColorGlow
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8169916092684545235, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_ShadowIteration
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8169916092684545235, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_ShadowDistance.x
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8169916092684545235, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_ShadowDistance.y
+      value: -3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8169916092684545235, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+      propertyPath: m_SamplingIntensity
+      value: 1
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+--- !u!224 &1920012910 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 3775897659628443270, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
+  m_PrefabInstance: {fileID: 1920012909}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1941607836
 GameObject:
   m_ObjectHideFlags: 0
@@ -11433,6 +11942,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -11521,6 +12034,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1941607839
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -11528,7 +12042,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1941607836}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1952486446
 GameObject:
   m_ObjectHideFlags: 0
@@ -11731,6 +12245,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -11819,6 +12337,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &1959774831
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -11826,7 +12345,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1959774828}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &1961290206
 GameObject:
   m_ObjectHideFlags: 0
@@ -11857,6 +12376,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 1920012910}
   - {fileID: 2053571691}
   - {fileID: 1959774829}
   - {fileID: 687910524}
@@ -12082,6 +12602,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -12170,6 +12694,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &2053571693
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -12177,7 +12702,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2053571690}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1 &2101935645
 GameObject:
   m_ObjectHideFlags: 0
@@ -12305,6 +12830,10 @@ MonoBehaviour:
   shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowDistance: {x: 1, y: -1}
   shadowBlur: 0
+  shadowIteration: 1
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  shadowFade: 1
   strokeWidth: 5
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -12393,6 +12922,7 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  debugShadowSolidRed: 0
 --- !u!222 &2101935648
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -12400,7 +12930,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2101935645}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -95,6 +95,10 @@ namespace ReunionMovement.UI.ImageExtensions
         [SerializeField] private Color shadowColor = Color.black;
         [SerializeField] private Vector2 shadowDistance = new Vector2(1, -1);
         [SerializeField][Range(0, 1)] private float shadowBlur = 0f;
+        [SerializeField][Range(1, 5)] private int shadowIteration = 1;
+        [SerializeField] private ColorMode shadowColorFilter = ColorMode.Replace;
+        [SerializeField] private bool shadowColorGlow = false;
+        [SerializeField][Range(0, 1)] private float shadowFade = 1f;
 
         [SerializeField] private float strokeWidth;
 
@@ -124,6 +128,7 @@ namespace ReunionMovement.UI.ImageExtensions
         [SerializeField] private NTriangleRoundedImg nTriangleRounded = new NTriangleRoundedImg();
 
         [SerializeField] private GradientEffect gradientEffect = new GradientEffect();
+        [SerializeField] private bool debugShadowSolidRed = false;
         #endregion
 
         #region Material PropertyIds
@@ -157,6 +162,10 @@ namespace ReunionMovement.UI.ImageExtensions
 
         private static readonly int shadowColor_Sp = Shader.PropertyToID("_ShadowColor");
         private static readonly int shadowBlur_Sp = Shader.PropertyToID("_ShadowBlur");
+        private static readonly int shadowColorFilter_Sp = Shader.PropertyToID("_ShadowColorFilter");
+        private static readonly int shadowColorGlow_Sp = Shader.PropertyToID("_ShadowColorGlow");
+        private static readonly int shadowFade_Sp = Shader.PropertyToID("_ShadowFade");
+        private static readonly int shadowIteration_Sp = Shader.PropertyToID("_ShadowIteration");
 
         private static readonly int outlineWidth_Sp = Shader.PropertyToID("_OutlineWidth");
         private static readonly int outlineColor_Sp = Shader.PropertyToID("_OutlineColor");
@@ -168,6 +177,8 @@ namespace ReunionMovement.UI.ImageExtensions
         private static readonly int constrainedRotation_Sp = Shader.PropertyToID("_ConstrainRotation");
         private static readonly int flipHorizontal_Sp = Shader.PropertyToID("_FlipHorizontal");
         private static readonly int flipVertical_Sp = Shader.PropertyToID("_FlipVertical");
+
+        private static readonly int debugShadowSolidRed_Sp = Shader.PropertyToID("_DebugShadowSolidRed");
 
         #endregion
 
@@ -401,10 +412,9 @@ namespace ReunionMovement.UI.ImageExtensions
         }
 
         /// <summary>
-        /// Defines what material type of use to render the shape. Dynamic or Shared.
-        /// Default is Dynamic and will issue one draw call per image object. If set to shared, assigned
-        /// material in the material slot will be used to render the image. It will fallback to dynamic
-        /// if no material in the material slot is assigned
+        /// 定义用于渲染形状的材质类型。动态或共享。
+        /// 默认为动态，每个图像对象将发出一个绘制调用。如果设置为共享，则将使用材质槽中分配的材质来渲染图像。
+        /// 如果未分配材质槽中的材质，它将回退到动态。
         /// </summary>
         public MaterialMode MaterialMode
         {
@@ -894,6 +904,57 @@ namespace ReunionMovement.UI.ImageExtensions
             {
                 shadowBlur = value;
                 SetMaterialDirty();
+                SetVerticesDirty();
+            }
+        }
+
+        public int ShadowIteration
+        {
+            get => shadowIteration;
+            set
+            {
+                shadowIteration = value;
+                SetVerticesDirty();
+            }
+        }
+
+        public ColorMode ShadowColorFilter
+        {
+            get => shadowColorFilter;
+            set
+            {
+                shadowColorFilter = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public bool ShadowColorGlow
+        {
+            get => shadowColorGlow;
+            set
+            {
+                shadowColorGlow = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public float ShadowFade
+        {
+            get => shadowFade;
+            set
+            {
+                shadowFade = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public bool DebugShadowSolidRed
+        {
+            get => debugShadowSolidRed;
+            set
+            {
+                debugShadowSolidRed = value;
+                SetMaterialDirty();
             }
         }
 
@@ -911,6 +972,12 @@ namespace ReunionMovement.UI.ImageExtensions
                 {
                     dynamicMaterial = new Material(Shader.Find(shaderName));
                     dynamicMaterial.name += " [Dynamic]";
+                }
+
+                // Ensure the correct shader is always used (avoid silent fallback).
+                if (dynamicMaterial && (dynamicMaterial.shader == null || dynamicMaterial.shader.name != shaderName))
+                {
+                    dynamicMaterial.shader = Shader.Find(shaderName);
                 }
 
                 return dynamicMaterial;
@@ -945,6 +1012,7 @@ namespace ReunionMovement.UI.ImageExtensions
         protected override void OnValidate()
         {
             InitializeComponents();
+            FixAdditionalShaderChannelsInCanvas();
             if (parseAgainOnValidate)
             {
                 InitValuesFromSharedMaterial();
@@ -1007,6 +1075,12 @@ namespace ReunionMovement.UI.ImageExtensions
             ShadowColor = shadowColor;
             ShadowDistance = shadowDistance;
             ShadowBlur = shadowBlur;
+            ShadowColorFilter = shadowColorFilter;
+            ShadowColorGlow = shadowColorGlow;
+            ShadowFade = shadowFade;
+            ShadowIteration = shadowIteration;
+            
+            if (shadowIteration < 1) shadowIteration = 1;
 
             base.OnValidate();
             base.SetMaterialDirty();
@@ -1073,12 +1147,18 @@ namespace ReunionMovement.UI.ImageExtensions
         /// </summary>
         void FixAdditionalShaderChannelsInCanvas()
         {
-            Canvas c = canvas;
-            if (canvas == null) return;
-            AdditionalCanvasShaderChannels additionalShaderChannels = c.additionalShaderChannels;
-            additionalShaderChannels |= AdditionalCanvasShaderChannels.TexCoord1;
-            additionalShaderChannels |= AdditionalCanvasShaderChannels.TexCoord2;
-            c.additionalShaderChannels = additionalShaderChannels;
+            Canvas myCanvas = canvas;
+            if (myCanvas == null)
+            {
+                myCanvas = GetComponentInParent<Canvas>();
+            }
+            if (myCanvas == null) return;
+            var channels = myCanvas.additionalShaderChannels;
+            var needed = AdditionalCanvasShaderChannels.TexCoord1 | AdditionalCanvasShaderChannels.TexCoord2;
+            if ((channels & needed) != needed)
+            {
+                myCanvas.additionalShaderChannels |= needed;
+            }
         }
 
 #if UNITY_EDITOR
@@ -1099,6 +1179,37 @@ namespace ReunionMovement.UI.ImageExtensions
             Init();
         }
 
+        protected override void Start()
+        {
+            base.Start();
+            FixAdditionalShaderChannelsInCanvas();
+        }
+
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            InitializeComponents();
+            FixAdditionalShaderChannelsInCanvas();
+            ListenToComponentChanges(true);
+
+            UpdateCullingBounds();
+        }
+
+        private void UpdateCullingBounds()
+        {
+            if (!canvasRenderer) return;
+
+            // Prevent unity from culling meshes that become fully transparent during rebuild.
+            // Some Unity versions can cull effect meshes unexpectedly; keeping this off is safest.
+            canvasRenderer.cullTransparentMesh = false;
+        }
+
+        protected override void OnDisable()
+        {
+            ListenToComponentChanges(false);
+            base.OnDisable();
+        }
+
         /// <summary>
         /// 初始化
         /// </summary>
@@ -1116,7 +1227,6 @@ namespace ReunionMovement.UI.ImageExtensions
 
         protected override void OnDestroy()
         {
-            ListenToComponentChanges(false);
             base.OnDestroy();
         }
 
@@ -1126,6 +1236,20 @@ namespace ReunionMovement.UI.ImageExtensions
         /// <param name="toggle"></param>
         protected void ListenToComponentChanges(bool toggle)
         {
+            circle.onComponentSettingsChanged -= OnComponentSettingsChanged;
+            triangle.onComponentSettingsChanged -= OnComponentSettingsChanged;
+            rectangle.onComponentSettingsChanged -= OnComponentSettingsChanged;
+            pentagon.onComponentSettingsChanged -= OnComponentSettingsChanged;
+            hexagon.onComponentSettingsChanged -= OnComponentSettingsChanged;
+            chamferBox.onComponentSettingsChanged -= OnComponentSettingsChanged;
+            parallelogram.onComponentSettingsChanged -= OnComponentSettingsChanged;
+            nStarPolygon.onComponentSettingsChanged -= OnComponentSettingsChanged;
+            heart.onComponentSettingsChanged -= OnComponentSettingsChanged;
+            blobbyCross.onComponentSettingsChanged -= OnComponentSettingsChanged;
+            squircle.onComponentSettingsChanged -= OnComponentSettingsChanged;
+            nTriangleRounded.onComponentSettingsChanged -= OnComponentSettingsChanged;
+            gradientEffect.onComponentSettingsChanged -= OnComponentSettingsChanged;
+
             if (toggle)
             {
                 circle.onComponentSettingsChanged += OnComponentSettingsChanged;
@@ -1141,22 +1265,6 @@ namespace ReunionMovement.UI.ImageExtensions
                 squircle.onComponentSettingsChanged += OnComponentSettingsChanged;
                 nTriangleRounded.onComponentSettingsChanged += OnComponentSettingsChanged;
                 gradientEffect.onComponentSettingsChanged += OnComponentSettingsChanged;
-            }
-            else
-            {
-                circle.onComponentSettingsChanged -= OnComponentSettingsChanged;
-                triangle.onComponentSettingsChanged -= OnComponentSettingsChanged;
-                rectangle.onComponentSettingsChanged -= OnComponentSettingsChanged;
-                pentagon.onComponentSettingsChanged -= OnComponentSettingsChanged;
-                hexagon.onComponentSettingsChanged -= OnComponentSettingsChanged;
-                chamferBox.onComponentSettingsChanged -= OnComponentSettingsChanged;
-                parallelogram.onComponentSettingsChanged -= OnComponentSettingsChanged;
-                nStarPolygon.onComponentSettingsChanged -= OnComponentSettingsChanged;
-                heart.onComponentSettingsChanged -= OnComponentSettingsChanged;
-                blobbyCross.onComponentSettingsChanged -= OnComponentSettingsChanged;
-                squircle.onComponentSettingsChanged -= OnComponentSettingsChanged;
-                nTriangleRounded.onComponentSettingsChanged -= OnComponentSettingsChanged;
-                gradientEffect.onComponentSettingsChanged -= OnComponentSettingsChanged;
             }
         }
 
@@ -1177,14 +1285,6 @@ namespace ReunionMovement.UI.ImageExtensions
         }
 
 
-        protected override void OnRectTransformDimensionsChange()
-        {
-            base.OnRectTransformDimensionsChange();
-            circle.UpdateCircleRadius(rectTransform);
-            heart.UpdateCircleRadius(rectTransform);
-            base.SetMaterialDirty();
-        }
-
         /// <summary>
         /// 生成网格
         /// </summary>
@@ -1192,6 +1292,9 @@ namespace ReunionMovement.UI.ImageExtensions
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         protected override void OnPopulateMesh(VertexHelper vh)
         {
+            // Ensure channels are set before generating mesh that relies on them
+            FixAdditionalShaderChannelsInCanvas();
+
             switch (type)
             {
                 case Type.Simple:
@@ -1208,24 +1311,84 @@ namespace ReunionMovement.UI.ImageExtensions
                     throw new ArgumentOutOfRangeException();
             }
 
-            if (shadowStyleMode != ShadowStyle.None)
+            if (shadowStyleMode == ShadowStyle.None)
             {
-                var output = new List<UIVertex>();
-                vh.GetUIVertexStream(output);
-                vh.Clear();
+                return;
+            }
 
-                var shadowVerts = new List<UIVertex>(output.Count);
-                for (int i = 0; i < output.Count; i++)
+            var verts = new List<UIVertex>();
+            vh.GetUIVertexStream(verts);
+            vh.Clear();
+
+            Rect r = rectTransform.rect;
+            float width = Mathf.Abs(r.width);
+            float height = Mathf.Abs(r.height);
+            if (Mathf.Approximately(width, 0)) width = 1;
+            if (Mathf.Approximately(height, 0)) height = 1;
+
+            for (int i = 0; i < verts.Count; i++)
+            {
+                var v = verts[i];
+                v.uv2 = new Vector2(width, height);
+                verts[i] = v;
+            }
+
+            int iterations = Mathf.Clamp(shadowIteration, 1, 5);
+            float spread = Mathf.Max(0f, shadowBlur) * 30f;
+            float a = Mathf.Clamp01(shadowFade);
+
+            var shadowVerts = new List<UIVertex>(verts.Count * iterations);
+            for (int k = 0; k < iterations; k++)
+            {
+                Vector2 currentDistance = shadowDistance * (k + 1) / (float)iterations;
+
+                for (int i = 0; i < verts.Count; i++)
                 {
-                    var v = output[i];
-                    v.position += (Vector3)shadowDistance;
-                    v.uv2.x = -Mathf.Abs(v.uv2.x);
+                    var src = verts[i];
+                    var v = src;
+
+                    Color32 c = v.color;
+                    c.a = (byte)(c.a * a);
+                    v.color = c;
+
+                    v.position += (Vector3)currentDistance;
+
+                    // Get the original size from the source vertex (set by GenerateSimpleSprite/FilledSprite)
+                    float w = src.uv2.x;
+                    float h = src.uv2.y;
+
+                    // Expand vertex position AND uv1 outward for proper SDF calculation.
+                    // This ensures the shape SDF in the fragment shader reads from the correct normalized position.
+                    float expandedW = w;
+                    float expandedH = h;
+                    if (spread > 0)
+                    {
+                        float expandX = (v.uv1.x < 0.5f) ? -spread : spread;
+                        float expandY = (v.uv1.y < 0.5f) ? -spread : spread;
+
+                        v.position.x += expandX;
+                        v.position.y += expandY;
+
+                        // Scale uv1 to maintain proper SDF sampling for the expanded geometry
+                        // vertices at edges (uv1 near 0 or 1) move outward; center stays near 0.5
+                        v.uv1.x += (v.uv1.x < 0.5f ? -1 : 1) * (spread / w);
+                        v.uv1.y += (v.uv1.y < 0.5f ? -1 : 1) * (spread / h);
+
+                        expandedW = w + spread * 2f;
+                        expandedH = h + spread * 2f;
+                    }
+
+                    // Mark as shadow by setting uv2.x negative.
+                    // The shader reads TEXCOORD2.x (`v.size.x`) to detect shadow vertices.
+                    v.uv2 = new Vector2(-expandedW, expandedH);
                     shadowVerts.Add(v);
                 }
 
-                vh.AddUIVertexTriangleStream(shadowVerts);
-                vh.AddUIVertexTriangleStream(output);
+                a *= 0.75f;
             }
+
+            vh.AddUIVertexTriangleStream(shadowVerts);
+            vh.AddUIVertexTriangleStream(verts);
         }
 
         /// <summary>
@@ -1239,6 +1402,11 @@ namespace ReunionMovement.UI.ImageExtensions
 
             Material mat = base.GetModifiedMaterial(baseMaterial);
 
+            // Force our shader for non-shared mode; otherwise the UI default material may be used.
+            if (materialMode != MaterialMode.Shared && mat != null && (mat.shader == null || mat.shader.name != shaderName))
+            {
+                mat.shader = Shader.Find(shaderName);
+            }
 
             if (m_Material && MaterialMode == MaterialMode.Shared)
             {
@@ -1309,6 +1477,10 @@ namespace ReunionMovement.UI.ImageExtensions
             {
                 mat.SetColor(shadowColor_Sp, shadowColor);
                 mat.SetFloat(shadowBlur_Sp, shadowBlur);
+                mat.SetInt(shadowColorFilter_Sp, (int)shadowColorFilter);
+                mat.SetInt(shadowColorGlow_Sp, shadowColorGlow ? 1 : 0);
+                mat.SetFloat(shadowFade_Sp, shadowFade);
+                mat.SetInt(shadowIteration_Sp, shadowIteration);
             }
 
             switch (transitionMode)
@@ -1475,9 +1647,11 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.SetInt(drawShape_Sp, (int)DrawShape);
             mat.SetInt(flipHorizontal_Sp, flipHorizontal ? 1 : 0);
             mat.SetInt(flipVertical_Sp, flipVertical ? 1 : 0);
-
             mat.SetFloat(shapeRotation_Sp, shapeRotation);
             mat.SetInt(constrainedRotation_Sp, constrainRotation ? 1 : 0);
+
+            // 写入调试阴影开关
+            mat.SetFloat(debugShadowSolidRed_Sp, debugShadowSolidRed ? 1f : 0f);
 
             return mat;
         }
@@ -1565,8 +1739,25 @@ namespace ReunionMovement.UI.ImageExtensions
             transitionTexClampPadding = mat.GetFloat(transitionTexClampPadding_Sp);
             transitionUseUv0 = mat.GetFloat(transitionUseUv0_Sp) == 1;
 
-            shadowColor = mat.GetColor(shadowColor_Sp);
-            shadowBlur = mat.GetFloat(shadowBlur_Sp);
+            if (mat.HasProperty(shadowColor_Sp))
+                shadowColor = mat.GetColor(shadowColor_Sp);
+            
+            if (mat.HasProperty(shadowBlur_Sp))
+                shadowBlur = mat.GetFloat(shadowBlur_Sp);
+
+            if (mat.HasProperty(shadowColorFilter_Sp))
+                shadowColorFilter = (ColorMode)mat.GetInt(shadowColorFilter_Sp);
+            
+            if (mat.HasProperty(shadowColorGlow_Sp))
+                shadowColorGlow = mat.GetInt(shadowColorGlow_Sp) == 1;
+            
+            if (mat.HasProperty(shadowFade_Sp))
+                shadowFade = mat.GetFloat(shadowFade_Sp);
+            
+            if (mat.HasProperty(shadowIteration_Sp))
+                shadowIteration = mat.GetInt(shadowIteration_Sp);
+            
+            if (shadowIteration < 1) shadowIteration = 1;
 
             strokeWidth = mat.GetFloat(strokeWidth_Sp);
             falloffDistance = mat.GetFloat(falloffDistance_Sp);
