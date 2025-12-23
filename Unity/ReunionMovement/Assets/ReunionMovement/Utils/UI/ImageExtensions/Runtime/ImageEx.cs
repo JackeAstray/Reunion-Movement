@@ -67,7 +67,7 @@ namespace ReunionMovement.UI.ImageExtensions
         [SerializeField] private float transitionTexRotation = 0;
         [SerializeField] private bool transitionKeepAspectRatio;
         [SerializeField] [Range(0, 1)] private float transitionRate = 0f;
-        [SerializeField] private Color transitionColor = Color.white;
+        [SerializeField] [ColorUsage(true, true)] private Color transitionColor = Color.white;
         [SerializeField] [Range(0, 1)] private float transitionWidth = 0.1f;
         [SerializeField] [Range(0, 1)] private float transitionSoftness = 0.1f;
         [SerializeField] private bool transitionReverse;
@@ -77,6 +77,7 @@ namespace ReunionMovement.UI.ImageExtensions
         [SerializeField] private ColorMode transitionColorFilter;
         [SerializeField] private bool transitionColorGlow;
         [SerializeField] private Texture transitionGradient;
+        [SerializeField] [GradientUsage(true)] private Gradient transitionGradientValue;
         [SerializeField] private Vector2 transitionRange;
         [SerializeField] private bool transitionClamp = true;
         [SerializeField] [Range(0, 4)] private float transitionTexClampPadding = 1f;
@@ -789,6 +790,16 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        public Gradient TransitionGradientValue
+        {
+            get => transitionGradientValue;
+            set
+            {
+                transitionGradientValue = value;
+                RefreshTransitionGradient();
+            }
+        }
+
         public Vector2 TransitionRange
         {
             get => transitionRange;
@@ -939,6 +950,42 @@ namespace ReunionMovement.UI.ImageExtensions
             base.SetMaterialDirty();
         }
 #endif
+        /// <summary>
+        /// 刷新过渡渐变纹理
+        /// </summary>
+        public void RefreshTransitionGradient()
+        {
+            if (transitionGradientValue == null)
+            {
+                transitionGradientValue = new Gradient();
+            }
+
+            int width = 256;
+            int height = 1;
+
+            if (transitionGradient == null || transitionGradient.width != width || transitionGradient.height != height)
+            {
+                transitionGradient = new Texture2D(width, height, TextureFormat.RGBA32, false)
+                {
+                    name = "Transition Gradient",
+                    wrapMode = TextureWrapMode.Clamp,
+                    filterMode = FilterMode.Bilinear
+                };
+            }
+
+            Texture2D tex = transitionGradient as Texture2D;
+            if (tex != null)
+            {
+                for (int i = 0; i < width; i++)
+                {
+                    tex.SetPixel(i, 0, transitionGradientValue.Evaluate((float)i / (width - 1)));
+                }
+                tex.Apply();
+            }
+
+            SetMaterialDirty();
+        }
+
         /// <summary>
         /// 初始化组件
         /// </summary>

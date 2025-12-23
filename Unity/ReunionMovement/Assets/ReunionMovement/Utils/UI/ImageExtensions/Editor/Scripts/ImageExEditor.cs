@@ -27,7 +27,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
         private SerializedProperty spBlurType, spBlurIntensity;
         private SerializedProperty spTransitionMode, spTransitionTex, spTransitionRate, spTransitionColor, spTransitionWidth, spTransitionSoftness, spTransitionReverse;
         private SerializedProperty spTransitionTexScale, spTransitionTexOffset, spTransitionTexRotation, spTransitionKeepAspectRatio;
-        private SerializedProperty spTransitionSpeed, spTransitionPatternReverse, spTransitionAutoPlaySpeed, spTransitionColorFilter, spTransitionColorGlow, spTransitionGradient, spTransitionRange;
+        private SerializedProperty spTransitionSpeed, spTransitionPatternReverse, spTransitionAutoPlaySpeed, spTransitionColorFilter, spTransitionColorGlow, spTransitionGradient, spTransitionGradientValue, spTransitionRange;
 
         private bool gsInitialized, shaderChannelsNeedUpdate;
 
@@ -103,6 +103,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             spTransitionColorFilter = serializedObject.FindProperty("transitionColorFilter");
             spTransitionColorGlow = serializedObject.FindProperty("transitionColorGlow");
             spTransitionGradient = serializedObject.FindProperty("transitionGradient");
+            spTransitionGradientValue = serializedObject.FindProperty("transitionGradientValue");
             spTransitionRange = serializedObject.FindProperty("transitionRange");
         }
 
@@ -219,7 +220,8 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                     if (mode == ImageEx.TransitionMode.Cutoff || mode == ImageEx.TransitionMode.Dissolve || 
                         mode == ImageEx.TransitionMode.Mask || mode == ImageEx.TransitionMode.Melt || 
                         mode == ImageEx.TransitionMode.Burn || mode == ImageEx.TransitionMode.Pattern ||
-                        mode == ImageEx.TransitionMode.Fade || mode == ImageEx.TransitionMode.Shiny)
+                        mode == ImageEx.TransitionMode.Fade || mode == ImageEx.TransitionMode.Shiny ||
+                        mode == ImageEx.TransitionMode.Blaze)
                     {
                         EditorGUILayout.LabelField("过渡纹理", EditorStyles.boldLabel);
                         EditorGUI.indentLevel++;
@@ -233,11 +235,6 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                         EditorGUI.indentLevel--;
                     }
                     
-                    if (mode == ImageEx.TransitionMode.Blaze)
-                    {
-                        EditorGUILayout.PropertyField(spTransitionGradient, new GUIContent("过渡渐变"));
-                    }
-
                     if (mode == ImageEx.TransitionMode.Dissolve || mode == ImageEx.TransitionMode.Shiny || 
                         mode == ImageEx.TransitionMode.Melt || mode == ImageEx.TransitionMode.Burn || 
                         mode == ImageEx.TransitionMode.Blaze || mode == ImageEx.TransitionMode.Mask)
@@ -247,6 +244,20 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                     else if (mode == ImageEx.TransitionMode.Pattern)
                     {
                         EditorGUILayout.PropertyField(spTransitionWidth, new GUIContent("图案大小"));
+                    }
+
+                    if (mode == ImageEx.TransitionMode.Blaze)
+                    {
+                        EditorGUI.BeginChangeCheck();
+                        EditorGUILayout.PropertyField(spTransitionGradientValue, new GUIContent("过渡渐变"));
+                        if (EditorGUI.EndChangeCheck())
+                        {
+                            serializedObject.ApplyModifiedProperties();
+                            foreach (Object obj in targets)
+                            {
+                                ((ImageEx)obj).RefreshTransitionGradient();
+                            }
+                        }
                     }
 
                     if (mode == ImageEx.TransitionMode.Dissolve || mode == ImageEx.TransitionMode.Shiny || 
@@ -270,7 +281,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                         EditorGUILayout.PropertyField(spTransitionPatternReverse, new GUIContent("图案反向"));
                     }
 
-                    if (mode != ImageEx.TransitionMode.Fade && mode != ImageEx.TransitionMode.Cutoff)
+                    if (mode != ImageEx.TransitionMode.Fade && mode != ImageEx.TransitionMode.Cutoff && mode != ImageEx.TransitionMode.Blaze)
                     {
                         EditorGUILayout.PropertyField(spTransitionColorFilter, new GUIContent("颜色滤镜"));
                         EditorGUILayout.PropertyField(spTransitionColor, new GUIContent("过渡颜色"));
