@@ -102,6 +102,9 @@ Shader "ReunionMovement/UI/Procedural Image"
         _StencilReadMask ("模板读取掩码", Float) = 255
         
         _ColorMask ("颜色掩码", Float) = 15
+
+        _ShadowColor ("阴影颜色", Color) = (0,0,0,0.5)
+        _ShadowBlur ("阴影模糊", Range(0, 1)) = 0
         
         [Toggle(UNITY_UI_ALPHACLIP)] _UseUIAlphaClip ("使用Alpha剪辑", Float) = 0
     }
@@ -211,6 +214,9 @@ Shader "ReunionMovement/UI/Procedural Image"
             half _TransitionClamp;
             half _TransitionTexClampPadding;
             half _TransitionUseUv0;
+
+            half4 _ShadowColor;
+            half _ShadowBlur;
 
             half _FalloffDistance;
             half _ShapeRotation;
@@ -1017,7 +1023,9 @@ Shader "ReunionMovement/UI/Procedural Image"
                 OUT.texcoord = v.texcoord;
                 OUT.effectsUv = v.uv1;
                 
-                float2 size = float2(v.size.x + _FalloffDistance, v.size.y + _FalloffDistance);
+                bool isShadow = v.size.x < 0;
+                float sizeX = abs(v.size.x);
+                float2 size = float2(sizeX + _FalloffDistance, v.size.y + _FalloffDistance);
                 float shapeRotation = radians(_ShapeRotation);
                 size = _ConstrainRotation > 0.0 && frac(abs(shapeRotation) / 3.14159) > 0.1? float2(size.y, size.x) : size;
                 
@@ -1029,7 +1037,7 @@ Shader "ReunionMovement/UI/Procedural Image"
                 shapeUv.x = lerp(shapeUv.x, abs(size.x - shapeUv.x), _FlipHorizontal);
                 shapeUv.y = lerp(shapeUv.y, abs(size.y - shapeUv.y), _FlipVertical);
                 
-                OUT.shapeData = float4(shapeUv.x, shapeUv.y, size.x, size.y);
+                OUT.shapeData = float4(shapeUv.x, shapeUv.y, isShadow ? -size.x : size.x, size.y);
                 
                 #ifdef UNITY_HALF_TEXEL_OFFSET
                     OUT.vertex.xy += (_ScreenParams.zw - 1.0) * float2(-1.0, 1.0);
@@ -1048,6 +1056,9 @@ Shader "ReunionMovement/UI/Procedural Image"
                 float2 transitionBaseUv = (_TransitionUseUv0 > 0.5) ? texcoord : effectsUv;
                 float2 transitionUv = transitionBaseUv;
                 float2 transitionFilterUv = transitionBaseUv;
+
+                bool isShadow = IN.shapeData.z < 0;
+                IN.shapeData.z = abs(IN.shapeData.z);
 
                 // Transition Logic
                 #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
@@ -1123,7 +1134,9 @@ Shader "ReunionMovement/UI/Procedural Image"
                 
                 #if RECTANGLE || CIRCLE || PENTAGON || TRIANGLE || HEXAGON || CHAMFERBOX || PARALLELOGRAM || NSTAR_POLYGON || HEART || BLOBBYCROSS || SQUIRCLE || NTRIANGLE_ROUNDED
                     float sdfData = 0;
-                    float pixelScale = clamp(1.0/_FalloffDistance, 1.0/2048.0, 2048.0);
+                    float falloff = _FalloffDistance;
+                    if (isShadow) falloff += _ShadowBlur * 20.0;
+                    float pixelScale = clamp(1.0/falloff, 1.0/2048.0, 2048.0);
                     #if RECTANGLE
                         sdfData = rectangleScene(IN.shapeData);
                     #elif CIRCLE
@@ -1198,6 +1211,12 @@ Shader "ReunionMovement/UI/Procedural Image"
                         color.a *= alpha;
                     #endif
                 #endif
+
+                if (isShadow)
+                {
+                    color.rgb = _ShadowColor.rgb;
+                    color.a *= _ShadowColor.a;
+                }
 
                 // Apply Transition Filter
                 #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
