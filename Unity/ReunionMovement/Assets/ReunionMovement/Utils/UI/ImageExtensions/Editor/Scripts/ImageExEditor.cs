@@ -30,6 +30,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
         private SerializedProperty spTransitionSpeed, spTransitionPatternReverse, spTransitionAutoPlaySpeed, spTransitionColorFilter, spTransitionColorGlow, spTransitionGradient, spTransitionGradientValue, spTransitionRange;
 
         private SerializedProperty spShadowStyleMode, spShadowColor, spShadowDistance, spShadowBlur;
+        private SerializedProperty spShadowIteration, spShadowColorFilter, spShadowColorGlow, spShadowFade;
 
         private bool gsInitialized, shaderChannelsNeedUpdate;
 
@@ -112,12 +113,17 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             spShadowColor = serializedObject.FindProperty("shadowColor");
             spShadowDistance = serializedObject.FindProperty("shadowDistance");
             spShadowBlur = serializedObject.FindProperty("shadowBlur");
+            spShadowIteration = serializedObject.FindProperty("shadowIteration");
+            spShadowColorFilter = serializedObject.FindProperty("shadowColorFilter");
+            spShadowColorGlow = serializedObject.FindProperty("shadowColorGlow");
+            spShadowFade = serializedObject.FindProperty("shadowFade");
         }
 
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
 
+            CheckShaderChannels();
             FixShaderChannelGUI();
 
             RaycastControlsGUI();
@@ -306,8 +312,12 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                 EditorGUILayout.PropertyField(spShadowStyleMode, new GUIContent("阴影样式"));
                 if (spShadowStyleMode.enumValueIndex != (int)ImageEx.ShadowStyle.None)
                 {
-                    EditorGUILayout.PropertyField(spShadowColor, new GUIContent("阴影颜色"));
                     EditorGUILayout.PropertyField(spShadowDistance, new GUIContent("阴影距离"));
+                    EditorGUILayout.PropertyField(spShadowIteration, new GUIContent("阴影迭代"));
+                    EditorGUILayout.PropertyField(spShadowColorFilter, new GUIContent("阴影颜色滤镜"));
+                    EditorGUILayout.PropertyField(spShadowColor, new GUIContent("阴影颜色"));
+                    EditorGUILayout.PropertyField(spShadowColorGlow, new GUIContent("阴影颜色发光"));
+                    EditorGUILayout.PropertyField(spShadowFade, new GUIContent("阴影衰减"));
                     EditorGUILayout.PropertyField(spShadowBlur, new GUIContent("阴影模糊"));
                 }
             }
@@ -317,6 +327,17 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             serializedObject.ApplyModifiedProperties();
             serializedObject.Update();
             Repaint();
+        }
+
+        private void CheckShaderChannels()
+        {
+            ImageEx image = target as ImageEx;
+            if (image != null && image.canvas != null)
+            {
+                var channels = image.canvas.additionalShaderChannels;
+                shaderChannelsNeedUpdate = (channels & AdditionalCanvasShaderChannels.TexCoord1) == 0 ||
+                                           (channels & AdditionalCanvasShaderChannels.TexCoord2) == 0;
+            }
         }
 
         private void AdditionalShapeDataGUI()

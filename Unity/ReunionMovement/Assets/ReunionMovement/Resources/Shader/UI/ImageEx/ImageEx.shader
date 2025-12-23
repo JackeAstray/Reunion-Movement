@@ -105,8 +105,14 @@ Shader "ReunionMovement/UI/Procedural Image"
 
         _ShadowColor ("阴影颜色", Color) = (0,0,0,0.5)
         _ShadowBlur ("阴影模糊", Range(0, 1)) = 0
+        _ShadowColorFilter ("阴影颜色滤镜", int) = 4
+        _ShadowColorGlow ("阴影颜色发光", int) = 0
+        _ShadowFade ("阴影衰减", Range(0, 1)) = 1
+        _ShadowIteration ("阴影迭代次数", int) = 1
         
         [Toggle(UNITY_UI_ALPHACLIP)] _UseUIAlphaClip ("使用Alpha剪辑", Float) = 0
+
+        [Toggle] _DebugShadowSolidRed ("[Debug] Shadow Solid Red", Float) = 0
     }
     
     SubShader
@@ -217,6 +223,11 @@ Shader "ReunionMovement/UI/Procedural Image"
 
             half4 _ShadowColor;
             half _ShadowBlur;
+            int _ShadowColorFilter;
+            int _ShadowColorGlow;
+            half _ShadowFade;
+
+            half _DebugShadowSolidRed;
 
             half _FalloffDistance;
             half _ShapeRotation;
@@ -1025,7 +1036,11 @@ Shader "ReunionMovement/UI/Procedural Image"
                 
                 bool isShadow = v.size.x < 0;
                 float sizeX = abs(v.size.x);
-                float2 size = float2(sizeX + _FalloffDistance, v.size.y + _FalloffDistance);
+                float2 size = float2(sizeX, v.size.y);
+                if (!isShadow)
+                {
+                    size += _FalloffDistance;
+                }
                 float shapeRotation = radians(_ShapeRotation);
                 size = _ConstrainRotation > 0.0 && frac(abs(shapeRotation) / 3.14159) > 0.1? float2(size.y, size.x) : size;
                 
@@ -1059,6 +1074,12 @@ Shader "ReunionMovement/UI/Procedural Image"
 
                 bool isShadow = IN.shapeData.z < 0;
                 IN.shapeData.z = abs(IN.shapeData.z);
+
+               // Debug: force shadow pixels visible
+               if (isShadow && _DebugShadowSolidRed > 0.5)
+               {
+                   return fixed4(1, 0, 0, 1);
+               }
 
                 // Transition Logic
                 #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
@@ -1135,7 +1156,7 @@ Shader "ReunionMovement/UI/Procedural Image"
                 #if RECTANGLE || CIRCLE || PENTAGON || TRIANGLE || HEXAGON || CHAMFERBOX || PARALLELOGRAM || NSTAR_POLYGON || HEART || BLOBBYCROSS || SQUIRCLE || NTRIANGLE_ROUNDED
                     float sdfData = 0;
                     float falloff = _FalloffDistance;
-                    if (isShadow) falloff += _ShadowBlur * 20.0;
+                    if (isShadow) falloff += _ShadowBlur * 30.0;
                     float pixelScale = clamp(1.0/falloff, 1.0/2048.0, 2048.0);
                     #if RECTANGLE
                         sdfData = rectangleScene(IN.shapeData);
@@ -1163,21 +1184,27 @@ Shader "ReunionMovement/UI/Procedural Image"
                         sdfData = nTriangleRoundedScene(IN.shapeData);
                     #endif
 
+                    if (isShadow)
+                    {
+                        sdfData -= falloff;
+                    }
+
                     #if !OUTLINED && !STROKE && !OUTLINED_STROKE
                         float sdf = sampleSdf(sdfData, pixelScale);
                         color.a *= sdf;
                     #endif
 
                     #if STROKE
-                        float sdf = sampleSdfStrip(sdfData, _StrokeWidth + _OutlineWidth, pixelScale);
+                        float sdf = isShadow ? sampleSdf(sdfData, pixelScale) : sampleSdfStrip(sdfData, _StrokeWidth + _OutlineWidth, pixelScale);
                         color.a *= sdf;
                     #endif
                     
+
                     #if OUTLINED
                         float alpha = sampleSdf(sdfData, pixelScale);
                         float lerpFac = sampleSdf(sdfData + _OutlineWidth, pixelScale);
             
-                        if (_EnableDashedOutline == 1)
+                        if (_EnableDashedOutline == 1 && !isShadow)
                         {
                             // 传递图形类型
                             float dashedEffect = generateDashedEffect(IN, _CustomTime, IN.shapeData.z / IN.shapeData.w, _DrawShape); 
@@ -1195,7 +1222,7 @@ Shader "ReunionMovement/UI/Procedural Image"
                                 color = half4(lerp(_OutlineColor.rgb, color.rgb, lerpFac), lerp(_OutlineColor.a, color.a, lerpFac));
                             }
                         }
-                        else
+                        else if (!isShadow)
                         {
                             // 普通描边效果
                             color = half4(lerp(_OutlineColor.rgb, color.rgb, lerpFac), lerp(_OutlineColor.a, color.a, lerpFac));
@@ -1204,18 +1231,20 @@ Shader "ReunionMovement/UI/Procedural Image"
                     #endif
                     
                     #if OUTLINED_STROKE
-                        float alpha = sampleSdfStrip(sdfData, _OutlineWidth + _StrokeWidth, pixelScale);
-                        float lerpFac = sampleSdfStrip(sdfData + _OutlineWidth, _StrokeWidth + _FalloffDistance, pixelScale);
-                        lerpFac = clamp(lerpFac, 0, 1);
-                        color = half4(lerp(_OutlineColor.rgb, color.rgb, lerpFac), lerp(_OutlineColor.a * color.a, color.a, lerpFac));
+                        float alpha = isShadow ? sampleSdf(sdfData, pixelScale) : sampleSdfStrip(sdfData, _OutlineWidth + _StrokeWidth, pixelScale);
+                        if (!isShadow)
+                        {
+                            float lerpFac = sampleSdfStrip(sdfData + _OutlineWidth, _StrokeWidth + _FalloffDistance, pixelScale);
+                            lerpFac = clamp(lerpFac, 0, 1);
+                            color = half4(lerp(_OutlineColor.rgb, color.rgb, lerpFac), lerp(_OutlineColor.a * color.a, color.a, lerpFac));
+                        }
                         color.a *= alpha;
                     #endif
                 #endif
 
                 if (isShadow)
                 {
-                    color.rgb = _ShadowColor.rgb;
-                    color.a *= _ShadowColor.a;
+                    color = apply_color_filter(_ShadowColorFilter, color, _ShadowColor, 1, _ShadowColorGlow);
                 }
 
                 // Apply Transition Filter
