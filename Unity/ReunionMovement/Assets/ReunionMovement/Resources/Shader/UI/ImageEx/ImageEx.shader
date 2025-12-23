@@ -864,7 +864,8 @@ Shader "ReunionMovement/UI/Procedural Image"
             
                         if (_EnableDashedOutline == 1)
                         {
-                            float dashedEffect = generateDashedEffect(IN, _CustomTime, IN.shapeData.z / IN.shapeData.w, _DrawShape); // 传递图形类型
+                            // 传递图形类型
+                            float dashedEffect = generateDashedEffect(IN, _CustomTime, IN.shapeData.z / IN.shapeData.w, _DrawShape); 
 
                             if (_DrawShape == 1)
                             {
@@ -898,49 +899,46 @@ Shader "ReunionMovement/UI/Procedural Image"
 
                 #if !RECTANGLE && !CIRCLE && !PENTAGON && !TRIANGLE && !HEXAGON && !CHAMFERBOX && !PARALLELOGRAM && !NSTAR_POLYGON && !HEART && !BLOBBYCROSS && !SQUIRCLE && !NTRIANGLE_ROUNDED
                     #if OUTLINED || STROKE || OUTLINED_STROKE
-                        // Use atlas texel size to convert sdSprite (UV units) to pixels.
-                        // _MainTex_TexelSize.xy is (1/width,1/height) in UV per pixel.
-                        float2 atlasTexelUV = _MainTex_TexelSize.xy;
-                        float sdf = sdSprite(_MainTex, texcoord, atlasTexelUV,0.5);
-                
-                        // Convert SDF (in UV units) to pixels: divide by UV-per-pixel (atlasTexelUV).
-                        float sdfPx = sdf / max(atlasTexelUV.x, atlasTexelUV.y); // negative: inside (pixels)
-                        float aa =1.5; // 抗锯齿过渡宽度 (像素)
+                        float width = _OutlineWidth;
 
-                        // 外轮廓（向外）: 从0 到 _OutlineWidth
-                        float outlineOutside = saturate( smoothstep(0.0, aa, sdfPx) - smoothstep(_OutlineWidth, _OutlineWidth + aa, sdfPx) );
+                        #if STROKE || OUTLINED_STROKE
+                            width += _StrokeWidth;
+                        #endif
 
-                        // 内描边（向内扩张 _StrokeWidth 像素）
-                        float strokeInner = smoothstep(-_StrokeWidth - aa, -_StrokeWidth, sdfPx);
-                        float strokeOuter = smoothstep(-aa,0.0, sdfPx);
-                        float strokeMaskOld = saturate(strokeInner - strokeOuter);
+                        if (width > 0)
+                        {
+                            float2 d = _MainTex_TexelSize.xy * width;
+                            
+                            half a00 = (tex2D(_MainTex, texcoord + float2(-d.x, -d.y)) + _TextureSampleAdd).a;
+                            half a01 = (tex2D(_MainTex, texcoord + float2(-d.x, 0.0)) + _TextureSampleAdd).a;
+                            half a02 = (tex2D(_MainTex, texcoord + float2(-d.x, +d.y)) + _TextureSampleAdd).a;
+                            half a10 = (tex2D(_MainTex, texcoord + float2(0.0, -d.y)) + _TextureSampleAdd).a;
+                            half a12 = (tex2D(_MainTex, texcoord + float2(0.0, +d.y)) + _TextureSampleAdd).a;
+                            half a20 = (tex2D(_MainTex, texcoord + float2(+d.x, -d.y)) + _TextureSampleAdd).a;
+                            half a21 = (tex2D(_MainTex, texcoord + float2(+d.x, 0.0)) + _TextureSampleAdd).a;
+                            half a22 = (tex2D(_MainTex, texcoord + float2(+d.x, +d.y)) + _TextureSampleAdd).a;
 
-                        // 新：支持从边缘根据 _StrokeFill 值向中心填充
-                        // 使用 _TextureSize估计最大内部半径（像素）来计算填充深度
-                        float maxInnerEstimate = min(_TextureSize.x, _TextureSize.y) *0.5;
-                        float innerExtend = maxInnerEstimate * saturate(_StrokeFill);
+                            half sobel_h = a00 * -1.0 + a01 * -2.0 + a02 * -1.0 + a20 * 1.0 + a21 * 2.0 + a22 * 1.0;
+                            half sobel_v = a00 * -1.0 + a10 * -2.0 + a20 * -1.0 + a02 * 1.0 + a12 * 2.0 + a22 * 1.0;
 
-                        // 填充蒙版：从边缘(0)到内部阈值(-innerExtend)
-                        float strokeFillMask = saturate( smoothstep(0.0, aa, sdfPx) - smoothstep(-innerExtend - aa, -innerExtend + aa, sdfPx) );
+                            half sobel = sqrt(sobel_h * sobel_h + sobel_v * sobel_v);
+                            sobel = saturate(sobel);
 
-                        // 根据 _StrokeFill 在原始描边（仅有限宽度）和填充描边之间混合
-                        float strokeMask = lerp(strokeMaskOld, strokeFillMask, saturate(_StrokeFill));
- 
-                        float4 baseCol = color;
- 
-                        #if OUTLINED && !STROKE
-                            //仅外轮廓
-                            color.rgb = lerp(baseCol.rgb, _OutlineColor.rgb, outlineOutside);
-                            color.a = max(baseCol.a, outlineOutside * _OutlineColor.a);
-                        #elif STROKE && !OUTLINED
-                            //仅线条（向内扩张 _StrokeWidth 像素）
-                            color.rgb = baseCol.rgb;
-                            color.a = strokeMask * IN.color.a;
-                        #elif OUTLINED_STROKE
-                            // 外轮廓 + 内描边
-                            color.rgb = lerp(baseCol.rgb, _OutlineColor.rgb, outlineOutside); //先外轮廓
-                            color.rgb = lerp(color.rgb, baseCol.rgb, strokeMask); // 再内描边保持原色
-                            color.a = max(strokeMask * IN.color.a, outlineOutside * _OutlineColor.a);
+                            #if STROKE
+                                // color = _OutlineColor * IN.color;
+                                // color.a *= sobel;
+
+                                color.a = sobel * _OutlineColor.a * IN.color.a;
+                            #else
+                                color.rgb = lerp(color.rgb, _OutlineColor.rgb, sobel);
+                                color.a = max(color.a, sobel * _OutlineColor.a * IN.color.a);
+                            #endif
+                        }
+                        #if STROKE
+                        else
+                        {
+                            color.a = 0;
+                        }
                         #endif
                     #endif
                 #endif
