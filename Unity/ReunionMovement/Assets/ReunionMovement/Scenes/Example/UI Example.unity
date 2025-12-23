@@ -11640,7 +11640,7 @@ MonoBehaviour:
   blurType: 0
   blurIntensity: 1
   transitionMode: 1
-  transitionTexture: {fileID: 2800000, guid: 08be5f9127de0d645bbddfc4e870d53a, type: 3}
+  transitionTexture: {fileID: 2800000, guid: 404a1ccdba91a714ca37086faa3837e6, type: 3}
   transitionTexScale: {x: 1, y: 1}
   transitionTexOffset: {x: 0, y: 0}
   transitionTexRotation: 0
