@@ -102,3 +102,4 @@ Material:
     - _MainColor: {r: 1, g: 0.24056602, b: 0.3567148, a: 1}
     - _RimColor: {r: 1, g: 0.06617645, b: 0.06617645, a: 1}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1
