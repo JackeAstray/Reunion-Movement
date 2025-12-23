@@ -24,6 +24,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
         private SerializedProperty spMaterialSettings, spMaterial, spImageType;
 
         private SerializedProperty spGradient;
+        private SerializedProperty spBlurType, spBlurIntensity;
 
         private bool gsInitialized, shaderChannelsNeedUpdate;
 
@@ -79,6 +80,8 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             spPreserveAspect = serializedObject.FindProperty("m_PreserveAspect");
 
             spGradient = serializedObject.FindProperty("gradientEffect");
+            spBlurType = serializedObject.FindProperty("blurType");
+            spBlurIntensity = serializedObject.FindProperty("blurIntensity");
         }
 
         public override void OnInspectorGUI()
@@ -167,6 +170,17 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             EditorGUILayout.BeginVertical("Box");
             {
                 EditorGUILayout.PropertyField(spGradient);
+            }
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spBlurType, new GUIContent("模糊类型"));
+                if (spBlurType.enumValueIndex != (int)ImageEx.BlurType.None)
+                {
+                    EditorGUILayout.PropertyField(spBlurIntensity, new GUIContent("模糊强度"));
+                }
             }
             EditorGUILayout.EndVertical();
 
