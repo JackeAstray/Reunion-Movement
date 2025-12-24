@@ -10,7 +10,7 @@ namespace UnityEngine.UI.ImageExtensions
             GenerateSimpleSprite(vh, preserveAspect, canvas, rectTransform, activeSprite, color, falloffDistance, false, Vector2.zero);
         }
 
-        // New overload to support optional shadow quad generation.
+        // 新的重载以支持可选的阴影四边形生成。
         public static void GenerateSimpleSprite(VertexHelper vh, bool preserveAspect, Canvas canvas,
             RectTransform rectTransform, Sprite activeSprite, Color32 color, float falloffDistance, bool appendShadow, Vector2 shadowOffsetLocal)
         {
@@ -283,19 +283,39 @@ namespace UnityEngine.UI.ImageExtensions
                 int startIndex2 = vertexHelper.currentVertCount;
                 // 使用黑色通道标记阴影顶点
                 Color32 shadowColor = new Color32(0, 0, 0, color.a);
+                // 从 quadUVs 获取纹理 UV 边界（假定 quadUVs[0]=最小, 最小，quadUVs[2]=最大, 最大）
+                float uvMinX = quadUVs[0].x;
+                float uvMaxX = quadUVs[2].x;
+                float uvMinY = quadUVs[0].y;
+                float uvMaxY = quadUVs[2].y;
+
+                // 预计算在四边形空间中的归一化偏移，以便 SDF UV 偏移保持一致
+                float boundsWidth = bounds.z - bounds.x;
+                float boundsHeight = bounds.w - bounds.y;
+                float offsetU = boundsWidth != 0 ? shadowOffsetLocal.x / boundsWidth : 0f;
+                float offsetV = boundsHeight != 0 ? shadowOffsetLocal.y / boundsHeight : 0f;
+
                 for (int i = 0; i < 4; ++i)
                 {
                     Vector3 pos = quadPositions[i] + new Vector3(shadowOffsetLocal.x, shadowOffsetLocal.y, 0);
 
-                    float u = Mathf.InverseLerp(bounds.x, bounds.z, pos.x - shadowOffsetLocal.x);
-                    float v = Mathf.InverseLerp(bounds.y, bounds.w, pos.y - shadowOffsetLocal.y);
+                    // 为原始顶点计算基础归一化 UV（在 bounds 内为 0..1）
+                    float uBase = Mathf.InverseLerp(bounds.x, bounds.z, quadPositions[i].x);
+                    float vBase = Mathf.InverseLerp(bounds.y, bounds.w, quadPositions[i].y);
 
-                    u = Mathf.Lerp(epsilon, 1 - epsilon, u);
-                    v = Mathf.Lerp(epsilon, 1 - epsilon, v);
+                    // 应用归一化偏移（即使阴影超出边界也能保持映射一致）
+                    float uShadow = Mathf.Clamp01(uBase + offsetU);
+                    float vShadow = Mathf.Clamp01(vBase + offsetV);
 
+                    // effects UV（uv1）用于形状 SDF：保留小的 epsilon 填充以避免采样缝隙
+                    float u = Mathf.Lerp(epsilon, 1 - epsilon, uShadow);
+                    float v = Mathf.Lerp(epsilon, 1 - epsilon, vShadow);
                     Vector2 uv1 = new Vector2(u, v);
 
-                    vertexHelper.AddVert(pos, shadowColor, quadUVs[i], uv1, size, Vector2.zero,
+                    // 对于纹理采样使用原始精灵 UV（quadUVs[i]），以便采样/模糊按比例正确缩放
+                    Vector2 sampleTexCoord = quadUVs[i];
+
+                    vertexHelper.AddVert(pos, shadowColor, sampleTexCoord, uv1, size, Vector2.zero,
                         Vector3.zero, Vector4.zero);
                 }
 
@@ -303,7 +323,7 @@ namespace UnityEngine.UI.ImageExtensions
                 vertexHelper.AddTriangle(startIndex2 + 2, startIndex2 + 3, startIndex2);
             }
 
-            // Now add the original quad on top of the shadow
+            // 现在在阴影之上添加原始四边形
             int startIndex = vertexHelper.currentVertCount;
             for (int i = 0; i < 4; ++i)
             {

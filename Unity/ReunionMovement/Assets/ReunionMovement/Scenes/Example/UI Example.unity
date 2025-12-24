@@ -5497,7 +5497,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.122641504, g: 0.122641504, b: 0.122641504, a: 1}
+  m_Color: {r: 0.1, g: 0.1, b: 0.1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -5967,11 +5967,11 @@ MonoBehaviour:
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
   appendShadow: 0
-  shadowOffsetLocal: {x: 8, y: -8}
-  shadowColor: {r: 0, g: 0, b: 0, a: 0.5372549}
+  shadowOffsetLocal: {x: 25, y: 25}
+  shadowColor: {r: 0, g: 0, b: 0, a: 1}
   shadowBlurIntensity: 0
-  samplingWidth: 1
-  samplingScale: 1
+  samplingWidth: 15
+  samplingScale: 15
   allowOutOfBoundsShadow: 1
   drawShape: 3
   imageType: 0
@@ -5979,7 +5979,7 @@ MonoBehaviour:
   blurType: 0
   blurIntensity: 1
   transitionMode: 0
-  transitionTexture: {fileID: 0}
+  transitionTexture: {fileID: 2800000, guid: c51cbd39373c20140b3c70b60f9c4d6f, type: 3}
   transitionTexScale: {x: 1, y: 1}
   transitionTexOffset: {x: 0, y: 0}
   transitionTexRotation: 0

@@ -305,31 +305,34 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             }
             EditorGUILayout.EndVertical();
 
-            EditorGUILayout.Space();
-
-            EditorGUILayout.BeginVertical("Box");
+            if (spShape.enumValueIndex == (int)DrawShape.None)
             {
-                EditorGUILayout.LabelField("阴影", EditorStyles.boldLabel);
-                EditorGUILayout.PropertyField(spAppendShadow, new GUIContent("启用阴影"));
-                if (spAppendShadow.boolValue)
+                EditorGUILayout.Space();
+
+                EditorGUILayout.BeginVertical("Box");
                 {
-                    EditorGUILayout.PropertyField(spShadowOffsetLocal, new GUIContent("阴影偏移 (本地)"));
+                    EditorGUILayout.LabelField("阴影", EditorStyles.boldLabel);
+                    EditorGUILayout.PropertyField(spAppendShadow, new GUIContent("启用阴影"));
+                    if (spAppendShadow.boolValue)
+                    {
+                        EditorGUILayout.PropertyField(spShadowOffsetLocal, new GUIContent("阴影偏移 (本地)"));
 
-                    // 阴影颜色（HDR）
-                    SerializedProperty spShadowColor = serializedObject.FindProperty("shadowColor");
-                    EditorGUI.BeginChangeCheck();
-                    EditorGUI.showMixedValue = spShadowColor.hasMultipleDifferentValues;
-                    Color newShadowColor = EditorGUILayout.ColorField(new GUIContent("阴影颜色"), spShadowColor.colorValue, true, true, true);
-                    EditorGUI.showMixedValue = false;
-                    if (EditorGUI.EndChangeCheck()) spShadowColor.colorValue = newShadowColor;
+                        // 阴影颜色（HDR）
+                        SerializedProperty spShadowColor = serializedObject.FindProperty("shadowColor");
+                        EditorGUI.BeginChangeCheck();
+                        EditorGUI.showMixedValue = spShadowColor.hasMultipleDifferentValues;
+                        Color newShadowColor = EditorGUILayout.ColorField(new GUIContent("阴影颜色"), spShadowColor.colorValue, true, true, true);
+                        EditorGUI.showMixedValue = false;
+                        if (EditorGUI.EndChangeCheck()) spShadowColor.colorValue = newShadowColor;
 
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("shadowBlurIntensity"), new GUIContent("阴影模糊强度"));
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingWidth"), new GUIContent("采样宽度"));
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingScale"), new GUIContent("采样缩放"));
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("allowOutOfBoundsShadow"), new GUIContent("允许超出边界阴影"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("shadowBlurIntensity"), new GUIContent("阴影模糊强度"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingWidth"), new GUIContent("采样宽度"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingScale"), new GUIContent("采样缩放"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("allowOutOfBoundsShadow"), new GUIContent("允许超出边界阴影"));
+                    }
                 }
+                EditorGUILayout.EndVertical();
             }
-            EditorGUILayout.EndVertical();
 
             //刷新
             serializedObject.ApplyModifiedProperties();
