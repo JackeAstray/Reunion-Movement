@@ -7,6 +7,13 @@ namespace UnityEngine.UI.ImageExtensions
         public static void GenerateSimpleSprite(VertexHelper vh, bool preserveAspect, Canvas canvas,
             RectTransform rectTransform, Sprite activeSprite, Color32 color, float falloffDistance)
         {
+            GenerateSimpleSprite(vh, preserveAspect, canvas, rectTransform, activeSprite, color, falloffDistance, false, Vector2.zero);
+        }
+
+        // New overload to support optional shadow quad generation.
+        public static void GenerateSimpleSprite(VertexHelper vh, bool preserveAspect, Canvas canvas,
+            RectTransform rectTransform, Sprite activeSprite, Color32 color, float falloffDistance, bool appendShadow, Vector2 shadowOffsetLocal)
+        {
             vh.Clear();
 
             Vector4 v = GetDrawingDimensions(preserveAspect, activeSprite, canvas, rectTransform);
@@ -29,7 +36,7 @@ namespace UnityEngine.UI.ImageExtensions
             suv[2] = new Vector2(uv.z, uv.w);
             suv[3] = new Vector2(uv.z, uv.y);
 
-            AddQuad(vh, sxy, color, suv, size, fullBounds);
+            AddQuad(vh, sxy, color, suv, size, fullBounds, appendShadow, shadowOffsetLocal);
         }
 
         public static void GenerateFilledSprite(VertexHelper toFill,
@@ -117,7 +124,7 @@ namespace UnityEngine.UI.ImageExtensions
                 if (fillMethod == Image.FillMethod.Radial90)
                 {
                     if (RadialCut(sxy, suv, fillAmount, fillClockwise, fillOrigin))
-                        AddQuad(toFill, sxy, color, suv, size, fullBounds);
+                        AddQuad(toFill, sxy, color, suv, size, fullBounds, false, Vector2.zero);
                 }
                 else if (fillMethod == Image.FillMethod.Radial180)
                 {
@@ -182,7 +189,7 @@ namespace UnityEngine.UI.ImageExtensions
                         if (RadialCut(sxy, suv, Mathf.Clamp01(val), fillClockwise,
                             ((side + fillOrigin + 3) % 4)))
                         {
-                            AddQuad(toFill, sxy, color, suv, size, fullBounds);
+                            AddQuad(toFill, sxy, color, suv, size, fullBounds, false, Vector2.zero);
                         }
                     }
                 }
@@ -239,13 +246,13 @@ namespace UnityEngine.UI.ImageExtensions
                             : fillAmount * 4f - (3 - ((corner + fillOrigin) % 4));
 
                         if (RadialCut(sxy, suv, Mathf.Clamp01(val), fillClockwise, ((corner + 2) % 4)))
-                            AddQuad(toFill, sxy, color, suv, size, fullBounds);
+                            AddQuad(toFill, sxy, color, suv, size, fullBounds, false, Vector2.zero);
                     }
                 }
             }
             else
             {
-                AddQuad(toFill, sxy, color, suv, size, fullBounds);
+                AddQuad(toFill, sxy, color, suv, size, fullBounds, false, Vector2.zero);
             }
         }
 
@@ -257,17 +264,46 @@ namespace UnityEngine.UI.ImageExtensions
         /// <param name="color"></param>
         /// <param name="quadUVs"></param>
         /// <param name="size"></param>
+        /// <param name="bounds"></param>
         private static void AddQuad(VertexHelper vertexHelper,
             Vector3[] quadPositions,
             Color32 color,
             Vector3[] quadUVs,
             Vector2 size,
-            Vector4 bounds)
+            Vector4 bounds,
+            bool appendShadow,
+            Vector2 shadowOffsetLocal)
         {
-            int startIndex = vertexHelper.currentVertCount;
             // Inset UVs slightly to avoid texture wrapping artifacts at edges (e.g. bilinear filtering with Repeat mode)
             float epsilon = 0.001f;
 
+            // If requested, add shadow quad first so it renders beneath the original quad
+            if (appendShadow)
+            {
+                int startIndex2 = vertexHelper.currentVertCount;
+                Color32 shadowColor = new Color32(0, 0, 0, color.a);
+                for (int i = 0; i < 4; ++i)
+                {
+                    Vector3 pos = quadPositions[i] + new Vector3(shadowOffsetLocal.x, shadowOffsetLocal.y, 0);
+
+                    float u = Mathf.InverseLerp(bounds.x, bounds.z, pos.x - shadowOffsetLocal.x);
+                    float v = Mathf.InverseLerp(bounds.y, bounds.w, pos.y - shadowOffsetLocal.y);
+
+                    u = Mathf.Lerp(epsilon, 1 - epsilon, u);
+                    v = Mathf.Lerp(epsilon, 1 - epsilon, v);
+
+                    Vector2 uv1 = new Vector2(u, v);
+
+                    vertexHelper.AddVert(pos, shadowColor, quadUVs[i], uv1, size, Vector2.zero,
+                        Vector3.zero, Vector4.zero);
+                }
+
+                vertexHelper.AddTriangle(startIndex2, startIndex2 + 1, startIndex2 + 2);
+                vertexHelper.AddTriangle(startIndex2 + 2, startIndex2 + 3, startIndex2);
+            }
+
+            // Now add the original quad on top of the shadow
+            int startIndex = vertexHelper.currentVertCount;
             for (int i = 0; i < 4; ++i)
             {
                 float u = Mathf.InverseLerp(bounds.x, bounds.z, quadPositions[i].x);
@@ -281,7 +317,6 @@ namespace UnityEngine.UI.ImageExtensions
                 vertexHelper.AddVert(quadPositions[i], color, quadUVs[i], uv1, size, Vector2.zero,
                     Vector3.zero, Vector4.zero);
             }
-
 
             vertexHelper.AddTriangle(startIndex, startIndex + 1, startIndex + 2);
             vertexHelper.AddTriangle(startIndex + 2, startIndex + 3, startIndex);

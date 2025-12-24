@@ -242,14 +242,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 5
   outlineColor: {r: 0, g: 1, b: 0.24778461, a: 1}
@@ -338,7 +330,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &840306
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -545,14 +536,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -641,7 +624,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &104643847
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -773,14 +755,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -869,7 +843,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &176662611
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1137,14 +1110,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 5
   outlineColor: {r: 1, g: 0.2699381, b: 0, a: 1}
@@ -1233,7 +1198,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &228356462
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1365,14 +1329,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -1461,7 +1417,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &307112962
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1743,14 +1698,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -1839,7 +1786,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &389057313
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1971,14 +1917,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 10
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -2067,7 +2005,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &391404686
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2422,14 +2359,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -2518,7 +2447,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &479420044
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2650,14 +2578,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 1
-  shadowIteration: 5
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -2746,7 +2666,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &515931150
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2878,14 +2797,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -2974,7 +2885,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &582972145
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3232,14 +3142,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -3328,7 +3230,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &604812177
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3460,14 +3361,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 5
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -3556,7 +3449,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &632584476
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3688,14 +3580,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -3784,7 +3668,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &635677603
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3916,14 +3799,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -4012,7 +3887,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &659240149
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4144,14 +4018,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -4240,7 +4106,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &680362035
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4493,14 +4358,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -4589,7 +4446,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &687910526
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4757,14 +4613,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -4853,7 +4701,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &781452804
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -5075,14 +4922,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 30
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -5171,7 +5010,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &966567570
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -5379,14 +5217,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 11.520002
   outlineColor: {r: 1, g: 0.5, b: 0, a: 1}
@@ -5475,7 +5305,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1055933270
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -5608,14 +5437,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -5704,7 +5525,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1087552789
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -5836,14 +5656,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 1
-  shadowColor: {r: 0.25490198, g: 1, b: 0, a: 1}
-  shadowDistance: {x: 3, y: -3}
-  shadowBlur: 0.3
-  shadowIteration: 5
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 0.2699381, b: 0, a: 1}
@@ -5932,7 +5744,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 1
 --- !u!222 &1138596011
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -6064,14 +5875,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -6160,7 +5963,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1166791353
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -6429,14 +6231,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 5
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -6525,7 +6319,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1226673022
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -6657,14 +6450,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -6753,7 +6538,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1243792512
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -6932,14 +6716,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -7028,7 +6804,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1261893692
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7160,14 +6935,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -7256,7 +7023,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1263647970
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7496,14 +7262,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -7592,7 +7350,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1283611869
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7724,14 +7481,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -7820,7 +7569,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1309871983
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7952,14 +7700,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -8048,7 +7788,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1344072095
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -8225,14 +7964,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -8321,7 +8052,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1370966741
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -8330,6 +8060,83 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1370966738}
   m_CullTransparentMesh: 0
+--- !u!1 &1391006223
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1391006224}
+  - component: {fileID: 1391006226}
+  - component: {fileID: 1391006227}
+  m_Layer: 0
+  m_Name: Image
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1391006224
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1391006223}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1961290207}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &1391006226
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1391006223}
+  m_CullTransparentMesh: 1
+--- !u!114 &1391006227
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1391006223}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e936f56a9168958458958fdd68d10b69, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 2100000, guid: 3c94891c28e1a33438d93534216936cd, type: 2}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 0
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: f168bd78da5483647b8e123f79a1fca0, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+  appendShadow: 1
+  shadowOffsetLocal: {x: 8, y: -8}
 --- !u!1 &1392620869
 GameObject:
   m_ObjectHideFlags: 0
@@ -8682,14 +8489,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -8778,7 +8577,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1431679125
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -8985,14 +8783,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -9081,7 +8871,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1451069955
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -9213,14 +9002,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -9309,7 +9090,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1451664777
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -9516,14 +9296,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 30
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -9612,7 +9384,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1525572499
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -9744,14 +9515,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 9.54
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -9840,7 +9603,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1544569385
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -9972,14 +9734,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 5
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -10068,7 +9822,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1548677175
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -10200,14 +9953,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 25
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -10296,7 +10041,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1567395379
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -10611,14 +10355,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -10707,7 +10443,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1681060974
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -10915,14 +10650,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -11011,7 +10738,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1795617802
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -11293,14 +11019,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 5
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
@@ -11389,7 +11107,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1864547435
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -11778,7 +11495,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8169916092684545235, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
       propertyPath: m_ShadowIteration
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8169916092684545235, guid: 46022f153b5d448aea4b360e3af68565, type: 3}
       propertyPath: m_ShadowDistance.x
@@ -11925,14 +11642,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -12021,7 +11730,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1941607839
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -12228,14 +11936,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -12324,7 +12024,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &1959774831
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -12377,6 +12076,7 @@ RectTransform:
   - {fileID: 2101935646}
   - {fileID: 228356460}
   - {fileID: 1138596009}
+  - {fileID: 1391006224}
   - {fileID: 840304}
   - {fileID: 1525572497}
   - {fileID: 966567568}
@@ -12585,14 +12285,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 0
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -12681,7 +12373,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 1}
     - {r: 0, g: 0.37633944, b: 1, a: 1}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &2053571693
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -12813,14 +12504,6 @@ MonoBehaviour:
   transitionClamp: 1
   transitionTexClampPadding: 1
   transitionUseUv0: 1
-  shadowStyleMode: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 1}
-  shadowDistance: {x: 1, y: -1}
-  shadowBlur: 0
-  shadowIteration: 1
-  shadowColorFilter: 4
-  shadowColorGlow: 0
-  shadowFade: 1
   strokeWidth: 5
   outlineWidth: 0
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -12909,7 +12592,6 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
-  debugShadowSolidRed: 0
 --- !u!222 &2101935648
 CanvasRenderer:
   m_ObjectHideFlags: 0
