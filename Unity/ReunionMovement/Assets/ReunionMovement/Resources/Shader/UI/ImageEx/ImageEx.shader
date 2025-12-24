@@ -91,7 +91,7 @@ Shader "ReunionMovement/UI/ImageEx"
         [Toggle] _TransitionUseUv0 ("过渡使用精灵 UV0", Float) = 1
 
         // Shadow properties
-        _ShadowColor ("Shadow Color", Color) = (0,0,0,0.5)
+        [HDR] _ShadowColor ("Shadow Color", Color) = (0,0,0,0.5)
         _ShadowBlurIntensity ("Shadow Blur Intensity", Range(0,8)) = 1
         _SamplingWidth ("Sampling Width", Float) = 1
         _SamplingScale ("Sampling Scale", Float) = 1
@@ -150,7 +150,7 @@ Shader "ReunionMovement/UI/ImageEx"
             #pragma multi_compile_local _ UNITY_UI_ALPHACLIP
             
             #pragma multi_compile_local _ CIRCLE TRIANGLE RECTANGLE PENTAGON HEXAGON CHAMFERBOX PARALLELOGRAM NSTAR_POLYGON HEART BLOBBYCROSS SQUIRCLE NTRIANGLE_ROUNDED
-            
+                        
             #pragma multi_compile_local _ STROKE OUTLINED OUTLINED_STROKE
             #pragma multi_compile_local _ GRADIENT_LINEAR GRADIENT_RADIAL GRADIENT_CORNER
             #pragma multi_compile_local _ BLUR_FAST BLUR_MEDIUM BLUR_DETAIL
@@ -271,7 +271,7 @@ Shader "ReunionMovement/UI/ImageEx"
                 float _NStarPolygonInset;
                 float2 _NStarPolygonOffset;
             #endif
-            
+                        
             #if GRADIENT_LINEAR || GRADIENT_RADIAL
                 half4 colors[8];
                 half4 alphas[8];
@@ -763,7 +763,7 @@ Shader "ReunionMovement/UI/ImageEx"
 
                     // 定义内外边界
                     float outerRadius = radius;       // 外边界半径（边缘部分）
-                    float innerRadius = radius - _OutlineWidth; // 内边界半径（裁剪中间部分）
+                    float innerRadius = radius - _OutlineWidth; // 内边界半径（裁剪中间部分）;
                     
                     float edgeMask = smoothstep(innerRadius, innerRadius + 0.01, distance) * 
                                      (1.0 - smoothstep(outerRadius - 0.01, outerRadius, distance));
