@@ -5497,7 +5497,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0, b: 0, a: 1}
+  m_Color: {r: 0.122641504, g: 0.122641504, b: 0.122641504, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -5949,7 +5949,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0, b: 0.33849812, a: 1}
+  m_Color: {r: 1, g: 0, b: 0.3372549, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -5968,8 +5968,8 @@ MonoBehaviour:
   m_PixelsPerUnitMultiplier: 1
   appendShadow: 0
   shadowOffsetLocal: {x: 8, y: -8}
-  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
-  shadowBlurIntensity: 1
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5372549}
+  shadowBlurIntensity: 0
   samplingWidth: 1
   samplingScale: 1
   allowOutOfBoundsShadow: 1
@@ -6080,7 +6080,7 @@ MonoBehaviour:
     nTriangleRoundedNumber: 0
   gradientEffect:
     enabled: 0
-    gradientType: 0
+    gradientType: 1
     gradient:
       serializedVersion: 2
       key0: {r: 1, g: 1, b: 1, a: 1}
@@ -6112,10 +6112,10 @@ MonoBehaviour:
       m_NumColorKeys: 2
       m_NumAlphaKeys: 2
     cornerGradientColors:
-    - {r: 0, g: 0, b: 0, a: 0}
-    - {r: 0, g: 0, b: 0, a: 0}
-    - {r: 0, g: 0, b: 0, a: 0}
-    - {r: 0, g: 0, b: 0, a: 0}
+    - {r: 0, g: 0.42721558, b: 1, a: 1}
+    - {r: 0, g: 1, b: 0.081349134, a: 1}
+    - {r: 0, g: 1, b: 0.31602573, a: 1}
+    - {r: 1, g: 0, b: 0, a: 1}
     rotation: 0
 --- !u!222 &1166791353
 CanvasRenderer:
@@ -6811,7 +6811,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0, b: 0, a: 1}
+  m_Color: {r: 0.1, g: 0.1, b: 0.1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1

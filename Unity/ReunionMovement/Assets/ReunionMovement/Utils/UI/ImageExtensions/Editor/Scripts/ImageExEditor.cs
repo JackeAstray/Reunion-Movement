@@ -289,7 +289,14 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                     if (mode != ImageEx.TransitionMode.Fade && mode != ImageEx.TransitionMode.Cutoff && mode != ImageEx.TransitionMode.Blaze)
                     {
                         EditorGUILayout.PropertyField(spTransitionColorFilter, new GUIContent("颜色滤镜"));
-                        EditorGUILayout.PropertyField(spTransitionColor, new GUIContent("过渡颜色"));
+
+                        // 过渡颜色（HDR）
+                        EditorGUI.BeginChangeCheck();
+                        EditorGUI.showMixedValue = spTransitionColor.hasMultipleDifferentValues;
+                        Color newTransitionColor = EditorGUILayout.ColorField(new GUIContent("过渡颜色"), spTransitionColor.colorValue, true, true, true);
+                        EditorGUI.showMixedValue = false;
+                        if (EditorGUI.EndChangeCheck()) spTransitionColor.colorValue = newTransitionColor;
+
                         EditorGUILayout.PropertyField(spTransitionColorGlow, new GUIContent("发光"));
                     }
 
@@ -307,7 +314,15 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                 if (spAppendShadow.boolValue)
                 {
                     EditorGUILayout.PropertyField(spShadowOffsetLocal, new GUIContent("阴影偏移 (本地)"));
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("shadowColor"), new GUIContent("阴影颜色"));
+
+                    // 阴影颜色（HDR）
+                    SerializedProperty spShadowColor = serializedObject.FindProperty("shadowColor");
+                    EditorGUI.BeginChangeCheck();
+                    EditorGUI.showMixedValue = spShadowColor.hasMultipleDifferentValues;
+                    Color newShadowColor = EditorGUILayout.ColorField(new GUIContent("阴影颜色"), spShadowColor.colorValue, true, true, true);
+                    EditorGUI.showMixedValue = false;
+                    if (EditorGUI.EndChangeCheck()) spShadowColor.colorValue = newShadowColor;
+
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("shadowBlurIntensity"), new GUIContent("阴影模糊强度"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingWidth"), new GUIContent("采样宽度"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingScale"), new GUIContent("采样缩放"));
@@ -370,8 +385,12 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             // 轮廓宽度（使用 SerializedProperty）
             EditorGUI.PropertyField(left1, spOutlineWidth, new GUIContent("轮廓宽度"));
 
-            // 轮廓颜色（使用 SerializedProperty）
-            EditorGUI.PropertyField(right1, spOutlineColor, new GUIContent("轮廓颜色"));
+            // 轮廓颜色（使用 HDR ColorField）
+            EditorGUI.BeginChangeCheck();
+            EditorGUI.showMixedValue = spOutlineColor.hasMultipleDifferentValues;
+            Color newOutlineColor = EditorGUI.ColorField(right1, new GUIContent("轮廓颜色"), spOutlineColor.colorValue, true, true, true);
+            EditorGUI.showMixedValue = false;
+            if (EditorGUI.EndChangeCheck()) spOutlineColor.colorValue = newOutlineColor;
 
             // 第三行（仅在 Circle/Rectangle 的情况下显示）：是否开启虚线 / 自定义时间
             if (!spShape.hasMultipleDifferentValues && (spShape.enumValueIndex == (int)DrawShape.Circle || spShape.enumValueIndex == (int)DrawShape.Rectangle))

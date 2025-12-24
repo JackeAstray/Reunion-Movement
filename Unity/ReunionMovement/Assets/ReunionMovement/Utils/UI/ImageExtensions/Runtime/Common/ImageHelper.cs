@@ -274,13 +274,14 @@ namespace UnityEngine.UI.ImageExtensions
             bool appendShadow,
             Vector2 shadowOffsetLocal)
         {
-            // Inset UVs slightly to avoid texture wrapping artifacts at edges (e.g. bilinear filtering with Repeat mode)
+            // 插入UV，以避免边缘出现纹理包裹伪影（例如，使用重复模式进行双线性滤波）
             float epsilon = 0.001f;
 
-            // If requested, add shadow quad first so it renders beneath the original quad
+            // 如果需要，请先添加阴影四边形，使其在原始四边形下方渲染
             if (appendShadow)
             {
                 int startIndex2 = vertexHelper.currentVertCount;
+                // 使用黑色通道标记阴影顶点
                 Color32 shadowColor = new Color32(0, 0, 0, color.a);
                 for (int i = 0; i < 4; ++i)
                 {
