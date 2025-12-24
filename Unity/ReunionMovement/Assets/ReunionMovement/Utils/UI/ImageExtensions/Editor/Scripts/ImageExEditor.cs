@@ -14,6 +14,8 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
     public class ImageExEditor : ImageEditor
     {
         private SerializedProperty spSprite;
+        private SerializedProperty spAppendShadow;
+        private SerializedProperty spShadowOffsetLocal;
         private SerializedProperty spCircle, spTriangle, spRectangle, spPentagon, spHexagon, spChamferBox, spParallelogram, spNStarPolygon, spHeart, spBlobbyCross, spSquircle, spNTriangleRounded;
         private SerializedProperty spPreserveAspect;
         private SerializedProperty spFillMethod, spFillOrigin, spFillAmount, spFillClockwise;
@@ -39,6 +41,9 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             }
 
             base.OnEnable();
+
+            spAppendShadow = serializedObject.FindProperty("appendShadow");
+            spShadowOffsetLocal = serializedObject.FindProperty("shadowOffsetLocal");
 
             spSprite = serializedObject.FindProperty("m_Sprite");
 
@@ -289,6 +294,24 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                     }
 
                     EditorGUILayout.PropertyField(spTransitionAutoPlaySpeed, new GUIContent("自动播放速度"));
+                }
+            }
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space();
+
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.LabelField("阴影", EditorStyles.boldLabel);
+                EditorGUILayout.PropertyField(spAppendShadow, new GUIContent("启用阴影"));
+                if (spAppendShadow.boolValue)
+                {
+                    EditorGUILayout.PropertyField(spShadowOffsetLocal, new GUIContent("阴影偏移 (本地)"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("shadowColor"), new GUIContent("阴影颜色"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("shadowBlurIntensity"), new GUIContent("阴影模糊强度"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingWidth"), new GUIContent("采样宽度"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingScale"), new GUIContent("采样缩放"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("allowOutOfBoundsShadow"), new GUIContent("允许超出边界阴影"));
                 }
             }
             EditorGUILayout.EndVertical();

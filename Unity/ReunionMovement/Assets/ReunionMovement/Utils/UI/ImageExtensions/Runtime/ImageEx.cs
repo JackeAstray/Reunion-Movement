@@ -12,6 +12,36 @@ namespace ReunionMovement.UI.ImageExtensions
     [AddComponentMenu("UI/ReunionMovement/ImageEx")]
     public class ImageEx : Image
     {
+        [SerializeField] private bool appendShadow = false;
+        [SerializeField] private Vector2 shadowOffsetLocal = new Vector2(8, -8);
+        [SerializeField] private Color shadowColor = new Color(0, 0, 0, 0.5f);
+        [SerializeField][Range(0, 8)] private float shadowBlurIntensity = 1f;
+        [SerializeField] private float samplingWidth = 1f;
+        [SerializeField] private float samplingScale = 1f;
+        [SerializeField] private bool allowOutOfBoundsShadow = true;
+
+        public bool AppendShadow
+        {
+            get => appendShadow;
+            set
+            {
+                appendShadow = value;
+                base.SetMaterialDirty();
+                base.SetVerticesDirty();
+            }
+        }
+
+        public Vector2 ShadowOffsetLocal
+        {
+            get => shadowOffsetLocal;
+            set
+            {
+                shadowOffsetLocal = value;
+                base.SetMaterialDirty();
+                base.SetVerticesDirty();
+            }
+        }
+
         public enum BlurType
         {
             None = 0,
@@ -48,7 +78,7 @@ namespace ReunionMovement.UI.ImageExtensions
         }
 
         #region 常量
-        public const string shaderName = "ReunionMovement/UI/Procedural Image";
+        public const string shaderName = "ReunionMovement/UI/ImageEx";
         #endregion
 
         #region 序列化字段
@@ -141,6 +171,12 @@ namespace ReunionMovement.UI.ImageExtensions
         private static readonly int transitionClamp_Sp = Shader.PropertyToID("_TransitionClamp");
         private static readonly int transitionTexClampPadding_Sp = Shader.PropertyToID("_TransitionTexClampPadding");
         private static readonly int transitionUseUv0_Sp = Shader.PropertyToID("_TransitionUseUv0");
+
+        private static readonly int shadowColor_Sp = Shader.PropertyToID("_ShadowColor");
+        private static readonly int shadowBlurIntensity_Sp = Shader.PropertyToID("_ShadowBlurIntensity");
+        private static readonly int samplingWidth_Sp = Shader.PropertyToID("_SamplingWidth");
+        private static readonly int samplingScale_Sp = Shader.PropertyToID("_SamplingScale");
+        private static readonly int allowOutOfBoundsShadow_Sp = Shader.PropertyToID("_AllowOutOfBoundsShadow");
 
         private static readonly int outlineWidth_Sp = Shader.PropertyToID("_OutlineWidth");
         private static readonly int outlineColor_Sp = Shader.PropertyToID("_OutlineColor");
@@ -411,7 +447,7 @@ namespace ReunionMovement.UI.ImageExtensions
         }
 
         /// <summary>
-        /// 用于渲染形状的共享材质。材质必须使用“ReunionMovement/UI/Procedural Image”着色器
+        /// 用于渲染形状的共享材质。材质必须使用“ReunionMovement/UI/ImageEx”着色器
         /// </summary>
         public override Material material
         {
@@ -840,6 +876,55 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        public Color ShadowColor
+        {
+            get => shadowColor;
+            set
+            {
+                shadowColor = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public float ShadowBlurIntensity
+        {
+            get => shadowBlurIntensity;
+            set
+            {
+                shadowBlurIntensity = Mathf.Clamp(value, 0f, 8f);
+                SetMaterialDirty();
+            }
+        }
+
+        public float SamplingWidth
+        {
+            get => samplingWidth;
+            set
+            {
+                samplingWidth = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public float SamplingScale
+        {
+            get => samplingScale;
+            set
+            {
+                samplingScale = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public bool AllowOutOfBoundsShadow
+        {
+            get => allowOutOfBoundsShadow;
+            set
+            {
+                allowOutOfBoundsShadow = value;
+                SetMaterialDirty();
+            }
+        }
         #endregion
 
         #region 私有变量
@@ -1134,9 +1219,9 @@ namespace ReunionMovement.UI.ImageExtensions
             {
                 case Type.Simple:
                 case Type.Sliced:
-                case Type.Tiled:
+                    // Use overload that can append a shadow quad. Shadow support is exposed in the editor under Transition settings.
                     ImageHelper.GenerateSimpleSprite(vh, preserveAspect, canvas, rectTransform, ActiveSprite,
-                        color, falloffDistance);
+                        color, falloffDistance, appendShadow, shadowOffsetLocal);
                     break;
                 case Type.Filled:
                     ImageHelper.GenerateFilledSprite(vh, preserveAspect, canvas, rectTransform, ActiveSprite,
@@ -1223,6 +1308,13 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.SetFloat(transitionClamp_Sp, runtimeClamp ? 1 : 0);
             mat.SetFloat(transitionTexClampPadding_Sp, transitionTexClampPadding);
             mat.SetFloat(transitionUseUv0_Sp, transitionUseUv0 ? 1 : 0);
+
+            // Shadow material params
+            mat.SetColor(shadowColor_Sp, shadowColor);
+            mat.SetFloat(shadowBlurIntensity_Sp, shadowBlurIntensity);
+            mat.SetFloat(samplingWidth_Sp, samplingWidth);
+            mat.SetFloat(samplingScale_Sp, samplingScale);
+            mat.SetFloat(allowOutOfBoundsShadow_Sp, allowOutOfBoundsShadow ? 1f : 0f);
 
             switch (transitionMode)
             {
