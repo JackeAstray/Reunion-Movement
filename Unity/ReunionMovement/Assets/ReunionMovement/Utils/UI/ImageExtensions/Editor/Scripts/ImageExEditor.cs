@@ -340,125 +340,58 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                 h = 3;
             }
 
-            Rect r = EditorGUILayout.GetControlRect(true, EditorGUIUtility.singleLineHeight * h + EditorGUIUtility.standardVerticalSpacing);
+            //EditorGUILayout.PropertyField(spStrokeWidth, new GUIContent("线条"));
+            //EditorGUILayout.PropertyField(spFalloffDistance, new GUIContent("衰减"));
 
-            Rect line = r;
-            line.height = EditorGUIUtility.singleLineHeight;
-            float x = (line.width - 10f) / 2;
+            // 合并为一个分组区域：多行、多列布局（第一列较宽）
+            Rect groupRect = EditorGUILayout.GetControlRect(true, EditorGUIUtility.singleLineHeight * h + EditorGUIUtility.standardVerticalSpacing);
+            float gap = 6f;
+            float lineHeight = EditorGUIUtility.singleLineHeight;
+            float vSpacing = EditorGUIUtility.standardVerticalSpacing;
+            // 左右列比例，左侧更宽
+            float leftWidth = (groupRect.width - gap) * 0.5f;
+            float rightWidth = groupRect.width - leftWidth - gap;
 
-            float fieldWidth = x / 2 - 10f;
-            float labelWidth = x - fieldWidth;
+            // 临时缩短标签宽度以让数值输入获得更多空间
+            float oldLabelWidth = EditorGUIUtility.labelWidth;
+            EditorGUIUtility.labelWidth = 100f;
 
-            line.width = labelWidth;
-            EditorGUI.LabelField(line, "线条");
-            Rect dragZone = line;
-            line.x += labelWidth;
-            line.width = fieldWidth;
-            EditorGUI.BeginChangeCheck();
-            {
-                EditorGUI.showMixedValue = spStrokeWidth.hasMultipleDifferentValues;
-                strokeWidth = FloatFieldDraggable.DraggableFloatField(line, spStrokeWidth.floatValue);
-                EditorGUI.showMixedValue = false;
-            }
-            if (EditorGUI.EndChangeCheck())
-            {
-                spStrokeWidth.floatValue = strokeWidth;
-            }
-            line.x += fieldWidth + 10;
-            line.width = labelWidth;
-            EditorGUI.BeginDisabledGroup(spShape.enumValueIndex == (int)DrawShape.None);
-            EditorGUI.LabelField(line, "衰减");
-            dragZone = line;
-            line.x += labelWidth;
-            line.width = fieldWidth;
+            // 第一行：线条 / 衰减
+            Rect left0 = new Rect(groupRect.x, groupRect.y, leftWidth, lineHeight);
+            Rect right0 = new Rect(groupRect.x + leftWidth + gap, groupRect.y, rightWidth, lineHeight);
+            EditorGUI.PropertyField(left0, spStrokeWidth, new GUIContent("线条"));
+            EditorGUI.PropertyField(right0, spFalloffDistance, new GUIContent("衰减"));
 
-            EditorGUI.BeginChangeCheck();
-            {
-                EditorGUI.showMixedValue = spFalloffDistance.hasMultipleDifferentValues;
-                falloff = FloatFieldDraggable.DraggableFloatField(line, spFalloffDistance.floatValue);
-                EditorGUI.showMixedValue = false;
-            }
+            // 第二行：轮廓宽度 / 轮廓颜色
+            float row1Y = groupRect.y + lineHeight + vSpacing;
+            Rect left1 = new Rect(groupRect.x, row1Y, leftWidth, lineHeight);
+            Rect right1 = new Rect(groupRect.x + leftWidth + gap, row1Y, rightWidth, lineHeight);
 
-            if (EditorGUI.EndChangeCheck())
-            {
-                spFalloffDistance.floatValue = falloff;
-            }
-            EditorGUI.EndDisabledGroup();
-            line.y += EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
-            line.x = r.x;
-            line.width = labelWidth;
-            EditorGUI.LabelField(line, "轮廓宽度");
-            dragZone = line;
-            line.x += labelWidth;
-            line.width = fieldWidth;
-            EditorGUI.BeginChangeCheck();
-            {
-                EditorGUI.showMixedValue = spOutlineWidth.hasMultipleDifferentValues;
-                outlineWidth = FloatFieldDraggable.DraggableFloatField(line, spOutlineWidth.floatValue);
-                EditorGUI.showMixedValue = false;
-            }
-            if (EditorGUI.EndChangeCheck())
-            {
-                spOutlineWidth.floatValue = outlineWidth;
-            }
-            line.x += fieldWidth + 10;
-            line.width = labelWidth;
-            EditorGUI.LabelField(line, "轮廓颜色");
-            dragZone = line;
-            line.width = fieldWidth;
-            line.x += labelWidth;
-            EditorGUI.BeginChangeCheck();
-            {
-                EditorGUI.showMixedValue = spOutlineColor.hasMultipleDifferentValues;
-                outlineColor = EditorGUI.ColorField(line, spOutlineColor.colorValue);
-                EditorGUI.showMixedValue = false;
-            }
-            if (EditorGUI.EndChangeCheck())
-            {
-                spOutlineColor.colorValue = outlineColor;
-            }
+            // 轮廓宽度（使用 SerializedProperty）
+            EditorGUI.PropertyField(left1, spOutlineWidth, new GUIContent("轮廓宽度"));
 
-            // ---------------------
+            // 轮廓颜色（使用 SerializedProperty）
+            EditorGUI.PropertyField(right1, spOutlineColor, new GUIContent("轮廓颜色"));
+
+            // 第三行（仅在 Circle/Rectangle 的情况下显示）：是否开启虚线 / 自定义时间
             if (!spShape.hasMultipleDifferentValues && (spShape.enumValueIndex == (int)DrawShape.Circle || spShape.enumValueIndex == (int)DrawShape.Rectangle))
             {
-                line.y += EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
-                line.x = r.x;
-                line.width = labelWidth;
+                float row2Y = groupRect.y + 2 * (lineHeight + vSpacing);
+                Rect left2 = new Rect(groupRect.x, row2Y, leftWidth, lineHeight);
+                Rect right2 = new Rect(groupRect.x + leftWidth + gap, row2Y, rightWidth, lineHeight);
 
-                // 绘制标签
-                EditorGUI.LabelField(line, "是否开启虚线");
+                // 本地标签宽度，用于左列标签对齐
+                float localLabelW = Mathf.Min(80f, EditorGUIUtility.labelWidth);
 
-                // 绘制复选框
-                line.x += labelWidth; // 添加间距以对齐复选框
-                line.width = fieldWidth - 5; // 调整宽度以适配复选框
-                EditorGUI.BeginChangeCheck();
-                {
-                    EditorGUI.showMixedValue = spEnableDashedOutline.hasMultipleDifferentValues;
-                    bool enableDashedOutline = EditorGUI.Toggle(line, spEnableDashedOutline.intValue != 0);
-                    EditorGUI.showMixedValue = false;
+                // 是否开启虚线（使用 SerializedProperty）
+                EditorGUI.PropertyField(left2, spEnableDashedOutline, new GUIContent("是否开启虚线"));
 
-                    if (EditorGUI.EndChangeCheck())
-                    {
-                        spEnableDashedOutline.intValue = enableDashedOutline ? 1 : 0;
-                    }
-                }
-                line.x += fieldWidth + 10;
-                line.width = labelWidth;
-                EditorGUI.LabelField(line, "自定义时间");
-                dragZone = line;
-                line.width = fieldWidth;
-                line.x += labelWidth;
-                EditorGUI.BeginChangeCheck();
-                {
-                    EditorGUI.showMixedValue = spCustomTime.hasMultipleDifferentValues;
-                    customTime = FloatFieldDraggable.DraggableFloatField(line, spCustomTime.floatValue);
-                    EditorGUI.showMixedValue = false;
-                }
-                if (EditorGUI.EndChangeCheck())
-                {
-                    spCustomTime.floatValue = customTime;
-                }
+                // 自定义时间（右列，使用 SerializedProperty）
+                EditorGUI.PropertyField(right2, spCustomTime, new GUIContent("自定义时间"));
             }
+
+            EditorGUIUtility.labelWidth = oldLabelWidth;
+
             EditorGUILayout.Space();
 
             RotationGUI();
