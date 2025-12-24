@@ -937,8 +937,24 @@ namespace ReunionMovement.UI.ImageExtensions
             {
                 if (dynamicMaterial == null)
                 {
-                    dynamicMaterial = new Material(Shader.Find(shaderName));
-                    dynamicMaterial.name += " [Dynamic]";
+                    Shader shader = Shader.Find(shaderName);
+                    if (shader == null)
+                    {
+                        Debug.LogWarning($"Shader '{shaderName}' not found. Falling back to 'Sprites/Default'.");
+                        shader = Shader.Find("Sprites/Default");
+                    }
+
+                    if (shader != null)
+                    {
+                        dynamicMaterial = new Material(shader);
+                        dynamicMaterial.name += " [Dynamic]";
+                    }
+                    else
+                    {
+                        // As a last resort, create a basic material to avoid null refs
+                        dynamicMaterial = new Material(Shader.Find("Hidden/InternalErrorShader"));
+                        dynamicMaterial.name += " [Dynamic - Fallback]";
+                    }
                 }
 
                 return dynamicMaterial;
