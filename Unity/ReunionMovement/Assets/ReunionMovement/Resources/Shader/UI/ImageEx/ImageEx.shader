@@ -1,4 +1,4 @@
-Shader "ReunionMovement/UI/Procedural Image"
+Shader "ReunionMovement/UI/ImageEx"
 {
     Properties
     {
@@ -90,6 +90,13 @@ Shader "ReunionMovement/UI/Procedural Image"
         _TransitionTexClampPadding ("过渡图块夹边距（像素）", Range(0, 4)) = 1
         [Toggle] _TransitionUseUv0 ("过渡使用精灵 UV0", Float) = 1
 
+        // Shadow properties
+        _ShadowColor ("Shadow Color", Color) = (0,0,0,0.5)
+        _ShadowBlurIntensity ("Shadow Blur Intensity", Range(0,8)) = 1
+        _SamplingWidth ("Sampling Width", Float) = 1
+        _SamplingScale ("Sampling Scale", Float) = 1
+        _AllowOutOfBoundsShadow ("Allow Out Of Bounds Shadow", Float) = 1
+         
         _BlobbyCrossTime ("水滴十字形状的动态时间参数", Float) = 0
         _SquircleTime ("方圆形形状的动态时间参数", Float) = 1
         _NTriangleRoundedTime ("N三角形圆角形状的动态时间参数", Float) = 0
@@ -183,7 +190,13 @@ Shader "ReunionMovement/UI/Procedural Image"
             half _StrokeWidth;
             half _StrokeFill;
             float4 _MainTex_TexelSize;
- 
+            // Shadow / sampling uniforms
+            half4 _ShadowColor;
+            float _ShadowBlurIntensity;
+            float _SamplingWidth;
+            float _SamplingScale;
+            float _AllowOutOfBoundsShadow;
+
             half _OutlineWidth;
             half4 _OutlineColor;
             int _EnableDashedOutline;
@@ -1042,7 +1055,50 @@ Shader "ReunionMovement/UI/Procedural Image"
             //片元着色器
             fixed4 frag(v2f IN): SV_Target
             {
+                // Detect shadow vertex and render shadow using separate logic
                 half4 color = IN.color;
+                bool isShadowVertex = color.a > 0.001 && color.r < 0.001 && color.g < 0.001 && color.b < 0.001;
+
+                if (isShadowVertex)
+                {
+                    float2 texel = _MainTex_TexelSize.xy * _SamplingScale * _SamplingWidth;
+
+                    half4 blurSample = 0;
+                    bool allowOOB = _AllowOutOfBoundsShadow > 0.5;
+
+                    if (_ShadowBlurIntensity <= 0.001)
+                    {
+                        float2 sampleUv = IN.texcoord;
+                        if (!allowOOB) sampleUv = saturate(sampleUv);
+                        blurSample = tex2D(_MainTex, sampleUv);
+                    }
+                    else
+                    {
+                        const float w[9] = {1.0/16.0, 2.0/16.0, 1.0/16.0,
+                                             2.0/16.0, 4.0/16.0, 2.0/16.0,
+                                             1.0/16.0, 2.0/16.0, 1.0/16.0};
+                        float s = saturate(_ShadowBlurIntensity);
+                        float2 off;
+                        int idx = 0;
+                        for (int y = -1; y <= 1; ++y)
+                        {
+                            for (int x = -1; x <= 1; ++x)
+                            {
+                                off = float2(x, y) * texel * (0.5 + s);
+                                float2 uv = IN.texcoord + off;
+                                if (!allowOOB) uv = saturate(uv);
+                                idx = (y + 1) * 3 + (x + 1);
+                                blurSample += tex2D(_MainTex, uv) * w[idx];
+                            }
+                        }
+                    }
+
+                    float shadowMask = blurSample.a;
+                    float shadowAlpha = shadowMask * _ShadowColor.a * IN.color.a;
+                    half3 shadowPremult = _ShadowColor.rgb * shadowAlpha;
+                    return half4(shadowPremult, shadowAlpha);
+                }
+                
                 half2 texcoord = IN.texcoord;
                 float2 effectsUv = IN.effectsUv;
                 float2 transitionBaseUv = (_TransitionUseUv0 > 0.5) ? texcoord : effectsUv;

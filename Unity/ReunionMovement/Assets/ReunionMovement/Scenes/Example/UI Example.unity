@@ -186,6 +186,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 1
   imageType: 0
   materialMode: 0
@@ -480,6 +487,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 0
   imageType: 0
   materialMode: 0
@@ -699,6 +713,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 1
   imageType: 0
   materialMode: 0
@@ -1054,6 +1075,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 0
   imageType: 0
   materialMode: 0
@@ -1273,6 +1301,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 3
   imageType: 0
   materialMode: 0
@@ -1642,6 +1677,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 0
   imageType: 0
   materialMode: 0
@@ -1861,6 +1903,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 8
   imageType: 0
   materialMode: 0
@@ -2303,6 +2352,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 12
   imageType: 0
   materialMode: 0
@@ -2522,6 +2578,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 0
   imageType: 0
   materialMode: 0
@@ -2741,6 +2804,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 0
   imageType: 0
   materialMode: 0
@@ -3086,6 +3156,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 7
   imageType: 0
   materialMode: 0
@@ -3305,6 +3382,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 11
   imageType: 0
   materialMode: 0
@@ -3524,6 +3608,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 3
   imageType: 0
   materialMode: 0
@@ -3743,6 +3834,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 8
   imageType: 0
   materialMode: 0
@@ -3962,6 +4060,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 5
   imageType: 0
   materialMode: 0
@@ -4302,6 +4407,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 0
   imageType: 0
   materialMode: 0
@@ -4557,6 +4669,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 5
   imageType: 0
   materialMode: 0
@@ -4866,6 +4985,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 1
   imageType: 0
   materialMode: 0
@@ -5161,6 +5287,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 5
   imageType: 0
   materialMode: 0
@@ -5381,6 +5514,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 3
   imageType: 0
   materialMode: 0
@@ -5600,6 +5740,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 1
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 1}
+  shadowBlurIntensity: 8
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 0
   imageType: 0
   materialMode: 0
@@ -5819,6 +5966,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 3
   imageType: 0
   materialMode: 0
@@ -6175,6 +6329,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 12
   imageType: 0
   materialMode: 0
@@ -6394,6 +6555,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 6
   imageType: 0
   materialMode: 0
@@ -6660,6 +6828,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 1
   imageType: 0
   materialMode: 0
@@ -6879,6 +7054,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 0
   imageType: 0
   materialMode: 0
@@ -7206,6 +7388,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 0
   imageType: 0
   materialMode: 0
@@ -7425,6 +7614,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 3
   imageType: 0
   materialMode: 0
@@ -7644,6 +7840,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 6
   imageType: 0
   materialMode: 0
@@ -7908,6 +8111,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 5
   imageType: 0
   materialMode: 0
@@ -8060,83 +8270,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1370966738}
   m_CullTransparentMesh: 0
---- !u!1 &1391006223
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1391006224}
-  - component: {fileID: 1391006226}
-  - component: {fileID: 1391006227}
-  m_Layer: 0
-  m_Name: Image
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1391006224
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1391006223}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1961290207}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!222 &1391006226
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1391006223}
-  m_CullTransparentMesh: 1
---- !u!114 &1391006227
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1391006223}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e936f56a9168958458958fdd68d10b69, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Material: {fileID: 2100000, guid: 3c94891c28e1a33438d93534216936cd, type: 2}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 0
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: f168bd78da5483647b8e123f79a1fca0, type: 3}
-  m_Type: 0
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
-  appendShadow: 1
-  shadowOffsetLocal: {x: 8, y: -8}
 --- !u!1 &1392620869
 GameObject:
   m_ObjectHideFlags: 0
@@ -8433,6 +8566,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 3
   imageType: 0
   materialMode: 0
@@ -8727,6 +8867,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 5
   imageType: 0
   materialMode: 0
@@ -8946,6 +9093,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 2
   imageType: 0
   materialMode: 0
@@ -9240,6 +9394,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 1
   imageType: 0
   materialMode: 0
@@ -9459,6 +9620,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 9
   imageType: 0
   materialMode: 0
@@ -9678,6 +9846,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 10
   imageType: 0
   materialMode: 0
@@ -9897,6 +10072,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 4
   imageType: 0
   materialMode: 0
@@ -10299,6 +10481,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 4
   imageType: 0
   materialMode: 0
@@ -10594,6 +10783,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 2
   imageType: 0
   materialMode: 0
@@ -10963,6 +11159,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 2
   imageType: 0
   materialMode: 0
@@ -11586,6 +11789,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 0
   imageType: 0
   materialMode: 0
@@ -11880,6 +12090,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 0
   imageType: 0
   materialMode: 0
@@ -12076,7 +12293,6 @@ RectTransform:
   - {fileID: 2101935646}
   - {fileID: 228356460}
   - {fileID: 1138596009}
-  - {fileID: 1391006224}
   - {fileID: 840304}
   - {fileID: 1525572497}
   - {fileID: 966567568}
@@ -12229,6 +12445,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 0
   imageType: 0
   materialMode: 0
@@ -12448,6 +12671,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
   drawShape: 0
   imageType: 0
   materialMode: 0
