@@ -5463,7 +5463,7 @@ MonoBehaviour:
   m_PixelsPerUnitMultiplier: 1
   appendShadow: 1
   shadowOffsetLocal: {x: 8, y: -8}
-  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowColor: {r: 1, g: 0.15294118, b: 0, a: 1}
   shadowBlurIntensity: 1
   samplingWidth: 1
   samplingScale: 1
