@@ -41,7 +41,7 @@ namespace ReunionMovement.UI.ButtonAnimated
 
         public float transitionDuration = 0.2f;
 
-        private Image image;
+        private Image targetImage;
         private TextMeshProUGUI tmpText;
         private Coroutine animCoroutine;
         private Coroutine submitCoroutine;
@@ -82,7 +82,7 @@ namespace ReunionMovement.UI.ButtonAnimated
         protected override void Awake()
         {
             base.Awake();
-            image = GetComponent<Image>();
+            targetImage = GetComponent<Image>();
             tmpText = GetComponentInChildren<TextMeshProUGUI>();
         }
 
@@ -427,10 +427,10 @@ namespace ReunionMovement.UI.ButtonAnimated
             // 直接同步设置属性，避免失活时启动协程
             var setting = GetSetting(ButtonAniState.Disabled);
             transform.localScale = setting.scale;
-            if (image)
+            if (targetImage)
             {
-                image.color = setting.imageColor;
-                if (setting.image != null) image.sprite = setting.image;
+                targetImage.color = setting.imageColor;
+                if (setting.image != null) targetImage.sprite = setting.image;
             }
             if (tmpText)
             {
@@ -484,11 +484,11 @@ namespace ReunionMovement.UI.ButtonAnimated
             float duration = instant ? 0f : transitionDuration;
             Vector3 startScale = transform.localScale;
             Vector3 endScale = setting.scale;
-            Color startImgColor = image ? image.color : Color.white;
+            Color startImgColor = targetImage ? targetImage.color : Color.white;
             Color endImgColor = setting.imageColor;
             Color startTextColor = tmpText ? tmpText.color : Color.white;
             Color endTextColor = setting.textColor;
-            Sprite startSprite = image ? image.sprite : null;
+            Sprite startSprite = targetImage ? targetImage.sprite : null;
             Sprite endSprite = setting.image;
             string startText = tmpText ? tmpText.text : null;
             string endText = setting.text;
@@ -497,10 +497,10 @@ namespace ReunionMovement.UI.ButtonAnimated
             {
                 float lerp = duration > 0 ? t / duration : 1f;
                 transform.localScale = Vector3.Lerp(startScale, endScale, lerp);
-                if (image)
+                if (targetImage)
                 {
-                    image.color = Color.Lerp(startImgColor, endImgColor, lerp);
-                    if (endSprite != null) image.sprite = endSprite;
+                    targetImage.color = Color.Lerp(startImgColor, endImgColor, lerp);
+                    if (endSprite != null) targetImage.sprite = endSprite;
                 }
                 if (tmpText)
                 {
@@ -511,10 +511,10 @@ namespace ReunionMovement.UI.ButtonAnimated
                 yield return null;
             }
             transform.localScale = endScale;
-            if (image)
+            if (targetImage)
             {
-                image.color = endImgColor;
-                if (endSprite != null) image.sprite = endSprite;
+                targetImage.color = endImgColor;
+                if (endSprite != null) targetImage.sprite = endSprite;
             }
             if (tmpText)
             {

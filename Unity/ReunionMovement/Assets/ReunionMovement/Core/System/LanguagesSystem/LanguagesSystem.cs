@@ -26,7 +26,7 @@ namespace ReunionMovement.Core.Languages
         public Multilingual multilingual = Multilingual.ZH_CN;
         private LanguagesContainer languagesContainer;
 
-        public async Task Init()
+        public Task Init()
         {
             initProgress = 0;
 
@@ -40,6 +40,7 @@ namespace ReunionMovement.Core.Languages
             initProgress = 100;
             IsInited = true;
             Log.Debug("LanguagesSystem 初始化完成");
+            return Task.CompletedTask;
         }
 
         public void Update(float logicTime, float realTime)
@@ -47,9 +48,15 @@ namespace ReunionMovement.Core.Languages
 
         }
 
-        public void Clear()
+        public new void Clear()
         {
             Log.Debug("LanguagesSystem 清除数据");
+            // 清除基类维护的观察者列表
+            base.Clear();
+            // 重置初始化状态和相关数据
+            IsInited = false;
+            initProgress = 0;
+            languagesContainer = null;
         }
 
         /// <summary>

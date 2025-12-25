@@ -346,12 +346,78 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  drawShape: 3
+  appendShadow: 1
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 1, g: 1, b: 1, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
+  shadowMode: 1
+  drawShape: 0
   imageType: 0
   materialMode: 0
+  blurType: 0
+  blurIntensity: 0
+  transitionMode: 3
+  transitionTexture: {fileID: 2800000, guid: 9cd54f7c9ad00984a86d3f631eb9683c, type: 3}
+  transitionTexScale: {x: 1, y: 1}
+  transitionTexOffset: {x: 0, y: 0}
+  transitionTexRotation: 0
+  transitionKeepAspectRatio: 0
+  transitionRate: 0
+  transitionColor: {r: 1, g: 0.5379276, b: 0, a: 1}
+  transitionWidth: 0.2
+  transitionSoftness: 0.3
+  transitionReverse: 0
+  transitionSpeed: {x: 0, y: 0}
+  transitionPatternReverse: 0
+  transitionAutoPlaySpeed: 0
+  transitionColorFilter: 4
+  transitionColorGlow: 0
+  transitionGradient: {fileID: 0}
+  transitionGradientValue:
+    serializedVersion: 2
+    key0: {r: 1, g: 1, b: 1, a: 1}
+    key1: {r: 1, g: 1, b: 1, a: 1}
+    key2: {r: 0, g: 0, b: 0, a: 0}
+    key3: {r: 0, g: 0, b: 0, a: 0}
+    key4: {r: 0, g: 0, b: 0, a: 0}
+    key5: {r: 0, g: 0, b: 0, a: 0}
+    key6: {r: 0, g: 0, b: 0, a: 0}
+    key7: {r: 0, g: 0, b: 0, a: 0}
+    ctime0: 0
+    ctime1: 65535
+    ctime2: 0
+    ctime3: 0
+    ctime4: 0
+    ctime5: 0
+    ctime6: 0
+    ctime7: 0
+    atime0: 0
+    atime1: 65535
+    atime2: 0
+    atime3: 0
+    atime4: 0
+    atime5: 0
+    atime6: 0
+    atime7: 0
+    m_Mode: 0
+    m_ColorSpace: -1
+    m_NumColorKeys: 2
+    m_NumAlphaKeys: 2
+  transitionRange: {x: 0, y: 0}
+  transitionClamp: 1
+  transitionTexClampPadding: 1
+  transitionUseUv0: 1
   strokeWidth: 0
   outlineWidth: 0
-  outlineColor: {r: 0, g: 0, b: 0, a: 1}
+  outlineColor: {r: 1, g: 1, b: 1, a: 1}
+  shadowMirrorDirection: 0
+  shadowMirrorScale: 1
+  shadowMirrorOffset: {x: 0, y: 0}
+  shadowMirrorShowSource: 0
+  shadowMirrorTintMix: 0.5
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -512,15 +578,81 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  drawShape: 3
+  appendShadow: 1
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 1, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  allowOutOfBoundsShadow: 1
+  shadowMode: 1
+  drawShape: 0
   imageType: 0
   materialMode: 0
+  blurType: 0
+  blurIntensity: 1
+  transitionMode: 3
+  transitionTexture: {fileID: 2800000, guid: 9cd54f7c9ad00984a86d3f631eb9683c, type: 3}
+  transitionTexScale: {x: 1, y: 1}
+  transitionTexOffset: {x: 0, y: 0}
+  transitionTexRotation: 0
+  transitionKeepAspectRatio: 0
+  transitionRate: 0
+  transitionColor: {r: 1, g: 0.5379276, b: 0, a: 1}
+  transitionWidth: 0.2
+  transitionSoftness: 0.3
+  transitionReverse: 0
+  transitionSpeed: {x: 0, y: 0}
+  transitionPatternReverse: 0
+  transitionAutoPlaySpeed: 0
+  transitionColorFilter: 4
+  transitionColorGlow: 0
+  transitionGradient: {fileID: 0}
+  transitionGradientValue:
+    serializedVersion: 2
+    key0: {r: 1, g: 1, b: 1, a: 1}
+    key1: {r: 1, g: 1, b: 1, a: 1}
+    key2: {r: 0, g: 0, b: 0, a: 0}
+    key3: {r: 0, g: 0, b: 0, a: 0}
+    key4: {r: 0, g: 0, b: 0, a: 0}
+    key5: {r: 0, g: 0, b: 0, a: 0}
+    key6: {r: 0, g: 0, b: 0, a: 0}
+    key7: {r: 0, g: 0, b: 0, a: 0}
+    ctime0: 0
+    ctime1: 65535
+    ctime2: 0
+    ctime3: 0
+    ctime4: 0
+    ctime5: 0
+    ctime6: 0
+    ctime7: 0
+    atime0: 0
+    atime1: 65535
+    atime2: 0
+    atime3: 0
+    atime4: 0
+    atime5: 0
+    atime6: 0
+    atime7: 0
+    m_Mode: 0
+    m_ColorSpace: -1
+    m_NumColorKeys: 2
+    m_NumAlphaKeys: 2
+  transitionRange: {x: 0, y: 0}
+  transitionClamp: 1
+  transitionTexClampPadding: 1
+  transitionUseUv0: 1
   strokeWidth: 0
   outlineWidth: 0
-  outlineColor: {r: 0, g: 0, b: 0, a: 1}
+  outlineColor: {r: 1, g: 1, b: 1, a: 1}
+  shadowMirrorDirection: 0
+  shadowMirrorScale: 1
+  shadowMirrorOffset: {x: 0, y: 0}
+  shadowMirrorShowSource: 0
+  shadowMirrorTintMix: 0.5
   customTime: 0
   enableDashedOutline: 0
-  falloffDistance: 0.5
+  falloffDistance: 0
   constrainRotation: 1
   shapeRotation: 0
   flipHorizontal: 0

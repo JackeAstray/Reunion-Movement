@@ -21,18 +21,32 @@ namespace ReunionMovement.Core.Terminal
         Keyboard keyboard;
         public TerminalRequest terminalRequest { get; private set; }
 
-        public async Task Init()
+        public Task Init()
         {
             initProgress = 0;
 
             keyboard = Keyboard.current;
-            terminalRequest = new TerminalRequest();
+
+            // 创建或查找TerminalRequest MonoBehaviour，而不是使用“new”
+            var existing = GameObject.FindFirstObjectByType<TerminalRequest>();
+            if (existing != null)
+            {
+                terminalRequest = existing;
+            }
+            else
+            {
+                var go = new GameObject("TerminalRequest");
+                UnityEngine.Object.DontDestroyOnLoad(go);
+                terminalRequest = go.AddComponent<TerminalRequest>();
+            }
 
             terminalRequest.RegisterCommands();
 
             initProgress = 100;
             IsInited = true;
             Log.Debug("TerminalSystem 初始化完成");
+
+            return Task.CompletedTask;
         }
 
         public void Update(float logicTime, float realTime)

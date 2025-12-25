@@ -52,7 +52,7 @@ namespace ReunionMovement.Core.Sound
         //生成对象池 特效
         private Dictionary<GameObject, GameObject> sfxObjects = new Dictionary<GameObject, GameObject>();
         #endregion
-        public async Task Init()
+        public Task Init()
         {
             initProgress = 0;
 
@@ -79,6 +79,8 @@ namespace ReunionMovement.Core.Sound
             initProgress = 100;
             IsInited = true;
             Log.Debug("SoundSystem 初始化完成");
+
+            return Task.CompletedTask;
         }
 
         public void Update(float logicTime, float realTime)

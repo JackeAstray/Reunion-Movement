@@ -206,7 +206,7 @@ namespace ReunionMovement.Common.Util.Download
         /// </summary>
         /// <param name="uri"></param>
         /// <returns></returns>
-        public override async Task<bool> Download(string uri)
+        public override Task<bool> Download(string uri)
         {
             if (!Downloading)
             {
@@ -237,7 +237,7 @@ namespace ReunionMovement.Common.Util.Download
             }
 
             OnDownloadIndividualInvoked?.Invoke(uri);
-            return true;
+            return Task.FromResult(true);
         }
 
         /// <summary>
@@ -440,7 +440,7 @@ namespace ReunionMovement.Common.Util.Download
         /// </summary>
         /// <param name="uri"></param>
         /// <returns></returns>
-        public override async Task<bool> Cancel(string uri)
+        public override Task<bool> Cancel(string uri)
         {
             OnCancelIndividual?.Invoke(uri);
 
@@ -454,13 +454,13 @@ namespace ReunionMovement.Common.Util.Download
             else if (!executorsOld.Any(idf => idf.Uri == uri))
             {
                 Log.Error($"对从未调用过的URI调用取消 {uri}");
-                return false;
+                return Task.FromResult(false);
             }
             else
             {
                 Log.Error("对已完成的URI调用取消");
             }
-            return true;
+            return Task.FromResult(true);
         }
 
         /// <summary>

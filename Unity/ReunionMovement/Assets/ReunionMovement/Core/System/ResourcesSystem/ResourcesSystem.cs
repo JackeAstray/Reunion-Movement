@@ -29,11 +29,12 @@ namespace ReunionMovement.Core.Resources
         private Dictionary<string, Object> resourceTable = new Dictionary<string, Object>();
         private Dictionary<string, int> resourceRefCount = new Dictionary<string, int>();
 
-        public async Task Init()
+        public Task Init()
         {
             initProgress = 100;
             IsInited = true;
             Log.Debug("ResourcesSystem 初始化完成");
+            return Task.CompletedTask;
         }
 
         public void Update(float logicTime, float realTime)
