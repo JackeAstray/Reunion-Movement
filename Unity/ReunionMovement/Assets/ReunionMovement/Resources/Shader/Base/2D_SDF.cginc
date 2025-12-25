@@ -289,6 +289,7 @@ float sdLine(float2 p, float2 a, float2 b)
     return length(pa - ba * h);
 }
 
+// 角度重复
 float2 opRepAng(float2 p, float theta, float offset)
 {
     float a = atan2(p.y, p.x) - offset;
