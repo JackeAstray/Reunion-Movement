@@ -294,6 +294,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 是否启用虚线轮廓
+        /// </summary>
         public int EnableDashedOutline
         {
             get => enableDashedOutline;
@@ -308,6 +311,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 自定义时间参数，可用于动画效果
+        /// </summary>
         public float CustomTime
         {
             get => customTime;
@@ -322,6 +328,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 阴影镜像的方向
+        /// </summary>
         public ShadowDirection ShadowMirrorDirection
         {
             get => shadowMirrorDirection;
@@ -332,6 +341,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 阴影镜像的缩放比例
+        /// </summary>
         public float ShadowMirrorScale
         {
             get => shadowMirrorScale;
@@ -352,6 +364,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 阴影镜像的偏移量
+        /// </summary>
         public Vector2 ShadowMirrorOffset
         {
             get => shadowMirrorOffset;
@@ -362,6 +377,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 阴影镜像的颜色混合比例
+        /// </summary>
         public float ShadowMirrorTintMix
         {
             get => shadowMirrorTintMix;
@@ -495,10 +513,10 @@ namespace ReunionMovement.UI.ImageExtensions
         }
 
         /// <summary>
-        /// Defines what material type of use to render the shape. Dynamic or Shared.
-        /// Default is Dynamic and will issue one draw call per image object. If set to shared, assigned
-        /// material in the material slot will be used to render the image. It will fallback to dynamic
-        /// if no material in the material slot is assigned
+        /// 定义用于渲染形状的材质类型。可选 Dynamic 或 Shared。
+        /// 默认值为 Dynamic，每个 image 对象会产生一个绘制调用。
+        /// 如果设置为 Shared，则会使用组件中分配的共享材质来渲染；
+        /// 如果材质槽没有分配材质，则回退为动态材质。
         /// </summary>
         public MaterialMode MaterialMode
         {
@@ -579,7 +597,9 @@ namespace ReunionMovement.UI.ImageExtensions
         }
 
         #endregion
-
+        /// <summary>
+        /// 三角形
+        /// </summary>
         public TriangleImg Triangle
         {
             get => triangle;
@@ -590,6 +610,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 矩形
+        /// </summary>
         public RectangleImg Rectangle
         {
             get => rectangle;
@@ -600,6 +623,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 圆形
+        /// </summary>
         public CircleImg Circle
         {
             get => circle;
@@ -610,6 +636,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 五边形
+        /// </summary>
         public PentagonImg Pentagon
         {
             get => pentagon;
@@ -620,6 +649,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 六边形
+        /// </summary>
         public HexagonImg Hexagon
         {
             get => hexagon;
@@ -630,6 +662,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 圆角矩形
+        /// </summary>
         public ChamferBoxImg ChamferBox
         {
             get => chamferBox;
@@ -640,6 +675,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 平行四边形
+        /// </summary>
         public ParallelogramImg Parallelogram
         {
             get => parallelogram;
@@ -650,6 +688,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// N星形多边形
+        /// </summary>
         public NStarPolygonImg NStarPolygon
         {
             get => nStarPolygon;
@@ -660,6 +701,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 爱心形状
+        /// </summary>
         public HeartImg Heart
         {
             get => heart;
@@ -670,6 +714,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 圆润十字形
+        /// </summary>
         public BlobbyCrossImg BlobbyCross
         {
             get => blobbyCross;
@@ -680,6 +727,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 圆角四边形
+        /// </summary>
         public SquircleImg Squircle
         {
             get => squircle;
@@ -690,6 +740,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 圆角三角形
+        /// </summary>
         public NTriangleRoundedImg NTriangleRounded
         {
             get => nTriangleRounded;
@@ -700,6 +753,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 渐变效果
+        /// </summary>
         public GradientEffect GradientEffect
         {
             get => gradientEffect;
@@ -710,6 +766,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 模糊类型
+        /// </summary>
         public BlurType Blur
         {
             get => blurType;
@@ -720,6 +779,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 模糊强度
+        /// </summary>
         public float BlurIntensity
         {
             get => blurIntensity;
@@ -730,6 +792,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 过渡模式
+        /// </summary>
         public TransitionMode Transition
         {
             get => transitionMode;
@@ -740,6 +805,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 过渡纹理
+        /// </summary>
         public Texture TransitionTexture
         {
             get => transitionTexture;
@@ -750,6 +818,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 过渡纹理的缩放
+        /// </summary>
         public Vector2 TransitionTexScale
         {
             get => transitionTexScale;
@@ -760,6 +831,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 过渡纹理的缩放
+        /// </summary>
         public Vector2 TransitionTexOffset
         {
             get => transitionTexOffset;
@@ -770,6 +844,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 过渡纹理的旋转角度
+        /// </summary>
         public float TransitionTexRotation
         {
             get => transitionTexRotation;
@@ -780,6 +857,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 是否保持过渡纹理的宽高比
+        /// </summary>
         public bool TransitionKeepAspectRatio
         {
             get => transitionKeepAspectRatio;
@@ -790,6 +870,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 过渡的进度
+        /// </summary>
         public float TransitionRate
         {
             get => transitionRate;
@@ -800,6 +883,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 过渡颜色
+        /// </summary>
         public Color TransitionColor
         {
             get => transitionColor;
@@ -810,6 +896,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 过渡的宽度
+        /// </summary>
         public float TransitionWidth
         {
             get => transitionWidth;
@@ -830,6 +919,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 是否反转过渡效果
+        /// </summary>
         public bool TransitionReverse
         {
             get => transitionReverse;
@@ -840,6 +932,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 过渡纹理的移动速度
+        /// </summary>
         public Vector2 TransitionSpeed
         {
             get => transitionSpeed;
@@ -850,6 +945,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 是否反转过渡纹理的图案
+        /// </summary>
         public bool TransitionPatternReverse
         {
             get => transitionPatternReverse;
@@ -860,6 +958,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 过渡自动播放速度
+        /// </summary>
         public float TransitionAutoPlaySpeed
         {
             get => transitionAutoPlaySpeed;
@@ -870,6 +971,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 过渡颜色滤镜模式
+        /// </summary>
         public ColorMode TransitionColorFilter
         {
             get => transitionColorFilter;
@@ -880,6 +984,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 是否启用过渡颜色发光效果
+        /// </summary>
         public bool TransitionColorGlow
         {
             get => transitionColorGlow;
@@ -890,6 +997,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 过渡渐变纹理
+        /// </summary>
         public Texture TransitionGradient
         {
             get => transitionGradient;
@@ -900,6 +1010,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 过渡渐变的值
+        /// </summary>
         public Gradient TransitionGradientValue
         {
             get => transitionGradientValue;
@@ -910,6 +1023,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 过渡渐变的范围
+        /// </summary>
         public Vector2 TransitionRange
         {
             get => transitionRange;
@@ -920,6 +1036,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 是否在过渡过程中夹紧纹理坐标
+        /// </summary>
         public bool TransitionClamp
         {
             get => transitionClamp;
@@ -930,6 +1049,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 过渡纹理夹紧的填充量
+        /// </summary>
         public float TransitionTexClampPadding
         {
             get => transitionTexClampPadding;
@@ -940,6 +1062,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 是否使用UV0坐标进行过渡效果
+        /// </summary>
         public bool TransitionUseUv0
         {
             get => transitionUseUv0;
@@ -950,6 +1075,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 阴影颜色
+        /// </summary>
         public Color ShadowColor
         {
             get => shadowColor;
@@ -960,6 +1088,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 阴影模糊强度
+        /// </summary>
         public float ShadowBlurIntensity
         {
             get => shadowBlurIntensity;
@@ -970,6 +1101,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 阴影采样宽度
+        /// </summary>
         public float SamplingWidth
         {
             get => samplingWidth;
@@ -980,6 +1114,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 阴影采样缩放比例
+        /// </summary>
         public float SamplingScale
         {
             get => samplingScale;
@@ -990,6 +1127,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 是否允许阴影超出边界绘制
+        /// </summary>
         public bool AllowOutOfBoundsShadow
         {
             get => allowOutOfBoundsShadow;
@@ -1000,6 +1140,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        /// <summary>
+        /// 阴影模式
+        /// </summary>
         public ShadowMode Shadow
         {
             get => shadowMode;
@@ -1024,7 +1167,7 @@ namespace ReunionMovement.UI.ImageExtensions
                     Shader shader = Shader.Find(shaderName);
                     if (shader == null)
                     {
-                        Debug.LogWarning($"Shader '{shaderName}' not found. Falling back to 'Sprites/Default'.");
+                        Debug.LogWarning($"着色器 '{shaderName}' 未找到，已回退到 'Sprites/Default'。请确认项目中存在对应着色器。");
                         shader = Shader.Find("Sprites/Default");
                     }
 
@@ -1035,7 +1178,7 @@ namespace ReunionMovement.UI.ImageExtensions
                     }
                     else
                     {
-                        // As a last resort, create a basic material to avoid null refs
+                        // 最后手段：创建一个基础材质以避免空引用错误
                         dynamicMaterial = new Material(Shader.Find("Hidden/InternalErrorShader"));
                         dynamicMaterial.name += " [Dynamic - Fallback]";
                     }
@@ -1319,8 +1462,8 @@ namespace ReunionMovement.UI.ImageExtensions
             {
                 case Type.Simple:
                 case Type.Sliced:
-                    // Use overload that can append a shadow quad. Shadow support is exposed in the editor under Transition settings.
-                    // If flipped, shadow offset should follow flip so shadow remains on correct side
+                    // 使用可追加阴影四边形的重载方法。编辑器中的过渡设置中启用了阴影支持。
+                    // 如果图像被翻转，阴影偏移也应随之翻转，以保证阴影仍在正确的一侧。
                     Vector2 effectiveShadowOffset = shadowOffsetLocal;
                     if (flipHorizontal) effectiveShadowOffset.x = -effectiveShadowOffset.x;
                     if (flipVertical) effectiveShadowOffset.y = -effectiveShadowOffset.y;
@@ -1361,7 +1504,7 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.SetFloat(outlineWidth_Sp, outlineWidth);
             mat.SetInt(enableDashedOutline_Sp, enableDashedOutline);
             mat.SetFloat(customTime_Sp, customTime);
-            // OUTLINED8 removed - no-op
+            // 已移除 OUTLINED8 - 无操作
 
 
             mat.SetFloat(strokeWidth_Sp, strokeWidth);
@@ -1655,7 +1798,7 @@ namespace ReunionMovement.UI.ImageExtensions
             if (m_Material == null) return;
             Material mat = m_Material;
 
-            //Basic Settings
+            // 基本设置
             drawShape = (DrawShape)mat.GetInt(drawShape_Sp);
 
             blurType = (BlurType)mat.GetInt(blurType_Sp);
@@ -1691,7 +1834,7 @@ namespace ReunionMovement.UI.ImageExtensions
             enableDashedOutline = mat.GetInt(enableDashedOutline_Sp);
             customTime = mat.GetFloat(customTime_Sp);
 
-            // Shadow mirror direction
+            // 阴影镜像方向
             shadowMirrorDirection = (ShadowDirection)mat.GetInt(shadowMirrorDirection_Sp);
 
             shadowMirrorScale = mat.GetFloat(shadowMirrorScale_Sp);
@@ -1724,7 +1867,7 @@ namespace ReunionMovement.UI.ImageExtensions
             squircle.InitValuesFromMaterial(ref mat);
             nTriangleRounded.InitValuesFromMaterial(ref mat);
 
-            //GradientEffect
+            // GradientEffect
             gradientEffect.InitValuesFromMaterial(ref mat);
         }
 

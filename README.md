@@ -80,6 +80,7 @@ Display scenes of ImageEX and shader<br>
     - Plugins
     - Resources
     - Scenes
+      - Example
     - Utils
 
 ## Thanks：<a name="Thanks"></a>
