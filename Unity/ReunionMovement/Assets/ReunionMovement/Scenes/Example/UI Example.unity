@@ -169,7 +169,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0, b: 0.33849812, a: 1}
+  m_Color: {r: 1, g: 0, b: 0.337255, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -199,21 +199,21 @@ MonoBehaviour:
   materialMode: 0
   blurType: 0
   blurIntensity: 1
-  transitionMode: 0
-  transitionTexture: {fileID: 0}
+  transitionMode: 4
+  transitionTexture: {fileID: 2800000, guid: c51cbd39373c20140b3c70b60f9c4d6f, type: 3}
   transitionTexScale: {x: 1, y: 1}
   transitionTexOffset: {x: 0, y: 0}
-  transitionTexRotation: 0
+  transitionTexRotation: 220
   transitionKeepAspectRatio: 0
   transitionRate: 0
-  transitionColor: {r: 1, g: 1, b: 1, a: 1}
-  transitionWidth: 0.1
-  transitionSoftness: 0.1
+  transitionColor: {r: 0, g: 0.035513878, b: 1, a: 1}
+  transitionWidth: 0.2
+  transitionSoftness: 0.2
   transitionReverse: 0
   transitionSpeed: {x: 0, y: 0}
   transitionPatternReverse: 0
-  transitionAutoPlaySpeed: 0
-  transitionColorFilter: 0
+  transitionAutoPlaySpeed: 1
+  transitionColorFilter: 6
   transitionColorGlow: 0
   transitionGradient: {fileID: 0}
   transitionGradientValue:
