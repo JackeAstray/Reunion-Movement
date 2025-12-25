@@ -20,13 +20,19 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
         private SerializedProperty spPreserveAspect;
         private SerializedProperty spFillMethod, spFillOrigin, spFillAmount, spFillClockwise;
         private SerializedProperty spAlphaThreshold;
+        private SerializedProperty spConstrainRotation, spShapeRotation, spFlipHorizontal, spFlipVertical;
         private SerializedProperty spShape;
         private SerializedProperty spStrokeWidth, spOutlineWidth, spOutlineColor, spFalloffDistance, spEnableDashedOutline, spCustomTime;
-        private SerializedProperty spConstrainRotation, spShapeRotation, spFlipHorizontal, spFlipVertical;
+        private SerializedProperty spShadowMirrorDirection;
+        private SerializedProperty spShadowMirrorScale, spShadowMirrorOffset;
+        private SerializedProperty spShadowMirrorShowSource;
+        private SerializedProperty spShadowMirrorTintMix;
+
         private SerializedProperty spMaterialSettings, spMaterial, spImageType;
 
         private SerializedProperty spGradient;
         private SerializedProperty spBlurType, spBlurIntensity;
+        private SerializedProperty spShadowMode;
         private SerializedProperty spTransitionMode, spTransitionTex, spTransitionRate, spTransitionColor, spTransitionWidth, spTransitionSoftness, spTransitionReverse;
         private SerializedProperty spTransitionTexScale, spTransitionTexOffset, spTransitionTexRotation, spTransitionKeepAspectRatio;
         private SerializedProperty spTransitionSpeed, spTransitionPatternReverse, spTransitionAutoPlaySpeed, spTransitionColorFilter, spTransitionColorGlow, spTransitionGradient, spTransitionGradientValue, spTransitionRange;
@@ -55,6 +61,11 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             spFalloffDistance = serializedObject.FindProperty("falloffDistance");
             spEnableDashedOutline = serializedObject.FindProperty("enableDashedOutline");
             spCustomTime = serializedObject.FindProperty("customTime");
+            spShadowMirrorDirection = serializedObject.FindProperty("shadowMirrorDirection");
+            spShadowMirrorScale = serializedObject.FindProperty("shadowMirrorScale");
+            spShadowMirrorOffset = serializedObject.FindProperty("shadowMirrorOffset");
+            spShadowMirrorShowSource = serializedObject.FindProperty("shadowMirrorShowSource");
+            spShadowMirrorTintMix = serializedObject.FindProperty("shadowMirrorTintMix");
 
             spMaterialSettings = serializedObject.FindProperty("materialMode");
             spMaterial = serializedObject.FindProperty("m_Material");
@@ -90,6 +101,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             spGradient = serializedObject.FindProperty("gradientEffect");
             spBlurType = serializedObject.FindProperty("blurType");
             spBlurIntensity = serializedObject.FindProperty("blurIntensity");
+            spShadowMode = serializedObject.FindProperty("shadowMode");
 
             spTransitionMode = serializedObject.FindProperty("transitionMode");
             spTransitionTex = serializedObject.FindProperty("transitionTexture");
@@ -320,6 +332,9 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
 
                         EditorGUILayout.PropertyField(spShadowOffsetLocal, new GUIContent("阴影偏移 (本地)"));
 
+                        // Shadow type dropdown
+                        EditorGUILayout.PropertyField(spShadowMode, new GUIContent("阴影类型"));
+
                         // 阴影颜色（HDR）
                         SerializedProperty spShadowColor = serializedObject.FindProperty("shadowColor");
                         EditorGUI.BeginChangeCheck();
@@ -332,6 +347,18 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingWidth"), new GUIContent("采样宽度"));
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingScale"), new GUIContent("采样缩放"));
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("allowOutOfBoundsShadow"), new GUIContent("允许超出边界阴影"));
+
+                        // Show 'show source' only when ShadowMode is Mirror
+                        if (!spShadowMode.hasMultipleDifferentValues && spShadowMode.intValue == (int)ImageEx.ShadowMode.Mirror)
+                        {
+                            EditorGUILayout.PropertyField(spShadowMirrorDirection, new GUIContent("镜像方向"));
+                            EditorGUILayout.PropertyField(spShadowMirrorScale, new GUIContent("镜像缩放"));
+                            EditorGUILayout.PropertyField(spShadowMirrorOffset, new GUIContent("镜像偏移"));
+                            if (spShadowMirrorShowSource != null)
+                                EditorGUILayout.PropertyField(spShadowMirrorShowSource, new GUIContent("显示原图"));
+                            if (spShadowMirrorTintMix != null)
+                                EditorGUILayout.PropertyField(spShadowMirrorTintMix, new GUIContent("镜像混合"));
+                        }
 
                         EditorGUI.indentLevel--;
                     }
@@ -468,7 +495,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             EditorGUI.LabelField(line, "图像翻转");
 
             line.y += EditorGUIUtility.standardVerticalSpacing + EditorGUIUtility.singleLineHeight;
-            line.x = r.x + 10;
+            line.x = r.x;
             line.height = EditorGUIUtility.singleLineHeight;
             line.width = labelWidth - 10;
             EditorGUI.BeginDisabledGroup(spConstrainRotation.boolValue);
@@ -721,13 +748,13 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
 
                 EditorGUI.BeginDisabledGroup(spMaterial.objectReferenceValue != null);
                 {
-                    if (GUI.Button(new Rect(rect.x + rect.width - 55, rect.y, 55, EditorGUIUtility.singleLineHeight), "创建"))
+                    if (GUILayout.Button("使用精灵材质"))
                     {
-                        Material mat = ((ImageEx)target).CreateMaterialAssetFromComponentSettings();
-                        spMaterial.objectReferenceValue = mat;
+                        spMaterial.objectReferenceValue = null;
+
                         foreach (Object obj in targets)
                         {
-                            ((ImageEx)obj).material = mat;
+                            ((ImageEx)obj).material = null;
                             UnityEditor.EditorUtility.SetDirty(obj);
                         }
                     }

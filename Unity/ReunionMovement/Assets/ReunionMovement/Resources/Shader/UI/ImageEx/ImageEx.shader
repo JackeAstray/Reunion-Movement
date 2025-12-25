@@ -96,7 +96,13 @@ Shader "ReunionMovement/UI/ImageEx"
         _SamplingWidth ("Sampling Width", Float) = 1
         _SamplingScale ("Sampling Scale", Float) = 1
         _AllowOutOfBoundsShadow ("Allow Out Of Bounds Shadow", Float) = 1
-         
+        _ShadowMode ("Shadow Mode", Int) = 0
+        _ShadowMirrorDirection ("Shadow Mirror Direction", Int) = 0
+        _ShadowMirrorScale ("Shadow Mirror Scale", Float) = 1
+        _ShadowMirrorOffset ("Shadow Mirror Offset", Vector) = (0,0,0,0)
+        _ShadowMirrorShowSource ("Shadow Mirror Show Source", Float) = 0
+        _ShadowMirrorTintMix ("Shadow Mirror Tint Mix", Range(0,1)) = 0.5
+
         _BlobbyCrossTime ("水滴十字形状的动态时间参数", Float) = 0
         _SquircleTime ("方圆形形状的动态时间参数", Float) = 1
         _NTriangleRoundedTime ("N三角形圆角形状的动态时间参数", Float) = 0
@@ -196,6 +202,12 @@ Shader "ReunionMovement/UI/ImageEx"
             float _SamplingWidth;
             float _SamplingScale;
             float _AllowOutOfBoundsShadow;
+            int _ShadowMode;
+            int _ShadowMirrorDirection;
+            float _ShadowMirrorScale;
+            float2 _ShadowMirrorOffset;
+            float _ShadowMirrorShowSource;
+            float _ShadowMirrorTintMix;
 
             half _OutlineWidth;
             half4 _OutlineColor;
@@ -1067,82 +1079,140 @@ Shader "ReunionMovement/UI/ImageEx"
             //片元着色器
             fixed4 frag(v2f IN): SV_Target
             {
-                // Detect shadow vertex and render shadow using separate logic
+                // Prepare UVs/transition info before deciding shadow or main fragment so shadow can follow transitions.
                 half4 color = IN.color;
-                bool isShadowVertex = color.a > 0.001 && color.r < 0.001 && color.g < 0.001 && color.b < 0.001;
-
-                if (isShadowVertex)
-                {
-                    float2 texel = _MainTex_TexelSize.xy * _SamplingScale * _SamplingWidth;
-
-                    half4 blurSample = 0;
-                    bool allowOOB = _AllowOutOfBoundsShadow > 0.5;
-
-                    if (_ShadowBlurIntensity <= 0.001)
-                    {
-                        float2 sampleUv = IN.texcoord;
-                        if (!allowOOB) sampleUv = saturate(sampleUv);
-                        blurSample = tex2D(_MainTex, sampleUv);
-                    }
-                    else
-                    {
-                        const float w[9] = {1.0/16.0, 2.0/16.0, 1.0/16.0,
-                                             2.0/16.0, 4.0/16.0, 2.0/16.0,
-                                             1.0/16.0, 2.0/16.0, 1.0/16.0};
-                        float s = saturate(_ShadowBlurIntensity);
-                        float2 off;
-                        int idx = 0;
-                        for (int y = -1; y <= 1; ++y)
-                        {
-                            for (int x = -1; x <= 1; ++x)
-                            {
-                                off = float2(x, y) * texel * (0.5 + s);
-                                float2 uv = IN.texcoord + off;
-                                if (!allowOOB) uv = saturate(uv);
-                                idx = (y + 1) * 3 + (x + 1);
-                                blurSample += tex2D(_MainTex, uv) * w[idx];
-                            }
-                        }
-                    }
-
-                    float shadowMask = blurSample.a;
-                    float shadowAlpha = shadowMask * _ShadowColor.a * IN.color.a;
-                    half3 shadowPremult = _ShadowColor.rgb * shadowAlpha;
-                    return half4(shadowPremult, shadowAlpha);
-                }
-                
                 half2 texcoord = IN.texcoord;
                 float2 effectsUv = IN.effectsUv;
                 float2 transitionBaseUv = (_TransitionUseUv0 > 0.5) ? texcoord : effectsUv;
                 float2 transitionUv = transitionBaseUv;
                 float2 transitionFilterUv = transitionBaseUv;
 
-                // Transition Logic
+                // Transition Logic (compute transAlpha and allow move for melt/burn)
+                float transAlpha = 1;
                 #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
-                    float alpha = 1;
                     #if TRANSITION_PATTERN
-                        // UIEffect scaling logic
                         const half scale = lerp(100, 1, _TransitionWidth);
                         const half2 time = half2(-transition_rate() * 2, 0);
-                        
                         if (_TransitionTexRotation != 0)
                             transitionUv = rotateUV(transitionUv, radians(_TransitionTexRotation), float2(0.5, 0.5));
-                        
                         transitionFilterUv = transitionUv;
-
                         transitionUv = transitionUv * _TransitionTex_ST.xy * scale + _TransitionTex_ST.zw + time;
-                        
-                        alpha = tex2D(_TransitionTex, transitionUv).a;
-                        alpha = _TransitionReverse ? 1 - alpha : alpha;
+                        transAlpha = tex2D(_TransitionTex, transitionUv).a;
+                        transAlpha = _TransitionReverse ? 1 - transAlpha : transAlpha;
                     #else
-                        alpha = transition_alpha(transitionBaseUv);
+                        transAlpha = transition_alpha(transitionBaseUv);
                     #endif
 
                     // Move UVs for Melt/Burn
                     float4 uvMask = float4(0, 0, 1, 1); // Simplified mask for full rect
-                    texcoord += move_transition_filter(uvMask, alpha);
+                    texcoord += move_transition_filter(uvMask, transAlpha);
                 #endif
 
+                // Detect shadow vertex and render shadow using separate logic (but include transitions)
+                bool isShadowVertex = color.a > 0.001 && color.r < 0.001 && color.g < 0.001 && color.b < 0.001;
+
+                if (isShadowVertex)
+                {
+                    float2 texel = _MainTex_TexelSize.xy * _SamplingScale * _SamplingWidth;
+
+                     half4 blurSample = 0;
+                     bool allowOOB = _AllowOutOfBoundsShadow > 0.5;
+
+                     // Support different shadow modes: single sample (fast), gaussian blur, and 3-layer shadow (Shadow3)
+                     if (_ShadowMode == 2)
+                     {
+                         // Shadow3: three layered samples with increasing offset and decreasing weight
+                         float2 baseUv = texcoord;
+                         if (!allowOOB) baseUv = saturate(baseUv);
+                         float2 step = texel * (0.5 + saturate(_ShadowBlurIntensity));
+                         float2 uv0 = baseUv;
+                         float2 uv1 = texcoord + step;
+                         float2 uv2 = texcoord + step * 2.0;
+                         if (!allowOOB) { uv1 = saturate(uv1); uv2 = saturate(uv2); }
+                         const float w0 = 0.55;
+                         const float w1 = 0.30;
+                         const float w2 = 0.15;
+                         blurSample += tex2D(_MainTex, uv0) * w0;
+                         blurSample += tex2D(_MainTex, uv1) * w1;
+                         blurSample += tex2D(_MainTex, uv2) * w2;
+                     }
+                     else
+                     {
+                         if (_ShadowBlurIntensity <= 0.001)
+                         {
+                             float2 sampleUv = texcoord;
+                             if (!allowOOB) sampleUv = saturate(sampleUv);
+                             blurSample = tex2D(_MainTex, sampleUv);
+                         }
+                         else
+                         {
+                             const float w[9] = {1.0/16.0, 2.0/16.0, 1.0/16.0,
+                                                  2.0/16.0, 4.0/16.0, 2.0/16.0,
+                                                  1.0/16.0, 2.0/16.0, 1.0/16.0};
+                             float s = saturate(_ShadowBlurIntensity);
+                             float2 off;
+                             int idx = 0;
+                             for (int y = -1; y <= 1; ++y)
+                             {
+                                 for (int x = -1; x <= 1; ++x)
+                                 {
+                                     off = float2(x, y) * texel * (0.5 + s);
+                                     float2 uv = texcoord + off;
+                                     if (!allowOOB) uv = saturate(uv);
+                                     idx = (y + 1) * 3 + (x + 1);
+                                     blurSample += tex2D(_MainTex, uv) * w[idx];
+                                 }
+                             }
+                         }
+                     }
+
+                     // If Mirror mode, sample mirrored texture instead of blur mask to render reflection-like shadow
+                     if (_ShadowMode == 3)
+                     {
+                         float2 sampleUv = texcoord;
+                         // Mirror direction: 0 = Vertical (flip Y), 1 = Horizontal (flip X)
+                         if (_ShadowMirrorDirection == 1)
+                         {
+                             sampleUv.x = 1.0 - (sampleUv.x - 0.5) * _ShadowMirrorScale - 0.5 + _ShadowMirrorOffset.x;
+                         }
+                         else
+                         {
+                             sampleUv.y = 1.0 - (sampleUv.y - 0.5) * _ShadowMirrorScale - 0.5 + _ShadowMirrorOffset.y;
+                         }
+                         if (!_AllowOutOfBoundsShadow) sampleUv = saturate(sampleUv);
+                         fixed4 baseSample = tex2D(_MainTex, sampleUv) + _TextureSampleAdd;
+                         float baseA = baseSample.a;
+                         float shadowAlpha = baseA * _ShadowColor.a * IN.color.a;
+                         half4 shadowOut = half4(_ShadowColor.rgb * shadowAlpha, shadowAlpha);
+
+                         // Optionally show original sampled color instead of tinted shadow when requested
+                         if (_ShadowMirrorShowSource > 0.5)
+                         {
+                             // Blend between IN.color (per-vertex tint) and global _Color using _ShadowMirrorTintMix
+                             half4 tint = lerp(_ShadowColor, _Color, clamp(_ShadowMirrorTintMix, 0.0, 1.0));
+                             half4 src = baseSample * tint;
+                             // 同时将过渡应用于源
+                             #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
+                                 src = apply_transition_filter(src, transAlpha, transitionFilterUv);
+                             #endif
+                             return src;
+                         }
+
+                         return shadowOut;
+                     }
+
+                     float shadowMask = blurSample.a;
+                     float shadowAlpha = shadowMask * _ShadowColor.a * IN.color.a;
+                     half4 shadowOut = half4(_ShadowColor.rgb * shadowAlpha, shadowAlpha);
+
+                     // Apply transition filter to shadow so it follows the same transition as the main image
+                     #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
+                         shadowOut = apply_transition_filter(shadowOut, transAlpha, transitionFilterUv);
+                     #endif
+
+                     return shadowOut;
+                  }
+                  
                 color = ApplyBlur(texcoord) * color;
 
                 // keep original base sample
@@ -1167,7 +1237,7 @@ Shader "ReunionMovement/UI/ImageEx"
                     alphas[6] = _GradientAlpha6;
                     alphas[7] = _GradientAlpha7;
                 #endif
-                
+                 
                 #if GRADIENT_LINEAR
                     half gradientRotation = radians(_GradientRotation);
                     half t = cos(gradientRotation) * (effectsUv.x -0.5) + 
@@ -1257,7 +1327,7 @@ Shader "ReunionMovement/UI/ImageEx"
                         }
                         color.a *= alpha;
                     #endif
-                    
+                     
                     #if OUTLINED_STROKE
                         float alpha = sampleSdfStrip(sdfData, _OutlineWidth + _StrokeWidth, pixelScale);
                         float lerpFac = sampleSdfStrip(sdfData + _OutlineWidth, _StrokeWidth + _FalloffDistance, pixelScale);
@@ -1269,7 +1339,8 @@ Shader "ReunionMovement/UI/ImageEx"
 
                 // Apply Transition Filter
                 #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
-                    color = apply_transition_filter(color, alpha, transitionFilterUv);
+                    // transAlpha and transitionFilterUv were computed earlier so they are available here
+                    color = apply_transition_filter(color, transAlpha, transitionFilterUv);
                 #endif
 
                 #if !RECTANGLE && !CIRCLE && !PENTAGON && !TRIANGLE && !HEXAGON && !CHAMFERBOX && !PARALLELOGRAM && !NSTAR_POLYGON && !HEART && !BLOBBYCROSS && !SQUIRCLE && !NTRIANGLE_ROUNDED
@@ -1299,6 +1370,7 @@ Shader "ReunionMovement/UI/ImageEx"
                             half sobel = sqrt(sobel_h * sobel_h + sobel_v * sobel_v);
                             sobel = saturate(sobel);
 
+                            // 原有描边逻辑
                             #if STROKE
                                 color.a = sobel * _OutlineColor.a * IN.color.a;
                             #else
