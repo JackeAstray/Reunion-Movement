@@ -29,10 +29,15 @@ namespace ReunionMovement.UI.ImageExtensions
             this.sharedMat = sharedMat;
             this.shouldModifySharedMat = sharedMat == renderMat;
             this.rectTransform = rectTransform;
+
+            // Notify listeners that settings were initialized/changed
+            onComponentSettingsChanged?.Invoke(this, EventArgs.Empty);
         }
 
         public void OnValidate()
         {
+            // Notify listeners when component is validated in editor
+            onComponentSettingsChanged?.Invoke(this, EventArgs.Empty);
         }
 
         /// <summary>
@@ -58,6 +63,8 @@ namespace ReunionMovement.UI.ImageExtensions
         /// <param name="rectT"></param>
         internal void UpdateCircleRadius(RectTransform rectT)
         {
+            // When geometry-related properties change, notify listeners
+            onComponentSettingsChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 }

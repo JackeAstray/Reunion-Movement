@@ -24,11 +24,12 @@ namespace ReunionMovement.Core.EventMessage
 
         private readonly Dictionary<EventMessageType, DelegateEvent> eventTypeListeners = new Dictionary<EventMessageType, DelegateEvent>();
 
-        public async Task Init()
+        public Task Init()
         {
             initProgress = 100;
             IsInited = true;
             Log.Debug("EventMessageSystem 初始化完成");
+            return Task.CompletedTask;
         }
 
         public void Update(float logicTime, float realTime)

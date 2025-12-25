@@ -178,8 +178,7 @@ namespace ReunionMovement.Common.Util
         /// <returns>分割后的字段数组</returns>
         public static string[] StringSplit(this string fullString, string[] separator)
         {
-            string[]? stringArray = null;
-            stringArray = fullString.Split(separator, StringSplitOptions.None);
+            string[] stringArray = fullString.Split(separator, StringSplitOptions.None);
             return stringArray;
         }
 

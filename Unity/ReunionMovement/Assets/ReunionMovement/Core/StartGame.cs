@@ -47,17 +47,18 @@ namespace ReunionMovement.Core
         /// 在初始化模块之前，协同程序
         /// </summary>
         /// <returns></returns>
-        public override async Task OnBeforeInitAsync()
+        public override Task OnBeforeInitAsync()
         {
             Log.Debug("初始化前执行");
             GameOption.LoadOptions();
+            return Task.CompletedTask;
         }
 
         /// <summary>
         /// 游戏启动
         /// </summary>
         /// <returns></returns>
-        public override async Task OnGameStartAsync()
+        public override Task OnGameStartAsync()
         {
             Log.Debug("游戏启动");
 
@@ -74,6 +75,8 @@ namespace ReunionMovement.Core
 
             // 加载场景
             //await SceneSystem.Instance.LoadScene("Temp", true);
+
+            return Task.CompletedTask;
         }
     }
 }
