@@ -311,10 +311,13 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
 
                 EditorGUILayout.BeginVertical("Box");
                 {
-                    EditorGUILayout.LabelField("阴影", EditorStyles.boldLabel);
-                    EditorGUILayout.PropertyField(spAppendShadow, new GUIContent("启用阴影"));
+                    // Shadow mode styled similarly to Transition Mode: a single field then indented settings.
+                    EditorGUILayout.PropertyField(spAppendShadow, new GUIContent("阴影模式"));
                     if (spAppendShadow.boolValue)
                     {
+                        EditorGUILayout.LabelField("阴影设置", EditorStyles.boldLabel);
+                        EditorGUI.indentLevel++;
+
                         EditorGUILayout.PropertyField(spShadowOffsetLocal, new GUIContent("阴影偏移 (本地)"));
 
                         // 阴影颜色（HDR）
@@ -329,7 +332,21 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingWidth"), new GUIContent("采样宽度"));
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingScale"), new GUIContent("采样缩放"));
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("allowOutOfBoundsShadow"), new GUIContent("允许超出边界阴影"));
+
+                        EditorGUI.indentLevel--;
                     }
+                }
+                EditorGUILayout.EndVertical();
+
+                // Flip controls (placed under Shadow settings, enabled only when DrawShape == None)
+                EditorGUILayout.Space();
+                EditorGUILayout.BeginVertical("Box");
+                {
+                    EditorGUILayout.LabelField("翻转", EditorStyles.boldLabel);
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(spFlipHorizontal, new GUIContent("水平翻转"));
+                    EditorGUILayout.PropertyField(spFlipVertical, new GUIContent("垂直翻转"));
+                    EditorGUI.indentLevel--;
                 }
                 EditorGUILayout.EndVertical();
             }

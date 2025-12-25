@@ -814,7 +814,7 @@ Shader "ReunionMovement/UI/ImageEx"
                 }
                 else if (mode == 3) // Color.Subtractive
                 {
-                    color.rgb = color.rgb - factor.rgb * color.a * factor.a;
+                    color.rgb = color.rgb - factor.rgb * color.a * color.a;
                 }
                 else if (mode == 4) // Color.Replace
                 {
@@ -832,7 +832,7 @@ Shader "ReunionMovement/UI/ImageEx"
                 else if (mode == 7) // Color.HsvModifier
                 {
                     const float3 hsv = rgb_to_hsv(color.rgb);
-                    color.rgb = hsv_to_rgb(hsv + factor.rgb) * color.a * factor.a;
+                    color.rgb = hsv_to_rgb(hsv + factor.rgb) * color.a * color.a;
                     color.a = inColor.a * factor.a;
                 }
                 else if (mode == 8) // Color.Contrast
@@ -1030,6 +1030,13 @@ Shader "ReunionMovement/UI/ImageEx"
                 OUT.texcoord = v.texcoord;
                 OUT.effectsUv = v.uv1;
                 
+                // Apply flip to texture UVs and effects UVs so shader sampling and transitions respect flip settings
+                // _FlipHorizontal/_FlipVertical are set as 0/1 ints from ImageEx component
+                OUT.texcoord.x = lerp(OUT.texcoord.x, 1 - OUT.texcoord.x, _FlipHorizontal);
+                OUT.texcoord.y = lerp(OUT.texcoord.y, 1 - OUT.texcoord.y, _FlipVertical);
+                OUT.effectsUv.x = lerp(OUT.effectsUv.x, 1 - OUT.effectsUv.x, _FlipHorizontal);
+                OUT.effectsUv.y = lerp(OUT.effectsUv.y, 1 - OUT.effectsUv.y, _FlipVertical);
+                
                 float2 size = float2(v.size.x + _FalloffDistance, v.size.y + _FalloffDistance);
                 float shapeRotation = radians(_ShapeRotation);
                 size = _ConstrainRotation > 0.0 && frac(abs(shapeRotation) / 3.14159) > 0.1? float2(size.y, size.x) : size;
@@ -1039,10 +1046,15 @@ Shader "ReunionMovement/UI/ImageEx"
                 shapeUv*= _ConstrainRotation > 0.0? size : 1.0;
                 
                 // Apply flipping
+                // _FlipHorizontal/_FlipVertical are set as 0/1 ints from ImageEx component
                 shapeUv.x = lerp(shapeUv.x, abs(size.x - shapeUv.x), _FlipHorizontal);
                 shapeUv.y = lerp(shapeUv.y, abs(size.y - shapeUv.y), _FlipVertical);
                 
                 OUT.shapeData = float4(shapeUv.x, shapeUv.y, size.x, size.y);
+                
+                // Apply flip to shape data (shapeUv in pixel space) so procedural shape SDF respects flipping
+                OUT.shapeData.x = lerp(OUT.shapeData.x, OUT.shapeData.z - OUT.shapeData.x, _FlipHorizontal);
+                OUT.shapeData.y = lerp(OUT.shapeData.y, OUT.shapeData.w - OUT.shapeData.y, _FlipVertical);
                 
                 #ifdef UNITY_HALF_TEXEL_OFFSET
                     OUT.vertex.xy += (_ScreenParams.zw - 1.0) * float2(-1.0, 1.0);
