@@ -19,6 +19,7 @@ namespace ReunionMovement.UI.ImageExtensions
         [SerializeField] private float samplingWidth = 1f;
         [SerializeField] private float samplingScale = 1f;
         [SerializeField] private bool allowOutOfBoundsShadow = true;
+        [SerializeField] private ShadowMode shadowMode = ShadowMode.Shadow;
 
         public bool AppendShadow
         {
@@ -52,8 +53,14 @@ namespace ReunionMovement.UI.ImageExtensions
 
         public enum ShadowMode
         {
-            None = 0,
             Shadow = 1,
+            Mirror = 3
+        }
+
+        public enum ShadowDirection
+        {
+            Vertical = 0,
+            Horizontal = 1
         }
 
         public enum TransitionMode
@@ -123,6 +130,11 @@ namespace ReunionMovement.UI.ImageExtensions
 
         [SerializeField] private float outlineWidth;
         [SerializeField] private Color outlineColor = Color.black;
+        [SerializeField] private ShadowDirection shadowMirrorDirection = ShadowDirection.Vertical;
+        [SerializeField][Range(0f, 2f)] private float shadowMirrorScale = 1f;
+        [SerializeField] private Vector2 shadowMirrorOffset = Vector2.zero;
+        [SerializeField] private bool shadowMirrorShowSource = false;
+        [SerializeField][Range(0f,1f)] private float shadowMirrorTintMix = 0.5f;
         [SerializeField] private float customTime;
         [SerializeField] private int enableDashedOutline;
 
@@ -183,6 +195,12 @@ namespace ReunionMovement.UI.ImageExtensions
         private static readonly int samplingWidth_Sp = Shader.PropertyToID("_SamplingWidth");
         private static readonly int samplingScale_Sp = Shader.PropertyToID("_SamplingScale");
         private static readonly int allowOutOfBoundsShadow_Sp = Shader.PropertyToID("_AllowOutOfBoundsShadow");
+        private static readonly int shadowMode_Sp = Shader.PropertyToID("_ShadowMode");
+        private static readonly int shadowMirrorDirection_Sp = Shader.PropertyToID("_ShadowMirrorDirection");
+        private static readonly int shadowMirrorScale_Sp = Shader.PropertyToID("_ShadowMirrorScale");
+        private static readonly int shadowMirrorOffset_Sp = Shader.PropertyToID("_ShadowMirrorOffset");
+        private static readonly int shadowMirrorShowSource_Sp = Shader.PropertyToID("_ShadowMirrorShowSource");
+        private static readonly int shadowMirrorTintMix_Sp = Shader.PropertyToID("_ShadowMirrorTintMix");
 
         private static readonly int outlineWidth_Sp = Shader.PropertyToID("_OutlineWidth");
         private static readonly int outlineColor_Sp = Shader.PropertyToID("_OutlineColor");
@@ -301,6 +319,56 @@ namespace ReunionMovement.UI.ImageExtensions
                     m_Material.SetFloat(customTime_Sp, customTime);
                 }
                 base.SetMaterialDirty();
+            }
+        }
+
+        public ShadowDirection ShadowMirrorDirection
+        {
+            get => shadowMirrorDirection;
+            set
+            {
+                shadowMirrorDirection = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public float ShadowMirrorScale
+        {
+            get => shadowMirrorScale;
+            set
+            {
+                shadowMirrorScale = Mathf.Clamp(value, 0f, 2f);
+                SetMaterialDirty();
+            }
+        }
+
+        public bool ShadowMirrorShowSource
+        {
+            get => shadowMirrorShowSource;
+            set
+            {
+                shadowMirrorShowSource = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public Vector2 ShadowMirrorOffset
+        {
+            get => shadowMirrorOffset;
+            set
+            {
+                shadowMirrorOffset = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public float ShadowMirrorTintMix
+        {
+            get => shadowMirrorTintMix;
+            set
+            {
+                shadowMirrorTintMix = Mathf.Clamp01(value);
+                SetMaterialDirty();
             }
         }
 
@@ -931,6 +999,16 @@ namespace ReunionMovement.UI.ImageExtensions
                 SetMaterialDirty();
             }
         }
+
+        public ShadowMode Shadow
+        {
+            get => shadowMode;
+            set
+            {
+                shadowMode = value;
+                SetMaterialDirty();
+            }
+        }
         #endregion
 
         #region 私有变量
@@ -1283,6 +1361,8 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.SetFloat(outlineWidth_Sp, outlineWidth);
             mat.SetInt(enableDashedOutline_Sp, enableDashedOutline);
             mat.SetFloat(customTime_Sp, customTime);
+            // OUTLINED8 removed - no-op
+
 
             mat.SetFloat(strokeWidth_Sp, strokeWidth);
 
@@ -1342,6 +1422,12 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.SetFloat(samplingWidth_Sp, samplingWidth);
             mat.SetFloat(samplingScale_Sp, samplingScale);
             mat.SetFloat(allowOutOfBoundsShadow_Sp, allowOutOfBoundsShadow ? 1f : 0f);
+            mat.SetInt(shadowMode_Sp, (int)shadowMode);
+            mat.SetInt(shadowMirrorDirection_Sp, (int)shadowMirrorDirection);
+            mat.SetFloat(shadowMirrorScale_Sp, shadowMirrorScale);
+            mat.SetVector(shadowMirrorOffset_Sp, shadowMirrorOffset);
+            mat.SetFloat(shadowMirrorShowSource_Sp, shadowMirrorShowSource ? 1f : 0f);
+            mat.SetFloat(shadowMirrorTintMix_Sp, shadowMirrorTintMix);
 
             switch (transitionMode)
             {
@@ -1605,10 +1691,25 @@ namespace ReunionMovement.UI.ImageExtensions
             enableDashedOutline = mat.GetInt(enableDashedOutline_Sp);
             customTime = mat.GetFloat(customTime_Sp);
 
+            // Shadow mirror direction
+            shadowMirrorDirection = (ShadowDirection)mat.GetInt(shadowMirrorDirection_Sp);
+
+            shadowMirrorScale = mat.GetFloat(shadowMirrorScale_Sp);
+            shadowMirrorOffset = mat.GetVector(shadowMirrorOffset_Sp);
+            shadowMirrorShowSource = mat.GetFloat(shadowMirrorShowSource_Sp) > 0.5f;
+            shadowMirrorTintMix = mat.GetFloat(shadowMirrorTintMix_Sp);
+
             flipHorizontal = mat.GetInt(flipHorizontal_Sp) == 1;
             flipVertical = mat.GetInt(flipVertical_Sp) == 1;
             constrainRotation = mat.GetInt(constrainedRotation_Sp) == 1;
             shapeRotation = mat.GetFloat(shapeRotation_Sp);
+
+            shadowColor = mat.GetColor(shadowColor_Sp);
+            shadowBlurIntensity = mat.GetFloat(shadowBlurIntensity_Sp);
+            shadowMode = (ShadowMode)mat.GetInt(shadowMode_Sp);
+            samplingWidth = mat.GetFloat(samplingWidth_Sp);
+            samplingScale = mat.GetFloat(samplingScale_Sp);
+            allowOutOfBoundsShadow = mat.GetFloat(allowOutOfBoundsShadow_Sp) == 1;
 
             triangle.InitValuesFromMaterial(ref mat);
             circle.InitValuesFromMaterial(ref mat);
