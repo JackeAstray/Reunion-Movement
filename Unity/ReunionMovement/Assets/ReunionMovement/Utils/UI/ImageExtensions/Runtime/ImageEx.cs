@@ -50,6 +50,12 @@ namespace ReunionMovement.UI.ImageExtensions
             Detail = 3
         }
 
+        public enum ShadowMode
+        {
+            None = 0,
+            Shadow = 1,
+        }
+
         public enum TransitionMode
         {
             None = 0,
@@ -1236,8 +1242,13 @@ namespace ReunionMovement.UI.ImageExtensions
                 case Type.Simple:
                 case Type.Sliced:
                     // Use overload that can append a shadow quad. Shadow support is exposed in the editor under Transition settings.
+                    // If flipped, shadow offset should follow flip so shadow remains on correct side
+                    Vector2 effectiveShadowOffset = shadowOffsetLocal;
+                    if (flipHorizontal) effectiveShadowOffset.x = -effectiveShadowOffset.x;
+                    if (flipVertical) effectiveShadowOffset.y = -effectiveShadowOffset.y;
+
                     ImageHelper.GenerateSimpleSprite(vh, preserveAspect, canvas, rectTransform, ActiveSprite,
-                        color, falloffDistance, appendShadow, shadowOffsetLocal);
+                        color, falloffDistance, appendShadow, effectiveShadowOffset);
                     break;
                 case Type.Filled:
                     ImageHelper.GenerateFilledSprite(vh, preserveAspect, canvas, rectTransform, ActiveSprite,
