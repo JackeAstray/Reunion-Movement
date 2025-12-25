@@ -83,5 +83,10 @@ Display scenes of ImageEX and shader<br>
     - Utils
 
 ## Thanks：<a name="Thanks"></a>
+感谢Shadertoy上的作者所做的贡献<br>
 Thank you to the authors on Shadertoy for their contributions<br>
 https://www.shadertoy.com/<br>
+
+感谢以下的开源项目<br>
+Thanks to the following open source projects<br>
+https://github.com/mob-sakai/UIEffect<br>
