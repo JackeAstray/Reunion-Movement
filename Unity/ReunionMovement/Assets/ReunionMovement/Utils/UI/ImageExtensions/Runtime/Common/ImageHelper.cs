@@ -2,15 +2,44 @@ using System.Text;
 
 namespace UnityEngine.UI.ImageExtensions
 {
+    /// <summary>
+    /// 图像辅助类，提供用于生成精灵网格（包括填充与简单绘制）的实用函数。
+    /// 这些方法用于构建 Unity UI 的 VertexHelper 顶点数据（支持可选阴影四边形、径向填充等）。
+    /// </summary>
     public static class ImageHelper
     {
+        #region Public API
+
+        /// <summary>
+        /// 生成一个简单的精灵网格（不带阴影），并填充到指定的 <see cref="VertexHelper"/> 中。
+        /// </summary>
+        /// <param name="vh">目标 VertexHelper，用于接收顶点与三角形。</param>
+        /// <param name="preserveAspect">是否保持精灵纵横比。</param>
+        /// <param name="canvas">用于像素调整的 Canvas（可为 null）。</param>
+        /// <param name="rectTransform">目标 RectTransform，用于确定绘制区域。</param>
+        /// <param name="activeSprite">用于绘制的精灵（可为 null，表示使用默认 UV）。</param>
+        /// <param name="color">顶点颜色（Color32）。</param>
+        /// <param name="falloffDistance">（保留参数）衰减距离（当前实现未直接使用此参数，但保留签名以兼容性）。
+        /// </param>
         public static void GenerateSimpleSprite(VertexHelper vh, bool preserveAspect, Canvas canvas,
             RectTransform rectTransform, Sprite activeSprite, Color32 color, float falloffDistance)
         {
             GenerateSimpleSprite(vh, preserveAspect, canvas, rectTransform, activeSprite, color, falloffDistance, false, Vector2.zero);
         }
 
-        // 新的重载以支持可选的阴影四边形生成。
+        /// <summary>
+        /// 生成一个简单的精灵网格，并可选地在下方附加一个阴影四边形。
+        /// 阴影四边形会以黑色（但保留原始透明度）添加在原始四边形之前，以便在后续 shader 中进行形状／SDF 效果处理。
+        /// </summary>
+        /// <param name="vh">目标 VertexHelper。</param>
+        /// <param name="preserveAspect">是否保持精灵纵横比。</param>
+        /// <param name="canvas">用于像素调整的 Canvas（可为 null）。</param>
+        /// <param name="rectTransform">目标 RectTransform。</param>
+        /// <param name="activeSprite">精灵（可为 null）。</param>
+        /// <param name="color">顶点颜色。</param>
+        /// <param name="falloffDistance">衰减距离（保留用）。</param>
+        /// <param name="appendShadow">是否附加阴影四边形。</param>
+        /// <param name="shadowOffsetLocal">阴影的本地偏移量（以像素为单位，局部空间）。</param>
         public static void GenerateSimpleSprite(VertexHelper vh, bool preserveAspect, Canvas canvas,
             RectTransform rectTransform, Sprite activeSprite, Color32 color, float falloffDistance, bool appendShadow, Vector2 shadowOffsetLocal)
         {
@@ -39,6 +68,21 @@ namespace UnityEngine.UI.ImageExtensions
             AddQuad(vh, sxy, color, suv, size, fullBounds, appendShadow, shadowOffsetLocal);
         }
 
+        /// <summary>
+        /// 生成带填充（包括水平、垂直、径向填充）的精灵网格。
+        /// 支持 <see cref="Image.FillMethod"/> 的所有填充方式（Horizontal / Vertical / Radial90 / Radial180 / Radial360）。
+        /// </summary>
+        /// <param name="toFill">目标 VertexHelper。</param>
+        /// <param name="preserveAspect">是否保持纵横比。</param>
+        /// <param name="canvas">用于像素调整的 Canvas（可为 null）。</param>
+        /// <param name="rectTransform">目标 RectTransform。</param>
+        /// <param name="activeSprite">精灵（可为 null）。</param>
+        /// <param name="color">顶点颜色。</param>
+        /// <param name="fillMethod">填充方式。</param>
+        /// <param name="fillAmount">填充量（0..1）。</param>
+        /// <param name="fillOrigin">填充起点（取决于 fillMethod）。</param>
+        /// <param name="fillClockwise">对于径向填充是否顺时针方向填充。</param>
+        /// <param name="falloffDistance">衰减距离（保留参数）。</param>
         public static void GenerateFilledSprite(VertexHelper toFill,
             bool preserveAspect,
             Canvas canvas,
@@ -69,7 +113,7 @@ namespace UnityEngine.UI.ImageExtensions
             float tx1 = outer.z;
             float ty1 = outer.w;
 
-            //水平和垂直填充的精灵很简单——只需提前结束图像即可
+            // 水平和垂直填充的处理
             if (fillMethod == Image.FillMethod.Horizontal || fillMethod == Image.FillMethod.Vertical)
             {
                 if (fillMethod == Image.FillMethod.Horizontal)
@@ -257,14 +301,47 @@ namespace UnityEngine.UI.ImageExtensions
         }
 
         /// <summary>
-        /// 增加方形面片
+        /// 保持精灵纵横比。会修改传入的 rect 以匹配精灵的纵横比，并根据 RectTransform 的 pivot 进行对齐。
+        /// 该方法对外公开以便在其它 UI 布局逻辑中复用。
         /// </summary>
-        /// <param name="vertexHelper"></param>
-        /// <param name="quadPositions"></param>
-        /// <param name="color"></param>
-        /// <param name="quadUVs"></param>
-        /// <param name="size"></param>
-        /// <param name="bounds"></param>
+        /// <param name="rect">要调整的矩形（按引用传入）。</param>
+        /// <param name="rectTransform">关联的 RectTransform（用于 pivot 对齐）。</param>
+        /// <param name="spriteSize">精灵的像素尺寸。</param>
+        public static void PreserveSpriteAspectRatio(ref Rect rect, RectTransform rectTransform, Vector2 spriteSize)
+        {
+            float spriteRatio = spriteSize.x / spriteSize.y;
+            float rectRatio = rect.width / rect.height;
+
+            if (spriteRatio > rectRatio)
+            {
+                float oldHeight = rect.height;
+                rect.height = rect.width * (1.0f / spriteRatio);
+                rect.y += (oldHeight - rect.height) * rectTransform.pivot.y;
+            }
+            else
+            {
+                float oldWidth = rect.width;
+                rect.width = rect.height * spriteRatio;
+                rect.x += (oldWidth - rect.width) * rectTransform.pivot.x;
+            }
+        }
+
+        #endregion
+
+        #region Private helpers
+
+        /// <summary>
+        /// 在 VertexHelper 中添加一个用于绘制的四边形（包含顶点数据、UV、额外的 effects UV 等）。
+        /// 支持在原始四边形下方先添加一个阴影四边形（用于 shader 的阴影/外扩处理）。
+        /// </summary>
+        /// <param name="vertexHelper">目标 VertexHelper。</param>
+        /// <param name="quadPositions">四边形在本地空间中的四个顶点位置（按顺序）。</param>
+        /// <param name="color">顶点颜色。</param>
+        /// <param name="quadUVs">对应的纹理 UV（用于采样）。</param>
+        /// <param name="size">四边形的像素尺寸（宽, 高）。</param>
+        /// <param name="bounds">绘制边界（用于归一化 uv1 计算）。</param>
+        /// <param name="appendShadow">是否先附加阴影四边形。</param>
+        /// <param name="shadowOffsetLocal">阴影本地偏移量（像素）。</param>
         private static void AddQuad(VertexHelper vertexHelper,
             Vector3[] quadPositions,
             Color32 color,
@@ -274,20 +351,15 @@ namespace UnityEngine.UI.ImageExtensions
             bool appendShadow,
             Vector2 shadowOffsetLocal)
         {
-            // 插入UV，以避免边缘出现纹理包裹伪影（例如，使用重复模式进行双线性滤波）
+            // 插入 UV 以避免边缘出现纹理包裹伪影
             float epsilon = 0.001f;
 
-            // 如果需要，请先添加阴影四边形，使其在原始四边形下方渲染
+            // 可选：先为阴影添加四边形（渲染在原始四边形下方）
             if (appendShadow)
             {
                 int startIndex2 = vertexHelper.currentVertCount;
-                // 使用黑色通道标记阴影顶点
+                // 使用黑色通道标记阴影顶点，保留原始透明度
                 Color32 shadowColor = new Color32(0, 0, 0, color.a);
-                // 从 quadUVs 获取纹理 UV 边界（假定 quadUVs[0]=最小, 最小，quadUVs[2]=最大, 最大）
-                float uvMinX = quadUVs[0].x;
-                float uvMaxX = quadUVs[2].x;
-                float uvMinY = quadUVs[0].y;
-                float uvMaxY = quadUVs[2].y;
 
                 // 预计算在四边形空间中的归一化偏移，以便 SDF UV 偏移保持一致
                 float boundsWidth = bounds.z - bounds.x;
@@ -299,20 +371,16 @@ namespace UnityEngine.UI.ImageExtensions
                 {
                     Vector3 pos = quadPositions[i] + new Vector3(shadowOffsetLocal.x, shadowOffsetLocal.y, 0);
 
-                    // 为原始顶点计算基础归一化 UV（在 bounds 内为 0..1）
                     float uBase = Mathf.InverseLerp(bounds.x, bounds.z, quadPositions[i].x);
                     float vBase = Mathf.InverseLerp(bounds.y, bounds.w, quadPositions[i].y);
 
-                    // 应用归一化偏移（即使阴影超出边界也能保持映射一致）
                     float uShadow = Mathf.Clamp01(uBase + offsetU);
                     float vShadow = Mathf.Clamp01(vBase + offsetV);
 
-                    // effects UV（uv1）用于形状 SDF：保留小的 epsilon 填充以避免采样缝隙
                     float u = Mathf.Lerp(epsilon, 1 - epsilon, uShadow);
                     float v = Mathf.Lerp(epsilon, 1 - epsilon, vShadow);
                     Vector2 uv1 = new Vector2(u, v);
 
-                    // 对于纹理采样使用原始精灵 UV（quadUVs[i]），以便采样/模糊按比例正确缩放
                     Vector2 sampleTexCoord = quadUVs[i];
 
                     vertexHelper.AddVert(pos, shadowColor, sampleTexCoord, uv1, size, Vector2.zero,
@@ -323,7 +391,7 @@ namespace UnityEngine.UI.ImageExtensions
                 vertexHelper.AddTriangle(startIndex2 + 2, startIndex2 + 3, startIndex2);
             }
 
-            // 现在在阴影之上添加原始四边形
+            // 添加原始四边形顶点（在阴影之上）
             int startIndex = vertexHelper.currentVertCount;
             for (int i = 0; i < 4; ++i)
             {
@@ -344,13 +412,14 @@ namespace UnityEngine.UI.ImageExtensions
         }
 
         /// <summary>
-        /// 获取绘画尺寸
+        /// 计算绘制时使用的四边形在目标 Rect 中的位置与 UV 映射（包含 padding 的偏移）。
+        /// 返回一个 Vector4 表示绘制矩形在本地空间中的 x, y, z, w（左，下，右，上）。
         /// </summary>
-        /// <param name="shouldPreserveAspect"></param>
-        /// <param name="activeSprite"></param>
-        /// <param name="canvas"></param>
-        /// <param name="rectTransform"></param>
-        /// <returns></returns>
+        /// <param name="shouldPreserveAspect">是否保持纵横比。</param>
+        /// <param name="activeSprite">当前使用的精灵（可为 null）。</param>
+        /// <param name="canvas">用于像素调整的 Canvas（可为 null）。</param>
+        /// <param name="rectTransform">目标 RectTransform。</param>
+        /// <returns>返回绘制矩形的边界（x, y, z, w）。</returns>
         private static Vector4 GetDrawingDimensions(bool shouldPreserveAspect,
             Sprite activeSprite,
             Canvas canvas,
@@ -390,36 +459,11 @@ namespace UnityEngine.UI.ImageExtensions
         }
 
         /// <summary>
-        /// 保持精灵纵横比
+        /// 根据 Canvas 与 RectTransform 返回像素调整后的矩形（当 Canvas 为 WorldSpace、scaleFactor 为 0 或 pixelPerfect 为 false 时返回 rectTransform.rect）。
         /// </summary>
-        /// <param name="rect"></param>
-        /// <param name="rectTransform"></param>
-        /// <param name="spriteSize"></param>
-        public static void PreserveSpriteAspectRatio(ref Rect rect, RectTransform rectTransform, Vector2 spriteSize)
-        {
-            float spriteRatio = spriteSize.x / spriteSize.y;
-            float rectRatio = rect.width / rect.height;
-
-            if (spriteRatio > rectRatio)
-            {
-                float oldHeight = rect.height;
-                rect.height = rect.width * (1.0f / spriteRatio);
-                rect.y += (oldHeight - rect.height) * rectTransform.pivot.y;
-            }
-            else
-            {
-                float oldWidth = rect.width;
-                rect.width = rect.height * spriteRatio;
-                rect.x += (oldWidth - rect.width) * rectTransform.pivot.x;
-            }
-        }
-
-        /// <summary>
-        /// 获取像素调整后的矩形
-        /// </summary>
-        /// <param name="canvas"></param>
-        /// <param name="rectTransform"></param>
-        /// <returns></returns>
+        /// <param name="canvas">Canvas（可为 null）。</param>
+        /// <param name="rectTransform">目标 RectTransform。</param>
+        /// <returns>调整后的矩形。</returns>
         private static Rect GetPixelAdjustedRect(Canvas canvas, RectTransform rectTransform)
         {
             if (!canvas || canvas.renderMode == RenderMode.WorldSpace || canvas.scaleFactor == 0.0f ||
@@ -432,31 +476,27 @@ namespace UnityEngine.UI.ImageExtensions
         }
 
         /// <summary>
-        /// 径向切割
+        /// 对给定的顶点与 UV 数组执行径向切割，支持旋转角与反转选项。
+        /// 返回是否需要绘制（fill 大于最小阈值并且不被反转完全裁剪时返回 true）。
         /// </summary>
-        /// <param name="xy"></param>
-        /// <param name="uv"></param>
-        /// <param name="fill"></param>
-        /// <param name="invert"></param>
-        /// <param name="corner"></param>
-        /// <returns></returns>
+        /// <param name="xy">顶点坐标数组（长度为 4）。</param>
+        /// <param name="uv">对应的 UV 坐标数组（长度为 4）。</param>
+        /// <param name="fill">填充比例（0..1）。</param>
+        /// <param name="invert">是否反转填充方向。</param>
+        /// <param name="corner">起始角索引（0..3）。</param>
+        /// <returns>是否需要绘制。</returns>
         private static bool RadialCut(Vector3[] xy, Vector3[] uv, float fill, bool invert, int corner)
         {
-            // 无需填充
             if (fill < 0.001f) return false;
 
-            // 偶数角反转填充方向
             if ((corner & 1) == 1) invert = !invert;
 
-            // 无需调整
             if (!invert && fill > 0.999f) return true;
 
-            // 将0-1值转换为0到90度的弧度角度
             float angle = Mathf.Clamp01(fill);
             if (invert) angle = 1f - angle;
             angle *= 90f * Mathf.Deg2Rad;
 
-            // 计算有效的X和Y因子
             float cos = Mathf.Cos(angle);
             float sin = Mathf.Sin(angle);
 
@@ -466,13 +506,13 @@ namespace UnityEngine.UI.ImageExtensions
         }
 
         /// <summary>
-        /// 径向切割
+        /// 内部径向切割实现：根据 cos/sin 值修改传入数组的顶点以完成切割。
         /// </summary>
-        /// <param name="xy"></param>
-        /// <param name="cos"></param>
-        /// <param name="sin"></param>
-        /// <param name="invert"></param>
-        /// <param name="corner"></param>
+        /// <param name="xy">顶点或 UV 数组（长度 4）。</param>
+        /// <param name="cos">角度的余弦。</param>
+        /// <param name="sin">角度的正弦。</param>
+        /// <param name="invert">是否反转。</param>
+        /// <param name="corner">起始角索引。</param>
         private static void RadialCut(Vector3[] xy, float cos, float sin, bool invert, int corner)
         {
             int i0 = corner;
@@ -547,5 +587,6 @@ namespace UnityEngine.UI.ImageExtensions
                 else xy[i1].x = Mathf.Lerp(xy[i0].x, xy[i2].x, cos);
             }
         }
+        #endregion
     }
 }
