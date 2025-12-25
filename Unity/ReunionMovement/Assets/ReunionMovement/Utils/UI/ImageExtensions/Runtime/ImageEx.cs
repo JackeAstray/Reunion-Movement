@@ -134,7 +134,7 @@ namespace ReunionMovement.UI.ImageExtensions
         [SerializeField][Range(0f, 2f)] private float shadowMirrorScale = 1f;
         [SerializeField] private Vector2 shadowMirrorOffset = Vector2.zero;
         [SerializeField] private bool shadowMirrorShowSource = false;
-        [SerializeField][Range(0f,1f)] private float shadowMirrorTintMix = 0.5f;
+        [SerializeField][Range(0f, 1f)] private float shadowMirrorTintMix = 0.5f;
         [SerializeField] private float customTime;
         [SerializeField] private int enableDashedOutline;
 
