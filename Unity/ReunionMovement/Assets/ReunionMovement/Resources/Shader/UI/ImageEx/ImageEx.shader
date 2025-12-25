@@ -90,7 +90,7 @@ Shader "ReunionMovement/UI/ImageEx"
         _TransitionTexClampPadding ("过渡图块夹边距（像素）", Range(0, 4)) = 1
         [Toggle] _TransitionUseUv0 ("过渡使用精灵 UV0", Float) = 1
 
-        // Shadow properties
+        // 阴影相关属性（用于控制投影/镜像阴影的颜色、模糊、采样与镜像行为）
         [HDR] _ShadowColor ("Shadow Color", Color) = (0,0,0,0.5)
         _ShadowBlurIntensity ("Shadow Blur Intensity", Range(0,8)) = 1
         _SamplingWidth ("Sampling Width", Float) = 1
@@ -196,7 +196,7 @@ Shader "ReunionMovement/UI/ImageEx"
             half _StrokeWidth;
             half _StrokeFill;
             float4 _MainTex_TexelSize;
-            // Shadow / sampling uniforms
+            // 阴影与采样相关的 uniform 变量
             half4 _ShadowColor;
             float _ShadowBlurIntensity;
             float _SamplingWidth;
@@ -528,21 +528,21 @@ Shader "ReunionMovement/UI/ImageEx"
                     half rhombus2 = sdRhombus(texcoord - float2(width - _HexagonTipSize.y * scale, height / 2.0), float2(_HexagonTipSize.y, height / 2.0) * scale);
                     half sdfHexagon = sdfDifference(sdfDifference(baseRect, -rhombus1), -rhombus2);
 
-                    //Left Rounded Corners
+                    // 左圆角
                     float halfHeight = height / 2.0;
                     float m = -halfHeight / _HexagonTipSize.x;
                     float c = halfHeight;
                     float d = sqrt(1.0 + m * m);
                     float k = _HexagonTipRadius.x * d + c;
-                    //middle
+                    // 中间
                     half2 circlePivot = half2((halfHeight - k) / m, halfHeight);
                     half cornerCircle = sdCircle(texcoord - circlePivot, _HexagonTipRadius.x);
                     half x = (circlePivot.y + circlePivot.x / m - c) / (m + 1.0 / m);
                     half y = m * x + c;
                     half fy = map(texcoord.x, x, circlePivot.x, y, circlePivot.y);
                     sdfHexagon = texcoord.y > fy && texcoord.y < height - fy ? cornerCircle: sdfHexagon;
-                    //return sdfHexagon;
-                    //bottom
+                 
+                    // 底部
                     k = _HexagonCornerRadius.x * d + c;
                     circlePivot = half2((_HexagonCornerRadius.x - k) / m, _HexagonCornerRadius.x);
                     cornerCircle = sdCircle(texcoord - circlePivot, _HexagonCornerRadius.x);
@@ -550,37 +550,36 @@ Shader "ReunionMovement/UI/ImageEx"
                     fy = map(texcoord.x, x, circlePivot.x, y, circlePivot.y);
                     sdfHexagon = texcoord.y < fy && texcoord.x < circlePivot.x ? cornerCircle: sdfHexagon;
 
-                    //return sdfHexagon;
-                    //top
+                    // 顶部
                     k = _HexagonCornerRadius.w * d + c;
                     circlePivot = half2((_HexagonCornerRadius.w - k) / m, height - _HexagonCornerRadius.w);
                     cornerCircle = sdCircle(texcoord - circlePivot, _HexagonCornerRadius.w);
                     x = (_HexagonCornerRadius.w + circlePivot.x / m - c) / (m + 1.0 / m); y = m * x + c;
                     fy = map(texcoord.x, x, circlePivot.x, height - y, circlePivot.y);
                     sdfHexagon = texcoord.y > fy && texcoord.x < circlePivot.x ? cornerCircle: sdfHexagon;
-                    //return sdfHexagon;
-                    //Right Rounded Corners
+     
+                    // 右圆角
                     m = halfHeight / _HexagonTipSize.y;
                     d = sqrt(1.0 + m * m);
                     c = halfHeight - m * width;
                     k = _HexagonTipRadius.y * d + c;
                     
-                    //middle
+                    // 中间
                     circlePivot = half2((halfHeight - k) / m, halfHeight);
                     cornerCircle = sdCircle(texcoord - circlePivot, _HexagonTipRadius.y);
                     x = (circlePivot.y + circlePivot.x / m - c) / (m + 1.0 / m); y = m * x + c;
                     fy = map(texcoord.x, circlePivot.x, x, circlePivot.y, y);
                     sdfHexagon = texcoord.y > fy && texcoord.y < height - fy ? cornerCircle: sdfHexagon;
-                    //return sdfHexagon;
-                    //bottom
+                    
+                    // 底部
                     k = _HexagonCornerRadius.y * d + c;
                     circlePivot = half2((_HexagonCornerRadius.y - k) / m, _HexagonCornerRadius.y);
                     cornerCircle = sdCircle(texcoord - circlePivot, _HexagonCornerRadius.y);
                     x = (circlePivot.y + circlePivot.x / m - c) / (m + 1.0 / m); y = m * x + c;
                     fy = map(texcoord.x, circlePivot.x, x, circlePivot.y, y);
                     sdfHexagon = texcoord.y < fy && texcoord.x > circlePivot.x ? cornerCircle: sdfHexagon;
-                    //return sdfHexagon;
-                    //top
+                    
+                    // 顶部
                     k = _HexagonCornerRadius.z * d + c;
                     circlePivot = half2((_HexagonCornerRadius.z - k) / m, height - _HexagonCornerRadius.z);
                     cornerCircle = sdCircle(texcoord - circlePivot, _HexagonCornerRadius.z);
@@ -592,6 +591,7 @@ Shader "ReunionMovement/UI/ImageEx"
                 }
             #endif
 
+            // 倒角方体
             #if CHAMFERBOX
                 half chamferBoxScene(float4 additionalData)
                 {
@@ -613,6 +613,7 @@ Shader "ReunionMovement/UI/ImageEx"
                 }
             #endif
             
+            // 平行四边形
             #if PARALLELOGRAM
                 half parallelogramScene(float4 additionalData)
                 {
@@ -748,11 +749,11 @@ Shader "ReunionMovement/UI/ImageEx"
             }
             #endif
 
-            // --------------------RECTANGLE Start---------------------
+            // -------------------- 矩形（RECTANGLE） 开始 --------------------
             float generateDashedEffect(v2f IN, float time, float aspectRatio, int shapeType)
             {
                 // 定义虚线的波长和占空比
-                float wavelength = 0.2; // 虚线的周期
+                float wavelength = 0.2; // 虚线的周期（以归一化坐标为基准）
                 float dashRatio = 0.5;  // 虚线的占空比
 
                 float dashedEffect = 0.0;
@@ -809,8 +810,8 @@ Shader "ReunionMovement/UI/ImageEx"
                 }
                 return saturate(dashedEffect);
             }
-            // --------------------RECTANGLE End---------------------
-            // --------------------TRANSITION Start---------------------
+            // -------------------- 矩形（RECTANGLE） 结束 --------------------
+            // -------------------- 过渡（TRANSITION） 开始 --------------------
 
             half4 apply_color_filter(int mode, half4 inColor, half4 factor, float intensity, float glow)
             {
@@ -877,11 +878,10 @@ Shader "ReunionMovement/UI/ImageEx"
                 
                 uv = uv * _TransitionTex_ST.xy + _TransitionTex_ST.zw;
 
-                // Notes:
-                // - Shiny/Mask/Melt/Burn are visually sensitive to wrap artifacts.
-                // - When _TransitionTexRotation is used, UVs can leave [0,1]. With Repeat wrap + bilinear
-                //   filtering this causes seams that move with rotation.
-                // For these transition modes we clamp UVs unconditionally.
+                // 说明：
+                // - Shiny/Mask/Melt/Burn 模式对纹理环绕带来的接缝很敏感。
+                // - 当使用 _TransitionTexRotation 时，UV 可能超出 [0,1] 区间；如果纹理为 Repeat 且使用双线性滤波，会出现随旋转移动的接缝。
+                // 对这些过渡模式，我们会无条件将 UV 限制在有效范围内以避免接缝。
                 #if TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN
                     uv = saturate(uv);
                 #else
@@ -893,10 +893,8 @@ Shader "ReunionMovement/UI/ImageEx"
                 
                 float2 uvSample = uv + _Time.y * _TransitionTex_Speed;
 
-                // When WrapMode=Repeat + FilterMode=Bilinear, sampling near the tile border blends with the
-                // opposite border, creating seams that move with rotation.
-                // Instead of snapping to texels (breaks smooth motion), clamp UVs *inside each repeat tile*
-                // by a small padding in pixels.
+                // 当 WrapMode=Repeat 且 FilterMode=Bilinear 时，在图块边缘采样会与对边混合，导致随旋转移动的接缝。
+                // 为避免直接对齐采样像素（会破坏平滑运动），对每个重复图块内部使用少量像素的内边距进行 clamp。
                 #if TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN
                     float2 pad = _TransitionTex_TexelSize.xy * max(_TransitionTexClampPadding, 0);
                     float2 tileUv = frac(uvSample);
@@ -904,11 +902,11 @@ Shader "ReunionMovement/UI/ImageEx"
                     uvSample = floor(uvSample) + tileUv;
                 #endif
 
-                // Force LOD 0 to avoid mip bleeding which can cause seams on sharp transition patterns.
+                // 强制使用 LOD 0，避免 mip 级别混合导致在锐利过渡图案上出现接缝。
                 float alpha = tex2Dlod(_TransitionTex, float4(uvSample, 0, 0)).a;
                 alpha = _TransitionReverse ? 1 - alpha : alpha;
 
-                // Avoid exact 0/1 values for modes that amplify edge precision artifacts.
+                // 避免出现精确的 0/1 值（某些过渡模式会放大边缘精度问题），对 alpha 做微小夹取
                 #if TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN
                     alpha = clamp(alpha, 1e-4, 1.0 - 1e-4);
                 #endif
@@ -980,7 +978,7 @@ Shader "ReunionMovement/UI/ImageEx"
                     const float maxValue = transition_rate();
                     const float minValue = maxValue - _TransitionWidth / 2;
                     const float rate = 1 - inv_lerp(minValue, maxValue, alpha * (1 - _TransitionWidth / 2));
-                    const float4 gradColor = tex2D(_TransitionGradientTex, float2(rate, 0.5)); // Use TransitionTex as gradient
+                    const float4 gradColor = tex2D(_TransitionGradientTex, float2(rate, 0.5)); // 将过渡纹理用作渐变
                     const float4 burntColor = gradColor * color;
                     const float4 flameColor = float4(gradColor.rgb, gradColor.a * color.a);
 
@@ -990,7 +988,7 @@ Shader "ReunionMovement/UI/ImageEx"
 
                 return color;
             }
-            // --------------------TRANSITION End---------------------
+            // -------------------- 过渡（TRANSITION） 结束 ---------------------
 
             half4 ApplyBlur(float2 uv)
             {
@@ -1042,8 +1040,8 @@ Shader "ReunionMovement/UI/ImageEx"
                 OUT.texcoord = v.texcoord;
                 OUT.effectsUv = v.uv1;
                 
-                // Apply flip to texture UVs and effects UVs so shader sampling and transitions respect flip settings
-                // _FlipHorizontal/_FlipVertical are set as 0/1 ints from ImageEx component
+                // 将翻转应用到纹理 UV 与 effects UV，确保采样与过渡在水平/垂直翻转时表现正确
+                // _FlipHorizontal/_FlipVertical 由 ImageEx 组件以 0/1 的形式设置
                 OUT.texcoord.x = lerp(OUT.texcoord.x, 1 - OUT.texcoord.x, _FlipHorizontal);
                 OUT.texcoord.y = lerp(OUT.texcoord.y, 1 - OUT.texcoord.y, _FlipVertical);
                 OUT.effectsUv.x = lerp(OUT.effectsUv.x, 1 - OUT.effectsUv.x, _FlipHorizontal);
@@ -1057,14 +1055,14 @@ Shader "ReunionMovement/UI/ImageEx"
                 shapeUv = rotateUV(shapeUv, shapeRotation, _ConstrainRotation > 0? float2(0.5, 0.5) : size * 0.5);
                 shapeUv*= _ConstrainRotation > 0.0? size : 1.0;
                 
-                // Apply flipping
-                // _FlipHorizontal/_FlipVertical are set as 0/1 ints from ImageEx component
+                // 在形状数据上应用翻转（shapeUv 在像素空间中），确保程序化形状的 SDF 计算也考虑翻转
+                // _FlipHorizontal/_FlipVertical 由 ImageEx 组件以 0/1 的形式设置
                 shapeUv.x = lerp(shapeUv.x, abs(size.x - shapeUv.x), _FlipHorizontal);
                 shapeUv.y = lerp(shapeUv.y, abs(size.y - shapeUv.y), _FlipVertical);
                 
                 OUT.shapeData = float4(shapeUv.x, shapeUv.y, size.x, size.y);
                 
-                // Apply flip to shape data (shapeUv in pixel space) so procedural shape SDF respects flipping
+                // 对形状数据应用翻转（shapeUv 以像素空间表示），以确保程序化形状的 SDF 考虑翻转
                 OUT.shapeData.x = lerp(OUT.shapeData.x, OUT.shapeData.z - OUT.shapeData.x, _FlipHorizontal);
                 OUT.shapeData.y = lerp(OUT.shapeData.y, OUT.shapeData.w - OUT.shapeData.y, _FlipVertical);
                 
@@ -1080,6 +1078,7 @@ Shader "ReunionMovement/UI/ImageEx"
             fixed4 frag(v2f IN): SV_Target
             {
                 // Prepare UVs/transition info before deciding shadow or main fragment so shadow can follow transitions.
+                // 在决定使用阴影分支或主图分支之前，准备 UV 与过渡信息，以便阴影能跟随过渡状态
                 half4 color = IN.color;
                 half2 texcoord = IN.texcoord;
                 float2 effectsUv = IN.effectsUv;
@@ -1087,7 +1086,7 @@ Shader "ReunionMovement/UI/ImageEx"
                 float2 transitionUv = transitionBaseUv;
                 float2 transitionFilterUv = transitionBaseUv;
 
-                // Transition Logic (compute transAlpha and allow move for melt/burn)
+                // 过渡逻辑（计算 transAlpha，并为 Melt/Burn 模式允许移动 UV）
                 float transAlpha = 1;
                 #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
                     #if TRANSITION_PATTERN
@@ -1108,7 +1107,7 @@ Shader "ReunionMovement/UI/ImageEx"
                     texcoord += move_transition_filter(uvMask, transAlpha);
                 #endif
 
-                // Detect shadow vertex and render shadow using separate logic (but include transitions)
+                // 检测是否为阴影顶点，并使用单独逻辑渲染阴影（仍包含过渡处理）
                 bool isShadowVertex = color.a > 0.001 && color.r < 0.001 && color.g < 0.001 && color.b < 0.001;
 
                 if (isShadowVertex)
@@ -1118,10 +1117,10 @@ Shader "ReunionMovement/UI/ImageEx"
                      half4 blurSample = 0;
                      bool allowOOB = _AllowOutOfBoundsShadow > 0.5;
 
-                     // Support different shadow modes: single sample (fast), gaussian blur, and 3-layer shadow (Shadow3)
+                     // 支持多种阴影模式：单次采样（快速）、高斯模糊、以及三层阴影（Shadow3）
                      if (_ShadowMode == 2)
                      {
-                         // Shadow3: three layered samples with increasing offset and decreasing weight
+                         // Shadow3：三层采样，偏移逐层增大、权重逐层减小（用于模拟分层软阴影）
                          float2 baseUv = texcoord;
                          if (!allowOOB) baseUv = saturate(baseUv);
                          float2 step = texel * (0.5 + saturate(_ShadowBlurIntensity));
@@ -1166,11 +1165,12 @@ Shader "ReunionMovement/UI/ImageEx"
                          }
                      }
 
-                     // If Mirror mode, sample mirrored texture instead of blur mask to render reflection-like shadow
+                     // 如果为镜像模式（Shadow Mirror），则采样镜像纹理并根据设置生成反射效果而非模糊阴影。
+                     // 注意：镜像模式会使用 _ShadowMirrorDirection/_ShadowMirrorScale/_ShadowMirrorOffset 控制变换。
                      if (_ShadowMode == 3)
                      {
                          float2 sampleUv = texcoord;
-                         // Mirror direction: 0 = Vertical (flip Y), 1 = Horizontal (flip X)
+                         // 镜像方向：0 = 垂直（翻转 Y），1 = 水平（翻转 X）
                          if (_ShadowMirrorDirection == 1)
                          {
                              sampleUv.x = 1.0 - (sampleUv.x - 0.5) * _ShadowMirrorScale - 0.5 + _ShadowMirrorOffset.x;
@@ -1185,13 +1185,13 @@ Shader "ReunionMovement/UI/ImageEx"
                          float shadowAlpha = baseA * _ShadowColor.a * IN.color.a;
                          half4 shadowOut = half4(_ShadowColor.rgb * shadowAlpha, shadowAlpha);
 
-                         // Optionally show original sampled color instead of tinted shadow when requested
+                         // 可选：当请求时，显示原始采样颜色而不是被阴影色调色的结果
                          if (_ShadowMirrorShowSource > 0.5)
                          {
-                             // Blend between IN.color (per-vertex tint) and global _Color using _ShadowMirrorTintMix
+                             // 在阴影四边形的顶点颜色（通常为黑色）和全局 _Color 之间进行颜色混合
                              half4 tint = lerp(_ShadowColor, _Color, clamp(_ShadowMirrorTintMix, 0.0, 1.0));
                              half4 src = baseSample * tint;
-                             // 同时将过渡应用于源
+                             // 同样将过渡应用于源
                              #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
                                  src = apply_transition_filter(src, transAlpha, transitionFilterUv);
                              #endif
@@ -1205,7 +1205,7 @@ Shader "ReunionMovement/UI/ImageEx"
                      float shadowAlpha = shadowMask * _ShadowColor.a * IN.color.a;
                      half4 shadowOut = half4(_ShadowColor.rgb * shadowAlpha, shadowAlpha);
 
-                     // Apply transition filter to shadow so it follows the same transition as the main image
+                     // 对生成的阴影结果应用过渡滤镜，这样阴影在过渡（例如 dissolve/melt）过程中保持一致性
                      #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
                          shadowOut = apply_transition_filter(shadowOut, transAlpha, transitionFilterUv);
                      #endif
@@ -1215,7 +1215,8 @@ Shader "ReunionMovement/UI/ImageEx"
                   
                 color = ApplyBlur(texcoord) * color;
 
-                // keep original base sample
+                // 继续主片元路径：先对主纹理进行可选模糊采样（ApplyBlur），然后按功能模块（渐变、SDF、描边、过渡）依次处理颜色与 alpha
+                // 保留原始的基础采样颜色
                 fixed4 baseSample = (tex2D(_MainTex, texcoord) + _TextureSampleAdd) * IN.color;
 
                 #if GRADIENT_LINEAR || GRADIENT_RADIAL
@@ -1337,9 +1338,9 @@ Shader "ReunionMovement/UI/ImageEx"
                     #endif
                 #endif
 
-                // Apply Transition Filter
+                // 应用过渡过滤器
                 #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
-                    // transAlpha and transitionFilterUv were computed earlier so they are available here
+                    // transAlpha 和 transitionFilterUv 已在前面计算，可在此处使用
                     color = apply_transition_filter(color, transAlpha, transitionFilterUv);
                 #endif
 
