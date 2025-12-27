@@ -33,7 +33,7 @@ TerminalSystem<br>
 
 Arrow Example：<br>
 展示箭头工具<br>
-<img src="Images/arrow-example.gif" alt="示例" width="520"/>
+<img src="Images/arrow-example.gif" alt="arrow-example" width="520"/>
 
 Camera Example：<br>
 展示Camera工具<br>
