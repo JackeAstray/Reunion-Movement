@@ -7,7 +7,8 @@ Unity Version : 6000.1.10f1
 
 - [工具](#Tool)
 - [功能](#Function)
-- [示例](#Catalogue)
+- [示例](#Example)
+- [目录](#Catalogue)
 - [感谢](#Thanks)
 
 ## 工具：<a name="Tool"></a>
@@ -27,10 +28,12 @@ UISystem<br>
 TerminalSystem<br>
 
 ## 示例：<a name="Example"></a>
-项目的例子在Assets->ReunionMovement->Scenes->Example中。<br>
+项目的例子在 Assets -> ReunionMovement -> Scenes -> Example 中<br>
+<img src="Images/示例路径.png" alt="示例" width="280"/>
 
 Arrow Example：<br>
 展示箭头工具<br>
+<img src="Images/Arrow Example.gif" alt="示例" width="280"/>
 
 Camera Example：<br>
 展示Camera工具<br>
@@ -73,9 +76,7 @@ UI Example：<br>
 
 ## 感谢：<a name="Thanks"></a>
 感谢Shadertoy上的作者所做的贡献<br>
-Thank you to the authors on Shadertoy for their contributions<br>
 https://www.shadertoy.com/<br>
 
 感谢以下的开源项目<br>
-Thanks to the following open source projects<br>
 https://github.com/mob-sakai/UIEffect<br>
