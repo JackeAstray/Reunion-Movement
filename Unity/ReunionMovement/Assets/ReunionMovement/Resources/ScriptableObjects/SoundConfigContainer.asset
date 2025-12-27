@@ -157,3 +157,9 @@ MonoBehaviour:
     Name: JDSherbert - Ultimate UI SFX Pack - Swipe - 2
     Type: 2
     Detailed: "\u6ED1\u52A8"
+  - Id: 25
+    Number: 300015
+    Path: Sounds/SFX/UI/
+    Name: RPG3_FireMagicMisc_AttackMissed03
+    Type: 2
+    Detailed: "\u706B\u9B54\u6CD5 \u653B\u51FB\u672A\u547D\u4E2D 03"
