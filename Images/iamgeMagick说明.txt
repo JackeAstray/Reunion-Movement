@@ -1,0 +1,7 @@
+让Gif能循环播放，需要通过iamgeMagick处理做如下处理
+
+1、安装iamgeMagick
+https://imagemagick.org/script/download.php#windows
+
+2、把 GIF 设置为无限循环的命令（在安装好 ImageMagick 后运行，工作目录置于仓库根目录）
+magick arrow-example.gif -coalesce -loop 0 arrow-example-loop.gif

@@ -27,7 +27,8 @@ namespace ReunionMovement.Core.Sound
         /// <param name="loop">是否循环</param>
         /// <param name="volume">音量</param>
         /// <param name="mute">是否静音</param>
-        public void Processing(AudioClip audioClip, Transform emitter, bool loop, float volume, bool mute)
+        /// <param name="pitch">音高</param>
+        public void Processing(AudioClip audioClip, Transform emitter, bool loop, float volume, bool mute, float pitch = 1f)
         {
             if (audioClip == null)
             {
@@ -51,6 +52,7 @@ namespace ReunionMovement.Core.Sound
             source.volume = volume;
             source.loop = loop;
             source.mute = mute;
+            source.pitch = pitch;
             source.Play();
 
             // 停止任何可能正在运行的旧的回收协程
@@ -62,7 +64,9 @@ namespace ReunionMovement.Core.Sound
             // 如果不是循环播放，则在播放结束后自动回收
             if (!loop)
             {
-                recycleCoroutine = StartCoroutine(RecycleAfterPlaying(audioClip.length));
+                // 考虑音高对播放时长的影响
+                float duration = Mathf.Abs(pitch) > 0f ? audioClip.length / Mathf.Abs(pitch) : audioClip.length;
+                recycleCoroutine = StartCoroutine(RecycleAfterPlaying(duration));
             }
         }
 
