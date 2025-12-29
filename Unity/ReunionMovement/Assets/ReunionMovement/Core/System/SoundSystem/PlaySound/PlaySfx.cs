@@ -1,36 +1,54 @@
 using ReunionMovement.Core.Sound;
 using UnityEngine;
 
-/// <summary>
-/// ²¥·ÅÒôĞ§
-/// </summary>
-public class PlaySfx : MonoBehaviour
+namespace ReunionMovement.Core.Sound
 {
-    // ÒôĞ§Ë÷Òı
-    public int sfxIndex;
-
-    // ¿ÉÅäÖÃ²ÎÊı
-    public Transform emitter;
-    public bool loop = false;
-    public bool playOnAwake = false;
-    public float volume = -1f; // -1 Ê¹ÓÃÈ«¾Ö
-    public float pitch = 1f;
-
-    private void Start()
+    /// <summary>
+    /// æ’­æ”¾éŸ³æ•ˆ
+    /// </summary>
+    public class PlaySfx : MonoBehaviour
     {
-        if (playOnAwake)
+        // éŸ³æ•ˆç´¢å¼•
+        public int sfxIndex;
+
+        // å¯é…ç½®å‚æ•°
+        public Transform emitter;
+        public bool loop = false;
+        public bool playOnAwake = false;
+        public float volume = -1f; // -1 ä½¿ç”¨å…¨å±€
+        public float pitch = 1f;
+
+        private void Start()
         {
-            PlaySfxClip();
+            if (playOnAwake)
+            {
+                PlaySfxClip();
+            }
         }
-    }
 
-    public void PlaySfxClip()
-    {
-        SoundSystem.Instance.PlaySfx(sfxIndex, emitter, loop, volume, pitch);
-    }
+        /// <summary>
+        /// æ’­æ”¾æŒ‡å®šIDçš„éŸ³æ•ˆ
+        /// </summary>
+        /// <param name="id"></param>
+        public void PlaySfxById(int id)
+        {
+            SoundSystem.Instance.PlaySfx(id, emitter, loop, volume, pitch);
+        }
 
-    public void StopSfx()
-    {
-        SoundSystem.Instance.StopSfx();
+        /// <summary>
+        /// æ’­æ”¾éŸ³æ•ˆå‰ªè¾‘
+        /// </summary>
+        public void PlaySfxClip()
+        {
+            SoundSystem.Instance.PlaySfx(sfxIndex, emitter, loop, volume, pitch);
+        }
+
+        /// <summary>
+        /// åœæ­¢éŸ³æ•ˆ
+        /// </summary>
+        public void StopSfx()
+        {
+            SoundSystem.Instance.StopSfx();
+        }
     }
 }

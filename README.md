@@ -32,19 +32,19 @@ TerminalSystem<br>
 <img src="Images/示例路径.png" alt="示例" width="280"/>
 
 Arrow Example：<br>
-展示箭头工具 <br>
+展示箭头 <br>
 <img src="Images/arrow-example-loop-min.gif" alt="arrow-example-min" width="520"/>
 
 Button Example：<br>
-展示Button工具 <br>
+展示Button <br>
 <img src="Images/button-example-loop-min.gif" alt="button-example-min" width="520"/>
 
 Camera Example：<br>
-展示Camera工具 <br>
+展示Camera <br>
 <img src="Images/camera-example-loop-min.gif" alt="camera-example-min" width="520"/>
 
 ColliderGizmo Example：<br>
-展示碰撞器工具<br>
+展示编辑模式显示碰撞器工具<br>
 <img src="Images/colliderGizmo-example-loop-min.gif" alt="colliderGizmo-example-min" width="520"/>
 
 Command Example：<br>
@@ -57,8 +57,16 @@ Deadline Example：<br>
 <img src="Images/deadline-example2-loop-min.gif" alt="deadline-example2-min" width="520"/>
 
 Download Example：<br>
-展示下载工具<br>
+展示下载<br>
 <img src="Images/download-example-loop-min.gif" alt="download-example-min" width="520"/>
+
+LoopScrollRect Example：<br>
+展示循环列表<br>
+<img src="Images/循环列表.png" alt="循环列表" width="520"/>
+
+Music Example：<br>
+展示音乐播放<br>
+<img src="Images/音乐示例.png" alt="音乐示例" width="520"/>
 
 Observer Example：<br>
 展示观察者例子<br>
@@ -82,7 +90,7 @@ Timer Example：<br>
 <img src="Images/timer-example-loop-min.gif" alt="timer-example-loop-min" width="520"/>
 
 TreeView Example：<br>
-展示计时和倒计时的使用<br>
+展示树状图<br>
 <img src="Images/treeView-example-loop-min.gif" alt="treeView-example-loop-min" width="520"/>
 
 ImageEx Example：<br>

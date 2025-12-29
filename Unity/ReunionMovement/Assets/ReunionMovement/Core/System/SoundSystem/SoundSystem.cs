@@ -54,6 +54,31 @@ namespace ReunionMovement.Core.Sound
         private Dictionary<GameObject, GameObject> sfxObjects = new Dictionary<GameObject, GameObject>();
         #endregion
 
+        // 确保 AudioSource 存在（如果被销毁则重建）
+        private void EnsureAudioSource()
+        {
+            if (source != null)
+            {
+                // Unity 的特殊 "null"（对象已被销毁）在 == null 时也会为 true，
+                // 但我们 still check to be safe using UnityEngine.Object reference.
+                return;
+            }
+
+            // If musicRoot exists try to get or add AudioSource, otherwise recreate roots
+            if (musicRoot == null)
+            {
+                CreateAudioRoot();
+            }
+            else
+            {
+                source = musicRoot.GetComponent<AudioSource>();
+                if (source == null)
+                {
+                    source = musicRoot.AddComponent<AudioSource>();
+                }
+            }
+        }
+
         public Task Init()
         {
             initProgress = 0;
@@ -113,6 +138,9 @@ namespace ReunionMovement.Core.Sound
                 AudioClip audioClip = await GetAudioClipAsync(soundConfig.Path, soundConfig.Name);
                 if (audioClip != null)
                 {
+                    EnsureAudioSource();
+                    if (source == null) return;
+
                     source.clip = audioClip;
                     source.volume = volume == -1 ? GameOption.currentOption.musicVolume : volume;
                     source.loop = true;
@@ -127,6 +155,7 @@ namespace ReunionMovement.Core.Sound
         /// </summary>
         public void PlayMusic()
         {
+            EnsureAudioSource();
             source?.Play();
         }
 
@@ -135,6 +164,7 @@ namespace ReunionMovement.Core.Sound
         /// </summary>
         public void PauseMusic()
         {
+            EnsureAudioSource();
             source?.Pause();
         }
 
@@ -143,6 +173,7 @@ namespace ReunionMovement.Core.Sound
         /// </summary>
         public void StopMusic()
         {
+            EnsureAudioSource();
             source?.Stop();
         }
 
@@ -166,6 +197,10 @@ namespace ReunionMovement.Core.Sound
         /// <returns></returns>
         private async Task FadeIn()
         {
+            // 如果 AudioSource 被销毁或不存在，则直接退出
+            EnsureAudioSource();
+            if (source == null) return;
+
             float startVolume = 0;
             float currentFadeTime = 0f;
             targetVolume = GameOption.currentOption.musicVolume;
@@ -186,6 +221,9 @@ namespace ReunionMovement.Core.Sound
         /// <returns></returns>
         private async Task FadeOut()
         {
+            EnsureAudioSource();
+            if (source == null) return;
+
             float startVolume = source.volume;
             float currentFadeTime = 0f;
 
