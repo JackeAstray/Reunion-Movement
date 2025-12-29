@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Pool;
 using UnityEngine.Rendering;
@@ -52,6 +53,7 @@ namespace ReunionMovement.Core.Sound
         //生成对象池 特效
         private Dictionary<GameObject, GameObject> sfxObjects = new Dictionary<GameObject, GameObject>();
         #endregion
+
         public Task Init()
         {
             initProgress = 0;
@@ -206,7 +208,7 @@ namespace ReunionMovement.Core.Sound
         /// <param name="index">声音配置索引</param>
         /// <param name="emitter">声音发射器</param>
         /// <param name="loop">是否循环</param>
-        public async void PlaySfx(int index, Transform emitter = null, bool loop = false)
+        public async void PlaySfx(int index, Transform emitter = null, bool loop = false, float volume = -1f, float pitch = 1f)
         {
             if (soundConfigDict != null && soundConfigDict.TryGetValue(index, out SoundConfig soundConfig))
             {
@@ -225,7 +227,8 @@ namespace ReunionMovement.Core.Sound
                             go.transform.localPosition = Vector3.zero;
                         }
                         SoundItem soundObj = go.GetComponent<SoundItem>();
-                        soundObj.Processing(clip, emitter, loop, GameOption.currentOption.musicVolume, GameOption.currentOption.musicMuted);
+                        float effectiveVolume = volume == -1f ? GameOption.currentOption.musicVolume : volume;
+                        soundObj.Processing(clip, emitter, loop, effectiveVolume, GameOption.currentOption.musicMuted, pitch);
                     }
                 }
             }
@@ -234,7 +237,7 @@ namespace ReunionMovement.Core.Sound
         /// <summary>
         /// 停止所有音效
         /// </summary>
-        public void StopSound()
+        public void StopSfx()
         {
             RecycleAll();
         }
@@ -639,7 +642,7 @@ namespace ReunionMovement.Core.Sound
         }
 
         /// <summary>
-        /// 从缓存或资源加载音频剪辑
+        /// 从缓存或资源加载音频剪辑  WAV(.wav)  AIFF/AIF(.aif, .aiff)  AU(.au)  Ogg Vorbis(.ogg)  MP3(.mp3)
         /// </summary>
         private async Task<AudioClip> GetAudioClipAsync(string path, string name)
         {
