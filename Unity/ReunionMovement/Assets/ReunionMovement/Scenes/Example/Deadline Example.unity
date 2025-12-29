@@ -269,8 +269,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bac29d096e004414e82fc563a2f1b37d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  StartDate: 2025-9-20
-  DeadlineDate: 2025-9-25
+  StartDate: 2025-12-28
+  DeadlineDate: 2025-12-30
   CurrentDate: 
 --- !u!4 &449908334
 Transform:

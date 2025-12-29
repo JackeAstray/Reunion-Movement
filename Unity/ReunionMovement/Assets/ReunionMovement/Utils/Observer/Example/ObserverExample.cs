@@ -13,7 +13,12 @@ namespace ReunionMovement.Example
 
         public void Init(SubjectBase subject)
         {
-            this.subject.Attach(this);
+            // 确保我们使用传递的主题而不是未初始化的字段
+            this.subject = subject;
+            if (this.subject != null)
+            {
+                this.subject.Attach(this);
+            }
         }
 
         public override void UpdateData(params object[] args)
