@@ -1,0 +1,173 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "E:\\Github\\Reunion-Movement\\WebServer\\ReunionMovementServer\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{4E456C7B-5117-47F1-B310-C609B5CC8372}|ReunionMovementServer\\ReunionMovementServer.csproj|e:\\github\\reunion-movement\\webserver\\reunionmovementserver\\reunionmovementserver\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4E456C7B-5117-47F1-B310-C609B5CC8372}|ReunionMovementServer\\ReunionMovementServer.csproj|solutionrelative:reunionmovementserver\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4E456C7B-5117-47F1-B310-C609B5CC8372}|ReunionMovementServer\\ReunionMovementServer.csproj|e:\\github\\reunion-movement\\webserver\\reunionmovementserver\\reunionmovementserver\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{4E456C7B-5117-47F1-B310-C609B5CC8372}|ReunionMovementServer\\ReunionMovementServer.csproj|solutionrelative:reunionmovementserver\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4E456C7B-5117-47F1-B310-C609B5CC8372}|ReunionMovementServer\\ReunionMovementServer.csproj|e:\\github\\reunion-movement\\webserver\\reunionmovementserver\\reunionmovementserver\\license\\licensechecker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4E456C7B-5117-47F1-B310-C609B5CC8372}|ReunionMovementServer\\ReunionMovementServer.csproj|solutionrelative:reunionmovementserver\\license\\licensechecker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4E456C7B-5117-47F1-B310-C609B5CC8372}|ReunionMovementServer\\ReunionMovementServer.csproj|e:\\github\\reunion-movement\\webserver\\reunionmovementserver\\reunionmovementserver\\data\\weatherforecast.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4E456C7B-5117-47F1-B310-C609B5CC8372}|ReunionMovementServer\\ReunionMovementServer.csproj|solutionrelative:reunionmovementserver\\data\\weatherforecast.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4E456C7B-5117-47F1-B310-C609B5CC8372}|ReunionMovementServer\\ReunionMovementServer.csproj|e:\\github\\reunion-movement\\webserver\\reunionmovementserver\\reunionmovementserver\\data\\timeverification.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4E456C7B-5117-47F1-B310-C609B5CC8372}|ReunionMovementServer\\ReunionMovementServer.csproj|solutionrelative:reunionmovementserver\\data\\timeverification.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 10,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{3ae79031-e1bc-11d0-8f78-00a0c9110057}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:1772720081:0:{83107a3e-496a-485e-b455-16ddb978e55e}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{0ad07096-bba9-4900-a651-0598d26f6d24}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{40ea2e6b-2121-4bb8-a43e-c83c04b51041}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "TimeVerification.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\WebServer\\ReunionMovementServer\\ReunionMovementServer\\Data\\TimeVerification.cs",
+              "RelativeDocumentMoniker": "ReunionMovementServer\\Data\\TimeVerification.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\WebServer\\ReunionMovementServer\\ReunionMovementServer\\Data\\TimeVerification.cs",
+              "RelativeToolTip": "ReunionMovementServer\\Data\\TimeVerification.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAAhAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T02:20:42.17Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\WebServer\\ReunionMovementServer\\ReunionMovementServer\\appsettings.json",
+              "RelativeDocumentMoniker": "ReunionMovementServer\\appsettings.json",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\WebServer\\ReunionMovementServer\\ReunionMovementServer\\appsettings.json",
+              "RelativeToolTip": "ReunionMovementServer\\appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAATAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-12-30T02:14:44.173Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "WeatherForecast.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\WebServer\\ReunionMovementServer\\ReunionMovementServer\\Data\\WeatherForecast.cs",
+              "RelativeDocumentMoniker": "ReunionMovementServer\\Data\\WeatherForecast.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\WebServer\\ReunionMovementServer\\ReunionMovementServer\\Data\\WeatherForecast.cs",
+              "RelativeToolTip": "ReunionMovementServer\\Data\\WeatherForecast.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAAGAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:57:15.252Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "LicenseChecker.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\WebServer\\ReunionMovementServer\\ReunionMovementServer\\License\\LicenseChecker.cs",
+              "RelativeDocumentMoniker": "ReunionMovementServer\\License\\LicenseChecker.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\WebServer\\ReunionMovementServer\\ReunionMovementServer\\License\\LicenseChecker.cs",
+              "RelativeToolTip": "ReunionMovementServer\\License\\LicenseChecker.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAASAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:55:40.196Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Program.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\WebServer\\ReunionMovementServer\\ReunionMovementServer\\Program.cs",
+              "RelativeDocumentMoniker": "ReunionMovementServer\\Program.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\WebServer\\ReunionMovementServer\\ReunionMovementServer\\Program.cs",
+              "RelativeToolTip": "ReunionMovementServer\\Program.cs",
+              "ViewState": "AgIAAFUAAAAAAAAAAAAswGcAAAA1AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:46:49.504Z",
+              "EditorCaption": ""
+            }
+          ]
+        },
+        {
+          "DockedWidth": 1856,
+          "SelectedChildIndex": -1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{5a4e9529-b6a0-46b5-be4f-0f0b239bc0eb}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{4a9b7e51-aa16-11d0-a8c5-00a0c921a4d2}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{28836128-fc2c-11d2-a433-00c04f72d18a}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{3822e751-eb69-4b0e-b301-595a9e4c74d5}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{a80febb4-e7e0-4147-b476-21aaf2453969}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
+            }
+          ]
+        },
+        {
+          "DockedWidth": 1856,
+          "SelectedChildIndex": -1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{004be353-6879-467c-9d1e-9ac23cdf6d49}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

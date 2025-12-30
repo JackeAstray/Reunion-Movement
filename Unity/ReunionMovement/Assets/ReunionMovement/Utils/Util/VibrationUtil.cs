@@ -18,12 +18,6 @@ namespace ReunionMovement.Common.Util
         private static readonly VibrationUtil instance = new VibrationUtil();
         public static VibrationUtil Instance => instance;
 
-
-        //private VibrationUtil()
-        //{
-        //    iOSInitializeHaptics();
-        //}
-
         // 震动参数
         private const long LightDuration = 20;
         private const long MediumDuration = 40;
@@ -50,7 +44,9 @@ namespace ReunionMovement.Common.Util
 
         private bool IsVibrationDisabled() => PlayerPrefs.GetInt(VIBRATION_PREFS, 2) == 1;
 
-        // 统一触发接口
+        /// <summary>
+        /// 统一触发接口
+        /// </summary>
         public void TriggerDefault() => Trigger(() =>
         {
 #if UNITY_IOS || UNITY_ANDROID
@@ -75,6 +71,10 @@ namespace ReunionMovement.Common.Util
         // 对 iOS 造成严重冲击，对 Android 造成长时间剧烈震动
         public void TriggerHeavyImpact() => Trigger(() => Haptic(HapticTypes.HeavyImpact));
 
+        /// <summary>
+        /// 统一触发方法
+        /// </summary>
+        /// <param name="action"></param>
         private void Trigger(System.Action action)
         {
             if (!IsVibrationDisabled()) action();

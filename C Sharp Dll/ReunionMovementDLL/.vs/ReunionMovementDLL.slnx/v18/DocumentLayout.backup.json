@@ -1,0 +1,445 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\resourcemanager.resourcechecker.checkinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\resourcemanager.resourcechecker.checkinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\loadsceneupdatecallback.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\loadsceneupdatecallback.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\localversionlist.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\localversionlist.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\localversionlist.filesystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\localversionlist.filesystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\localversionlist.resource.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\localversionlist.resource.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\packageversionlist.asset.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\packageversionlist.asset.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\packageversionlist.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\packageversionlist.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\packageversionlist.filesystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\packageversionlist.filesystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\packageversionlist.resource.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\packageversionlist.resource.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\packageversionlist.resourcegroup.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\packageversionlist.resourcegroup.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\packageversionlistserializer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\packageversionlistserializer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\readwriteversionlistserializer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\readwriteversionlistserializer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\resourceapplyfailureeventargs.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\resourceapplyfailureeventargs.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\resourceapplystarteventargs.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\resourceapplystarteventargs.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\resourceapplysuccesseventargs.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\resourceapplysuccesseventargs.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\resourcemanager.assetinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\resourcemanager.assetinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\resourcemanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\resourcemanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\resourcemanager.loadtype.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\resourcemanager.loadtype.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\resourcemanager.readwriteresourceinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\resourcemanager.readwriteresourceinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\resourcemanager.resourcechecker.checkinfo.checkstatus.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\resourcemanager.resourcechecker.checkinfo.checkstatus.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|e:\\github\\reunion-movement\\c sharp dll\\reunionmovementdll\\reunionmovementdll\\resource\\readonlyversionlistserializer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D64A6D0F-007C-434B-B2C5-34D3DA1A2BAC}|ReunionMovementDLL\\ReunionMovementDLL.csproj|solutionrelative:reunionmovementdll\\resource\\readonlyversionlistserializer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "ResourceManager.ResourceChecker.CheckInfo.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ResourceManager.ResourceChecker.CheckInfo.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\ResourceManager.ResourceChecker.CheckInfo.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ResourceManager.ResourceChecker.CheckInfo.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\ResourceManager.ResourceChecker.CheckInfo.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAXAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:39:06.869Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 19,
+              "Title": "ResourceManager.ResourceChecker.CheckInfo.CheckStatus.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ResourceManager.ResourceChecker.CheckInfo.CheckStatus.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\ResourceManager.ResourceChecker.CheckInfo.CheckStatus.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ResourceManager.ResourceChecker.CheckInfo.CheckStatus.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\ResourceManager.ResourceChecker.CheckInfo.CheckStatus.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:39:02.334Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 18,
+              "Title": "ResourceManager.ReadWriteResourceInfo.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ResourceManager.ReadWriteResourceInfo.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\ResourceManager.ReadWriteResourceInfo.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ResourceManager.ReadWriteResourceInfo.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\ResourceManager.ReadWriteResourceInfo.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:38:59.309Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
+              "Title": "ResourceManager.LoadType.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ResourceManager.LoadType.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\ResourceManager.LoadType.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ResourceManager.LoadType.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\ResourceManager.LoadType.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:38:56.519Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "ResourceManager.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ResourceManager.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\ResourceManager.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ResourceManager.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\ResourceManager.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:38:52.542Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "ResourceManager.AssetInfo.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ResourceManager.AssetInfo.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\ResourceManager.AssetInfo.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ResourceManager.AssetInfo.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\ResourceManager.AssetInfo.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:38:49.517Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "ResourceApplySuccessEventArgs.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ResourceApplySuccessEventArgs.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\ResourceApplySuccessEventArgs.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ResourceApplySuccessEventArgs.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\ResourceApplySuccessEventArgs.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:38:46.722Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "ResourceApplyStartEventArgs.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ResourceApplyStartEventArgs.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\ResourceApplyStartEventArgs.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ResourceApplyStartEventArgs.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\ResourceApplyStartEventArgs.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:38:43.709Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "ResourceApplyFailureEventArgs.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ResourceApplyFailureEventArgs.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\ResourceApplyFailureEventArgs.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ResourceApplyFailureEventArgs.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\ResourceApplyFailureEventArgs.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:38:40.413Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "ReadWriteVersionListSerializer.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ReadWriteVersionListSerializer.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\ReadWriteVersionListSerializer.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ReadWriteVersionListSerializer.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\ReadWriteVersionListSerializer.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:38:35.079Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 20,
+              "Title": "ReadOnlyVersionListSerializer.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ReadOnlyVersionListSerializer.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\ReadOnlyVersionListSerializer.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\ReadOnlyVersionListSerializer.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\ReadOnlyVersionListSerializer.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:38:27.684Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "PackageVersionListSerializer.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\PackageVersionListSerializer.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\PackageVersionListSerializer.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\PackageVersionListSerializer.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\PackageVersionListSerializer.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:38:23.345Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "PackageVersionList.ResourceGroup.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\PackageVersionList.ResourceGroup.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\PackageVersionList.ResourceGroup.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\PackageVersionList.ResourceGroup.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\PackageVersionList.ResourceGroup.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:38:20.282Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "PackageVersionList.Resource.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\PackageVersionList.Resource.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\PackageVersionList.Resource.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\PackageVersionList.Resource.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\PackageVersionList.Resource.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:38:17.483Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "PackageVersionList.FileSystem.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\PackageVersionList.FileSystem.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\PackageVersionList.FileSystem.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\PackageVersionList.FileSystem.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\PackageVersionList.FileSystem.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:38:14.533Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "PackageVersionList.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\PackageVersionList.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\PackageVersionList.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\PackageVersionList.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\PackageVersionList.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:38:10.217Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "PackageVersionList.Asset.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\PackageVersionList.Asset.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\PackageVersionList.Asset.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\PackageVersionList.Asset.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\PackageVersionList.Asset.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:38:07.318Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "LocalVersionList.Resource.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\LocalVersionList.Resource.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\LocalVersionList.Resource.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\LocalVersionList.Resource.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\LocalVersionList.Resource.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:38:04.62Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "LocalVersionList.FileSystem.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\LocalVersionList.FileSystem.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\LocalVersionList.FileSystem.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\LocalVersionList.FileSystem.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\LocalVersionList.FileSystem.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:38:01.499Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "LocalVersionList.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\LocalVersionList.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\LocalVersionList.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\LocalVersionList.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\LocalVersionList.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:37:58.171Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "LoadSceneUpdateCallback.cs",
+              "DocumentMoniker": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\LoadSceneUpdateCallback.cs",
+              "RelativeDocumentMoniker": "ReunionMovementDLL\\Resource\\LoadSceneUpdateCallback.cs",
+              "ToolTip": "E:\\Github\\Reunion-Movement\\C Sharp Dll\\ReunionMovementDLL\\ReunionMovementDLL\\Resource\\LoadSceneUpdateCallback.cs",
+              "RelativeToolTip": "ReunionMovementDLL\\Resource\\LoadSceneUpdateCallback.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-30T01:37:50.341Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{3ae79031-e1bc-11d0-8f78-00a0c9110057}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:1772720081:0:{83107a3e-496a-485e-b455-16ddb978e55e}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{0ad07096-bba9-4900-a651-0598d26f6d24}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{40ea2e6b-2121-4bb8-a43e-c83c04b51041}"
+            }
+          ]
+        },
+        {
+          "DockedWidth": 1856,
+          "SelectedChildIndex": -1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{5a4e9529-b6a0-46b5-be4f-0f0b239bc0eb}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{4a9b7e51-aa16-11d0-a8c5-00a0c921a4d2}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{28836128-fc2c-11d2-a433-00c04f72d18a}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{3822e751-eb69-4b0e-b301-595a9e4c74d5}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{a80febb4-e7e0-4147-b476-21aaf2453969}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
+            }
+          ]
+        },
+        {
+          "DockedWidth": 1856,
+          "SelectedChildIndex": -1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{004be353-6879-467c-9d1e-9ac23cdf6d49}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
