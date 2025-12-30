@@ -26,7 +26,6 @@ namespace ReunionMovement.Core
             public int framerate = 60;
             // 多语言支持
             public Multilingual language = Multilingual.ZH_CN;
-
             // 图形质量
             public int graphicsQuality = 2; // 0: Low, 1: Medium, 2: High
             // 亮度
@@ -47,7 +46,6 @@ namespace ReunionMovement.Core
             public bool sfxMuted = false;
             // 音效音量
             public float sfxVolume = 0.5f;
-
             //淡入淡出时间
             public float musicFadeTime = 2f;
             #endregion
@@ -66,6 +64,7 @@ namespace ReunionMovement.Core
             currentOption.resolutionHeight = PlayerPrefs.GetInt("resolutionHeight", currentOption.resolutionHeight);
             currentOption.vsync = PlayerPrefs.GetInt("vsync", currentOption.vsync ? 1 : 0) == 1;
             currentOption.framerate = PlayerPrefs.GetInt("framerate", currentOption.framerate);
+
             // 将 Multilingual 枚举转换为 string，再从 PlayerPrefs 获取后解析回枚举
             string langStr = PlayerPrefs.GetString("language", currentOption.language.ToString());
             if (Enum.TryParse<Multilingual>(langStr, out var langEnum))
@@ -97,6 +96,7 @@ namespace ReunionMovement.Core
             PlayerPrefs.SetInt("resolutionHeight", currentOption.resolutionHeight);
             PlayerPrefs.SetInt("vsync", currentOption.vsync ? 1 : 0);
             PlayerPrefs.SetInt("framerate", currentOption.framerate);
+
             // 将 Multilingual 枚举转换为 string 存储
             PlayerPrefs.SetString("language", currentOption.language.ToString());
             PlayerPrefs.SetInt("graphicsQuality", currentOption.graphicsQuality);

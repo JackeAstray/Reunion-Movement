@@ -1,0 +1,124 @@
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.IdentityModel.Tokens;
+using ReunionMovementServer.License;
+using Serilog;
+using System.Text;
+
+// 许可检查
+LicenseChecker.CheckOrExit();
+
+// 配置日志记录器
+Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}", theme: Serilog.Sinks.SystemConsole.Themes.AnsiConsoleTheme.Code)
+            .WriteTo.Async(a => a.File("logs/log.txt", rollingInterval: RollingInterval.Day))
+            .CreateLogger();
+
+// 创建wwwroot目录（使用绝对路径以保证与 WebRootPath 一致）
+var webRootPath = Path.Combine(AppContext.BaseDirectory, "wwwroot");
+if (!Directory.Exists(webRootPath))
+{
+    Directory.CreateDirectory(webRootPath);
+}
+
+// 创建Web应用程序构建器，确保使用上面创建的 webRootPath
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    WebRootPath = webRootPath,
+});
+
+// 添加JWT Token认证
+var jwtKey = builder.Configuration["Jwt:Key"];
+var jwtIssuer = builder.Configuration["Jwt:Issuer"];
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = false,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtIssuer,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+    };
+});
+
+builder.Services.AddControllers();
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// 添加跨域支持
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+// 启动静态文件服务，增强对 Unity WebGL 压缩文件和 wasm 的支持
+var provider = new FileExtensionContentTypeProvider();
+// 确保常见 Unity 输出的 MIME 类型正确
+provider.Mappings[".unityweb"] = "application/octet-stream";
+provider.Mappings[".wasm"] = "application/wasm";
+provider.Mappings[".mem"] = "application/octet-stream";
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = provider,
+    // 处理 Brotli 和 Gzip 压缩文件，并根据原始扩展名设置正确的 Content-Type
+    OnPrepareResponse = ctx =>
+    {
+        var fileName = ctx.File.Name;
+        if (fileName.EndsWith(".br", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Context.Response.Headers["Content-Encoding"] = "br";
+            // 将 content-type 设置为去掉压缩扩展名后的类型（例如 .wasm.br -> application/wasm）
+            var originalName = Path.GetFileNameWithoutExtension(fileName);
+            if (provider.TryGetContentType(originalName, out var contentType))
+            {
+                ctx.Context.Response.ContentType = contentType;
+            }
+        }
+        else if (fileName.EndsWith(".gz", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Context.Response.Headers["Content-Encoding"] = "gzip";
+            var originalName = Path.GetFileNameWithoutExtension(fileName);
+            if (provider.TryGetContentType(originalName, out var contentType))
+            {
+                ctx.Context.Response.ContentType = contentType;
+            }
+        }
+    }
+});
+
+app.UseCors("AllowAll");
+//// 使用HTTPS重定向
+//app.UseHttpsRedirection();
+// 使用身份验证
+app.UseAuthentication();
+// 使用授权
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();

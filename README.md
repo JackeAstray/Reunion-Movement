@@ -2,7 +2,7 @@
 Unity Game Framework | Unity游戏框架
 Unity Version : 6000.1.10f1
 
-注意：该框架只支持 New Input System<br>
+注意：在项目中请确保 TextMesh Pro 、New Input System存在<br>
 说明：此项目是重构的LLAFramework，由于LLAFramework有太多的多余代码所以我打算从新重构该项目。<br>
 
 - [工具](#Tool)
