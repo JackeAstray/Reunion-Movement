@@ -56,6 +56,8 @@ namespace ReunionMovement.Common.Util
         public float rotX = 0;
         public float rotY = 0;
 
+
+
         public float offsetHeight = 0f;
         public float lateralOffset = 0f;
         public float offsetDistance = 30f;
@@ -64,8 +66,13 @@ namespace ReunionMovement.Common.Util
         public float zoomSpeed = 50f;                       //缩放速度
         public float zoomValue = 50f;                       //缩放值
         public float rotateSpeed = 15f;                     //转速
-        public float maxRot = 90f;                          //最大旋转角度
-        public float minRot = -90f;                         //最小旋转角度
+        [Space(10)]
+        public float maxRotY = 90f;                         //最大上下旋转角度
+        public float minRotY = -90f;                        //最小上下旋转角度
+        [Space(10)]
+        public float minRotX = -180f;                       // 最小左右旋转角度
+        public float maxRotX = 180f;                        // 最大左右旋转角度
+        [Space(10)]
         public float distance = 30f;                        //默认距离
         Quaternion destRot = Quaternion.identity;
         #endregion
@@ -304,7 +311,10 @@ namespace ReunionMovement.Common.Util
             rotX += horz * step;
             rotY += vert * step;
 
-            rotY = Mathf.Clamp(rotY, minRot, maxRot);
+            // 限制左右旋转
+            rotX = ClampAngle(rotX, minRotX, maxRotX);
+
+            rotY = Mathf.Clamp(rotY, minRotY, maxRotY);
             Quaternion addRot = Quaternion.Euler(0f, rotX, 0f);
             destRot = addRot * Quaternion.Euler(rotY, 0f, 0f);
             csmoCamera.transform.rotation = destRot;
@@ -383,8 +393,8 @@ namespace ReunionMovement.Common.Util
         /// <param name="y"></param>
         public void SetCameraView(float x, float y)
         {
-            rotX = x;
-            rotY = y;
+            rotX = ClampAngle(x, minRotX, maxRotX);
+            rotY = Mathf.Clamp(y, minRotY, maxRotY);
             Quaternion addRot = Quaternion.Euler(0f, rotX, 0f);
             destRot = addRot * Quaternion.Euler(rotY, 0f, 0f);
 
@@ -412,5 +422,12 @@ namespace ReunionMovement.Common.Util
             UpdatePosition();
         }
         #endregion
+
+        // 辅助：把角度归一化到 -180~180 并在范围内夹取
+        private float ClampAngle(float angle, float min, float max)
+        {
+            angle = Mathf.Repeat(angle + 180f, 360f) - 180f;
+            return Mathf.Clamp(angle, min, max);
+        }
     }
 }
