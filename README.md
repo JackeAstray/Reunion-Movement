@@ -1,6 +1,6 @@
 # Reunion-Movement
 Unity Game Framework | Unity游戏框架
-Unity Version : 6000.1.10f1
+Unity Version : 6000.1.10f1 (低的版本比如2022.3.xx在演示中TextMesh Pro可能会报错，需要将Fonts中的字体重新生成Font Asset，报错不影响框架逻辑)
 
 注意：在项目中请确保 TextMesh Pro 、New Input System存在<br>
 说明：此项目是重构的LLAFramework，由于LLAFramework有太多的多余代码所以我打算从新重构该项目。<br>
