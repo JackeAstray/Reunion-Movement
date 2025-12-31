@@ -20,27 +20,14 @@ MonoBehaviour:
     m_OptionalShaders:
     - key: Hidden/UI/Default (SoftMaskable)
       value: Hidden/UI/Default (UIEffect)
-    m_Asset: {fileID: 7243248133133803495}
+    m_Asset: {fileID: 1583440340238750835}
     m_ErrorOnUnregisteredVariant: 0
     m_UnregisteredVariants: []
---- !u!200 &7243248133133803495
+--- !u!200 &1583440340238750835
 ShaderVariantCollection:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: ShaderVariants
-  m_Shaders:
-  - first: {fileID: 4800000, guid: 96246b1ead49a4c5a996fd477bc5a117, type: 3}
-    second:
-      variants:
-      - keywords: 
-        passType: 0
-      - keywords: COLOR_FILTER
-        passType: 0
-      - keywords: COLOR_FILTER TRANSITION_MELT
-        passType: 0
-      - keywords: SAMPLING_BLUR_DETAIL
-        passType: 0
-      - keywords: SAMPLING_EDGE_LUMINANCE
-        passType: 0
+  m_Shaders: {}
