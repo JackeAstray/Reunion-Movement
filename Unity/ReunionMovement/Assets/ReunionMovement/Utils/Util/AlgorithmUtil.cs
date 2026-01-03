@@ -78,7 +78,7 @@ namespace ReunionMovement.Common.Util
         /// <returns>是否是奇数</returns>
         public static bool IsOdd(long value)
         {
-            return !Convert.ToBoolean(value & 0x1);
+            return Convert.ToBoolean(value & 0x1);
         }
 
         /// <summary>
@@ -88,7 +88,7 @@ namespace ReunionMovement.Common.Util
         /// <returns>是否是偶数</returns>
         public static bool IsEven(long value)
         {
-            return Convert.ToBoolean(value & 0x1);
+            return !Convert.ToBoolean(value & 0x1);
         }
 
         /// <summary>
@@ -325,7 +325,9 @@ namespace ReunionMovement.Common.Util
             if (array == null)
             {
                 Log.Error("Distinct: 输入数组不能为空");
+                return null;
             }
+
             var set = new HashSet<T>();
             var result = new List<T>(array.Count);
             foreach (var item in array)
@@ -345,6 +347,11 @@ namespace ReunionMovement.Common.Util
         /// <param name="array">数组</param>
         public static void Shuffle<T>(IList<T> array)
         {
+            if (array == null)
+            {
+                Log.Error("Distinct: 输入数组不能为空");
+                return;
+            }
             Shuffle(array, 0, array.Count);
         }
 
@@ -360,11 +367,13 @@ namespace ReunionMovement.Common.Util
             if (array == null)
             {
                 Log.Error("Distinct: 输入数组不能为空");
+                return;
             }
 
             if (startIndex < 0 || count < 0 || startIndex + count > array.Count)
             {
                 Log.Error($"Disrupt: 输入参数错误，startIndex: {startIndex}, count: {count}, array.Count: {array.Count}");
+                return;
             }
 
             var endIndex = startIndex + count;
@@ -394,11 +403,13 @@ namespace ReunionMovement.Common.Util
             if (array == null)
             {
                 Log.Error("BinarySearch_TryFind: 输入数组不能为空");
+                return -1;
             }
 
             if (keySelector == null)
             {
                 Log.Error("BinarySearch_TryFind: 键选择器不能为空");
+                return -1;
             }
 
             int first = 0;
@@ -685,10 +696,12 @@ namespace ReunionMovement.Common.Util
             if (array == null)
             {
                 Log.Error("Sort: 输入数组不能为空");
+                return;
             }
             if (keySelector == null)
             {
                 Log.Error("Sort: 键选择器不能为空");
+                return;
             }
 
             var sorted = ascending
@@ -711,8 +724,13 @@ namespace ReunionMovement.Common.Util
         /// <returns>最小或最大值</returns>
         public static T MinMax<T>(IList<T> array, Comparison<T> comparison, bool findMax = false)
         {
-            if (array == null || array.Count == 0) return default;
+            if (array == null || array.Count == 0)
+            {
+                return default;
+            }
+
             T temp = array[0];
+
             foreach (var arr in array)
             {
                 int cmp = comparison(temp, arr);
@@ -756,8 +774,6 @@ namespace ReunionMovement.Common.Util
             return MinMax(array, comparison, true);
         }
 
-
-
         /// <summary>
         /// 从序列中获取第N个元素
         /// </summary>
@@ -767,6 +783,11 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static List<T> First<T>(this IEnumerable<T> source, int num)
         {
+            if (source == null)
+            {
+                return new List<T>();
+            }
+
             return source.Take(num).ToList();
         }
 
@@ -798,7 +819,9 @@ namespace ReunionMovement.Common.Util
         public static T GetRandomItemFromList<T>(IEnumerable<T> source)
         {
             if (source == null)
+            {
                 return default;
+            }
 
             // 优先处理 IList<T>，如 List、数组，效率高
             if (source is IList<T> list)
@@ -922,6 +945,12 @@ namespace ReunionMovement.Common.Util
                                                               int length,
                                                               IComparer<TElement> comparer)
         {
+            if (source == null)
+            {
+                Log.Error("source 为空");
+                return -1;
+            }
+
             if (index < 0)
             {
                 Log.Error("index is less than the lower bound of array.");
@@ -2047,19 +2076,6 @@ namespace ReunionMovement.Common.Util
             }
 
             return findTrans;
-        }
-
-        /// <summary>
-        /// 查找子项
-        /// </summary>
-        /// <param name="t"></param>
-        /// <param name="objName"></param>
-        /// <param name="check_visible"></param>
-        /// <param name="raise_error"></param>
-        /// <returns></returns>
-        public static Transform ChildTF(this Transform t, string objName, bool check_visible = false, bool raise_error = true)
-        {
-            return Child(t, objName, check_visible, raise_error);
         }
 
         /// <summary>
