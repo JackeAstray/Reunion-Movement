@@ -97,17 +97,17 @@ namespace ReunionMovement.Common.Util.Download
                 .OnDownloadProgress(onProgress)
                 .OnSuccess(response =>
                 {
-                    if (response.Texture != null)
+                    if (response.texture != null)
                     {
                         if (imageCache.TryGetValue(url, out Texture2D oldTex) && oldTex != null)
                         {
                             UnityEngine.Object.Destroy(oldTex);
                         }
-                        imageCache[url] = response.Texture;
+                        imageCache[url] = response.texture;
 
                         // 保存到本地（确保目录存在于SaveToLocal中）
-                        SaveToLocal(response.Texture, localPath);
-                        onComplete?.Invoke(response.Texture);
+                        SaveToLocal(response.texture, localPath);
+                        onComplete?.Invoke(response.texture);
                     }
                 })
                 .OnError(error => Log.Error($"下载图片失败: {error}"))

@@ -12,9 +12,9 @@ namespace ReunionMovement.Core.UI
     public class UIController : MonoBehaviour
     {
         // 界面名称，必须唯一
-        public string UIName = "";
+        public string uiName = "";
         // 界面优先级，数值越大优先级越高
-        public int Priority { get; set; } = 0;
+        public int priority { get; set; } = 0;
 
         #region 每个界面都有一个Canvas
         private Canvas canvas;
@@ -85,7 +85,7 @@ namespace ReunionMovement.Core.UI
         /// <param name="uiName"></param>
         protected void CloseWindow(string uiName = null)
         {
-            UISystem.Instance.CloseWindow(uiName ?? UIName);
+            UISystem.Instance.CloseWindow(uiName ?? this.uiName);
         }
 
         /// <summary>

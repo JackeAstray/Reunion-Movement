@@ -6,14 +6,9 @@ namespace ReunionMovement.Common.Util
     /// <summary>
     /// iOS Android 震动
     /// </summary>
-    public class VibrationUtil
+    public class VibrationUtil : SingletonMgr<VibrationUtil>
     {
         public const string VIBRATION_PREFS = "VibrationStatus";
-
-        // 单例实现
-        private static readonly VibrationUtil instance = new VibrationUtil();
-        public static VibrationUtil Instance => instance;
-
         // 震动参数
         private const long LightDuration = 20;
         private const long MediumDuration = 40;

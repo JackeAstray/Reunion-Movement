@@ -22,7 +22,9 @@ namespace ReunionMovement.Core.Sound
         #region 单例与初始化
         private static readonly Lazy<SoundSystem> instance = new(() => new SoundSystem());
         public static SoundSystem Instance => instance.Value;
-        public bool IsInited { get; private set; }
+
+        public bool isInited { get; private set; }
+
         private double initProgress = 0;
         public double InitProgress { get { return initProgress; } }
         #endregion
@@ -104,7 +106,7 @@ namespace ReunionMovement.Core.Sound
             CreatePools();
 
             initProgress = 100;
-            IsInited = true;
+            isInited = true;
             Log.Debug("SoundSystem 初始化完成");
 
             return Task.CompletedTask;

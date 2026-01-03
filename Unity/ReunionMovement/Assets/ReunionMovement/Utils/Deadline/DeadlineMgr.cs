@@ -14,17 +14,17 @@ namespace ReunionMovement.Common.Util
     public class DeadlineMgr : SingletonMgr<DeadlineMgr>
     {
         [Tooltip("起始日期，格式建议：yyyy-MM-dd（也兼容yyyy-M-d）")]
-        public string StartDate = "2025-9-20";
+        public string startDate = "2025-9-20";
         [Tooltip("截止日期，格式建议：yyyy-MM-dd（也兼容yyyy-M-d）")]
-        public string DeadlineDate = "2025-9-25";
+        public string deadlineDate = "2025-9-25";
         [Tooltip("当前日期（运行时自动填充，格式：yyyy-MM-dd）")]
-        public string CurrentDate;
+        public string currentDate;
 
         // 本地存储 key
-        private const string PrefKey_LastUtcTicks = "Deadline_LastUtcTicks_v1";
-        private const string PrefKey_Hash = "Deadline_LastUtcHash_v1";
+        private const string prefKey_LastUtcTicks = "Deadline_LastUtcTicks_v1";
+        private const string prefKey_Hash = "Deadline_LastUtcHash_v1";
         // 简单的内置 salt（最好构建时注入或由服务端提供）
-        private const string InternalSalt = "@REUNION_m0v3m3nt$alt";
+        private const string internalSalt = "@REUNION_m0v3m3nt$alt";
 
         // 容忍的向后跳阈值（例如：1 分钟）。如果跳得比这个多则认为可疑。
         private static readonly TimeSpan RollbackTolerance = TimeSpan.FromMinutes(1);
@@ -41,7 +41,7 @@ namespace ReunionMovement.Common.Util
         {
             // 使用本地时间作日期比较（保持原行为）
             var nowLocal = DateTime.Now.Date;
-            CurrentDate = nowLocal.ToString("yyyy-MM-dd");
+            currentDate = nowLocal.ToString("yyyy-MM-dd");
 
             // 先做离线时钟回拨检测（基于 UTC）
             var nowUtc = DateTime.UtcNow;
@@ -52,7 +52,7 @@ namespace ReunionMovement.Common.Util
                 return;
             }
 
-            if (!TryParseDate(StartDate, out var start) || !TryParseDate(DeadlineDate, out var end))
+            if (!TryParseDate(startDate, out var start) || !TryParseDate(deadlineDate, out var end))
             {
                 Debug.LogError("DeadlineMgr: 日期格式错误，请使用 yyyy-MM-dd 或 yyyy-M-d。");
                 return;
@@ -88,8 +88,8 @@ namespace ReunionMovement.Common.Util
         {
             try
             {
-                var hasTicks = PlayerPrefs.HasKey(PrefKey_LastUtcTicks);
-                var hasHash = PlayerPrefs.HasKey(PrefKey_Hash);
+                var hasTicks = PlayerPrefs.HasKey(prefKey_LastUtcTicks);
+                var hasHash = PlayerPrefs.HasKey(prefKey_Hash);
 
                 // 首次运行或无任何记录：写入当前 UTC
                 if (!hasTicks && !hasHash)
@@ -105,8 +105,8 @@ namespace ReunionMovement.Common.Util
                     return true;
                 }
 
-                var storedTicksStr = PlayerPrefs.GetString(PrefKey_LastUtcTicks, string.Empty);
-                var storedHash = PlayerPrefs.GetString(PrefKey_Hash, string.Empty);
+                var storedTicksStr = PlayerPrefs.GetString(prefKey_LastUtcTicks, string.Empty);
+                var storedHash = PlayerPrefs.GetString(prefKey_Hash, string.Empty);
 
                 if (!long.TryParse(storedTicksStr, out var storedTicks))
                 {
@@ -151,8 +151,8 @@ namespace ReunionMovement.Common.Util
         /// <param name="ticks"></param>
         private void SaveUtcTicks(long ticks)
         {
-            PlayerPrefs.SetString(PrefKey_LastUtcTicks, ticks.ToString());
-            PlayerPrefs.SetString(PrefKey_Hash, ComputeHashForTicks(ticks));
+            PlayerPrefs.SetString(prefKey_LastUtcTicks, ticks.ToString());
+            PlayerPrefs.SetString(prefKey_Hash, ComputeHashForTicks(ticks));
             PlayerPrefs.Save();
         }
 
@@ -164,7 +164,7 @@ namespace ReunionMovement.Common.Util
         private string ComputeHashForTicks(long ticks)
         {
             // 使用简单的 SHA256(ticks + Application.identifier + salt) 作为完整性校验
-            var payload = ticks.ToString() + "|" + Application.identifier + "|" + InternalSalt;
+            var payload = ticks.ToString() + "|" + Application.identifier + "|" + internalSalt;
             using (var sha = SHA256.Create())
             {
                 var bytes = Encoding.UTF8.GetBytes(payload);

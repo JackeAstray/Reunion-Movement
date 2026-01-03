@@ -56,8 +56,6 @@ namespace ReunionMovement.Common.Util
         public float rotX = 0;
         public float rotY = 0;
 
-
-
         public float offsetHeight = 0f;
         public float lateralOffset = 0f;
         public float offsetDistance = 30f;

@@ -18,7 +18,7 @@ namespace ReunionMovement.Common.Util
         /// <summary>
         /// 获取文件协议
         /// </summary>
-        public static string GetFileProtocol => "file://";
+        public static string getFileProtocol => "file://";
 
         /// <summary>
         /// 获取文件名（包含后缀）或不包含后缀

@@ -13,7 +13,9 @@ namespace ReunionMovement.Core.Terminal
         #region 单例与初始化
         private static readonly Lazy<TerminalSystem> instance = new(() => new TerminalSystem());
         public static TerminalSystem Instance => instance.Value;
-        public bool IsInited { get; private set; }
+
+        public bool isInited { get; private set; }
+
         private double initProgress = 0;
         public double InitProgress { get { return initProgress; } }
         #endregion
@@ -43,7 +45,7 @@ namespace ReunionMovement.Core.Terminal
             terminalRequest.RegisterCommands();
 
             initProgress = 100;
-            IsInited = true;
+            isInited = true;
             Log.Debug("TerminalSystem 初始化完成");
 
             return Task.CompletedTask;
@@ -62,7 +64,7 @@ namespace ReunionMovement.Core.Terminal
             if (keyboard.backquoteKey.wasPressedThisFrame)
             {
                 // UI 系统未初始化时不执行切换
-                if (UISystem.Instance != null && UISystem.Instance.IsInited)
+                if (UISystem.Instance != null && UISystem.Instance.isInited)
                 {
                     UISystem.Instance.ToggleWindow("TerminalUIPlane");
                 }

@@ -17,7 +17,9 @@ namespace ReunionMovement.Core.EventMessage
         #region 单例与初始化
         private static readonly Lazy<EventMessageSystem> instance = new(() => new EventMessageSystem());
         public static EventMessageSystem Instance => instance.Value;
-        public bool IsInited { get; private set; }
+
+        public bool isInited { get; private set; }
+
         private double initProgress = 0;
         public double InitProgress { get { return initProgress; } }
         #endregion
@@ -27,7 +29,7 @@ namespace ReunionMovement.Core.EventMessage
         public Task Init()
         {
             initProgress = 100;
-            IsInited = true;
+            isInited = true;
             Log.Debug("EventMessageSystem 初始化完成");
             return Task.CompletedTask;
         }

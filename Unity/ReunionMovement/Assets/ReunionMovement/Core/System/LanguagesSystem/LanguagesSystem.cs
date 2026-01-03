@@ -18,7 +18,9 @@ namespace ReunionMovement.Core.Languages
         #region 单例与初始化
         private static readonly Lazy<LanguagesSystem> instance = new(() => new LanguagesSystem());
         public static LanguagesSystem Instance => instance.Value;
-        public bool IsInited { get; private set; }
+
+        public bool isInited { get; private set; }
+
         private double initProgress = 0;
         public double InitProgress { get { return initProgress; } }
         #endregion
@@ -38,7 +40,7 @@ namespace ReunionMovement.Core.Languages
             }
 
             initProgress = 100;
-            IsInited = true;
+            isInited = true;
             Log.Debug("LanguagesSystem 初始化完成");
             return Task.CompletedTask;
         }
@@ -54,7 +56,7 @@ namespace ReunionMovement.Core.Languages
             // 清除基类维护的观察者列表
             base.Clear();
             // 重置初始化状态和相关数据
-            IsInited = false;
+            isInited = false;
             initProgress = 0;
             languagesContainer = null;
         }

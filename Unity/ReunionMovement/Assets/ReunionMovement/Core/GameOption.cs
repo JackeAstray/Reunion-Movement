@@ -9,7 +9,7 @@ namespace ReunionMovement.Core
         public class Option
         {
             // 版本号
-            public string version = "0.1.0";
+            public string version = "1.0.0";
             // 全屏模式
             public bool fullscreen = true;
             // 分辨率宽度

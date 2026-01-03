@@ -10,7 +10,7 @@ namespace ReunionMovement.Common.Util
     /// </summary>
     public static class PathUtil
     {
-        public static readonly string[] PathHeadDefine = { "jar://", "jar:file://", "file://", "file:///", "http://", "https://", "ftp://", "content://", "data:" };
+        public static readonly string[] pathHeadDefine = { "jar://", "jar:file://", "file://", "file:///", "http://", "https://", "ftp://", "content://", "data:" };
 
         /// <summary>
         /// 获取路径头
@@ -19,7 +19,7 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static string GetPathHead(string path)
         {
-            foreach (var head in PathHeadDefine)
+            foreach (var head in pathHeadDefine)
             {
                 if (path.StartsWith(head, StringComparison.OrdinalIgnoreCase))
                 {
