@@ -3097,7 +3097,7 @@ namespace ReunionMovement.Common.Util
         {
             Texture2D texture2D = new Texture2D(texture.width, texture.height, TextureFormat.RGBA32, false);
             RenderTexture currentRT = RenderTexture.active;
-            RenderTexture renderTexture = RenderTexture.GetTemporary(texture.width, texture.height, 32);
+            RenderTexture renderTexture = RenderTexture.GetTemporary(texture.width, texture.height, 32, RenderTextureFormat.Default, RenderTextureReadWrite.Linear);
             Graphics.Blit(texture, renderTexture);
 
             RenderTexture.active = renderTexture;
@@ -3174,7 +3174,7 @@ namespace ReunionMovement.Common.Util
             if (TextureWidth > side_x && TextureHeight > side_y)
             {
                 tex = new Texture2D(side_x, side_y);
-                UnityEngine.Color[] col = texture.GetPixels((TextureWidth - side_x) / 2, (TextureWidth - side_y) / 2, side_x, side_y);
+                UnityEngine.Color[] col = texture.GetPixels((TextureWidth - side_x) / 2, (TextureHeight - side_y) / 2, side_x, side_y);
                 tex.SetPixels(0, 0, side_x, side_y, col);
                 tex.Apply();
                 return tex;
