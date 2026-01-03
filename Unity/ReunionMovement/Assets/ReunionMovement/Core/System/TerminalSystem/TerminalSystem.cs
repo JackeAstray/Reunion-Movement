@@ -74,6 +74,7 @@ namespace ReunionMovement.Core.Terminal
         public void Clear()
         {
             Log.Debug("TerminalSystem 清除数据");
+            isInited = false;
         }
 
         #region 打开指定UI

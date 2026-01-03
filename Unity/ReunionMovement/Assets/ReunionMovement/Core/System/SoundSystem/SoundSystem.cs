@@ -120,6 +120,8 @@ namespace ReunionMovement.Core.Sound
         public void Clear()
         {
             Log.Debug("SoundSystem 清除数据");
+            isInited = false;
+            startupPools.Clear();
             foreach (var pool in pooledObjects.Values)
             {
                 pool.Clear();
