@@ -14,7 +14,7 @@ namespace ReunionMovement.Common.Util
         /// <summary>
         /// 加密字节长度
         /// </summary>
-        public const int EncryptBytesLength = 64;
+        public const int encryptBytesLength = 64;
 
         /// <summary>
         /// 偏移加密的头部字节值
@@ -67,18 +67,18 @@ namespace ReunionMovement.Common.Util
         public static void EncryptOffset(string filePath)
         {
             byte[] bytes = File.ReadAllBytes(filePath);
-            int newLength = bytes.Length + EncryptBytesLength;
+            int newLength = bytes.Length + encryptBytesLength;
 
             byte[] cachedBytes = GetCachedBytes(newLength);
 
             //写入额外的头部数据
-            for (int i = 0; i < EncryptBytesLength; i++)
+            for (int i = 0; i < encryptBytesLength; i++)
             {
                 cachedBytes[i] = encryptOffsetHead;
             }
 
             //写入原始数据
-            Array.Copy(bytes, 0, cachedBytes, EncryptBytesLength, bytes.Length);
+            Array.Copy(bytes, 0, cachedBytes, encryptBytesLength, bytes.Length);
             using (FileStream fs = File.OpenWrite(filePath))
             {
                 fs.Position = 0;
@@ -94,11 +94,11 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         public static void EncryptXOr(string filePath)
         {
-            byte[] cachedBytes = GetCachedBytes(EncryptBytesLength);
+            byte[] cachedBytes = GetCachedBytes(encryptBytesLength);
 
             using (FileStream fs = File.Open(filePath, FileMode.Open))
             {
-                int _ = fs.Read(cachedBytes, 0, EncryptBytesLength);
+                int _ = fs.Read(cachedBytes, 0, encryptBytesLength);
                 EncryptXOr(cachedBytes);
                 fs.Position = 0;
                 fs.Write(cachedBytes, 0, encryptXOrKey);
@@ -111,7 +111,7 @@ namespace ReunionMovement.Common.Util
         /// <summary>
         /// 使用二进制数据进行异或加密/解密
         /// </summary>
-        public static void EncryptXOr(byte[] bytes, long length = EncryptBytesLength)
+        public static void EncryptXOr(byte[] bytes, long length = encryptBytesLength)
         {
             for (long i = 0; i < length; i++)
             {

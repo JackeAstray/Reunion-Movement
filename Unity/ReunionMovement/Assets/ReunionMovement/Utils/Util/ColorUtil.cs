@@ -8,7 +8,7 @@ namespace ReunionMovement.Common.Util
     /// </summary>
     public static class ColorUtil
     {
-        private const float LightOffset = 0.0625f;
+        private const float lightOffset = 0.0625f;
 
         /// <summary>
         /// color 转换hex
@@ -46,9 +46,9 @@ namespace ReunionMovement.Common.Util
         public static Color Lighter(this Color color)
         {
             return new Color(
-                Mathf.Clamp(color.r + LightOffset, 0, 1),
-                Mathf.Clamp(color.g + LightOffset, 0, 1),
-                Mathf.Clamp(color.b + LightOffset, 0, 1),
+                Mathf.Clamp(color.r + lightOffset, 0, 1),
+                Mathf.Clamp(color.g + lightOffset, 0, 1),
+                Mathf.Clamp(color.b + lightOffset, 0, 1),
                 color.a);
         }
 
@@ -60,9 +60,9 @@ namespace ReunionMovement.Common.Util
         public static Color Darker(this Color color)
         {
             return new Color(
-                Mathf.Clamp(color.r - LightOffset, 0, 1),
-                Mathf.Clamp(color.g - LightOffset, 0, 1),
-                Mathf.Clamp(color.b - LightOffset, 0, 1),
+                Mathf.Clamp(color.r - lightOffset, 0, 1),
+                Mathf.Clamp(color.g - lightOffset, 0, 1),
+                Mathf.Clamp(color.b - lightOffset, 0, 1),
                 color.a);
         }
 

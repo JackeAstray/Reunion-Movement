@@ -18,7 +18,9 @@ namespace ReunionMovement.Core.Scene
         #region 单例与初始化
         private static readonly Lazy<SceneSystem> instance = new(() => new SceneSystem());
         public static SceneSystem Instance => instance.Value;
-        public bool IsInited { get; private set; }
+
+        public bool isInited { get; private set; }
+
         private double initProgress = 0;
         public double InitProgress { get { return initProgress; } }
         #endregion
@@ -48,7 +50,7 @@ namespace ReunionMovement.Core.Scene
             await OnInit();
 
             initProgress = 100;
-            IsInited = true;
+            isInited = true;
             Log.Debug("SceneSystem 初始化完成");
         }
 
@@ -288,7 +290,7 @@ namespace ReunionMovement.Core.Scene
 
             foreach (var window in windows)
             {
-                if (window.IsHidenWhenLeaveScene)
+                if (window.isHidenWhenLeaveScene)
                 {
                     // 这里可以是隐藏、关闭或销毁窗口的逻辑  
                     window.gameObject.SetActive(false);

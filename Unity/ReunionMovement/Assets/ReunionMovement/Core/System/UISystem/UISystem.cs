@@ -20,7 +20,9 @@ namespace ReunionMovement.Core.UI
         #region 单例与初始化
         private static readonly Lazy<UISystem> instance = new(() => new UISystem());
         public static UISystem Instance => instance.Value;
-        public bool IsInited { get; private set; }
+
+        public bool isInited { get; private set; }
+
         private double initProgress = 0;
         public double InitProgress { get { return initProgress; } }
         #endregion
@@ -47,7 +49,7 @@ namespace ReunionMovement.Core.UI
             await CreateRoot();
 
             initProgress = 100;
-            IsInited = true;
+            isInited = true;
             Log.Debug("UISystem 初始化完成");
         }
 
@@ -162,7 +164,7 @@ namespace ReunionMovement.Core.UI
                 openArgs = args,
                 isOnInit = true
             };
-            uiLoadState.uiWindow.UIName = name;
+            uiLoadState.uiWindow.uiName = name;
             InitWindow(uiLoadState, uiLoadState.uiWindow, uiLoadState.openWhenFinish, uiLoadState.openArgs);
 
             uiStateCache.Add(name, uiLoadState);
@@ -196,7 +198,7 @@ namespace ReunionMovement.Core.UI
             {
                 if (!uiState.isStaticUI)
                 {
-                    CloseWindow(uiBase.UIName); // Destroy
+                    CloseWindow(uiBase.uiName); // Destroy
                     return;
                 }
                 else
@@ -630,9 +632,9 @@ namespace ReunionMovement.Core.UI
             var ui = GetUIBase(uiName);
             if (ui != null)
             {
-                ui.Priority = priority;
+                ui.priority = priority;
                 // 按优先级排序
-                var siblings = ui.transform.parent.Cast<Transform>().OrderBy(t => (t.GetComponent<UIController>()?.Priority) ?? 0).ToList();
+                var siblings = ui.transform.parent.Cast<Transform>().OrderBy(t => (t.GetComponent<UIController>()?.priority) ?? 0).ToList();
                 for (int i = 0; i < siblings.Count; i++)
                 {
                     siblings[i].SetSiblingIndex(i);
@@ -756,7 +758,7 @@ namespace ReunionMovement.Core.UI
         {
             foreach (var kv in uiStateCache)
             {
-                if (kv.Value.uiWindow != null && kv.Value.uiWindow.WindowAsset.GroupName == groupName)
+                if (kv.Value.uiWindow != null && kv.Value.uiWindow.WindowAsset.groupName == groupName)
                     CloseWindow(kv.Key);
             }
         }

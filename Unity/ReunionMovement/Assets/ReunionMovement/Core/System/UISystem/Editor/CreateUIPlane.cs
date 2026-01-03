@@ -244,7 +244,7 @@ namespace ReunionMovement.Common.Util.EditorTools
             if (!obj.TryGetComponent(type, out Component component))
             {
                 obj.AddComponent(type);
-                obj.GetComponent<UIController>().UIName = scriptName;
+                obj.GetComponent<UIController>().uiName = scriptName;
                 AssetDatabase.Refresh();
             }
         }

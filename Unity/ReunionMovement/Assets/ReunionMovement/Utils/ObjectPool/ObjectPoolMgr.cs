@@ -11,9 +11,9 @@ namespace ReunionMovement.Common.Util
     /// </summary>
     public class ObjectPoolMgr : SingletonMgr<ObjectPoolMgr>
     {
-        public Dictionary<string, ObjectSpawnPool> SpawnPools { get; private set; } = new Dictionary<string, ObjectSpawnPool>();
+        public Dictionary<string, ObjectSpawnPool> spawnPools { get; private set; } = new Dictionary<string, ObjectSpawnPool>();
 
-        [SerializeField] internal int Limit = 100;
+        [SerializeField] internal int limit = 100;
 
         /// <summary>
         /// 注册对象池
@@ -25,10 +25,10 @@ namespace ReunionMovement.Common.Util
                 return;
             }
 
-            if (!SpawnPools.ContainsKey(name))
+            if (!spawnPools.ContainsKey(name))
             {
-                int poolLimit = limit > 0 ? limit : Limit;
-                SpawnPools.Add(name, new ObjectSpawnPool(spawnTem, poolLimit, onSpawn, onDespawn));
+                int poolLimit = limit > 0 ? limit : this.limit;
+                spawnPools.Add(name, new ObjectSpawnPool(spawnTem, poolLimit, onSpawn, onDespawn));
             }
             else
             {
@@ -36,15 +36,15 @@ namespace ReunionMovement.Common.Util
             }
         }
 
-        public bool IsExistSpawnPool(string name) => SpawnPools.ContainsKey(name);
+        public bool IsExistSpawnPool(string name) => spawnPools.ContainsKey(name);
 
         public void UnRegisterSpawnPool(string name)
         {
-            if (SpawnPools.TryGetValue(name, out var pool))
+            if (spawnPools.TryGetValue(name, out var pool))
             {
                 pool.Clear();
                 Destroy(pool);
-                SpawnPools.Remove(name);
+                spawnPools.Remove(name);
             }
             else
             {
@@ -54,7 +54,7 @@ namespace ReunionMovement.Common.Util
 
         public int GetPoolCount(string name)
         {
-            if (SpawnPools.TryGetValue(name, out var pool))
+            if (spawnPools.TryGetValue(name, out var pool))
             {
                 return pool.Count;
             }
@@ -64,7 +64,7 @@ namespace ReunionMovement.Common.Util
 
         public GameObject Spawn(string name)
         {
-            if (SpawnPools.TryGetValue(name, out var pool))
+            if (spawnPools.TryGetValue(name, out var pool))
             {
                 return pool.Spawn();
             }
@@ -74,7 +74,7 @@ namespace ReunionMovement.Common.Util
 
         public void Despawn(string name, GameObject target)
         {
-            if (SpawnPools.TryGetValue(name, out var pool))
+            if (spawnPools.TryGetValue(name, out var pool))
             {
                 pool.Despawn(target);
             }
@@ -90,7 +90,7 @@ namespace ReunionMovement.Common.Util
             {
                 return;
             }
-            if (SpawnPools.TryGetValue(name, out var pool))
+            if (spawnPools.TryGetValue(name, out var pool))
             {
                 foreach (var t in targets)
                 {
@@ -109,7 +109,7 @@ namespace ReunionMovement.Common.Util
             {
                 return;
             }
-            if (SpawnPools.TryGetValue(name, out var pool))
+            if (spawnPools.TryGetValue(name, out var pool))
             {
                 foreach (var t in targets)
                 {
@@ -125,7 +125,7 @@ namespace ReunionMovement.Common.Util
 
         public void Clear(string name)
         {
-            if (SpawnPools.TryGetValue(name, out var pool))
+            if (spawnPools.TryGetValue(name, out var pool))
             {
                 pool.Clear();
             }
@@ -137,7 +137,7 @@ namespace ReunionMovement.Common.Util
 
         public void ClearAll()
         {
-            foreach (var pool in SpawnPools.Values)
+            foreach (var pool in spawnPools.Values)
             {
                 pool.Clear();
             }

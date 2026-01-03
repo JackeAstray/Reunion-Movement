@@ -19,11 +19,11 @@ namespace ReunionMovement.Core.UI
         /// <summary>
         /// 切换场景时是否关闭当前界面
         /// </summary>
-        public bool IsHidenWhenLeaveScene = true;
+        public bool isHidenWhenLeaveScene = true;
 
         /// <summary>
         /// 界面分组名称
         /// </summary>
-        public string GroupName = "";
+        public string groupName = "";
     }
 }

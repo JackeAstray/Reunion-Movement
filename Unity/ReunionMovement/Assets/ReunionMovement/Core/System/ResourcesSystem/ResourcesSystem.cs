@@ -21,7 +21,9 @@ namespace ReunionMovement.Core.Resources
         #region 单例与初始化
         private static readonly Lazy<ResourcesSystem> instance = new(() => new ResourcesSystem());
         public static ResourcesSystem Instance => instance.Value;
-        public bool IsInited { get; private set; }
+
+        public bool isInited { get; private set; }
+
         private double initProgress = 0;
         public double InitProgress { get { return initProgress; } }
         #endregion
@@ -32,7 +34,7 @@ namespace ReunionMovement.Core.Resources
         public Task Init()
         {
             initProgress = 100;
-            IsInited = true;
+            isInited = true;
             Log.Debug("ResourcesSystem 初始化完成");
             return Task.CompletedTask;
         }
