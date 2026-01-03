@@ -1,6 +1,8 @@
 ﻿using ReunionMovement.Common;
 using System;
+using System.Reflection;
 using UnityEngine;
+using ReunionMovement.Core.Sound;
 
 namespace ReunionMovement.Core
 {
@@ -9,7 +11,7 @@ namespace ReunionMovement.Core
         public class Option
         {
             // 版本号
-            public string version = "1.0.0";
+            public string version = "1.0.3";
             // 全屏模式
             public bool fullscreen = true;
             // 分辨率宽度
@@ -79,6 +81,9 @@ namespace ReunionMovement.Core
             currentOption.musicFadeTime = PlayerPrefs.GetFloat("musicFadeTime", currentOption.musicFadeTime);
             currentOption.sfxMuted = PlayerPrefs.GetInt("sfxMuted", currentOption.sfxMuted ? 1 : 0) == 1;
             currentOption.sfxVolume = PlayerPrefs.GetFloat("sfxVolume", currentOption.sfxVolume);
+
+            // 读取完毕后立即应用到游戏（分辨率、音量、质量等）
+            ApplyOptions();
         }
 
         /// <summary>
@@ -109,6 +114,61 @@ namespace ReunionMovement.Core
             PlayerPrefs.SetFloat("sfxVolume", currentOption.sfxVolume);
 
             PlayerPrefs.Save();
+        }
+
+        /// <summary>
+        /// 将当前选项应用到游戏（分辨率、画质、音量等）
+        /// </summary>
+        public static void ApplyOptions()
+        {
+            try
+            {
+                // 分辨率与全屏
+                Screen.SetResolution(currentOption.resolutionWidth, currentOption.resolutionHeight, currentOption.fullscreen);
+
+                // 垂直同步
+                QualitySettings.vSyncCount = currentOption.vsync ? 1 : 0;
+
+                // 目标帧率
+                Application.targetFrameRate = currentOption.framerate;
+
+                // 图形质量
+                int qualityIndex = Mathf.Clamp(currentOption.graphicsQuality, 0, QualitySettings.names.Length - 1);
+                QualitySettings.SetQualityLevel(qualityIndex, true);
+
+                // 主音量（使用 AudioListener 作为全局主音量）
+                AudioListener.volume = currentOption.masterVolumeMuted ? 0f : currentOption.masterVolume;
+
+                // 自动暂停（如果为 true，启用 Unity 的 AudioListener.pause 行为；注意这会暂停所有音频）
+                AudioListener.pause = currentOption.autoPause;
+
+                // 应用音乐和音效设置到 SoundSystem（如果已初始化）
+                var ss = SoundSystem.Instance;
+                if (ss != null)
+                {
+                    // 将淡入淡出时间同步
+                    try { ss.fadeDuration = currentOption.musicFadeTime; } catch { }
+
+                    // 通过反射获取私有 AudioSource 并立即应用静音/音量/loop 等
+                    var field = ss.GetType().GetField("source", BindingFlags.NonPublic | BindingFlags.Instance);
+                    if (field != null)
+                    {
+                        var audio = field.GetValue(ss) as AudioSource;
+                        if (audio != null)
+                        {
+                            audio.mute = currentOption.musicMuted;
+                            audio.volume = currentOption.musicVolume;
+                        }
+                    }
+                }
+
+                // 其它可扩展的应用（亮度等）：尝试设置全局 shader 属性 以便 shader 使用
+                Shader.SetGlobalFloat("_GameBrightness", currentOption.brightness);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"ApplyOptions 异常: {ex}");
+            }
         }
 
         /// <summary>
@@ -171,6 +231,52 @@ namespace ReunionMovement.Core
             else
             {
                 throw new NotSupportedException($"不支持的类型: {typeof(T)}");
+            }
+        }
+
+        /// <summary>
+        /// 设置单个选项并立即应用
+        /// </summary>
+        public static void ApplyOption<T>(string key, T value)
+        {
+            // 更新内存中的 currentOption 对象 的常见键
+            try
+            {
+                // 特殊处理常见字段，便于即时应用
+                switch (key)
+                {
+                    case "fullscreen": currentOption.fullscreen = Convert.ToBoolean(value); break;
+                    case "resolutionWidth": currentOption.resolutionWidth = Convert.ToInt32(value); break;
+                    case "resolutionHeight": currentOption.resolutionHeight = Convert.ToInt32(value); break;
+                    case "vsync": currentOption.vsync = Convert.ToBoolean(value); break;
+                    case "framerate": currentOption.framerate = Convert.ToInt32(value); break;
+                    case "graphicsQuality": currentOption.graphicsQuality = Convert.ToInt32(value); break;
+                    case "brightness": currentOption.brightness = Convert.ToSingle(value); break;
+                    case "autoPause": currentOption.autoPause = Convert.ToBoolean(value); break;
+                    case "masterVolumeMuted": currentOption.masterVolumeMuted = Convert.ToBoolean(value); break;
+                    case "masterVolume": currentOption.masterVolume = Convert.ToSingle(value); break;
+                    case "musicMuted": currentOption.musicMuted = Convert.ToBoolean(value); break;
+                    case "musicVolume": currentOption.musicVolume = Convert.ToSingle(value); break;
+                    case "musicFadeTime": currentOption.musicFadeTime = Convert.ToSingle(value); break;
+                    case "sfxMuted": currentOption.sfxMuted = Convert.ToBoolean(value); break;
+                    case "sfxVolume": currentOption.sfxVolume = Convert.ToSingle(value); break;
+                    case "language":
+                        if (value is string s && Enum.TryParse<Multilingual>(s, out var le)) currentOption.language = le;
+                        break;
+                    default:
+                        // 对于不在上面列表的 key，只是写入 PlayerPrefs
+                        SetOption(key, value);
+                        break;
+                }
+
+                // 持久化并应用
+                SetOption(key, value);
+                PlayerPrefs.Save();
+                ApplyOptions();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"ApplyOption 异常: {ex}");
             }
         }
     }

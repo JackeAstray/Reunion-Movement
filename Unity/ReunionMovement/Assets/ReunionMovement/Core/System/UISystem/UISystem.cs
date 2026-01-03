@@ -61,6 +61,8 @@ namespace ReunionMovement.Core.UI
         public void Clear()
         {
             Log.Debug("UISystem 清除数据");
+            isInited = false;
+            uiStateCache.Clear();
         }
 
         /// <summary>

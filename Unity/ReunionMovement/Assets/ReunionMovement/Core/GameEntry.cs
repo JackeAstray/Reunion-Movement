@@ -33,18 +33,6 @@ namespace ReunionMovement.Core
             GameEngine.StartEngine(gameObject, this, modules);
         }
 
-        ///// <summary>
-        ///// 在初始化之前
-        ///// </summary>
-        ///// <returns></returns>
-        //public abstract IEnumerator OnBeforeInit();
-
-        ///// <summary>
-        ///// 游戏启动
-        ///// </summary>
-        ///// <returns></returns>
-        //public abstract IEnumerator OnGameStart();
-
         /// <summary>
         /// 在初始化之前
         /// </summary>

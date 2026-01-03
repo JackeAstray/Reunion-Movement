@@ -42,8 +42,10 @@ namespace ReunionMovement.Core.EventMessage
         public void Clear()
         {
             Log.Debug("EventMessageSystem 清除数据");
+            eventTypeListeners.Clear();
             // 清理所有注册的事件监听器
             // 这里可以添加清理逻辑
+            isInited = false;
         }
 
         /// <summary>

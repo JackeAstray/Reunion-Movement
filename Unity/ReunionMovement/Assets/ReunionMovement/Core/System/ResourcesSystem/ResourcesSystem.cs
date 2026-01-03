@@ -47,6 +47,9 @@ namespace ReunionMovement.Core.Resources
         public void Clear()
         {
             Log.Debug("ResourcesSystem 清除数据");
+            resourceTable.Clear();
+            resourceRefCount.Clear();
+            isInited = false;
         }
 
         #region 加载

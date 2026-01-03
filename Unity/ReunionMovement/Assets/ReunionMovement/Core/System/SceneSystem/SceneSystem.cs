@@ -62,6 +62,11 @@ namespace ReunionMovement.Core.Scene
         public void Clear()
         {
             Log.Debug("SceneSystem 清除数据");
+
+            isInited = false;
+            getProgress = null;
+            beforeSceneLoadingCompletionCallback = null;
+            sceneLoadingCompletionCallback = null;
         }
 
         private Task OnInit()
