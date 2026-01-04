@@ -76,7 +76,7 @@ namespace ReunionMovement.Common.Util
         /// <returns>是否是奇数</returns>
         public static bool IsOdd(long value)
         {
-            return Convert.ToBoolean(value & 0x1);
+            return (value & 1) != 0;
         }
 
         /// <summary>
@@ -86,7 +86,7 @@ namespace ReunionMovement.Common.Util
         /// <returns>是否是偶数</returns>
         public static bool IsEven(long value)
         {
-            return !Convert.ToBoolean(value & 0x1);
+            return !((value & 1) != 0);
         }
 
         /// <summary>
@@ -294,6 +294,12 @@ namespace ReunionMovement.Common.Util
         {
             if (num == 0)
             {
+                return 0;
+            }
+
+            if (num <= 0)
+            {
+                Log.Error("GetNearestPower2: 输入必须为正整数");
                 return 0;
             }
 
@@ -2786,7 +2792,7 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         /// <param name="t"></param>
         /// <returns></returns>
-        public static RectTransform RectTransform(this Transform t)
+        public static RectTransform AsRectTransform(this Transform t)
         {
             return t?.gameObject.GetComponent<RectTransform>();
         }
@@ -3207,7 +3213,7 @@ namespace ReunionMovement.Common.Util
             catch (Exception ex)
             {
                 Log.Error("object转string失败 : " + ex);
-                return null;
+                return default;
             }
         }
         #endregion
