@@ -10,7 +10,8 @@ namespace ReunionMovement.Common.Util
     /// </summary>
     public static class PathUtil
     {
-        public static readonly string[] pathHeadDefine = { "jar://", "jar:file://", "file://", "file:///", "http://", "https://", "ftp://", "content://", "data:" };
+        // 将较长的前缀放在前面以确保正确匹配（例如 "file:///" 与 "file://"）
+        public static readonly string[] pathHeadDefine = { "jar:file://", "jar://", "file:///", "file://", "https://", "http://", "ftp://", "content://", "data:" };
 
         /// <summary>
         /// 获取路径头
@@ -19,6 +20,8 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static string GetPathHead(string path)
         {
+            if (string.IsNullOrEmpty(path)) return string.Empty;
+
             foreach (var head in pathHeadDefine)
             {
                 if (path.StartsWith(head, StringComparison.OrdinalIgnoreCase))
@@ -32,22 +35,37 @@ namespace ReunionMovement.Common.Util
         /// <summary>
         /// 获取规范的路径
         /// </summary>
-        public static string GetRegularPath(string path) => path.Replace('\\', '/');
+        public static string GetRegularPath(string path) => string.IsNullOrEmpty(path) ? string.Empty : path.Replace('\\', '/');
 
         /// <summary>
         /// 验证路径（是否为真路径）
         /// </summary>
-        public static bool IsSureDir(string path) => path.Contains("/") || path.Contains("\\");
+        public static bool IsSureDir(string path) => !string.IsNullOrEmpty(path) && (path.Contains("/") || path.Contains("\\"));
 
         /// <summary>
         /// 验证路径（是否为全路径）
         /// </summary>
-        public static bool IsFullPath(string path) => path.Contains(":/") || path.Contains(":\\");
+        public static bool IsFullPath(string path) => !string.IsNullOrEmpty(path) && (path.Contains(":/") || path.Contains(":\\"));
 
         /// <summary>
         /// 持续化路径
         /// </summary>
         public static string AppDataPath() => Application.persistentDataPath + "/";
+
+        /// <summary>
+        /// 判断是否包含 URI scheme（如 http://、file://），比简单查找 "://" 更严格，避免把 "C:/" 误判为 scheme
+        /// </summary>
+        private static bool HasUriScheme(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return false;
+            int idx = path.IndexOf("://", StringComparison.Ordinal);
+            if (idx <= 0) return false;
+            string scheme = path.Substring(0, idx);
+            if (string.IsNullOrEmpty(scheme)) return false;
+            // scheme 必须以字母开头，并且只包含允许的字符
+            if (!char.IsLetter(scheme[0])) return false;
+            return scheme.All(c => char.IsLetterOrDigit(c) || c == '+' || c == '-' || c == '.');
+        }
 
         /// <summary>
         /// 获取完整路径
@@ -57,7 +75,45 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static bool GetFullPath(string url, out string newPath)
         {
-            newPath = Path.GetFullPath(AppDataPath() + url);
+            newPath = string.Empty;
+
+            if (string.IsNullOrEmpty(url))
+            {
+                return false;
+            }
+
+            // 如果这是一个非 file 协议的 URI，则原样返回（本地文件不存在）
+            if (HasUriScheme(url) && !url.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+            {
+                newPath = url;
+                return false;
+            }
+
+            // 如果是 file:// URI，去掉前缀并检查底层路径
+            string pathToCheck = url;
+            if (url.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+            {
+                pathToCheck = url.Substring("file://".Length);
+            }
+
+            // 如果是绝对路径则直接获取完整路径；否则与 AppDataPath 结合
+            try
+            {
+                if (Path.IsPathRooted(pathToCheck))
+                {
+                    newPath = Path.GetFullPath(pathToCheck);
+                }
+                else
+                {
+                    newPath = Path.GetFullPath(AppDataPath() + pathToCheck);
+                }
+            }
+            catch (Exception)
+            {
+                newPath = pathToCheck;
+                return false;
+            }
+
             return File.Exists(newPath);
         }
 
@@ -68,22 +124,22 @@ namespace ReunionMovement.Common.Util
         {
             string tempPath;
 
-            // If path is empty use streamingAssetsPath
+            // 如果路径为空使用 streamingAssetsPath
             if (string.IsNullOrEmpty(path))
             {
                 tempPath = Application.streamingAssetsPath;
             }
             else
             {
-                // If the provided path already contains a URI scheme (e.g. "http://", "file://"), don't try to combine with streamingAssetsPath
-                if (path.IndexOf("://", StringComparison.Ordinal) >= 0)
+                // 如果传入路径已经包含 URI scheme（例如 "http://", "file://"），则不要与 streamingAssetsPath 合并
+                if (HasUriScheme(path))
                 {
                     tempPath = path;
                 }
                 else if (path.StartsWith("/") || path.StartsWith("\\"))
                 {
-                    // Path.Combine will treat a leading directory separator as rooted and ignore the first part.
-                    // Manually concatenate to preserve streamingAssetsPath.
+                    // Path.Combine 会把以目录分隔符开头的路径视为根路径并忽略第一部分。
+                    // 手动拼接以保留 streamingAssetsPath
                     tempPath = Application.streamingAssetsPath.TrimEnd('/', '\\') + "/" + path.TrimStart('/', '\\');
                 }
                 else
@@ -96,9 +152,8 @@ namespace ReunionMovement.Common.Util
 
             if (isUwrPath)
             {
-                // Only prefix with file:// when the computed result does not already contain a URI scheme
-                // e.g. on Android streamingAssetsPath may already be "jar:file://..." so don't add another prefix
-                if (!result.Contains("://") && !result.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+                // 只有当计算结果尚未包含 URI scheme 时才添加 "file://" 前缀
+                if (!HasUriScheme(result) && !result.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
                 {
                     result = "file://" + result;
                 }
@@ -120,7 +175,7 @@ namespace ReunionMovement.Common.Util
             }
             else
             {
-                if (path.IndexOf("://", StringComparison.Ordinal) >= 0)
+                if (HasUriScheme(path))
                 {
                     tempPath = path;
                 }
@@ -138,8 +193,8 @@ namespace ReunionMovement.Common.Util
 
             if (isUwrPath)
             {
-                // Only prefix with file:// when the computed result does not already contain a URI scheme
-                if (!result.Contains("://") && !result.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+                // 只有当计算结果尚未包含 URI scheme 时才添加 "file://" 前缀
+                if (!HasUriScheme(result) && !result.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
                 {
                     result = "file://" + result;
                 }
@@ -156,11 +211,25 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static string TruncatePath(string fullPath, int levels)
         {
-            for (int i = 0; i < levels && !string.IsNullOrEmpty(fullPath); i++)
+            if (string.IsNullOrEmpty(fullPath) || levels <= 0) return fullPath;
+
+            string current = fullPath;
+            for (int i = 0; i < levels; i++)
             {
-                fullPath = Path.GetDirectoryName(fullPath);
+                try
+                {
+                    current = Path.GetDirectoryName(current);
+                    if (string.IsNullOrEmpty(current))
+                    {
+                        return string.Empty;
+                    }
+                }
+                catch
+                {
+                    return string.Empty;
+                }
             }
-            return fullPath;
+            return current;
         }
 
         /// <summary>
@@ -189,9 +258,22 @@ namespace ReunionMovement.Common.Util
                 _ => Application.persistentDataPath + "/File"
             };
 
-            if (!Directory.Exists(savePath))
+            // 对于 streamingAssets 的路径不应尝试创建目录（许多平台为只读）
+            bool isStreaming = savePath.StartsWith(Application.streamingAssetsPath, StringComparison.OrdinalIgnoreCase);
+
+            if (!isStreaming)
             {
-                Directory.CreateDirectory(savePath);
+                try
+                {
+                    if (!Directory.Exists(savePath))
+                    {
+                        Directory.CreateDirectory(savePath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error($"GetLocalPath: 创建目录失败 {savePath} -> {ex}");
+                }
             }
 
             return savePath;
@@ -205,7 +287,7 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static string GetLocalFilePath(string url)
         {
-            string urlHash = StringUtil.CreateMD5(url);
+            string urlHash = StringUtil.CreateMD5(url ?? string.Empty);
             return $"{GetLocalPath(DownloadType.CacheImage)}/{urlHash}{GetExtensionFromUrl(url)}";
         }
 
@@ -217,7 +299,7 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static string GetFileNameByUrl(string url)
         {
-            string urlHash = StringUtil.CreateMD5(url);
+            string urlHash = StringUtil.CreateMD5(url ?? string.Empty);
             return $"{urlHash}{GetExtensionFromUrl(url)}";
         }
 
@@ -241,8 +323,17 @@ namespace ReunionMovement.Common.Util
             if (fragmentIndex >= 0 && fragmentIndex < endIndex) endIndex = fragmentIndex;
             string cleanUrl = url.Substring(0, endIndex);
 
-            // 用Path.GetExtension获取后缀
-            string ext = Path.GetExtension(cleanUrl);
+            // 用 Path.GetExtension 获取后缀
+            string ext;
+            try
+            {
+                ext = Path.GetExtension(cleanUrl);
+            }
+            catch
+            {
+                return ".asset";
+            }
+
             if (!string.IsNullOrEmpty(ext) && ext.Length <= 8 && ext.All(c => char.IsLetterOrDigit(c) || c == '.'))
             {
                 return ext.ToLower();
