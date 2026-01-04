@@ -16,9 +16,10 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static bool Probability(float chancePercent)
         {
-            // 限制概率在0~100之间
-            chancePercent = Math.Clamp(chancePercent, 0f, 100f);
-            return random.NextDouble() * 100f <= chancePercent;
+            // 限制概率在0~100之间（手动实现以兼容较旧的框架）
+            if (chancePercent < 0f) chancePercent = 0f;
+            if (chancePercent > 100f) chancePercent = 100f;
+            return random.NextDouble() * 100.0 <= chancePercent;
         }
 
         /// <summary>
@@ -28,6 +29,7 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static bool Probability(byte chancePercent)
         {
+            // 当传入255(或更大)视为必然发生
             if (chancePercent >= 255)
             {
                 return true;
@@ -36,7 +38,7 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 生成一个随机整数 [0.0, 1.0]
+        /// 生成一个随机小数 [0.0, 1.0)
         /// </summary>
         /// <returns> </returns>
         public static double RandomDouble()
@@ -60,6 +62,11 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static int RandomRange(int maxValue)
         {
+            if (maxValue <= 0)
+            {
+                Log.Error($"RandomRange(int): 非法的 maxValue={maxValue}，返回0");
+                return 0;
+            }
             return random.Next(maxValue);
         }
 
@@ -70,6 +77,11 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static double RandomRange(double maxValue)
         {
+            if (maxValue <= 0.0)
+            {
+                Log.Error($"RandomRange(double): 非法的 maxValue={maxValue}，返回0");
+                return 0.0;
+            }
             return random.NextDouble() * maxValue;
         }
 
@@ -83,7 +95,8 @@ namespace ReunionMovement.Common.Util
         {
             if (minValue >= maxValue)
             {
-                Log.Error("RandomRange : minValue 大于或等于 maxValue");
+                Log.Error("RandomRange : minValue 大于或等于 maxValue，返回 minValue");
+                return minValue;
             }
             return random.Next(minValue, maxValue);
         }
@@ -99,7 +112,8 @@ namespace ReunionMovement.Common.Util
         {
             if (minValue >= maxValue)
             {
-                Log.Error("RandomRange : minValue 大于或等于 maxValue");
+                Log.Error("RandomRange : minValue 大于或等于 maxValue，返回 minValue");
+                return minValue;
             }
 
             return (random.NextDouble() * (maxValue - minValue) + minValue);
@@ -113,7 +127,12 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static float RandomOffset(float value, float range)
         {
-            var offset = random.NextDouble() * range - range / 2;
+            if (range < 0f)
+            {
+                Log.Error($"RandomOffset: 传入的 range 为负值 ({range})，使用其绝对值");
+                range = Math.Abs(range);
+            }
+            var offset = random.NextDouble() * range - range / 2.0;
             return (float)(value + offset);
         }
 
@@ -122,20 +141,50 @@ namespace ReunionMovement.Common.Util
         /// Box-Muller 正态分布生成一个随机数
         /// </summary>
         /// <param name="miu">均值</param>
-        /// <param name="sigma">标准差</param>
+        /// <param name="sigma">标准差（必须大于0）</param>
         /// <param name="min">最小值</param>
         /// <param name="max">最大值</param>
         /// <returns></returns>
         public static double RandomNormalDistribution(double miu, double sigma, double min, double max)
         {
+            if (min > max)
+            {
+                Log.Error("RandomNormalDistribution: min 大于 max，交换两者");
+                var tmp = min; min = max; max = tmp;
+            }
+
+            if (sigma <= 0)
+            {
+                Log.Error("RandomNormalDistribution: sigma 必须大于 0，使用绝对值");
+                sigma = Math.Abs(sigma);
+                if (sigma <= 0)
+                {
+                    sigma = 1e-6;
+                }
+            }
+
             double value;
+            int safety = 0;
             do
             {
-                // Box-Muller 变换
-                double u1 = random.NextDouble();
+                // Box-Muller 变换，确保 u1 不为 0
+                double u1;
+                do
+                {
+                    u1 = random.NextDouble();
+                } while (u1 <= double.Epsilon);
+
                 double u2 = random.NextDouble();
                 double z0 = Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Cos(2.0 * Math.PI * u2);
                 value = miu + sigma * z0;
+
+                safety++;
+                if (safety > 100000)
+                {
+                    // 防止极端参数导致死循环，返回边界值
+                    Log.Error("RandomNormalDistribution: 采样超过安全限制，返回最近的边界值");
+                    return Math.Max(min, Math.Min(max, value));
+                }
             } while (value < min || value > max);
 
             return value;
