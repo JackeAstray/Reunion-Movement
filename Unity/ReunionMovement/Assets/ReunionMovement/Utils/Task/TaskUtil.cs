@@ -20,11 +20,11 @@ namespace ReunionMovement.Common.Util
         /// <param name="onError">任务发生异常时的回调。</param>
         /// <param name="timeout">任务超时时间。</param>
         /// <param name="cancellationToken">用于取消任务的 CancellationToken。</param>
-        public static async void StartTask(Action action, Action callback = null, Action<Exception> onError = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+        public static async Task StartTask(Action action, Action callback = null, Action<Exception> onError = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
         {
             try
             {
-                await ExecuteTask(() => { action?.Invoke(); return true; }, timeout, cancellationToken);
+                await ExecuteTask(() => { action?.Invoke(); return true; }, timeout, cancellationToken).ConfigureAwait(false);
                 callback?.Invoke();
             }
             catch (Exception ex)
@@ -42,11 +42,11 @@ namespace ReunionMovement.Common.Util
         /// <param name="onError">任务发生异常时的回调。</param>
         /// <param name="timeout">任务超时时间。</param>
         /// <param name="cancellationToken">用于取消任务的 CancellationToken。</param>
-        public static async void StartTask<T>(Func<T> func, Action<T> callback = null, Action<Exception> onError = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+        public static async Task StartTask<T>(Func<T> func, Action<T> callback = null, Action<Exception> onError = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
         {
             try
             {
-                T result = await ExecuteTask(func, timeout, cancellationToken);
+                T result = await ExecuteTask(func, timeout, cancellationToken).ConfigureAwait(false);
                 callback?.Invoke(result);
             }
             catch (Exception ex)
@@ -62,19 +62,21 @@ namespace ReunionMovement.Common.Util
         /// <param name="continuation">要执行的接续操作。</param>
         /// <param name="onError">任务发生异常时的回调。</param>
         /// <param name="cancellationToken">用于取消任务的 CancellationToken。</param>
-        public static void ContinueWith(this Task previousTask, Action continuation, Action<Exception> onError = null, CancellationToken cancellationToken = default)
+        public static async Task ContinueWith(this Task previousTask, Action continuation, Action<Exception> onError = null, CancellationToken cancellationToken = default)
         {
-            previousTask.ContinueWith(t =>
+            try
             {
-                if (t.IsFaulted)
-                {
-                    HandleException(t.Exception.InnerException, onError);
-                }
-                else if (!t.IsCanceled)
+                await previousTask.ConfigureAwait(false);
+                if (!previousTask.IsCanceled)
                 {
                     continuation?.Invoke();
                 }
-            }, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                HandleException(ex, onError);
+                throw;
+            }
         }
 
         /// <summary>
@@ -87,21 +89,22 @@ namespace ReunionMovement.Common.Util
         /// <param name="onError">任务发生异常时的回调。</param>
         /// <param name="cancellationToken">用于取消任务的 CancellationToken。</param>
         /// <returns>表示新任务的 Task。</returns>
-        public static Task<TNewResult> ContinueWith<TResult, TNewResult>(this Task<TResult> previousTask, Func<TResult, TNewResult> continuation, Action<Exception> onError = null, CancellationToken cancellationToken = default)
+        public static async Task<TNewResult> ContinueWith<TResult, TNewResult>(this Task<TResult> previousTask, Func<TResult, TNewResult> continuation, Action<Exception> onError = null, CancellationToken cancellationToken = default)
         {
-            return previousTask.ContinueWith(t =>
+            try
             {
-                if (t.IsFaulted)
-                {
-                    HandleException(t.Exception.InnerException, onError);
-                    return default;
-                }
-                if (t.IsCanceled)
+                TResult prevResult = await previousTask.ConfigureAwait(false);
+                if (previousTask.IsCanceled)
                 {
                     return default;
                 }
-                return continuation(t.Result);
-            }, cancellationToken);
+                return continuation(prevResult);
+            }
+            catch (Exception ex)
+            {
+                HandleException(ex, onError);
+                throw;
+            }
         }
 
         /// <summary>
@@ -114,7 +117,16 @@ namespace ReunionMovement.Common.Util
         /// <param name="onError">任务发生异常时的回调。</param>
         /// <param name="cancellationToken">用于取消任务的 CancellationToken。</param>
         /// <returns>表示异步操作的 Task，包含任务结果。</returns>
-        public static async Task<T> StartTaskWithRetry<T>(Func<Task<T>> func, int maxRetries = 3, TimeSpan? retryDelay = null, Action<Exception> onError = null, CancellationToken cancellationToken = default)
+        public static Task<T> StartTaskWithRetry<T>(Func<Task<T>> func, int maxRetries = 3, TimeSpan? retryDelay = null, Action<Exception> onError = null, CancellationToken cancellationToken = default)
+        {
+            // 保持向后兼容，包装为接受 CancellationToken 的重载
+            return StartTaskWithRetry(ct => func(), maxRetries, retryDelay, onError, cancellationToken);
+        }
+
+        /// <summary>
+        /// 开始一个带重试机制的任务（支持将 CancellationToken 传递给被调用函数）。
+        /// </summary>
+        public static async Task<T> StartTaskWithRetry<T>(Func<CancellationToken, Task<T>> func, int maxRetries = 3, TimeSpan? retryDelay = null, Action<Exception> onError = null, CancellationToken cancellationToken = default)
         {
             int attempts = 0;
             while (attempts < maxRetries)
@@ -122,7 +134,7 @@ namespace ReunionMovement.Common.Util
                 try
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    return await func();
+                    return await func(cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -134,7 +146,7 @@ namespace ReunionMovement.Common.Util
                     }
                     if (retryDelay.HasValue)
                     {
-                        await Task.Delay(retryDelay.Value, cancellationToken);
+                        await Task.Delay(retryDelay.Value, cancellationToken).ConfigureAwait(false);
                     }
                 }
             }
@@ -157,7 +169,7 @@ namespace ReunionMovement.Common.Util
 
             if (!timeout.HasValue)
             {
-                return await Task.Run(func, cancellationToken);
+                return await Task.Run(func, cancellationToken).ConfigureAwait(false);
             }
 
             using (var timeoutCts = new CancellationTokenSource(timeout.Value))
@@ -168,7 +180,7 @@ namespace ReunionMovement.Common.Util
 
                 try
                 {
-                    return await task;
+                    return await task.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
