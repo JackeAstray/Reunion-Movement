@@ -64,7 +64,8 @@ namespace ReunionMovement.Common.Util
         /// <returns>Unix 时间戳（秒）</returns>
         public static long GetUnixTimestampSeconds(this DateTime dateTime, bool asUtc = true)
         {
-            var dt = asUtc ? DateTime.SpecifyKind(dateTime, DateTimeKind.Utc) : DateTime.SpecifyKind(dateTime, DateTimeKind.Local);
+            // 确保对 DateTime 进行实际的时区转换，而不是仅仅修改其 Kind
+            var dt = asUtc ? dateTime.ToUniversalTime() : dateTime.ToLocalTime();
             return new DateTimeOffset(dt).ToUnixTimeSeconds();
         }
 
@@ -76,7 +77,8 @@ namespace ReunionMovement.Common.Util
         /// <returns>Unix 时间戳（毫秒）</returns>
         public static long GetUnixTimestampMilliseconds(this DateTime dateTime, bool asUtc = true)
         {
-            var dt = asUtc ? DateTime.SpecifyKind(dateTime, DateTimeKind.Utc) : DateTime.SpecifyKind(dateTime, DateTimeKind.Local);
+            // 确保对 DateTime 进行实际的时区转换，而不是仅仅修改其 Kind
+            var dt = asUtc ? dateTime.ToUniversalTime() : dateTime.ToLocalTime();
             return new DateTimeOffset(dt).ToUnixTimeMilliseconds();
         }
 
@@ -88,8 +90,11 @@ namespace ReunionMovement.Common.Util
         /// <returns>格式正确返回 true，否则返回 false</returns>
         public static bool TryParseTimeString(this string timeString, out DateTime result)
         {
-            return DateTime.TryParse(
+            // 使用 TryParseExact 强制要求使用文档中声明的格式
+            const string format = "yyyy-MM-dd HH:mm:ss";
+            return DateTime.TryParseExact(
                 timeString,
+                format,
                 System.Globalization.CultureInfo.InvariantCulture,
                 System.Globalization.DateTimeStyles.None,
                 out result
@@ -237,6 +242,85 @@ namespace ReunionMovement.Common.Util
         public static DateTime GetTimeAfterMilliseconds(this DateTime baseTime, long milliseconds)
         {
             return baseTime.AddMilliseconds(milliseconds);
+        }
+        #endregion
+
+        #region 额外方法
+        /// <summary>
+        /// 将 DateTime 转为指定格式的字符串（默认：yyyy-MM-dd HH:mm:ss）
+        /// </summary>
+        public static string ToTimeString(this DateTime dateTime, string format = "yyyy-MM-dd HH:mm:ss")
+        {
+            return dateTime.ToString(format);
+        }
+
+        /// <summary>
+        /// 尝试按指定格式解析时间字符串
+        /// </summary>
+        public static bool TryParseTimeString(this string timeString, string format, out DateTime result)
+        {
+            return DateTime.TryParseExact(
+                timeString,
+                format,
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None,
+                out result
+            );
+        }
+
+        /// <summary>
+        /// 判断两个时间是否为同一天（按本地日期比较）
+        /// </summary>
+        public static bool IsSameDay(this DateTime a, DateTime b)
+        {
+            return a.Date == b.Date;
+        }
+
+        /// <summary>
+        /// 获取指定时间当天的起始时间（00:00:00）
+        /// </summary>
+        public static DateTime StartOfDay(this DateTime dateTime)
+        {
+            return dateTime.Date;
+        }
+
+        /// <summary>
+        /// 获取指定时间当天的结束时间（23:59:59.9999999）
+        /// </summary>
+        public static DateTime EndOfDay(this DateTime dateTime)
+        {
+            return dateTime.Date.AddDays(1).AddTicks(-1);
+        }
+
+        /// <summary>
+        /// 将秒数转换为可读字符串（天 时:分:秒），例如 "1天 02:03:04"
+        /// </summary>
+        public static string SecondsToReadable(this long seconds)
+        {
+            if (seconds < 0) seconds = 0;
+            var ts = TimeSpan.FromSeconds(seconds);
+            var parts = string.Empty;
+            if (ts.Days > 0) parts = $"{ts.Days}天 ";
+            parts += $"{ts.Hours:D2}:{ts.Minutes:D2}:{ts.Seconds:D2}";
+            return parts;
+        }
+
+        /// <summary>
+        /// 将时间转换到目标时区
+        /// </summary>
+        public static DateTime ConvertToTimeZone(this DateTime dateTime, TimeZoneInfo targetZone)
+        {
+            return TimeZoneInfo.ConvertTime(dateTime, targetZone);
+        }
+
+        /// <summary>
+        /// 获取指定日期所在周的起始日期（可指定周起始日，默认周一）
+        /// 返回的时间为当天 00:00:00
+        /// </summary>
+        public static DateTime GetWeekStart(this DateTime dateTime, DayOfWeek startOfWeek = DayOfWeek.Monday)
+        {
+            int diff = (7 + (dateTime.DayOfWeek - startOfWeek)) % 7;
+            return dateTime.Date.AddDays(-diff);
         }
         #endregion
     }
