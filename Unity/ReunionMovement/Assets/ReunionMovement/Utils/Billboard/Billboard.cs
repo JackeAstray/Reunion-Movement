@@ -7,7 +7,7 @@ namespace ReunionMovement.Common.Util
     /// <summary>
     /// 广告牌
     /// </summary>
-    [ExecuteAlways]
+    //[ExecuteAlways]
     public class Billboard : MonoBehaviour
     {
         public enum BillboardType
