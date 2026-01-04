@@ -16,11 +16,6 @@ namespace ReunionMovement.Common.Util
     public static class FileOperationUtil
     {
         /// <summary>
-        /// 获取文件协议
-        /// </summary>
-        public static string getFileProtocol => "file://";
-
-        /// <summary>
         /// 获取文件名（包含后缀）或不包含后缀
         /// </summary>
         /// <param name="path"></param>
@@ -29,19 +24,50 @@ namespace ReunionMovement.Common.Util
         public static string GetFileName(string path, bool withSuffix = true) => withSuffix ? Path.GetFileName(path) : Path.GetFileNameWithoutExtension(path);
 
         /// <summary>
-        /// 获取文件夹下所有文件大小（单位KB）
+        /// 获取文件夹下所有文件大小（单位KB，向上取整）
+        /// 保留原方法签名但改为向上取整以减少精度损失
         /// </summary>
         /// <param name="path">路径</param>
         /// <returns></returns>
         public static int GetAllFileSize(string path)
         {
             if (!Directory.Exists(path)) return 0;
-            int sum = 0;
+            long totalBytes = 0;
             foreach (var file in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
             {
-                sum += Convert.ToInt32(new FileInfo(file).Length / 1024);
+                try
+                {
+                    totalBytes += new FileInfo(file).Length;
+                }
+                catch (Exception e)
+                {
+                    Log.Debug($"GetAllFileSize: 无法读取文件大小 {file} -> {e.Message}");
+                }
             }
-            return sum;
+            // 向上取整到KB
+            return Convert.ToInt32(Math.Ceiling(totalBytes / 1024.0));
+        }
+
+        /// <summary>
+        /// 获取文件夹下所有文件大小（字节，精确）
+        /// 新增方法，返回精确字节数
+        /// </summary>
+        public static long GetAllFileSizeBytes(string path)
+        {
+            if (!Directory.Exists(path)) return 0;
+            long totalBytes = 0;
+            foreach (var file in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    totalBytes += new FileInfo(file).Length;
+                }
+                catch (Exception e)
+                {
+                    Log.Debug($"GetAllFileSizeBytes: 无法读取文件大小 {file} -> {e.Message}");
+                }
+            }
+            return totalBytes;
         }
 
         /// <summary>
@@ -77,16 +103,38 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 无视锁文件，直接读bytes
+        /// 无视锁文件，直接读bytes，增加存在性检查和异常处理
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
         public static byte[] ReadAllBytes(string path)
         {
-            using var fs = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            var bytes = new byte[fs.Length];
-            fs.Read(bytes, 0, bytes.Length);
-            return bytes;
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            {
+                Log.Debug($"ReadAllBytes: 文件不存在 {path}");
+                return Array.Empty<byte>();
+            }
+
+            try
+            {
+                using var fs = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                var length = fs.Length;
+                if (length == 0) return Array.Empty<byte>();
+                var bytes = new byte[length];
+                int offset = 0;
+                while (offset < bytes.Length)
+                {
+                    int read = fs.Read(bytes, offset, bytes.Length - offset);
+                    if (read == 0) break;
+                    offset += read;
+                }
+                return bytes;
+            }
+            catch (Exception e)
+            {
+                Log.Error($"ReadAllBytes() 路径:{path}, 错误:{e.Message}");
+                return Array.Empty<byte>();
+            }
         }
 
         /// <summary>
@@ -102,7 +150,7 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         /// <param name="fullpath"></param>
         /// <param name="content"></param>
-        /// <returns></returns>
+        /// <returns>写入字节数，失败返回 -1</returns>
         public static async Task<int> SaveFileAsync(string fullpath, byte[] content)
         {
             try
@@ -125,7 +173,7 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 加载Json
+        /// 加载Json，增加异常捕获并记录错误
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="fileName"></param>
@@ -137,25 +185,43 @@ namespace ReunionMovement.Common.Util
             {
                 return default;
             }
-            var tempStr = File.ReadAllText(fileAbslutePath);
-            return JsonConvert.DeserializeObject<T>(tempStr);
+
+            try
+            {
+                var tempStr = File.ReadAllText(fileAbslutePath);
+                return JsonConvert.DeserializeObject<T>(tempStr);
+            }
+            catch (Exception e)
+            {
+                Log.Error($"LoadJson() 路径:{fileAbslutePath}, 错误:{e.Message}");
+                return default;
+            }
         }
 
         /// <summary>
-        /// 保存Json
+        /// 保存Json，新增返回写入是否成功的状态（true 成功，false 失败）
         /// </summary>
         /// <param name="jsonStr"></param>
         /// <param name="fileName"></param>
         /// <returns></returns>
-        public static async Task SaveJson(string jsonStr, string fileName)
+        public static async Task<bool> SaveJson(string jsonStr, string fileName)
         {
             var filePath = Path.Combine(Application.persistentDataPath, "Json");
-            if (!Directory.Exists(filePath))
+            try
             {
-                Directory.CreateDirectory(filePath);
+                if (!Directory.Exists(filePath))
+                {
+                    Directory.CreateDirectory(filePath);
+                }
+                var fileAbslutePath = Path.Combine(filePath, fileName + ".json");
+                await File.WriteAllTextAsync(fileAbslutePath, jsonStr);
+                return true;
             }
-            var fileAbslutePath = Path.Combine(filePath, fileName + ".json");
-            await File.WriteAllTextAsync(fileAbslutePath, jsonStr);
+            catch (Exception e)
+            {
+                Log.Error($"SaveJson() 路径:{filePath}, 文件:{fileName}, 错误:{e.Message}");
+                return false;
+            }
         }
 
         /// <summary>
@@ -187,7 +253,14 @@ namespace ReunionMovement.Common.Util
                         }
                         else
                         {
-                            File.WriteAllBytes(targetPath, www.downloadHandler.data);
+                            try
+                            {
+                                File.WriteAllBytes(targetPath, www.downloadHandler.data);
+                            }
+                            catch (Exception e)
+                            {
+                                Log.Error($"CopyFileToTarget 写入失败:{targetPath} -> {e.Message}");
+                            }
                         }
                     }
                     break;
@@ -195,7 +268,14 @@ namespace ReunionMovement.Common.Util
                     originalPath = $"{Application.dataPath}/Raw/{filePath}/{fileName}";
                     if (!File.Exists(targetPath))
                     {
-                        File.Copy(originalPath, targetPath);
+                        try
+                        {
+                            File.Copy(originalPath, targetPath);
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error($"CopyFileToTarget 复制失败:{originalPath} -> {e.Message}");
+                        }
                     }
                     break;
                 case RuntimePlatform.WindowsEditor:
@@ -204,7 +284,14 @@ namespace ReunionMovement.Common.Util
                 case RuntimePlatform.OSXPlayer:
                     if (!File.Exists(targetPath))
                     {
-                        File.Copy(originalPath, targetPath);
+                        try
+                        {
+                            File.Copy(originalPath, targetPath);
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error($"CopyFileToTarget 复制失败:{originalPath} -> {e.Message}");
+                        }
                     }
                     break;
             }
