@@ -2546,7 +2546,7 @@ namespace ReunionMovement.Common.Util
             t.localPosition = new Vector3(t.localPosition.x, newY, t.localPosition.z);
         }
         /// <summary>
-        /// 
+        /// 获取本地位置的Z轴
         /// </summary>
         /// <param name="t"></param>
         /// <param name="newZ"></param>
@@ -2791,7 +2791,7 @@ namespace ReunionMovement.Common.Util
                 return null;
             }
 
-            var t = Child(go, objName, check_visible, error);
+            var t = Child(go.transform, objName, check_visible, error);
             return t?.gameObject;
         }
 
@@ -3169,7 +3169,7 @@ namespace ReunionMovement.Common.Util
             int TextureHeight = texture.height;//图片的高
 
             //如果图片的高和宽都比side大
-            if (TextureWidth > side_x && TextureHeight > side_y)
+            if (TextureWidth >= side_x && TextureHeight >= side_y)
             {
                 tex = new Texture2D(side_x, side_y);
                 UnityEngine.Color[] col = texture.GetPixels((TextureWidth - side_x) / 2, (TextureHeight - side_y) / 2, side_x, side_y);
