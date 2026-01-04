@@ -1076,10 +1076,9 @@ namespace ReunionMovement.Common.Util
 
             if (comparer == null)
             {
-                throw new ArgumentException("比较器为空");
+                // 如果没有传入比较器，使用默认比较器
+                comparer = Comparer<TElement>.Default;
             }
-
-            comparer ??= Comparer<TElement>.Default;
 
             int min = index;
             int max = index + length - 1;
@@ -1220,8 +1219,25 @@ namespace ReunionMovement.Common.Util
             }
 
             var item = list[sourceIndex];
-            list.RemoveAt(sourceIndex);
-            list.Insert(destinationIndex, item);
+
+            if (sourceIndex < destinationIndex)
+            {
+                // 向后移动: 手动向前移动区间内元素
+                for (int i = sourceIndex; i < destinationIndex; i++)
+                {
+                    list[i] = list[i + 1];
+                }
+                list[destinationIndex] = item;
+            }
+            else // sourceIndex > destinationIndex
+            {
+                // 向前移动: 手动向后移动区间内元素
+                for (int i = sourceIndex; i > destinationIndex; i--)
+                {
+                    list[i] = list[i - 1];
+                }
+                list[destinationIndex] = item;
+            }
         }
 
         /// <summary>
@@ -1257,8 +1273,25 @@ namespace ReunionMovement.Common.Util
             }
 
             var item = list[sourceIndex];
-            Array.Copy(list, sourceIndex + 1, list, sourceIndex, destinationIndex - sourceIndex);
-            list[destinationIndex] = item;
+
+            if (sourceIndex < destinationIndex)
+            {
+                // 向后移动: 手动向前移动区间内元素
+                for (int i = sourceIndex; i < destinationIndex; i++)
+                {
+                    list[i] = list[i + 1];
+                }
+                list[destinationIndex] = item;
+            }
+            else // sourceIndex > destinationIndex
+            {
+                // 向前移动: 手动向后移动区间内元素
+                for (int i = sourceIndex; i > destinationIndex; i--)
+                {
+                    list[i] = list[i - 1];
+                }
+                list[destinationIndex] = item;
+            }
         }
         #endregion
 
@@ -2909,34 +2942,6 @@ namespace ReunionMovement.Common.Util
         {
             var t = Child(go, objName, check_visible, error);
             return t?.GetComponent<T>();
-        }
-
-        /// <summary>
-        /// 查找子项组件
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="go"></param>
-        /// <param name="name"></param>
-        /// <returns></returns>
-        public static T FindInChild<T>(this GameObject go, string name = "") where T : Component
-        {
-            if (!go)
-            {
-                return null;
-            }
-
-            if (!string.IsNullOrEmpty(name) && !go.name.Contains(name))
-            {
-                return null;
-            }
-
-            var comp = go.GetComponent<T>();
-            if (comp)
-            {
-                return comp;
-            }
-
-            return go.GetComponentsInChildren<T>().FirstOrDefault();
         }
 
         /// <summary>
