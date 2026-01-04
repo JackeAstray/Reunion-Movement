@@ -118,14 +118,33 @@ namespace ReunionMovement.Common.Util
         /// <returns>1234</returns>
         public static int ConvertIntArrayToInt(int[] array)
         {
-            int result = 0;
-            int length = array.Length;
-            for (int i = 0; i < length; i++)
+            if (array == null || array.Length == 0)
             {
-                result += Convert.ToInt32((Math.Abs(array[i]) * Math.Pow(10, length - 1 - i)));
+                return 0;
             }
 
-            return result;
+            // 使用整数运算避免 Math.Pow 带来的精度问题
+            long result = 0;
+            int length = array.Length;
+
+            // 使用首位的符号决定结果符号（若需要保留负号）
+            int sign = array[0] < 0 ? -1 : 1;
+
+            for (int i = 0; i < length; i++)
+            {
+                int digit = Math.Abs(array[i]);
+                // 保证为一位数字（若传入多位，取低位）
+                digit = digit % 10;
+                result = result * 10 + digit;
+
+                if (result > int.MaxValue)
+                {
+                    Log.Error("ConvertIntArrayToInt: 结果溢出 int 范围，已截断");
+                    return sign > 0 ? int.MaxValue : int.MinValue;
+                }
+            }
+
+            return (int)(result * sign);
         }
 
         /// <summary>
@@ -331,7 +350,7 @@ namespace ReunionMovement.Common.Util
             if (array == null)
             {
                 Log.Error("Distinct: 输入数组不能为空");
-                return null;
+                return Array.Empty<T>();
             }
 
             var set = new HashSet<T>();
@@ -346,6 +365,35 @@ namespace ReunionMovement.Common.Util
             }
 
             return result.ToArray();
+        }
+
+        /// <summary>
+        /// 把集合转成字典，便于后续高效查找。
+        /// 当输入为 null 时返回空字典而不是 null，以统一错误返回风格。
+        /// </summary>
+        /// <typeparam name="TKey">键的类型</typeparam>
+        /// <typeparam name="TValue">值的类型</typeparam>
+        /// <param name="source">源数据集合</param>
+        /// <param name="keySelector">键选择器</param>
+        /// <returns>构建的字典</returns>
+        public static Dictionary<TKey, TValue> BuildDictionary<TKey, TValue>(IEnumerable<TValue> source, Func<TValue, TKey> keySelector) where TKey : notnull
+        {
+            if (source == null || keySelector == null)
+            {
+                Log.Error("BuildDictionary: 源或键选择器为空，返回空字典");
+                return new Dictionary<TKey, TValue>();
+            }
+
+            var dictionary = new Dictionary<TKey, TValue>();
+            foreach (var item in source)
+            {
+                var key = keySelector(item);
+                if (!dictionary.ContainsKey(key))
+                {
+                    dictionary[key] = item;
+                }
+            }
+            return dictionary;
         }
 
         /// <summary>
@@ -449,33 +497,6 @@ namespace ReunionMovement.Common.Util
                 }
             }
             return -1;
-        }
-
-        /// <summary>
-        /// 把集合转成字典，便于后续高效查找。
-        /// </summary>
-        /// <typeparam name="TKey">键的类型</typeparam>
-        /// <typeparam name="TValue">值的类型</typeparam>
-        /// <param name="source">源数据集合</param>
-        /// <param name="keySelector">键选择器</param>
-        /// <returns>构建的字典</returns>
-        public static Dictionary<TKey, TValue> BuildDictionary<TKey, TValue>(IEnumerable<TValue> source, Func<TValue, TKey> keySelector) where TKey : notnull
-        {
-            if (source == null || keySelector == null)
-            {
-                return null;
-            }
-
-            var dictionary = new Dictionary<TKey, TValue>();
-            foreach (var item in source)
-            {
-                var key = keySelector(item);
-                if (!dictionary.ContainsKey(key))
-                {
-                    dictionary[key] = item;
-                }
-            }
-            return dictionary;
         }
 
         /// <summary>
@@ -1675,7 +1696,7 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         /// <param name="startDirection">起始方向</param>
         /// <param name="nNum">需要的数量</param>
-        /// <param name="pAnchorPos"><锚点/param>
+        /// <param name="pAnchorPos">锚点</param>
         /// <param name="fAngle">角度</param>
         /// <param name="nRadius">半径</param>
         /// <returns></returns>
