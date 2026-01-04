@@ -1,6 +1,4 @@
-﻿using Codice.CM.Client.Differences.Graphic;
-using System;
-using System.Security.Policy;
+﻿using System;
 using UnityEditor;
 using UnityEditor.UI;
 using UnityEngine;
