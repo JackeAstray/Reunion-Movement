@@ -273,6 +273,11 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static int GetNearestPower2(int num)
         {
+            if (num == 0)
+            {
+                return 0;
+            }
+
             return (int)(Math.Pow(2, Math.Ceiling(Math.Log(num) / Math.Log(2))));
         }
 
@@ -286,10 +291,12 @@ namespace ReunionMovement.Common.Util
         {
             a = Math.Abs(a);
             b = Math.Abs(b);
+
             if (a == 0 && b == 0)
             {
                 return 0;
             }
+
             while (b != 0)
             {
                 (a, b) = (b, a % b);
@@ -309,6 +316,7 @@ namespace ReunionMovement.Common.Util
             {
                 return 0;
             }
+
             return Math.Abs(a * b) / CalculateMaximumCommonDivisor(a, b);
         }
 
@@ -328,6 +336,7 @@ namespace ReunionMovement.Common.Util
 
             var set = new HashSet<T>();
             var result = new List<T>(array.Count);
+
             foreach (var item in array)
             {
                 if (set.Add(item))
@@ -335,6 +344,7 @@ namespace ReunionMovement.Common.Util
                     result.Add(item);
                 }
             }
+
             return result.ToArray();
         }
 
@@ -350,6 +360,7 @@ namespace ReunionMovement.Common.Util
                 Log.Error("Distinct: 输入数组不能为空");
                 return;
             }
+
             Shuffle(array, 0, array.Count);
         }
 
@@ -568,6 +579,12 @@ namespace ReunionMovement.Common.Util
         /// <param name="j">序号j</param>
         private static void Swap<T>(IList<T> array, int i, int j)
         {
+            if (array == null)
+            {
+                Log.Error("Swap: 输入数组不能为空");
+                return;
+            }
+
             T temp = array[i];
             array[i] = array[j];
             array[j] = temp;
@@ -635,6 +652,11 @@ namespace ReunionMovement.Common.Util
         /// <param name="ascending"></param>
         private static void InsertionSort<T, K>(IList<T> array, Func<T, K> handler, int start, int end, bool ascending) where K : IComparable<K>
         {
+            if (array == null || handler == null || start < 0 || end < 0 || start >= end)
+            {
+                return;
+            }
+
             for (int i = start + 1; i <= end; i++)
             {
                 T temp = array[i];
@@ -661,6 +683,12 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         private static int MedianOfThree<T, K>(IList<T> array, Func<T, K> handler, int start, int mid, int end) where K : IComparable<K>
         {
+            if (array == null || handler == null)
+            {
+                Log.Error("MedianOfThree: 输入数组或处理器不能为空");
+                return start;
+            }
+
             K a = handler(array[start]);
             K b = handler(array[mid]);
             K c = handler(array[end]);
@@ -691,14 +719,9 @@ namespace ReunionMovement.Common.Util
         /// <param name="ascending">是否升序（默认升序）</param>
         public static void Sort<T, K>(IList<T> array, Func<T, K> keySelector, bool ascending = true) where K : IComparable<K>
         {
-            if (array == null)
+            if (array == null || keySelector == null)
             {
-                Log.Error("Sort: 输入数组不能为空");
-                return;
-            }
-            if (keySelector == null)
-            {
-                Log.Error("Sort: 键选择器不能为空");
+                Log.Error("Sort: 输入数组或键选择器不能为空");
                 return;
             }
 
@@ -722,8 +745,21 @@ namespace ReunionMovement.Common.Util
         /// <returns>最小或最大值</returns>
         public static T MinMax<T>(IList<T> array, Comparison<T> comparison, bool findMax = false)
         {
-            if (array == null || array.Count == 0)
+            if (array == null)
             {
+                Log.Error("MinMax: 输入数组不能为空");
+                return default;
+            }
+
+            if (array.Count == 0)
+            {
+                Log.Error("MinMax: 输入数组不能为空");
+                return default;
+            }
+
+            if (comparison == null)
+            {
+                Log.Error("MinMax: 比较器不能为空");
                 return default;
             }
 
@@ -745,6 +781,18 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         public static T Min<T, K>(IList<T> array, Func<T, K> keySelector) where K : IComparable<K>
         {
+            if (array == null || array.Count == 0)
+            {
+                Log.Error("Min: 输入数组不能为空");
+                return default;
+            }
+
+            if (keySelector == null)
+            {
+                Log.Error("Min: 键选择器不能为空");
+                return default;
+            }
+
             return MinMax(array, (a, b) => keySelector(a).CompareTo(keySelector(b)), false);
         }
 
@@ -753,6 +801,18 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         public static T Max<T, K>(IList<T> array, Func<T, K> keySelector) where K : IComparable<K>
         {
+            if (array == null)
+            {
+                Log.Error("Max: 输入数组不能为空");
+                return default;
+            }
+
+            if (keySelector == null)
+            {
+                Log.Error("Max: 键选择器不能为空");
+                return default;
+            }
+
             return MinMax(array, (a, b) => keySelector(a).CompareTo(keySelector(b)), true);
         }
 
@@ -761,6 +821,18 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         public static T Min<T>(IList<T> array, Comparison<T> comparison)
         {
+            if (array == null)
+            {
+                Log.Error("Min: 输入数组不能为空");
+                return default;
+            }
+
+            if (comparison == null)
+            {
+                Log.Error("Min: 比较器不能为空");
+                return default;
+            }
+
             return MinMax(array, comparison, false);
         }
 
@@ -769,6 +841,18 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         public static T Max<T>(IList<T> array, Comparison<T> comparison)
         {
+            if (array == null)
+            {
+                Log.Error("Max: 输入数组不能为空");
+                return default;
+            }
+
+            if (comparison == null)
+            {
+                Log.Error("Max: 比较器不能为空");
+                return default;
+            }
+
             return MinMax(array, comparison, true);
         }
 
@@ -825,7 +909,9 @@ namespace ReunionMovement.Common.Util
             if (source is IList<T> list)
             {
                 if (list.Count == 0)
+                {
                     return default;
+                }
                 return list[RandomUtil.random.Next(list.Count)];
             }
 
@@ -850,6 +936,18 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static List<T> Filter<T>(this IEnumerable<T> source, Func<T, bool> predicate)
         {
+            if (source == null)
+            {
+                Log.Error("Filter: 源不能为空");
+                return new List<T>();
+            }
+
+            if (predicate == null)
+            {
+                Log.Error("Filter: 断言不能为空");
+                return new List<T>();
+            }
+
             return source?.Where(predicate).ToList() ?? new List<T>();
         }
 
@@ -863,6 +961,18 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static Dictionary<T, K> Filter<T, K>(this IEnumerable<KeyValuePair<T, K>> source, FilterAction<T, K> testAction)
         {
+            if (source == null)
+            {
+                Log.Error("Filter: 源不能为空");
+                return new Dictionary<T, K>();
+            }
+
+            if (testAction == null)
+            {
+                Log.Error("Filter: 断言不能为空");
+                return new Dictionary<T, K>();
+            }
+
             return source.Where(pair => testAction(pair.Key, pair.Value)).ToDictionary(pair => pair.Key, pair => pair.Value);
         }
 
@@ -875,8 +985,9 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static void AddRange<T>(this ICollection<T> collection, IEnumerable<T> other)
         {
-            if (other == null)
+            if (collection == null)
             {
+                Log.Error("集合为空");
                 return;
             }
 
@@ -896,7 +1007,12 @@ namespace ReunionMovement.Common.Util
         {
             if (list == null)
             {
-                Log.Error("list is null");
+                Log.Error("列表为空");
+                return;
+            }
+
+            if (list.Count == 0)
+            {
                 return;
             }
 
@@ -915,7 +1031,7 @@ namespace ReunionMovement.Common.Util
         {
             if (list == null)
             {
-                Log.Error("list is null");
+                Log.Error("列表为空");
                 return;
             }
 
@@ -945,26 +1061,22 @@ namespace ReunionMovement.Common.Util
         {
             if (source == null)
             {
-                Log.Error("source 为空");
-                return -1;
+                throw new ArgumentNullException(nameof(source));
             }
 
-            if (index < 0)
+            if (getSubElement == null)
             {
-                Log.Error("index is less than the lower bound of array.");
-                return -1;
+                throw new ArgumentNullException(nameof(getSubElement));
             }
 
-            if (length < 0)
+            if (index < 0 || length < 0 || index + length > source.Count)
             {
-                Log.Error("Value has to be >= 0.");
-                return -1;
+                throw new ArgumentOutOfRangeException("索引或长度超出范围");
             }
 
-            if (index > source.Count - length)
+            if (comparer == null)
             {
-                Log.Error("index and length do not specify a valid range in array.");
-                return -1;
+                throw new ArgumentException("比较器为空");
             }
 
             comparer ??= Comparer<TElement>.Default;
@@ -1086,17 +1198,24 @@ namespace ReunionMovement.Common.Util
         {
             if (list == null)
             {
-                Log.Error("list is null");
+                Log.Error("列表为空");
                 return;
             }
+
             if (sourceIndex < 0 || sourceIndex >= list.Count)
             {
-                Log.Error("sourceIndex is out of range");
+                Log.Error("sourceIndex 超出范围");
                 return;
             }
+
             if (destinationIndex < 0 || destinationIndex >= list.Count)
             {
-                Log.Error("destinationIndex is out of range");
+                Log.Error("destinationIndex 超出范围");
+                return;
+            }
+
+            if (sourceIndex == destinationIndex)
+            {
                 return;
             }
 
@@ -1116,57 +1235,30 @@ namespace ReunionMovement.Common.Util
         {
             if (list == null)
             {
-                Log.Error("list is null");
+                Log.Error("列表为空");
                 return;
             }
+
             if (sourceIndex < 0 || sourceIndex >= list.Length)
             {
-                Log.Error("sourceIndex is out of range");
+                Log.Error("sourceIndex 超出范围");
                 return;
             }
+
             if (destinationIndex < 0 || destinationIndex >= list.Length)
             {
-                Log.Error("destinationIndex is out of range");
+                Log.Error("destinationIndex 超出范围");
                 return;
             }
+
+            if (sourceIndex == destinationIndex)
+            {
+                return;
+            }
+
             var item = list[sourceIndex];
             Array.Copy(list, sourceIndex + 1, list, sourceIndex, destinationIndex - sourceIndex);
             list[destinationIndex] = item;
-        }
-
-        /// <summary>
-        /// 转成数组
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="source"></param>
-        /// <returns></returns>
-        public static T[] ToArray<T>(this IEnumerable<T> source)
-        {
-            return source.ToList().ToArray();
-        }
-
-        /// <summary>
-        /// 转成列表
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="source"></param>
-        /// <returns></returns>
-        public static List<T> ToList<T>(this IEnumerable<T> source)
-        {
-            return new List<T>(source);
-        }
-
-        /// <summary>
-        /// 列表合并
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="first"></param>
-        /// <param name="second"></param>
-        /// <param name="comparer"></param>
-        /// <returns></returns>
-        public static List<T> Union<T>(this List<T> first, List<T> second, IEqualityComparer<T> comparer)
-        {
-            return first.Concat(second).Distinct(comparer).ToList();
         }
         #endregion
 
@@ -1276,15 +1368,12 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 获取圆、椭圆上某个角度的相对位置
-        /// angle = 0，返回椭圆最右侧点 (longHalfAxis, 0)
-        /// angle = 90，返回椭圆最上侧点(0, shortHalfAxis)
-        /// angle = 180，返回椭圆最左侧点(-longHalfAxis, 0)
-        /// angle = 270，返回椭圆最下侧点(0, -shortHalfAxis)
+        /// 获取椭圆上某个角度的相对位置
+        /// 作用是-已椭圆中心为原点，长轴与X轴重合，短轴与Y轴重合，计算出该角度对应的椭圆上点的坐标。
         /// </summary>
-        /// <param name="longHalfAxis">长半轴</param>
-        /// <param name="shortHalfAxis">短半轴</param>
-        /// <param name="angle">角度</param>
+        /// <param name="longHalfAxis"></param>
+        /// <param name="shortHalfAxis"></param>
+        /// <param name="angle"></param>
         /// <returns></returns>
         public static Vector2 GetRelativePositionOfEllipse(float longHalfAxis, float shortHalfAxis, float angle)
         {
@@ -1348,6 +1437,11 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static Vector3 CalculateCenterPoint(List<Transform> Points)
         {
+            if (Points == null || Points.Count == 0)
+            {
+                return Vector3.zero;
+            }
+
             return Points.Aggregate(Vector3.zero, (acc, p) => acc + p.position) / Points.Count;
         }
 
@@ -1373,7 +1467,10 @@ namespace ReunionMovement.Common.Util
         public static Vector3 GetRandomPointInSphere(Vector3 center, float radius)
         {
             if (radius < 0)
+            {
                 radius = 0;
+            }
+
             var rndPtr = UnityEngine.Random.insideUnitSphere * radius;
             var rndPos = rndPtr + center;
             return rndPos;
@@ -1392,10 +1489,12 @@ namespace ReunionMovement.Common.Util
             {
                 miniRadius = 0;
             }
+
             if (maxRadius < miniRadius)
             {
                 maxRadius = miniRadius;
             }
+
             var randomRadius = UnityEngine.Random.Range(miniRadius, maxRadius);
             var rndPtr = UnityEngine.Random.insideUnitSphere * randomRadius;
             var rndPos = rndPtr + center;
@@ -1403,7 +1502,8 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 生成一组以startPos为中心、在startDirection垂直方向上等间距排列的点。常用于队列、阵型、道路布点等需要横向分布的场景。
+        /// 生成一组以startPos为中心、在startDirection垂直方向上等间距排列的点。
+        /// 常用于队列、阵型、道路布点等需要横向分布的场景。
         /// </summary>
         /// <param name="startPos"></param>
         /// <param name="startDirection"></param>
@@ -2062,12 +2162,13 @@ namespace ReunionMovement.Common.Util
             foreach (var id1 in ids)
             {
                 findTrans = ChildDirect(findTrans, id1, check_visible);
+
                 if (findTrans == null)
                 {
                     // 如果需要抛出错误
                     if (raise_error)
                     {
-                        Log.Error($"查找子项失败, id:{objName} ,parent={findTrans.name}");
+                        Log.Error($"查找子项失败, id:{objName} ,parent={id1}");
                     }
                     break;
                 }
