@@ -15,32 +15,42 @@ namespace ReunionMovement.Common
             switch (level)
             {
                 case LogLevel.Debug:
-                    string msg = string.Format("<color=#80FF00>{0}</color>", message);
-                    Debug.Log(msg);
-                    break;
+                    {
+                        string msg = string.Format("<color=#80FF00>[调试] {0}</color>", message);
+                        Debug.Log(msg);
+                        break;
+                    }
 
                 case LogLevel.Info:
-                    msg = string.Format("<color=#00FF00>{0}</color>", message);
-                    Debug.Log(msg);
-                    break;
+                    {
+                        string msg = string.Format("<color=#00FF00>[信息] {0}</color>", message);
+                        Debug.Log(msg);
+                        break;
+                    }
 
                 case LogLevel.Warning:
-                    msg = string.Format("<color=#FFCC00>{0}</color>", message);
-                    Debug.LogWarning(msg);
-                    break;
+                    {
+                        string msg = string.Format("<color=#FFCC00>[警告] {0}</color>", message);
+                        Debug.LogWarning(msg);
+                        break;
+                    }
 
                 case LogLevel.Error:
-                    msg = string.Format("<color=#FF0040>{0}</color>", message);
-                    Debug.LogError(msg);
-                    break;
+                    {
+                        string msg = string.Format("<color=#FF0040>[错误] {0}</color>", message);
+                        Debug.LogError(msg);
+                        break;
+                    }
 
                 case LogLevel.Fatal:
-                    msg = string.Format("<color=#FF0000>{0}</color>", message);
-                    Debug.LogError(msg);
-                    break;
+                    {
+                        string msg = string.Format("<color=#FF0000>[致命] {0}</color>", message);
+                        Debug.LogError(msg);
+                        break;
+                    }
 
                 default:
-                    throw new System.Exception(message.ToString());
+                    throw new System.Exception($"未知日志等级: {message}");
             }
         }
     }

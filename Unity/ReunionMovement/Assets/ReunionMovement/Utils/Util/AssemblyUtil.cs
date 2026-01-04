@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 
@@ -46,6 +42,27 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
+        /// 安全地获取程序集中的类型列表，处理 ReflectionTypeLoadException 并过滤 null
+        /// </summary>
+        /// <param name="assembly"></param>
+        /// <returns></returns>
+        private static IEnumerable<Type> SafeGetTypes(Assembly assembly)
+        {
+            try
+            {
+                return assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                return ex.Types.Where(t => t != null);
+            }
+            catch
+            {
+                return Array.Empty<Type>();
+            }
+        }
+
+        /// <summary>
         /// 获取所有带有指定特性的类型
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -53,7 +70,7 @@ namespace ReunionMovement.Common.Util
         public static Type[] GetTypesWithAttribute<T>() where T : Attribute
         {
             return GetAllAssemblies()
-                .SelectMany(a => a.GetTypes())
+                .SelectMany(a => SafeGetTypes(a))
                 .Where(t => t.GetCustomAttributes(typeof(T), true).Length > 0)
                 .ToArray();
         }
@@ -64,7 +81,7 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static Type[] GetExecutingAssemblyTypes()
         {
-            return Assembly.GetExecutingAssembly().GetTypes();
+            return SafeGetTypes(Assembly.GetExecutingAssembly()).ToArray();
         }
 
         /// <summary>
@@ -74,7 +91,7 @@ namespace ReunionMovement.Common.Util
         public static Type[] GetAllInterfaceTypes()
         {
             return GetAllAssemblies()
-                .SelectMany(a => a.GetTypes())
+                .SelectMany(a => SafeGetTypes(a))
                 .Where(t => t.IsInterface)
                 .ToArray();
         }
@@ -86,7 +103,7 @@ namespace ReunionMovement.Common.Util
         public static Type[] GetAllAbstractClassTypes()
         {
             return GetAllAssemblies()
-                .SelectMany(a => a.GetTypes())
+                .SelectMany(a => SafeGetTypes(a))
                 .Where(t => t.IsClass && t.IsAbstract)
                 .ToArray();
         }
@@ -98,7 +115,7 @@ namespace ReunionMovement.Common.Util
         public static Type[] GetAllEnumTypes()
         {
             return GetAllAssemblies()
-                .SelectMany(a => a.GetTypes())
+                .SelectMany(a => SafeGetTypes(a))
                 .Where(t => t.IsEnum)
                 .ToArray();
         }
@@ -111,8 +128,8 @@ namespace ReunionMovement.Common.Util
         public static Type[] GetTypesInNamespace(string ns)
         {
             return GetAllAssemblies()
-                .SelectMany(a => a.GetTypes())
-                .Where(t => t.Namespace == ns)
+                .SelectMany(a => SafeGetTypes(a))
+                .Where(t => string.Equals(t.Namespace, ns, StringComparison.Ordinal))
                 .ToArray();
         }
 
@@ -123,7 +140,7 @@ namespace ReunionMovement.Common.Util
         public static Type[] GetAllPublicClassTypes()
         {
             return GetAllAssemblies()
-                .SelectMany(a => a.GetTypes())
+                .SelectMany(a => SafeGetTypes(a))
                 .Where(t => t.IsClass && t.IsPublic)
                 .ToArray();
         }
@@ -137,7 +154,7 @@ namespace ReunionMovement.Common.Util
         public static Type[] GetAllMonoBehaviourTypes()
         {
             return GetAllAssemblies()
-                .SelectMany(a => a.GetTypes())
+                .SelectMany(a => SafeGetTypes(a))
                 .Where(t => typeof(MonoBehaviour).IsAssignableFrom(t) && t.IsClass && !t.IsAbstract)
                 .ToArray();
         }
@@ -149,7 +166,7 @@ namespace ReunionMovement.Common.Util
         public static Type[] GetAllScriptableObjectTypes()
         {
             return GetAllAssemblies()
-                .SelectMany(a => a.GetTypes())
+                .SelectMany(a => SafeGetTypes(a))
                 .Where(t => typeof(ScriptableObject).IsAssignableFrom(t) && t.IsClass && !t.IsAbstract)
                 .ToArray();
         }
@@ -161,7 +178,7 @@ namespace ReunionMovement.Common.Util
         public static Type[] GetAllComponentTypes()
         {
             return GetAllAssemblies()
-                .SelectMany(a => a.GetTypes())
+                .SelectMany(a => SafeGetTypes(a))
                 .Where(t => typeof(Component).IsAssignableFrom(t) && t.IsClass && !t.IsAbstract)
                 .ToArray();
         }
@@ -174,7 +191,7 @@ namespace ReunionMovement.Common.Util
         public static string[] GetAllTypeFullNames()
         {
             return GetAllAssemblies()
-                .SelectMany(a => a.GetTypes())
+                .SelectMany(a => SafeGetTypes(a))
                 .Select(t => t.FullName)
                 .ToArray();
         }
@@ -213,7 +230,7 @@ namespace ReunionMovement.Common.Util
         {
             if (string.IsNullOrEmpty(typeFullName)) return null;
             return GetAllAssemblies()
-                .SelectMany(a => a.GetTypes())
+                .SelectMany(a => SafeGetTypes(a))
                 .FirstOrDefault(t => t.FullName == typeFullName || t.Name == typeFullName);
         }
 
