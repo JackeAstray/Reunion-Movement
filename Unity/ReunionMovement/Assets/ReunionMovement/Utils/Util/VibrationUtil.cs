@@ -1,5 +1,7 @@
 ﻿using System;
 using UnityEngine;
+using System.Runtime.InteropServices;
+using UnityEngine.iOS;
 
 namespace ReunionMovement.Common.Util
 {
@@ -379,7 +381,7 @@ namespace ReunionMovement.Common.Util
         {
             bool hapticsSupported = false;
 #if UNITY_IOS
-            switch (generation)
+            switch (UnityEngine.iOS.Device.generation)
             {
                 case DeviceGeneration.iPhone3G:
                 case DeviceGeneration.iPhone3GS:
