@@ -63,7 +63,8 @@ namespace ReunionMovement.Common.Util
         {
             try
             {
-                string dir = string.IsNullOrEmpty(saveDir) ? Application.persistentDataPath : saveDir;
+                // 统一使用 PathUtil 获取持久化图片目录，保持与 CaptureFullScreenAsync 一致
+                string dir = string.IsNullOrEmpty(saveDir) ? PathUtil.GetLocalPath(DownloadType.PersistentImage) : saveDir;
                 if (!Directory.Exists(dir))
                 {
                     Directory.CreateDirectory(dir);
@@ -100,6 +101,7 @@ namespace ReunionMovement.Common.Util
 
         /// <summary>  
         /// 截取全屏并返回Texture2D（无需保存）  
+        /// 注意：返回的Texture2D的生命周期由调用方管理，使用完毕请调用 UnityEngine.Object.Destroy(tex) 以释放内存。
         /// </summary>  
         public static async Task<Texture2D> CaptureFullScreenTextureAsync()
         {
@@ -112,7 +114,8 @@ namespace ReunionMovement.Common.Util
         /// </summary>  
         private static Task WaitForEndOfFrameAsync()
         {
-            var tcs = new TaskCompletionSource<bool>();
+            // 确保继续执行在异步上下文中运行，减少同步续体导致的问题
+            var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             void WaitForEndOfFrameCoroutine()
             {
                 var waitForEndOfFrame = new WaitForEndOfFrame();
@@ -132,7 +135,8 @@ namespace ReunionMovement.Common.Util
         private static IEnumerator WaitForEndOfFrameCoroutineImpl(WaitForEndOfFrame waitForEndOfFrame, TaskCompletionSource<bool> tcs)
         {
             yield return waitForEndOfFrame;
-            tcs.SetResult(true);
+            // 使用 TrySetResult 以防止在异常或重入场景下抛出
+            tcs.TrySetResult(true);
         }
     }
 
@@ -142,15 +146,33 @@ namespace ReunionMovement.Common.Util
     public class MonoBehaviourHelper : MonoBehaviour
     {
         private static MonoBehaviourHelper instance;
+        private static readonly object instanceLock = new object();
+
         public static MonoBehaviourHelper Instance
         {
             get
             {
                 if (instance == null)
                 {
-                    var obj = new GameObject("MonoBehaviourHelper");
-                    instance = obj.AddComponent<MonoBehaviourHelper>();
-                    DontDestroyOnLoad(obj);
+                    lock (instanceLock)
+                    {
+                        if (instance == null)
+                        {
+                            // 注意：Unity 不允许在非主线程创建 GameObject。调用这些截屏方法应在主线程（一般为 Unity 的主循环线程）执行。
+                            var obj = new GameObject("MonoBehaviourHelper");
+                            instance = obj.AddComponent<MonoBehaviourHelper>();
+                            // 仅在运行时保持对象不被销毁
+                            if (Application.isPlaying)
+                            {
+                                DontDestroyOnLoad(obj);
+                            }
+                            else
+                            {
+                                // 在编辑器下或非运行时，隐藏对象以免干扰场景
+                                obj.hideFlags = HideFlags.HideAndDontSave;
+                            }
+                        }
+                    }
                 }
                 return instance;
             }
