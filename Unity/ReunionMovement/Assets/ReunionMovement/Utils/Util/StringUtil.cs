@@ -156,7 +156,7 @@ namespace ReunionMovement.Common.Util
         /// <param name="count">要返回的子字符串的最大数量</param>
         /// <param name="removeEmptyEntries">是否移除空实体</param>
         /// <returns>分割后的字段</returns>
-        public static string StringSplit(this string fullString, string[] separator, int count, bool removeEmptyEntries)
+        public static string[] StringSplit(this string fullString, string[] separator, int count, bool removeEmptyEntries)
         {
             string[] stringArray = null;
             if (removeEmptyEntries)
@@ -167,7 +167,7 @@ namespace ReunionMovement.Common.Util
             {
                 stringArray = fullString.Split(separator, count, StringSplitOptions.None);
             }
-            return stringArray.ToString();
+            return stringArray;
         }
 
         /// <summary>
@@ -352,12 +352,13 @@ namespace ReunionMovement.Common.Util
         {
             string[] sizes = { "B", "KB", "MB", "GB", "TB" };
             int order = 0;
-            while (size >= 1024 && order < sizes.Length - 1)
+            double len = size;
+            while (len >= 1024 && order < sizes.Length - 1)
             {
                 order++;
-                size = size / 1024;
+                len = len / 1024d;
             }
-            return String.Format("{0:0.##} {1}", size, sizes[order]);
+            return String.Format("{0:0.##} {1}", len, sizes[order]);
         }
 
         /// <summary>
@@ -368,6 +369,9 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static byte[] Base64ToByte(this string imageData, int offset = 0)
         {
+            if (imageData == null) throw new ArgumentNullException(nameof(imageData));
+            if (offset < 0 || offset > imageData.Length) throw new ArgumentOutOfRangeException(nameof(offset));
+
             imageData = imageData.Substring(offset);
             byte[] data = Convert.FromBase64String(imageData);
             return data;
@@ -475,22 +479,13 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static byte[] Compress(byte[] data)
         {
-            try
+            using (var ms = new MemoryStream())
             {
-                MemoryStream ms = new MemoryStream();
-                GZipStream zip = new GZipStream(ms, CompressionMode.Compress, true);
-                zip.Write(data, 0, data.Length);
-                zip.Close();
-                byte[] buffer = new byte[ms.Length];
-                ms.Position = 0;
-                ms.Read(buffer, 0, buffer.Length);
-                ms.Close();
-                return buffer;
-
-            }
-            catch (Exception e)
-            {
-                throw new Exception(e.Message);
+                using (var zip = new GZipStream(ms, CompressionMode.Compress, true))
+                {
+                    zip.Write(data, 0, data.Length);
+                }
+                return ms.ToArray();
             }
         }
 
@@ -501,31 +496,17 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static byte[] Decompress(byte[] data)
         {
-            try
+            using (var ms = new MemoryStream(data))
+            using (var zip = new GZipStream(ms, CompressionMode.Decompress, true))
+            using (var msreader = new MemoryStream())
             {
-                MemoryStream ms = new MemoryStream(data);
-                GZipStream zip = new GZipStream(ms, CompressionMode.Decompress, true);
-                MemoryStream msreader = new MemoryStream();
                 byte[] buffer = new byte[0x1000];
-                while (true)
+                int reader;
+                while ((reader = zip.Read(buffer, 0, buffer.Length)) > 0)
                 {
-                    int reader = zip.Read(buffer, 0, buffer.Length);
-                    if (reader <= 0)
-                    {
-                        break;
-                    }
                     msreader.Write(buffer, 0, reader);
                 }
-                zip.Close();
-                ms.Close();
-                msreader.Position = 0;
-                buffer = msreader.ToArray();
-                msreader.Close();
-                return buffer;
-            }
-            catch (Exception e)
-            {
-                throw new Exception(e.Message);
+                return msreader.ToArray();
             }
         }
 
@@ -536,12 +517,10 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static string CompressString(string str)
         {
-            string compressString = "";
-            byte[] compressBeforeByte = Encoding.GetEncoding("UTF-8").GetBytes(str);
+            byte[] compressBeforeByte = Encoding.UTF8.GetBytes(str);
             byte[] compressAfterByte = Compress(compressBeforeByte);
-            compressString = Convert.ToBase64String(compressAfterByte);
+            string compressString = Convert.ToBase64String(compressAfterByte);
             return compressString;
-
         }
 
         /// <summary>
@@ -551,10 +530,9 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static string DecompressString(string str)
         {
-            string compressString = "";
             byte[] compressBeforeByte = Convert.FromBase64String(str);
             byte[] compressAfterByte = Decompress(compressBeforeByte);
-            compressString = Encoding.GetEncoding("UTF-8").GetString(compressAfterByte);
+            string compressString = Encoding.UTF8.GetString(compressAfterByte);
             return compressString;
         }
         #endregion
@@ -567,7 +545,7 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static IEnumerable<byte> ToBytes(this string str)
         {
-            byte[] byteArray = Encoding.Default.GetBytes(str);
+            byte[] byteArray = Encoding.UTF8.GetBytes(str);
             return byteArray;
         }
 
@@ -578,7 +556,7 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static byte[] ToByteArray(this string str)
         {
-            byte[] byteArray = Encoding.Default.GetBytes(str);
+            byte[] byteArray = Encoding.UTF8.GetBytes(str);
             return byteArray;
         }
 
@@ -601,9 +579,10 @@ namespace ReunionMovement.Common.Util
         /// <exception cref="Exception"></exception>
         public static byte[] HexToBytes(this string hexString)
         {
+            if (string.IsNullOrEmpty(hexString)) throw new ArgumentNullException(nameof(hexString));
             if (hexString.Length % 2 != 0)
             {
-                throw new Exception(String.Format(CultureInfo.InvariantCulture, "二进制密钥不能有奇数位数: {0}", hexString));
+                throw new ArgumentException(String.Format(CultureInfo.InvariantCulture, "二进制密钥不能有奇数位数: {0}", hexString));
             }
 
             var hexAsBytes = new byte[hexString.Length / 2];
@@ -636,13 +615,8 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static string ListToString<T>(this List<T> list)
         {
-            StringBuilder sb = new StringBuilder();
-            foreach (T t in list)
-            {
-                sb.Append(t);
-                sb.Append(",");
-            }
-            return sb.ToString();
+            if (list == null || list.Count == 0) return string.Empty;
+            return string.Join(",", list);
         }
         #endregion
 
@@ -712,7 +686,7 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static string ToStr(this byte[] bytes)
         {
-            return Encoding.Default.GetString(bytes);
+            return Encoding.UTF8.GetString(bytes);
         }
 
         /// <summary>
@@ -724,7 +698,7 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static string ToStr(this byte[] bytes, int index, int count)
         {
-            return Encoding.Default.GetString(bytes, index, count);
+            return Encoding.UTF8.GetString(bytes, index, count);
         }
 
         /// <summary>
@@ -821,14 +795,16 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static string GetMD5_32(string input)
         {
-            MD5 md5 = MD5.Create();
-            byte[] data = md5.ComputeHash(Encoding.Default.GetBytes(input));
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < data.Length; i++)
+            using (var md5 = MD5.Create())
             {
-                sb.AppendFormat("{0:X2}", data[i]);
+                byte[] data = md5.ComputeHash(Encoding.UTF8.GetBytes(input));
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < data.Length; i++)
+                {
+                    sb.AppendFormat("{0:X2}", data[i]);
+                }
+                return sb.ToString();
             }
-            return sb.ToString();
         }
 
         /// <summary>
@@ -891,11 +867,13 @@ namespace ReunionMovement.Common.Util
         /// <returns>计算结果</returns>
         public static string MD5Buffer(byte[] MD5File, int index, int count)
         {
-            MD5CryptoServiceProvider get_md5 = new MD5CryptoServiceProvider();
-            byte[] hash_byte = get_md5.ComputeHash(MD5File, index, count);
-            string result = BitConverter.ToString(hash_byte);
-            result = result.Replace("-", "");
-            return result;
+            using (var get_md5 = new MD5CryptoServiceProvider())
+            {
+                byte[] hash_byte = get_md5.ComputeHash(MD5File, index, count);
+                string result = BitConverter.ToString(hash_byte);
+                result = result.Replace("-", "");
+                return result;
+            }
         }
         #endregion
     }
