@@ -43,14 +43,16 @@ namespace ReunionMovement.Common.Util
                 return new byte[length];
             }
 
-            byte[] bytes = cachedBytesQueue.Peek();
+            // Dequeue the first item and check its size. If it's too small, allocate a new one.
+            byte[] bytes = cachedBytesQueue.Dequeue();
 
             if (bytes.Length < length)
             {
+                // Put the smaller buffer aside (do not re-enqueue it) and return a new proper-sized buffer.
                 return new byte[length];
             }
 
-            return cachedBytesQueue.Dequeue();
+            return bytes;
         }
         /// <summary>
         /// 释放缓存的字节数组
@@ -58,6 +60,7 @@ namespace ReunionMovement.Common.Util
         /// <param name="bytes"></param>
         private static void ReleaseCachedBytes(byte[] bytes)
         {
+            if (bytes == null) return;
             cachedBytesQueue.Enqueue(bytes);
         }
 
@@ -79,10 +82,11 @@ namespace ReunionMovement.Common.Util
 
             //写入原始数据
             Array.Copy(bytes, 0, cachedBytes, encryptBytesLength, bytes.Length);
-            using (FileStream fs = File.OpenWrite(filePath))
+            using (FileStream fs = File.Open(filePath, FileMode.Open, FileAccess.Write))
             {
                 fs.Position = 0;
                 fs.Write(cachedBytes, 0, newLength);
+                fs.SetLength(newLength);
             }
 
             Array.Clear(cachedBytes, 0, newLength);
@@ -96,12 +100,16 @@ namespace ReunionMovement.Common.Util
         {
             byte[] cachedBytes = GetCachedBytes(encryptBytesLength);
 
-            using (FileStream fs = File.Open(filePath, FileMode.Open))
+            // Open file for read/write so we can read the first bytes and write them back
+            using (FileStream fs = File.Open(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
             {
-                int _ = fs.Read(cachedBytes, 0, encryptBytesLength);
-                EncryptXOr(cachedBytes);
-                fs.Position = 0;
-                fs.Write(cachedBytes, 0, encryptXOrKey);
+                int bytesRead = fs.Read(cachedBytes, 0, Math.Min(cachedBytes.Length, encryptBytesLength));
+                if (bytesRead > 0)
+                {
+                    EncryptXOr(cachedBytes, bytesRead);
+                    fs.Position = 0;
+                    fs.Write(cachedBytes, 0, bytesRead);
+                }
             }
 
             Array.Clear(cachedBytes, 0, cachedBytes.Length);
@@ -111,9 +119,10 @@ namespace ReunionMovement.Common.Util
         /// <summary>
         /// 使用二进制数据进行异或加密/解密
         /// </summary>
-        public static void EncryptXOr(byte[] bytes, long length = encryptBytesLength)
+        public static void EncryptXOr(byte[] bytes, int length = encryptBytesLength)
         {
-            for (long i = 0; i < length; i++)
+            int actualLength = Math.Min(length, bytes?.Length ?? 0);
+            for (int i = 0; i < actualLength; i++)
             {
                 bytes[i] ^= encryptXOrKey;
             }
