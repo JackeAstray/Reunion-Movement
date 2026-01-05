@@ -3,9 +3,15 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using Mirror.SimpleWeb;
+using UnityEngine.Events;
 
 namespace ReunionMovement.Common.Util
 {
+    [Serializable]
+    public class StringEvent : UnityEvent<string> { }
+    [Serializable]
+    public class IntEvent : UnityEvent<int> { }
+
     /// <summary>
     /// 通用网络组件：可在 Inspector 切换 客户端/服务端 与 传输类型（TCP / KCP / WebSocket）。
     /// 设计为轻量可扩展的封装，示例用途；生产环境请根据需求扩展错误处理、重连、线程安全等。
@@ -15,14 +21,51 @@ namespace ReunionMovement.Common.Util
         public enum Mode { Client, Server }
         public enum Transport { TCP, KCP, WebSocket }
 
-        [Header("Mode")]
+        [Header("模式")]
         public Mode mode = Mode.Client;
         public Transport transport = Transport.TCP;
 
-        [Header("Common")]
+        [Header("公共")]
         public string channelName = "UNET_CHANNEL";
         public string host = "127.0.0.1";
         public int port = 7778;
+
+        [Header("自动重连/心跳")]
+        public bool autoReconnect = true;
+        public int maxReconnectAttempts = 5; // -1 表示无限重连
+        public float reconnectInterval = 3f;
+
+        public bool enableHeartbeat = false;
+        public float heartbeatInterval = 5f;
+        public string heartbeatText = "PING";
+
+        [Header("Inspector 控制")]
+        public string inspectorSendText = "Hello from Inspector";
+
+        // 便于在 Inspector 中订阅的 UnityEvent
+        [Header("事件")]
+        public UnityEvent onClientConnected;
+        public UnityEvent onClientDisconnected;
+        public StringEvent onClientDataReceived;
+        public StringEvent onClientError;
+
+        public UnityEvent onServerStarted;
+        public IntEvent onServerClientConnected; // client id
+        public IntEvent onServerClientDisconnected;
+        public StringEvent onServerDataReceived; // stringified data
+        public StringEvent onServerError;
+
+        // 供代码订阅的 C# 事件
+        public event Action ClientConnected;
+        public event Action ClientDisconnected;
+        public event Action<byte[]> ClientDataReceived;
+        public event Action<string> ClientError;
+
+        public event Action ServerStarted;
+        public event Action<int> ServerClientConnected;
+        public event Action<int> ServerClientDisconnected;
+        public event Action<int, byte[]> ServerDataReceived;
+        public event Action<int, string> ServerError;
 
         // 服务器端连接跟踪
         HashSet<int> clientIds = new HashSet<int>();
@@ -36,6 +79,11 @@ namespace ReunionMovement.Common.Util
         TcpServerChannel tcpServer;
         KcpServerChannel kcpServer;
         SimpleWebServer swtServer;
+
+        // 内部状态
+        int reconnectAttempts = 0;
+        Coroutine reconnectCoroutine;
+        Coroutine heartbeatCoroutine;
 
         void Start()
         {
@@ -91,6 +139,13 @@ namespace ReunionMovement.Common.Util
         {
             Log.Info("停止所有网络连接...");
 
+            // stop coroutines
+            if (reconnectCoroutine != null) StopCoroutine(reconnectCoroutine);
+            reconnectCoroutine = null;
+            if (heartbeatCoroutine != null) StopCoroutine(heartbeatCoroutine);
+            heartbeatCoroutine = null;
+            reconnectAttempts = 0;
+
             // 客户端关闭
             try { tcpClient?.Close(); } catch { }
             try { kcpClient?.Close(); } catch { }
@@ -108,21 +163,72 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         public void StartClient()
         {
+            // ensure previous coroutines cleared
+            if (reconnectCoroutine != null) { StopCoroutine(reconnectCoroutine); reconnectCoroutine = null; }
+            if (heartbeatCoroutine != null) { StopCoroutine(heartbeatCoroutine); heartbeatCoroutine = null; }
+            reconnectAttempts = 0;
+
             switch (transport)
             {
                 case Transport.TCP:
                     tcpClient = new TcpClientChannel(channelName);
-                    tcpClient.OnConnected += () => Log.Info("TCP 客户端已连接");
-                    tcpClient.OnDataReceived += (data) => OnClientDataReceived(data);
-                    tcpClient.OnDisconnected += () => Log.Info("TCP 客户端已断开连接");
+                    tcpClient.OnConnected += () =>
+                    {
+                        Log.Info("TCP 客户端已连接");
+                        reconnectAttempts = 0;
+                        ClientConnected?.Invoke();
+                        onClientConnected?.Invoke();
+                        // start heartbeat if enabled
+                        if (enableHeartbeat && heartbeatCoroutine == null)
+                            heartbeatCoroutine = StartCoroutine(HeartbeatRoutine());
+                    };
+                    tcpClient.OnDataReceived += (data) =>
+                    {
+                        OnClientDataReceived(data);
+                        ClientDataReceived?.Invoke(data);
+                        try { onClientDataReceived?.Invoke(Encoding.UTF8.GetString(data)); } catch { }
+                    };
+                    tcpClient.OnDisconnected += () =>
+                    {
+                        Log.Info("TCP 客户端已断开连接");
+                        ClientDisconnected?.Invoke();
+                        onClientDisconnected?.Invoke();
+                        if (reconnectCoroutine == null && autoReconnect)
+                            reconnectCoroutine = StartCoroutine(ReconnectRoutine());
+                    };
                     tcpClient.Connect(host, port);
                     NetworkMgr.Instance?.AddChannel(tcpClient);
                     break;
                 case Transport.KCP:
                     kcpClient = new KcpClientChannel(channelName);
-                    kcpClient.OnConnected += () => Log.Info("KCP 客户端已连接");
-                    kcpClient.OnDataReceived += (data) => OnClientDataReceived(data);
-                    kcpClient.OnDisconnected += () => Log.Info("KCP 客户端已断开连接");
+                    kcpClient.OnConnected += () =>
+                    {
+                        Log.Info("KCP 客户端已连接");
+                        reconnectAttempts = 0;
+                        ClientConnected?.Invoke();
+                        onClientConnected?.Invoke();
+                        if (enableHeartbeat && heartbeatCoroutine == null)
+                            heartbeatCoroutine = StartCoroutine(HeartbeatRoutine());
+                    };
+                    kcpClient.OnDataReceived += (data) =>
+                    {
+                        OnClientDataReceived(data);
+                        ClientDataReceived?.Invoke(data);
+                        try { onClientDataReceived?.Invoke(Encoding.UTF8.GetString(data)); } catch { }
+                    };
+                    kcpClient.OnDisconnected += () =>
+                    {
+                        Log.Info("KCP 客户端已断开连接");
+                        ClientDisconnected?.Invoke();
+                        onClientDisconnected?.Invoke();
+                        if (reconnectCoroutine == null && autoReconnect)
+                            reconnectCoroutine = StartCoroutine(ReconnectRoutine());
+                    };
+                    kcpClient.OnError += (err) =>
+                    {
+                        ClientError?.Invoke(err);
+                        try { onClientError?.Invoke(err); } catch { }
+                    };
                     kcpClient.Connect(host, port);
                     NetworkMgr.Instance?.AddChannel(kcpClient);
                     break;
@@ -131,8 +237,23 @@ namespace ReunionMovement.Common.Util
                     {
                         var tcpConfig = new TcpConfig(true, 5000, 5000);
                         swtClient = SimpleWebClient.Create(32000, 500, tcpConfig);
-                        swtClient.onConnect += () => Log.Info("WebSocket 客户端已连接");
-                        swtClient.onDisconnect += () => Log.Info("WebSocket 客户端已断开连接");
+                        swtClient.onConnect += () =>
+                        {
+                            Log.Info("WebSocket 客户端已连接");
+                            reconnectAttempts = 0;
+                            ClientConnected?.Invoke();
+                            onClientConnected?.Invoke();
+                            if (enableHeartbeat && heartbeatCoroutine == null)
+                                heartbeatCoroutine = StartCoroutine(HeartbeatRoutine());
+                        };
+                        swtClient.onDisconnect += () =>
+                        {
+                            Log.Info("WebSocket 客户端已断开连接");
+                            ClientDisconnected?.Invoke();
+                            onClientDisconnected?.Invoke();
+                            if (reconnectCoroutine == null && autoReconnect)
+                                reconnectCoroutine = StartCoroutine(ReconnectRoutine());
+                        };
                         swtClient.onData += (seg) =>
                         {
                             try
@@ -140,13 +261,20 @@ namespace ReunionMovement.Common.Util
                                 var arr = new byte[seg.Count];
                                 Array.Copy(seg.Array, seg.Offset, arr, 0, seg.Count);
                                 OnClientDataReceived(arr);
+                                ClientDataReceived?.Invoke(arr);
+                                try { onClientDataReceived?.Invoke(Encoding.UTF8.GetString(arr)); } catch { }
                             }
                             catch (Exception ex)
                             {
                                 Log.Warning("swtClient.onData 处理错误：" + ex);
                             }
                         };
-                        swtClient.onError += (ex) => Log.Warning("WebSocket 客户端错误：" + ex);
+                        swtClient.onError += (ex) =>
+                        {
+                            Log.Warning("WebSocket 客户端错误：" + ex);
+                            ClientError?.Invoke(ex.ToString());
+                            try { onClientError?.Invoke(ex.ToString()); } catch { }
+                        };
 
                         UriBuilder builder = new UriBuilder(host)
                         {
@@ -163,6 +291,77 @@ namespace ReunionMovement.Common.Util
                     }
                     break;
             }
+        }
+
+        System.Collections.IEnumerator ReconnectRoutine()
+        {
+            reconnectAttempts = 0;
+            while (autoReconnect && (maxReconnectAttempts < 0 || reconnectAttempts < maxReconnectAttempts))
+            {
+                reconnectAttempts++;
+                Log.Info($"尝试第 {reconnectAttempts} 次重连...");
+                try
+                {
+                    StartClient();
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning("重连尝试异常：" + ex);
+                }
+
+                // wait for reconnectInterval seconds while giving chance for connection events to reset attempts
+                float waited = 0f;
+                while (waited < reconnectInterval)
+                {
+                    // if connected, finish
+                    bool connected = false;
+                    if (transport == Transport.TCP && tcpClient != null) connected = tcpClient.IsConnect;
+                    if (transport == Transport.KCP && kcpClient != null) connected = kcpClient.IsConnect;
+                    if (transport == Transport.WebSocket && swtClient != null) connected = (swtClient.ConnectionState == ClientState.Connected);
+                    if (connected)
+                    {
+                        reconnectCoroutine = null;
+                        yield break;
+                    }
+                    waited += Time.deltaTime;
+                    yield return null;
+                }
+            }
+
+            // ended attempts
+            reconnectCoroutine = null;
+        }
+
+        System.Collections.IEnumerator HeartbeatRoutine()
+        {
+            while (enableHeartbeat)
+            {
+                bool connected = false;
+                if (transport == Transport.TCP && tcpClient != null) connected = tcpClient.IsConnect;
+                if (transport == Transport.KCP && kcpClient != null) connected = kcpClient.IsConnect;
+                if (transport == Transport.WebSocket && swtClient != null) connected = (swtClient.ConnectionState == ClientState.Connected);
+
+                if (connected)
+                {
+                    try
+                    {
+                        var bytes = Encoding.UTF8.GetBytes(heartbeatText);
+                        SendClientBytes(bytes);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning("心跳发送失败：" + ex);
+                    }
+                }
+
+                float waited = 0f;
+                while (waited < heartbeatInterval)
+                {
+                    waited += Time.deltaTime;
+                    yield return null;
+                }
+            }
+            heartbeatCoroutine = null;
         }
 
         /// <summary>
@@ -230,14 +429,20 @@ namespace ReunionMovement.Common.Util
                     {
                         clientIds.Add(id);
                         Log.Info($"TCP 客户端已连接 id={id} ip={ip}");
+                        ServerClientConnected?.Invoke(id);
+                        onServerClientConnected?.Invoke(id);
                     };
                     tcpServer.OnDisconnected += (id) =>
                     {
                         clientIds.Remove(id);
                         Log.Info($"TCP 客户端已断开 id={id}");
+                        ServerClientDisconnected?.Invoke(id);
+                        onServerClientDisconnected?.Invoke(id);
                     };
                     tcpServer.OnDataReceived += (id, data) => OnServerDataReceived(id, data);
                     tcpServer.Start();
+                    ServerStarted?.Invoke();
+                    onServerStarted?.Invoke();
                     break;
                 case Transport.KCP:
                     kcpServer = new KcpServerChannel(channelName, (ushort)port);
@@ -245,14 +450,20 @@ namespace ReunionMovement.Common.Util
                     {
                         clientIds.Add(id);
                         Log.Info($"KCP 客户端已连接 id={id} ip={ip}");
+                        ServerClientConnected?.Invoke(id);
+                        onServerClientConnected?.Invoke(id);
                     };
                     kcpServer.OnDisconnected += (id) =>
                     {
                         clientIds.Remove(id);
                         Log.Info($"KCP 客户端已断开 id={id}");
+                        ServerClientDisconnected?.Invoke(id);
+                        onServerClientDisconnected?.Invoke(id);
                     };
                     kcpServer.OnDataReceived += (id, data) => OnServerDataReceived(id, data);
                     kcpServer.Start();
+                    ServerStarted?.Invoke();
+                    onServerStarted?.Invoke();
                     break;
                 case Transport.WebSocket:
                     try
@@ -263,11 +474,15 @@ namespace ReunionMovement.Common.Util
                         {
                             clientIds.Add(id);
                             Log.Info($"WebSocket 客户端已连接 id={id} ip={ip}");
+                            ServerClientConnected?.Invoke(id);
+                            onServerClientConnected?.Invoke(id);
                         };
                         swtServer.onDisconnect += (id) =>
                         {
                             clientIds.Remove(id);
                             Log.Info($"WebSocket 客户端已断开 id={id}");
+                            ServerClientDisconnected?.Invoke(id);
+                            onServerClientDisconnected?.Invoke(id);
                         };
                         swtServer.onData += (id, seg) =>
                         {
@@ -286,6 +501,8 @@ namespace ReunionMovement.Common.Util
 
                         swtServer.Start((ushort)port);
                         Log.Info("WebSocket 服务已启动...");
+                        ServerStarted?.Invoke();
+                        onServerStarted?.Invoke();
                     }
                     catch (Exception ex)
                     {
@@ -378,6 +595,8 @@ namespace ReunionMovement.Common.Util
         {
             var s = Encoding.UTF8.GetString(data);
             Log.Info($"服务器收到来自 {clientId} 的消息 ({transport})：{s}");
+            ServerDataReceived?.Invoke(clientId, data);
+            try { onServerDataReceived?.Invoke(s); } catch { }
             // 默认回显
             SendToClientBytes(clientId, data);
         }
