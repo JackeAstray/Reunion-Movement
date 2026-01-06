@@ -128,7 +128,8 @@ namespace ReunionMovement.Common.Util.Download
             Action action = null,
             Action<string> error = null,
             bool skipIfExists = true, // 存在则跳过
-            bool deleteIfExists = false // 存在则删除
+            bool deleteIfExists = false, // 存在则删除
+            bool useMd5Name = true // 是否使用 MD5 命名（默认 true），对 bundle 下载可设为 false
         )
         {
             // 检查本地文件是否存在
@@ -170,7 +171,8 @@ namespace ReunionMovement.Common.Util.Download
                 return;
             }
 
-            FileDownloader ufd = new FileDownloader(savePath, true, true, 3, true, false, true, url);
+            // 将 useMd5Name 传递给 FileDownloader，以便控制命名策略
+            FileDownloader ufd = new FileDownloader(savePath, useMd5Name, true, 3, true, false, true, urlsToDownload);
 
             ufd.OnDownloadSuccess += (string uri) =>
             {
