@@ -36,6 +36,9 @@ namespace ReunionMovement.Core.Resources
         private readonly Dictionary<string, Object> assetTable = new Dictionary<string, Object>();
         private readonly Dictionary<string, int> assetRefCount = new Dictionary<string, int>();
 
+        // 正在进行的 Bundle 加载任务，防止并发重复加载
+        private readonly Dictionary<string, Task<AssetBundle>> loadingBundles = new Dictionary<string, Task<AssetBundle>>();
+
         // locks for thread-safety
         private readonly object bundleLock = new object();
         private readonly object assetLock = new object();
@@ -91,6 +94,9 @@ namespace ReunionMovement.Core.Resources
 
             lock (bundleLock)
             {
+                // 注意：无法取消正在进行的 loadingBundles 任务，它们完成后会尝试加入 bundleTable
+                // 但这里我们先清空当前表
+                loadingBundles.Clear(); // 清空加载任务记录
                 foreach (var kvp in bundleTable)
                 {
                     try { kvp.Value.Unload(true); } catch { }
@@ -381,6 +387,27 @@ namespace ReunionMovement.Core.Resources
                     var dir = Path.GetDirectoryName(localPath);
                     if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
 
+                    // 如果 Bundle 已加载，必须先卸载，否则 Windows 下无法覆盖文件 (Sharing Violation)
+                    bool isLoaded = false;
+                    lock (bundleLock)
+                    {
+                        isLoaded = bundleTable.ContainsKey(localPath);
+                    }
+                    if (isLoaded)
+                    {
+                        // 切换到主线程卸载
+                        await RunOnMainThread(() =>
+                        {
+                            // 强制卸载 Header 以释放文件句柄 (Unload(true) 也会销毁对象，视需求而定)
+                            // 若要热更，通常建议 Unload(true) 清理旧数据；若仅为了覆盖文件，Unload(false) 即可
+                            // 这里为了安全覆盖文件，且假设热更后会重新加载，建议 Unload(true) 或者 Unload(false)
+                            // AssetBundlesSystem 设计为简单实现，这里保守使用 false (保留对象) 
+                            // 但注意：保留对象后若 Bundle 重新加载，旧对象引用可能会有问题。
+                            // 系统 UpdateBundle 逻辑似乎倾向于更新。这里使用 force=true 确保处理。
+                            UnloadBundle(localPath, unloadAllLoadedObjects: false, force: true); 
+                        });
+                    }
+
                     File.Copy(downloadedFilePath, localPath, true);
 
                     // 保存版本信息
@@ -448,6 +475,15 @@ namespace ReunionMovement.Core.Resources
                     return exist;
                 }
 
+                // 如果正在异步加载，同步加载无法安全进行（会导致 Unity 报错），必须阻塞或报错
+                // 由于是在主线程，阻塞等待异步任务完成会导致死锁（因为异步任务回调通常也在主线程）
+                // 这里选择报错并返回 null，或者考虑回退
+                if (loadingBundles.ContainsKey(localPath))
+                {
+                    Log.Error($"无法同步加载 Bundle，因为该 Bundle 正在异步加载中: {localPath}");
+                    return null;
+                }
+
                 if (!File.Exists(localPath))
                 {
                     Log.Error($"Bundle 文件不存在: {localPath}");
@@ -469,43 +505,84 @@ namespace ReunionMovement.Core.Resources
         /// <summary>
         /// 异步加载本地 bundle 并缓存
         /// </summary>
-        public async Task<AssetBundle> LoadBundleFromFileAsync(string localPath)
+        public Task<AssetBundle> LoadBundleFromFileAsync(string localPath)
         {
-            if (string.IsNullOrEmpty(localPath)) return null;
+            if (string.IsNullOrEmpty(localPath)) return Task.FromResult<AssetBundle>(null);
 
+            Task<AssetBundle> task;
             lock (bundleLock)
             {
                 if (bundleTable.TryGetValue(localPath, out var exist))
                 {
-                    return exist;
+                    return Task.FromResult(exist);
                 }
-            }
 
-            if (!File.Exists(localPath))
-            {
-                Log.Error($"Bundle 文件不存在: {localPath}");
-                return null;
-            }
-
-            var req = AssetBundle.LoadFromFileAsync(localPath);
-            await AwaitAsyncOperation(req);
-
-            // Access Unity object on main thread
-            var ab = await RunOnMainThread(() => req.assetBundle);
-            if (ab == null)
-            {
-                Log.Error($"异步加载 AssetBundle 失败: {localPath}");
-                return null;
-            }
-
-            lock (bundleLock)
-            {
-                if (!bundleTable.ContainsKey(localPath))
+                // 检查是否已经在加载中
+                if (loadingBundles.TryGetValue(localPath, out var loadingTask))
                 {
-                    bundleTable[localPath] = ab;
+                    return loadingTask;
+                }
+
+                // 创建新的加载任务并缓存
+                task = InternalLoadBundleFromFileAsync(localPath);
+                loadingBundles[localPath] = task;
+            }
+
+            return task;
+        }
+
+        private async Task<AssetBundle> InternalLoadBundleFromFileAsync(string localPath)
+        {
+            try
+            {
+                if (!File.Exists(localPath))
+                {
+                    Log.Error($"Bundle 文件不存在: {localPath}");
+                    return null;
+                }
+
+                var req = AssetBundle.LoadFromFileAsync(localPath);
+                await AwaitAsyncOperation(req);
+
+                // Access Unity object on main thread
+                var ab = await RunOnMainThread(() => req.assetBundle);
+                if (ab == null)
+                {
+                    Log.Error($"异步加载 AssetBundle 失败: {localPath}");
+                    return null;
+                }
+
+                lock (bundleLock)
+                {
+                    // 二次检查，确保没有由于并在逻辑导致的重复 (虽然 loadingBundles 应该已经阻止了)
+                    if (!bundleTable.ContainsKey(localPath))
+                    {
+                        bundleTable[localPath] = ab;
+                    }
+                    else
+                    {
+                        // 理论上不应该发生，但如果发生，卸载刚才加载的副本以防内存泄漏
+                        if (bundleTable[localPath] != ab)
+                        {
+                            ab.Unload(true);
+                            ab = bundleTable[localPath];
+                        }
+                    }
+                }
+                return ab;
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"InternalLoadBundleFromFileAsync 异常: {localPath}, {ex}");
+                return null;
+            }
+            finally
+            {
+                lock (bundleLock)
+                {
+                    loadingBundles.Remove(localPath);
                 }
             }
-            return ab;
         }
         #endregion
 
@@ -764,26 +841,21 @@ namespace ReunionMovement.Core.Resources
                 return false;
             }
 
-            string oldLocalPath = Path.Combine(PathUtil.GetLocalPath(DownloadType.PersistentAssets), info.fileName);
+            // string oldLocalPath = Path.Combine(PathUtil.GetLocalPath(DownloadType.PersistentAssets), info.fileName); // Removed unused
 
             try
             {
+                // DownloadBundleIfNeeded 会处理版本检查、下载、和文件覆盖
                 var newLocal = await DownloadBundleIfNeeded(info.url);
-                if (string.Equals(newLocal, oldLocalPath, StringComparison.OrdinalIgnoreCase))
+                
+                // 如果 DownloadBundleIfNeeded 返回有效路径，说明 Bundle 存在（可能是刚下载的，也可能是旧的）
+                if (!string.IsNullOrEmpty(newLocal))
                 {
-                    Log.Debug($"UpdateBundle: bundle 已为最新: {bundleName}");
+                    Log.Info($"UpdateBundle: bundle 检查完成: {bundleName}");
                     return true;
                 }
-
-                // 下载并替换逻辑已在 DownloadBundleIfNeeded 原子完成，若成功则移除旧的缓存并删除旧文件
-                if (File.Exists(oldLocalPath))
-                {
-                    UnloadBundle(oldLocalPath, true);
-                    try { File.Delete(oldLocalPath); } catch (Exception ex) { Log.Warning("删除旧 bundle 失败: " + ex.Message); }
-                }
-
-                Log.Info($"UpdateBundle: bundle 已更新: {bundleName}");
-                return true;
+                
+                return false;
             }
             catch (Exception ex)
             {
