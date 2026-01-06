@@ -10,6 +10,7 @@ using UnityEngine;
 using Object = UnityEngine.Object;
 using System.Linq;
 using ReunionMovement.Common.Util.HttpService;
+using ReunionMovement.Common.Util.Manager;
 
 namespace ReunionMovement.Core.Resources
 {
@@ -34,6 +35,11 @@ namespace ReunionMovement.Core.Resources
         // 缓存已加载的资源（key: bundleKey + "::" + assetName 或 resources path）
         private readonly Dictionary<string, Object> assetTable = new Dictionary<string, Object>();
         private readonly Dictionary<string, int> assetRefCount = new Dictionary<string, int>();
+
+        // locks for thread-safety
+        private readonly object bundleLock = new object();
+        private readonly object assetLock = new object();
+        private readonly object dependencyLock = new object();
 
         private readonly BundleVersionManager versionManager = new BundleVersionManager();
 
@@ -69,24 +75,38 @@ namespace ReunionMovement.Core.Resources
         public void Clear()
         {
             Log.Debug("AssetBundlesSystem 清除数据");
-            foreach (var kvp in assetTable)
+
+            lock (assetLock)
             {
-                if (kvp.Value != null)
+                foreach (var kvp in assetTable)
                 {
-                    Object.Destroy(kvp.Value);
+                    if (kvp.Value != null)
+                    {
+                        try { UnityMainThreadDispatcher.RunOnMainThread(() => Object.Destroy(kvp.Value)); } catch { }
+                    }
                 }
+                assetTable.Clear();
+                assetRefCount.Clear();
             }
-            assetTable.Clear();
-            assetRefCount.Clear();
 
-            foreach (var kvp in bundleTable)
+            lock (bundleLock)
             {
-                try { kvp.Value.Unload(true); } catch { }
+                foreach (var kvp in bundleTable)
+                {
+                    try { kvp.Value.Unload(true); } catch { }
+                }
+                bundleTable.Clear();
             }
-            bundleTable.Clear();
 
-            dependencyCache.Clear();
-            ongoingDownloads.Clear();
+            lock (dependencyLock)
+            {
+                dependencyCache.Clear();
+            }
+
+            lock (ongoingDownloads)
+            {
+                ongoingDownloads.Clear();
+            }
 
             isInited = false;
         }
@@ -101,6 +121,56 @@ namespace ReunionMovement.Core.Resources
                 return tcs.Task;
             }
             op.completed += _ => tcs.TrySetResult(true);
+            return tcs.Task;
+        }
+
+        private static Task RunOnMainThread(Action action)
+        {
+            var tcs = new TaskCompletionSource<bool>();
+            try
+            {
+                UnityMainThreadDispatcher.RunOnMainThread(() =>
+                {
+                    try
+                    {
+                        action();
+                        tcs.TrySetResult(true);
+                    }
+                    catch (Exception ex)
+                    {
+                        tcs.TrySetException(ex);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                tcs.TrySetException(ex);
+            }
+            return tcs.Task;
+        }
+
+        private static Task<T> RunOnMainThread<T>(Func<T> func)
+        {
+            var tcs = new TaskCompletionSource<T>();
+            try
+            {
+                UnityMainThreadDispatcher.RunOnMainThread(() =>
+                {
+                    try
+                    {
+                        var r = func();
+                        tcs.TrySetResult(r);
+                    }
+                    catch (Exception ex)
+                    {
+                        tcs.TrySetException(ex);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                tcs.TrySetException(ex);
+            }
             return tcs.Task;
         }
 
@@ -251,7 +321,8 @@ namespace ReunionMovement.Core.Resources
                 }
                 catch (Exception ex)
                 {
-                    OnBundleLoadFailed?.Invoke(bundleUrl);
+                    // ensure event invoked on main thread
+                    UnityMainThreadDispatcher.RunOnMainThread(() => OnBundleLoadFailed?.Invoke(bundleUrl));
                     Log.Error($"开始下载 bundle 失败: {bundleUrl}, {ex}");
                     throw;
                 }
@@ -283,7 +354,7 @@ namespace ReunionMovement.Core.Resources
 
                 if (!File.Exists(downloadedFilePath))
                 {
-                    OnBundleLoadFailed?.Invoke(bundleUrl);
+                    UnityMainThreadDispatcher.RunOnMainThread(() => OnBundleLoadFailed?.Invoke(bundleUrl));
                     throw new FileNotFoundException("下载后未找到 bundle 文件", downloadedFilePath);
                 }
 
@@ -318,7 +389,8 @@ namespace ReunionMovement.Core.Resources
                         versionManager.SaveLocalVersion(localVersionFile, infoFromManifest.version);
                     }
 
-                    OnBundleDownloaded?.Invoke(localPath);
+                    // invoke event on main thread
+                    UnityMainThreadDispatcher.RunOnMainThread(() => OnBundleDownloaded?.Invoke(localPath));
 
                     // 删除备份
                     if (backupPath != null)
@@ -343,7 +415,7 @@ namespace ReunionMovement.Core.Resources
                         }
                     }
 
-                    OnBundleLoadFailed?.Invoke(bundleUrl);
+                    UnityMainThreadDispatcher.RunOnMainThread(() => OnBundleLoadFailed?.Invoke(bundleUrl));
                     Log.Error($"替换 bundle 失败: {bundleUrl}, {ex}");
                     throw;
                 }
@@ -369,26 +441,29 @@ namespace ReunionMovement.Core.Resources
         {
             if (string.IsNullOrEmpty(localPath)) return null;
 
-            if (bundleTable.TryGetValue(localPath, out var exist))
+            lock (bundleLock)
             {
-                return exist;
-            }
+                if (bundleTable.TryGetValue(localPath, out var exist))
+                {
+                    return exist;
+                }
 
-            if (!File.Exists(localPath))
-            {
-                Log.Error($"Bundle 文件不存在: {localPath}");
-                return null;
-            }
+                if (!File.Exists(localPath))
+                {
+                    Log.Error($"Bundle 文件不存在: {localPath}");
+                    return null;
+                }
 
-            var ab = AssetBundle.LoadFromFile(localPath);
-            if (ab == null)
-            {
-                Log.Error($"加载 AssetBundle 失败: {localPath}");
-                return null;
-            }
+                var ab = AssetBundle.LoadFromFile(localPath);
+                if (ab == null)
+                {
+                    Log.Error($"加载 AssetBundle 失败: {localPath}");
+                    return null;
+                }
 
-            bundleTable[localPath] = ab;
-            return ab;
+                bundleTable[localPath] = ab;
+                return ab;
+            }
         }
 
         /// <summary>
@@ -398,9 +473,12 @@ namespace ReunionMovement.Core.Resources
         {
             if (string.IsNullOrEmpty(localPath)) return null;
 
-            if (bundleTable.TryGetValue(localPath, out var exist))
+            lock (bundleLock)
             {
-                return exist;
+                if (bundleTable.TryGetValue(localPath, out var exist))
+                {
+                    return exist;
+                }
             }
 
             if (!File.Exists(localPath))
@@ -411,14 +489,22 @@ namespace ReunionMovement.Core.Resources
 
             var req = AssetBundle.LoadFromFileAsync(localPath);
             await AwaitAsyncOperation(req);
-            var ab = req.assetBundle;
+
+            // Access Unity object on main thread
+            var ab = await RunOnMainThread(() => req.assetBundle);
             if (ab == null)
             {
                 Log.Error($"异步加载 AssetBundle 失败: {localPath}");
                 return null;
             }
 
-            bundleTable[localPath] = ab;
+            lock (bundleLock)
+            {
+                if (!bundleTable.ContainsKey(localPath))
+                {
+                    bundleTable[localPath] = ab;
+                }
+            }
             return ab;
         }
         #endregion
@@ -444,15 +530,22 @@ namespace ReunionMovement.Core.Resources
                 }
 
                 string assetKey = MakeAssetKey(bundleKey, assetName);
-                if (assetTable.TryGetValue(assetKey, out var cached) && cached != null)
+                lock (assetLock)
                 {
-                    IncrementRefCount(assetKey);
-                    return cached as T;
+                    if (assetTable.TryGetValue(assetKey, out var cached) && cached != null)
+                    {
+                        IncrementRefCount(assetKey);
+                        return cached as T;
+                    }
                 }
 
-                var req = ab.LoadAssetAsync<T>(assetName);
+                // Call LoadAssetAsync on main thread
+                AssetBundleRequest req = null;
+                await RunOnMainThread(() => { req = ab.LoadAssetAsync<T>(assetName); });
                 await AwaitAsyncOperation(req);
-                var asset = req.asset as T;
+
+                // Access the loaded asset on main thread
+                var asset = await RunOnMainThread(() => req.asset as T);
                 if (asset == null)
                 {
                     Log.Error($"Bundle 中未找到资源: {assetName} in {bundlePathOrUrl}");
@@ -461,8 +554,11 @@ namespace ReunionMovement.Core.Resources
 
                 if (isCache)
                 {
-                    assetTable[assetKey] = asset;
-                    assetRefCount[assetKey] = 1;
+                    lock (assetLock)
+                    {
+                        assetTable[assetKey] = asset;
+                        assetRefCount[assetKey] = 1;
+                    }
                 }
 
                 return asset;
@@ -504,12 +600,16 @@ namespace ReunionMovement.Core.Resources
             }
 
             string assetKey = MakeAssetKey(localPath, assetName);
-            if (assetTable.TryGetValue(assetKey, out var cached) && cached != null)
+            lock (assetLock)
             {
-                IncrementRefCount(assetKey);
-                return cached as T;
+                if (assetTable.TryGetValue(assetKey, out var cached) && cached != null)
+                {
+                    IncrementRefCount(assetKey);
+                    return cached as T;
+                }
             }
 
+            // Synchronous load: assume caller on main thread. If not, this may fail.
             var asset = ab.LoadAsset<T>(assetName);
             if (asset == null)
             {
@@ -519,8 +619,11 @@ namespace ReunionMovement.Core.Resources
 
             if (isCache)
             {
-                assetTable[assetKey] = asset;
-                assetRefCount[assetKey] = 1;
+                lock (assetLock)
+                {
+                    assetTable[assetKey] = asset;
+                    assetRefCount[assetKey] = 1;
+                }
             }
 
             return asset;
@@ -538,63 +641,108 @@ namespace ReunionMovement.Core.Resources
         #region 卸载/引用计数
         public void IncrementRefCount(string key)
         {
-            if (assetRefCount.TryGetValue(key, out var count))
+            lock (assetLock)
             {
-                assetRefCount[key] = count + 1;
-            }
-            else
-            {
-                assetRefCount[key] = 1;
+                if (assetRefCount.TryGetValue(key, out var count))
+                {
+                    assetRefCount[key] = count + 1;
+                }
+                else
+                {
+                    assetRefCount[key] = 1;
+                }
             }
         }
 
         public void DecrementRefCount(string key)
         {
-            if (assetRefCount.TryGetValue(key, out var count))
+            lock (assetLock)
             {
-                count--;
-                if (count <= 0)
+                if (assetRefCount.TryGetValue(key, out var count))
                 {
-                    assetRefCount.Remove(key);
-                    if (assetTable.TryGetValue(key, out var obj))
+                    count--;
+                    if (count <= 0)
                     {
-                        try { Object.Destroy(obj); } catch { }
-                        assetTable.Remove(key);
+                        assetRefCount.Remove(key);
+                        if (assetTable.TryGetValue(key, out var obj))
+                        {
+                            try { UnityMainThreadDispatcher.RunOnMainThread(() => Object.Destroy(obj)); } catch { }
+                            assetTable.Remove(key);
+                        }
                     }
-                }
-                else
-                {
-                    assetRefCount[key] = count;
+                    else
+                    {
+                        assetRefCount[key] = count;
+                    }
                 }
             }
         }
 
         /// <summary>
-        /// 卸载 bundle（可选是否同时卸载已加载对象）
+        /// 卸载 bundle（可选是否同时卸载已加载对象, 可选择强制卸载忽略引用计数）
         /// </summary>
-        public void UnloadBundle(string bundleLocalPath, bool unloadAllLoadedObjects = false)
+        public void UnloadBundle(string bundleLocalPath, bool unloadAllLoadedObjects = false, bool force = false)
         {
             if (string.IsNullOrEmpty(bundleLocalPath)) return;
 
-            if (bundleTable.TryGetValue(bundleLocalPath, out var ab))
+            AssetBundle ab = null;
+            lock (bundleLock)
             {
-                try { ab.Unload(unloadAllLoadedObjects); } catch (Exception ex) { Log.Error(ex.Message); }
-                bundleTable.Remove(bundleLocalPath);
+                if (bundleTable.TryGetValue(bundleLocalPath, out ab))
+                {
+                    // 如果不是强制并且 caller 请求卸载已加载对象，出于安全性我们不对 AssetBundle 调用带 true 的 unload
+                    bool abUnloadAll = unloadAllLoadedObjects && force;
+                    try { ab.Unload(abUnloadAll); } catch (Exception ex) { Log.Error(ex.Message); }
+                    bundleTable.Remove(bundleLocalPath);
+                }
+            }
 
-                // 清理相关 assetTable 条目
-                var keysToRemove = new List<string>();
+            // 清理相关 assetTable 条目
+            var keysToRemove = new List<string>();
+            lock (assetLock)
+            {
                 foreach (var kvp in assetTable)
                 {
                     if (kvp.Key.StartsWith(bundleLocalPath + "::", StringComparison.Ordinal))
                     {
-                        try { Object.Destroy(kvp.Value); } catch { }
-                        keysToRemove.Add(kvp.Key);
+                        var key = kvp.Key;
+
+                        if (force)
+                        {
+                            // 强制卸载：直接销毁并移除引用计数
+                            try { UnityMainThreadDispatcher.RunOnMainThread(() => Object.Destroy(kvp.Value)); } catch { }
+                            keysToRemove.Add(key);
+                        }
+                        else
+                        {
+                            // 安全卸载：尊重引用计数，只有当引用计数 <= 0 或不存在时才销毁
+                            if (!assetRefCount.TryGetValue(key, out var count) || count <= 0)
+                            {
+                                try { UnityMainThreadDispatcher.RunOnMainThread(() => Object.Destroy(kvp.Value)); } catch { }
+                                keysToRemove.Add(key);
+                            }
+                            else
+                            {
+                                // 仍有外部引用，保留该资源并记录提示
+                                Log.Warning($"UnloadBundle: 资源仍被引用，跳过销毁: {key} (refCount={count})");
+                            }
+                        }
                     }
                 }
+
                 foreach (var k in keysToRemove)
                 {
                     assetTable.Remove(k);
                     assetRefCount.Remove(k);
+                }
+            }
+
+            // 如果存在依赖缓存，移除与该 bundle 相关的缓存项（这里只移除完全匹配的 bundle 名称键）
+            lock (dependencyLock)
+            {
+                if (dependencyCache.ContainsKey(bundleLocalPath))
+                {
+                    dependencyCache.Remove(bundleLocalPath);
                 }
             }
         }
@@ -655,7 +803,14 @@ namespace ReunionMovement.Core.Resources
             }
 
             // 先检查缓存
-            if (dependencyCache.TryGetValue(bundleName, out var cachedDeps) && cachedDeps != null)
+            List<string> cachedDeps = null;
+            lock (dependencyLock)
+            {
+                if (dependencyCache.TryGetValue(bundleName, out var tmp) && tmp != null)
+                    cachedDeps = new List<string>(tmp);
+            }
+
+            if (cachedDeps != null)
             {
                 // 确保依赖已经下载并加载
                 foreach (var depLocal in cachedDeps)
@@ -690,13 +845,16 @@ namespace ReunionMovement.Core.Resources
                         {
                             Log.Warning($"依赖下载失败: {dep} -> {ex.Message}");
                             // 如果依赖下载失败，尝试回退：卸载已下载的新依赖（由 DownloadBundleIfNeeded 已保持旧文件）
-                            OnBundleLoadFailed?.Invoke(depPath);
+                            UnityMainThreadDispatcher.RunOnMainThread(() => OnBundleLoadFailed?.Invoke(depPath));
                             // 继续尝试下一个依赖
                         }
                     }
                 }
 
-                dependencyCache[bundleName] = resolvedDeps;
+                lock (dependencyLock)
+                {
+                    dependencyCache[bundleName] = resolvedDeps;
+                }
             }
 
             // 主 bundle
