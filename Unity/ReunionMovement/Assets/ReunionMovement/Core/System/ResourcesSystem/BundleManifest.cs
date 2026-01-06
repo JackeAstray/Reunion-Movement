@@ -14,7 +14,7 @@ namespace ReunionMovement.Core.Resources
         public string fileName;
         public string[] dependencies;
         public string version;
-        public string url; // ¿ÉÑ¡Ô¶³Ìurl
+        public string url; // å¯é€‰è¿œç¨‹url
     }
 
     [Serializable]
@@ -90,10 +90,10 @@ namespace ReunionMovement.Core.Resources
             var info = manifest.GetBundle(bundleName);
             if (info == null) return false;
 
-            // ±¾µØ°æ±¾ÎÄ¼şÊÇ°üÃû.version ÄÚÈİÎª°æ±¾×Ö·û´®
+            // æœ¬åœ°ç‰ˆæœ¬æ–‡ä»¶æ˜¯åŒ…å.version å†…å®¹ä¸ºç‰ˆæœ¬å­—ç¬¦ä¸²
             if (string.IsNullOrEmpty(localVersionFile) || !File.Exists(localVersionFile))
             {
-                return true; // ÎŞ±¾µØ°æ±¾£¬ÈÏÎªĞèÒªÏÂÔØ
+                return true; // æ— æœ¬åœ°ç‰ˆæœ¬ï¼Œè®¤ä¸ºéœ€è¦ä¸‹è½½
             }
 
             try
