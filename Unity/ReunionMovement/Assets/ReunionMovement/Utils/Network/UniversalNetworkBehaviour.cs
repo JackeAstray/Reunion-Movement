@@ -440,6 +440,14 @@ namespace ReunionMovement.Common.Util
                         onServerClientDisconnected?.Invoke(id);
                     };
                     tcpServer.OnDataReceived += (id, data) => OnServerDataReceived(id, data);
+                    // Hook TCP abort as a generic server error notification
+                    tcpServer.OnAbort += () =>
+                    {
+                        var msg = "TCP 服务中止";
+                        Log.Warning(msg);
+                        ServerError?.Invoke(-1, msg);
+                        try { onServerError?.Invoke(msg); } catch { }
+                    };
                     tcpServer.Start();
                     ServerStarted?.Invoke();
                     onServerStarted?.Invoke();
@@ -461,6 +469,13 @@ namespace ReunionMovement.Common.Util
                         onServerClientDisconnected?.Invoke(id);
                     };
                     kcpServer.OnDataReceived += (id, data) => OnServerDataReceived(id, data);
+                    // attach KCP error handler
+                    kcpServer.OnError += (id, err) =>
+                    {
+                        Log.Warning($"KCP 服务错误 id={id} 异常={err}");
+                        ServerError?.Invoke(id, err);
+                        try { onServerError?.Invoke(err); } catch { }
+                    };
                     kcpServer.Start();
                     ServerStarted?.Invoke();
                     onServerStarted?.Invoke();
@@ -497,7 +512,13 @@ namespace ReunionMovement.Common.Util
                                 Log.Warning("swtServer.onData 处理错误：" + ex);
                             }
                         };
-                        swtServer.onError += (id, ex) => Log.Warning($"WebSocket 服务错误 id={id} 异常={ex}");
+                        swtServer.onError += (id, ex) =>
+                        {
+                            Log.Warning($"WebSocket 服务错误 id={id} 异常={ex}");
+                            var msg = ex?.ToString() ?? "WebSocket 服务错误";
+                            ServerError?.Invoke(id, msg);
+                            try { onServerError?.Invoke(msg); } catch { }
+                        };
 
                         swtServer.Start((ushort)port);
                         Log.Info("WebSocket 服务已启动...");
