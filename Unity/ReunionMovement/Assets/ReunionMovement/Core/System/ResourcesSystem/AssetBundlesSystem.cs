@@ -15,13 +15,13 @@ using ReunionMovement.Common.Util.Manager;
 namespace ReunionMovement.Core.Resources
 {
     /// <summary>
-    /// ¼òÒ× AssetBundle ÈÈ¸ü/¼ÓÔØ¹ÜÀí£¨ÓÅÏÈÊ¹ÓÃ±¾¿ò¼ÜÏÂÔØÄ£¿é£©
-    /// Ö§³Ö£ºÏÈ´Ó±¾µØ/ÏÂÔØµÄ AssetBundle ¼ÓÔØ×ÊÔ´£¬»ò»ØÍËµ½ ResourcesSystem
-    /// ×¢Òâ£ºÕâÊÇÒ»¸ö¾«¼òÊµÏÖ£¬ÓÃÓÚ¿ìËÙ¼¯³ÉÓë²âÊÔ£¬²»°üÀ¨ÒÀÀµ¹ÜÀí/manifest½âÎöµÈ
+    /// ç®€æ˜“ AssetBundle çƒ­æ›´/åŠ è½½ç®¡ç†ï¼ˆä¼˜å…ˆä½¿ç”¨æœ¬æ¡†æ¶ä¸‹è½½æ¨¡å—ï¼‰
+    /// æ”¯æŒï¼šå…ˆä»æœ¬åœ°/ä¸‹è½½çš„ AssetBundle åŠ è½½èµ„æºï¼Œæˆ–å›é€€åˆ° ResourcesSystem
+    /// æ³¨æ„ï¼šè¿™æ˜¯ä¸€ä¸ªç²¾ç®€å®ç°ï¼Œç”¨äºå¿«é€Ÿé›†æˆä¸æµ‹è¯•ï¼Œä¸åŒ…æ‹¬ä¾èµ–ç®¡ç†/manifestè§£æç­‰
     /// </summary>
     public class AssetBundlesSystem : ICustommSystem
     {
-        #region µ¥ÀıÓë³õÊ¼»¯
+        #region å•ä¾‹ä¸åˆå§‹åŒ–
         private static readonly Lazy<AssetBundlesSystem> instance = new(() => new AssetBundlesSystem());
         public static AssetBundlesSystem Instance => instance.Value;
 
@@ -30,14 +30,14 @@ namespace ReunionMovement.Core.Resources
         public double InitProgress => initProgress;
         #endregion
 
-        // ÒÑ¼ÓÔØµÄ AssetBundle£¨key: ±¾µØÂ·¾¶ »ò bundle ±êÊ¶£©
-        private readonly Dictionary<string, AssetBundle> bundleTable = new Dictionary<string, AssetBundle>();
-        // »º´æÒÑ¼ÓÔØµÄ×ÊÔ´£¨key: bundleKey + "::" + assetName »ò resources path£©
-        private readonly Dictionary<string, Object> assetTable = new Dictionary<string, Object>();
-        private readonly Dictionary<string, int> assetRefCount = new Dictionary<string, int>();
+        // å·²åŠ è½½çš„ AssetBundleï¼ˆkey: æœ¬åœ°è·¯å¾„ æˆ– bundle æ ‡è¯†ï¼‰
+        private readonly Dictionary<string, AssetBundle> bundleTable = new Dictionary<string, AssetBundle>(StringComparer.OrdinalIgnoreCase);
+        // ç¼“å­˜å·²åŠ è½½çš„èµ„æºï¼ˆkey: bundleKey + "::" + assetName æˆ– resources pathï¼‰
+        private readonly Dictionary<string, Object> assetTable = new Dictionary<string, Object>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> assetRefCount = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-        // ÕıÔÚ½øĞĞµÄ Bundle ¼ÓÔØÈÎÎñ£¬·ÀÖ¹²¢·¢ÖØ¸´¼ÓÔØ
-        private readonly Dictionary<string, Task<AssetBundle>> loadingBundles = new Dictionary<string, Task<AssetBundle>>();
+        // æ­£åœ¨è¿›è¡Œçš„ Bundle åŠ è½½ä»»åŠ¡ï¼Œé˜²æ­¢å¹¶å‘é‡å¤åŠ è½½
+        private readonly Dictionary<string, Task<AssetBundle>> loadingBundles = new Dictionary<string, Task<AssetBundle>>(StringComparer.OrdinalIgnoreCase);
 
         // locks for thread-safety
         private readonly object bundleLock = new object();
@@ -46,38 +46,38 @@ namespace ReunionMovement.Core.Resources
 
         private readonly BundleVersionManager versionManager = new BundleVersionManager();
 
-        // ĞÂÔöÊÂ¼ş
+        // æ–°å¢äº‹ä»¶
         public event Action<string> OnBundleDownloaded;
         public event Action<string> OnBundleLoadFailed;
 
-        // ÒÀÀµ»º´æ£ºbundleName -> list of ±¾µØÂ·¾¶£¨ÒÑ½âÎöºÍÏÂÔØ£©
+        // ä¾èµ–ç¼“å­˜ï¼šbundleName -> list of æœ¬åœ°è·¯å¾„ï¼ˆå·²è§£æå’Œä¸‹è½½ï¼‰
         private readonly Dictionary<string, List<string>> dependencyCache = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
-        // ²¢·¢ÏÂÔØÈ¥ÖØ/¶ÓÁĞ£ºurl -> Lazy<Task<string>> È·±£½ö´´½¨Ò»´ÎÏÂÔØÈÎÎñ
+        // å¹¶å‘ä¸‹è½½å»é‡/é˜Ÿåˆ—ï¼šurl -> Lazy<Task<string>> ç¡®ä¿ä»…åˆ›å»ºä¸€æ¬¡ä¸‹è½½ä»»åŠ¡
         private readonly Dictionary<string, Lazy<Task<string>>> ongoingDownloads = new Dictionary<string, Lazy<Task<string>>>(StringComparer.OrdinalIgnoreCase);
 
         public Task Init()
         {
             initProgress = 0;
 
-            // ³¢ÊÔ¼ÓÔØ±¾µØ manifest
+            // å°è¯•åŠ è½½æœ¬åœ° manifest
             string manifestLocal = Path.Combine(PathUtil.GetLocalPath(DownloadType.PersistentAssets), "bundle_manifest.json");
             versionManager.LoadLocalManifest(manifestLocal);
 
             initProgress = 100;
             isInited = true;
-            Log.Debug("AssetBundlesSystem ³õÊ¼»¯Íê³É");
+            Log.Debug("AssetBundlesSystem åˆå§‹åŒ–å®Œæˆ");
             return Task.CompletedTask;
         }
 
         public void Update(float logicTime, float realTime)
         {
-            // ÎŞĞè¶¨ÆÚÂß¼­£¬ÏÂÔØÓÉ DownloadMgr ¸ºÔğ
+            // æ— éœ€å®šæœŸé€»è¾‘ï¼Œä¸‹è½½ç”± DownloadMgr è´Ÿè´£
         }
 
         public void Clear()
         {
-            Log.Debug("AssetBundlesSystem Çå³ıÊı¾İ");
+            Log.Debug("AssetBundlesSystem æ¸…é™¤æ•°æ®");
 
             lock (assetLock)
             {
@@ -94,9 +94,9 @@ namespace ReunionMovement.Core.Resources
 
             lock (bundleLock)
             {
-                // ×¢Òâ£ºÎŞ·¨È¡ÏûÕıÔÚ½øĞĞµÄ loadingBundles ÈÎÎñ£¬ËüÃÇÍê³Éºó»á³¢ÊÔ¼ÓÈë bundleTable
-                // µ«ÕâÀïÎÒÃÇÏÈÇå¿Õµ±Ç°±í
-                loadingBundles.Clear(); // Çå¿Õ¼ÓÔØÈÎÎñ¼ÇÂ¼
+                // æ³¨æ„ï¼šæ— æ³•å–æ¶ˆæ­£åœ¨è¿›è¡Œçš„ loadingBundles ä»»åŠ¡ï¼Œå®ƒä»¬å®Œæˆåä¼šå°è¯•åŠ å…¥ bundleTable
+                // ä½†è¿™é‡Œæˆ‘ä»¬å…ˆæ¸…ç©ºå½“å‰è¡¨
+                loadingBundles.Clear(); // æ¸…ç©ºåŠ è½½ä»»åŠ¡è®°å½•
                 foreach (var kvp in bundleTable)
                 {
                     try { kvp.Value.Unload(true); } catch { }
@@ -117,7 +117,7 @@ namespace ReunionMovement.Core.Resources
             isInited = false;
         }
 
-        #region °ïÖú·½·¨
+        #region å¸®åŠ©æ–¹æ³•
         private static Task AwaitAsyncOperation(AsyncOperation op)
         {
             var tcs = new TaskCompletionSource<bool>();
@@ -185,23 +185,23 @@ namespace ReunionMovement.Core.Resources
             return string.IsNullOrEmpty(bundleKey) ? assetName : bundleKey + "::" + assetName;
         }
 
-        // ³¢ÊÔ¸ü½¡×³µØ¸ù¾İ URL »òÃû×ÖÕÒµ½ manifest ÖĞµÄ BundleInfo
+        // å°è¯•æ›´å¥å£®åœ°æ ¹æ® URL æˆ–åå­—æ‰¾åˆ° manifest ä¸­çš„ BundleInfo
         private BundleInfo FindManifestInfoFor(string identifierOrUrl)
         {
             if (versionManager.Manifest == null) return null;
 
-            // ÏÈ°´Ö±½ÓÆ¥Åä URL
+            // å…ˆæŒ‰ç›´æ¥åŒ¹é… URL
             foreach (var b in versionManager.Manifest.bundles)
             {
                 if (!string.IsNullOrEmpty(b.url) && string.Equals(b.url, identifierOrUrl, StringComparison.OrdinalIgnoreCase))
                     return b;
             }
 
-            // ³¢ÊÔ°´´«ÈëµÄ identifier ÊÇ·ñµÈÓÚ fileName »ò name
+            // å°è¯•æŒ‰ä¼ å…¥çš„ identifier æ˜¯å¦ç­‰äº fileName æˆ– name
             var byName = versionManager.Manifest.GetBundle(identifierOrUrl);
             if (byName != null) return byName;
 
-            // Èç¹û´«ÈëÊÇ URL£¬³¢ÊÔÓÃ URL ×îºóµÄÎÄ¼şÃûÈ¥Æ¥Åä manifest.fileName
+            // å¦‚æœä¼ å…¥æ˜¯ URLï¼Œå°è¯•ç”¨ URL æœ€åçš„æ–‡ä»¶åå»åŒ¹é… manifest.fileName
             try
             {
                 var uri = new Uri(identifierOrUrl);
@@ -214,23 +214,23 @@ namespace ReunionMovement.Core.Resources
             }
             catch { }
 
-            // ×îºó°´ fileName ×Ö·û´®ÏàµÈ£¨ºöÂÔ´óĞ¡Ğ´£©²éÕÒ
+            // æœ€åæŒ‰ fileName å­—ç¬¦ä¸²ç›¸ç­‰ï¼ˆå¿½ç•¥å¤§å°å†™ï¼‰æŸ¥æ‰¾
             var fallback = versionManager.Manifest.bundles.FirstOrDefault(b => string.Equals(b.fileName, identifierOrUrl, StringComparison.OrdinalIgnoreCase));
             return fallback;
         }
         #endregion
 
-        #region ÏÂÔØÓë¼ÓÔØ Bundle
+        #region ä¸‹è½½ä¸åŠ è½½ Bundle
         /// <summary>
-        /// ÏÂÔØÔ¶³Ì bundle£¨Èç¹ûÒÑ¾­´æÔÚÔòÖ±½Ó·µ»Ø±¾µØÂ·¾¶£©
-        /// ·µ»Ø±¾µØÎÄ¼şÍêÕûÂ·¾¶
-        /// ÊµÏÖ£º²¢·¢È¥ÖØ + Ô­×ÓÌæ»»£¨ÏÈÏÂÔØµ½ÁÙÊ±Ä¿Â¼£¬³É¹¦ºóÌæ»»£©£¬Ê§°ÜÊ±»Ø¹ö£¨¾ÉÎÄ¼ş±£Áô£©
+        /// ä¸‹è½½è¿œç¨‹ bundleï¼ˆå¦‚æœå·²ç»å­˜åœ¨åˆ™ç›´æ¥è¿”å›æœ¬åœ°è·¯å¾„ï¼‰
+        /// è¿”å›æœ¬åœ°æ–‡ä»¶å®Œæ•´è·¯å¾„
+        /// å®ç°ï¼šå¹¶å‘å»é‡ + åŸå­æ›¿æ¢ï¼ˆå…ˆä¸‹è½½åˆ°ä¸´æ—¶ç›®å½•ï¼ŒæˆåŠŸåæ›¿æ¢ï¼‰ï¼Œå¤±è´¥æ—¶å›æ»šï¼ˆæ—§æ–‡ä»¶ä¿ç•™ï¼‰
         /// </summary>
         public async Task<string> DownloadBundleIfNeeded(string bundleUrl)
         {
             if (string.IsNullOrEmpty(bundleUrl)) return string.Empty;
 
-            // Èç¹ûÊÇ bundle Ãû³Æ£¨ÎŞ http Ç°×º£©£¬³¢ÊÔ´Ó manifest »ñÈ¡ url
+            // å¦‚æœæ˜¯ bundle åç§°ï¼ˆæ—  http å‰ç¼€ï¼‰ï¼Œå°è¯•ä» manifest è·å– url
             if (!bundleUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
                 !bundleUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase) &&
                 !Path.IsPathRooted(bundleUrl))
@@ -242,11 +242,11 @@ namespace ReunionMovement.Core.Resources
                 }
             }
 
-            // Èç¹ûÒÑ¾­ÊÇ±¾µØÂ·¾¶»ò streamingAssets£¬ÔòÖ±½Ó·µ»Ø
+            // å¦‚æœå·²ç»æ˜¯æœ¬åœ°è·¯å¾„æˆ– streamingAssetsï¼Œåˆ™ç›´æ¥è¿”å›
             if (!bundleUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
                 !bundleUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
-                // ÊÓÎª±¾µØÂ·¾¶£¬³¢ÊÔ¼ÆËãÍêÕûÂ·¾¶
+                // è§†ä¸ºæœ¬åœ°è·¯å¾„ï¼Œå°è¯•è®¡ç®—å®Œæ•´è·¯å¾„
                 if (PathUtil.GetFullPath(bundleUrl, out var full) && !string.IsNullOrEmpty(full))
                 {
                     return full;
@@ -259,7 +259,7 @@ namespace ReunionMovement.Core.Resources
             {
                 if (!ongoingDownloads.TryGetValue(bundleUrl, out lazyTask))
                 {
-                    // ´´½¨µ¥¸ö Lazy Task£¬±£Ö¤Ö»ÓĞÒ»¸ö InternalDownloadBundle ÔÚÔËĞĞ
+                    // åˆ›å»ºå•ä¸ª Lazy Taskï¼Œä¿è¯åªæœ‰ä¸€ä¸ª InternalDownloadBundle åœ¨è¿è¡Œ
                     lazyTask = new Lazy<Task<string>>(() => InternalDownloadBundle(bundleUrl), true);
                     ongoingDownloads[bundleUrl] = lazyTask;
                 }
@@ -274,7 +274,7 @@ namespace ReunionMovement.Core.Resources
             {
                 lock (ongoingDownloads)
                 {
-                    // ÒÆ³ıÒÑÍê³ÉµÄÈÎÎñ
+                    // ç§»é™¤å·²å®Œæˆçš„ä»»åŠ¡
                     if (ongoingDownloads.TryGetValue(bundleUrl, out var current) && current == lazyTask)
                     {
                         ongoingDownloads.Remove(bundleUrl);
@@ -285,28 +285,35 @@ namespace ReunionMovement.Core.Resources
 
         private async Task<string> InternalDownloadBundle(string bundleUrl)
         {
-            string fileName = PathUtil.GetFileNameByUrl(bundleUrl);
-            string saveDir = PathUtil.GetLocalPath(DownloadType.PersistentAssets);
-            string localPath = Path.Combine(saveDir, fileName);
-
-            // ¼ì²é°æ±¾£¨¸ÄÎªÏÈÍ¨¹ı manifest ¸ü¿É¿¿µØ²éÕÒĞÅÏ¢£©
+            // 1. ä¼˜å…ˆä½¿ç”¨ Manifest ä¸­çš„ fileName ä»¥ä¿æŒç›®å½•ç»“æ„ï¼ˆé¿å…ä¸åŒç›®å½•ä¸‹åŒåæ–‡ä»¶å†²çªï¼‰
             var infoFromManifest = FindManifestInfoFor(bundleUrl);
-            string localVersionFile = Path.Combine(saveDir, fileName + ".version");
+            string relPath = (infoFromManifest != null && !string.IsNullOrEmpty(infoFromManifest.fileName))
+                             ? infoFromManifest.fileName
+                             : PathUtil.GetFileNameByUrl(bundleUrl);
+
+            string saveDir = PathUtil.GetLocalPath(DownloadType.PersistentAssets);
+            string localPath = Path.Combine(saveDir, relPath);
+            string localVersionFile = localPath + ".version"; // ç‰ˆæœ¬æ–‡ä»¶è·Ÿéš Bundle
+
+            // æ£€æŸ¥ç‰ˆæœ¬
             if (infoFromManifest != null && !versionManager.NeedsUpdate(infoFromManifest.fileName, localVersionFile) && File.Exists(localPath))
             {
                 return localPath;
             }
 
+            // ç”¨äºåç»­åœ¨ tempRoot æŸ¥æ‰¾æ–‡ä»¶çš„ç®€å•çš„æ–‡ä»¶å
+            string fileName = Path.GetFileName(relPath);
+
             if (File.Exists(localPath))
             {
-                // Èç¹ûÃ»ÓĞ manifest ĞÅÏ¢£¬Ö»ÒªÎÄ¼ş´æÔÚ¾ÍÖ±½Ó·µ»Ø
+                // å¦‚æœæ²¡æœ‰ manifest ä¿¡æ¯ï¼Œåªè¦æ–‡ä»¶å­˜åœ¨å°±ç›´æ¥è¿”å›
                 if (infoFromManifest == null)
                 {
                     return localPath;
                 }
             }
 
-            // ÏÂÔØµ½ÁÙÊ±Ä¿Â¼£¬ÏÂÔØ³É¹¦ºóÔÙÌæ»»µ½Ä¿±êÄ¿Â¼£¨±£Ö¤»Ø¹ö£©
+            // ä¸‹è½½åˆ°ä¸´æ—¶ç›®å½•ï¼Œä¸‹è½½æˆåŠŸåå†æ›¿æ¢åˆ°ç›®æ ‡ç›®å½•ï¼ˆä¿è¯å›æ»šï¼‰
             string tempRoot = Path.Combine(saveDir, ".tmp_download_") + Guid.NewGuid().ToString("N");
             try
             {
@@ -314,7 +321,7 @@ namespace ReunionMovement.Core.Resources
 
                 var tcs = new TaskCompletionSource<bool>();
 
-                // Ê¹ÓÃ DownloadMgr ÏÂÔØµ½ÁÙÊ±Ä¿Â¼£¬¹Ø±Õ MD5 ÃüÃûÒÔ±£ÁôÔ­Ê¼ÎÄ¼şÃû£¨±ãÓÚÆ¥Åä manifest£©
+                // ä½¿ç”¨ DownloadMgr ä¸‹è½½åˆ°ä¸´æ—¶ç›®å½•ï¼Œå…³é—­ MD5 å‘½åä»¥ä¿ç•™åŸå§‹æ–‡ä»¶åï¼ˆä¾¿äºåŒ¹é… manifestï¼‰
                 try
                 {
                     DownloadMgr.Instance.DownloadFiles(new List<string> { bundleUrl }, tempRoot,
@@ -329,13 +336,13 @@ namespace ReunionMovement.Core.Resources
                 {
                     // ensure event invoked on main thread
                     UnityMainThreadDispatcher.RunOnMainThread(() => OnBundleLoadFailed?.Invoke(bundleUrl));
-                    Log.Error($"¿ªÊ¼ÏÂÔØ bundle Ê§°Ü: {bundleUrl}, {ex}");
+                    Log.Error($"å¼€å§‹ä¸‹è½½ bundle å¤±è´¥: {bundleUrl}, {ex}");
                     throw;
                 }
 
-                await tcs.Task; // µÈ´ıÏÂÔØ
+                await tcs.Task; // ç­‰å¾…ä¸‹è½½
 
-                // Ä¿±êÎÄ¼ş¿ÉÄÜ°üº¬×ÓÄ¿Â¼ derived from URL; compute relative file path
+                // ç›®æ ‡æ–‡ä»¶å¯èƒ½åŒ…å«å­ç›®å½• derived from URL; compute relative file path
                 string downloadedFilePath = Path.Combine(tempRoot, ReunionMovement.Common.Util.Download.HTTPHelper.GetRelativePathFromUri(bundleUrl));
 
                 // Fallback: if not found, try filename
@@ -349,7 +356,7 @@ namespace ReunionMovement.Core.Resources
 
                 if (!File.Exists(downloadedFilePath))
                 {
-                    // ×÷Îª×îÖÕ»ØÍË£¬ÔÙ³¢ÊÔÒÔ manifest ÖĞµÄ fileName ²éÕÒ
+                    // ä½œä¸ºæœ€ç»ˆå›é€€ï¼Œå†å°è¯•ä»¥ manifest ä¸­çš„ fileName æŸ¥æ‰¾
                     if (infoFromManifest != null)
                     {
                         var candidate = Directory.GetFiles(tempRoot, "*", SearchOption.AllDirectories)
@@ -361,10 +368,10 @@ namespace ReunionMovement.Core.Resources
                 if (!File.Exists(downloadedFilePath))
                 {
                     UnityMainThreadDispatcher.RunOnMainThread(() => OnBundleLoadFailed?.Invoke(bundleUrl));
-                    throw new FileNotFoundException("ÏÂÔØºóÎ´ÕÒµ½ bundle ÎÄ¼ş", downloadedFilePath);
+                    throw new FileNotFoundException("ä¸‹è½½åæœªæ‰¾åˆ° bundle æ–‡ä»¶", downloadedFilePath);
                 }
 
-                // ±¸·İ¾ÉÎÄ¼ş£¨Èç¹û´æÔÚ£©µ½ .bak
+                // å¤‡ä»½æ—§æ–‡ä»¶ï¼ˆå¦‚æœå­˜åœ¨ï¼‰åˆ° .bak
                 string backupPath = null;
                 if (File.Exists(localPath))
                 {
@@ -375,19 +382,19 @@ namespace ReunionMovement.Core.Resources
                     }
                     catch (Exception ex)
                     {
-                        Log.Warning("´´½¨¾É bundle ±¸·İÊ§°Ü: " + ex.Message);
+                        Log.Warning("åˆ›å»ºæ—§ bundle å¤‡ä»½å¤±è´¥: " + ex.Message);
                         backupPath = null;
                     }
                 }
 
-                // ¸²¸Ç/ÒÆ¶¯ĞÂÎÄ¼şµ½Ä¿±êÎ»ÖÃ
+                // è¦†ç›–/ç§»åŠ¨æ–°æ–‡ä»¶åˆ°ç›®æ ‡ä½ç½®
                 try
                 {
-                    // È·±£Ä¿±êÄ¿Â¼´æÔÚ
+                    // ç¡®ä¿ç›®æ ‡ç›®å½•å­˜åœ¨
                     var dir = Path.GetDirectoryName(localPath);
                     if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
 
-                    // Èç¹û Bundle ÒÑ¼ÓÔØ£¬±ØĞëÏÈĞ¶ÔØ£¬·ñÔò Windows ÏÂÎŞ·¨¸²¸ÇÎÄ¼ş (Sharing Violation)
+                    // å¦‚æœ Bundle å·²åŠ è½½ï¼Œå¿…é¡»å…ˆå¸è½½ï¼Œå¦åˆ™ Windows ä¸‹æ— æ³•è¦†ç›–æ–‡ä»¶ (Sharing Violation)
                     bool isLoaded = false;
                     lock (bundleLock)
                     {
@@ -395,22 +402,19 @@ namespace ReunionMovement.Core.Resources
                     }
                     if (isLoaded)
                     {
-                        // ÇĞ»»µ½Ö÷Ïß³ÌĞ¶ÔØ
+                        // åˆ‡æ¢åˆ°ä¸»çº¿ç¨‹å¸è½½
                         await RunOnMainThread(() =>
                         {
-                            // Ç¿ÖÆĞ¶ÔØ Header ÒÔÊÍ·ÅÎÄ¼ş¾ä±ú (Unload(true) Ò²»áÏú»Ù¶ÔÏó£¬ÊÓĞèÇó¶ø¶¨)
-                            // ÈôÒªÈÈ¸ü£¬Í¨³£½¨Òé Unload(true) ÇåÀí¾ÉÊı¾İ£»Èô½öÎªÁË¸²¸ÇÎÄ¼ş£¬Unload(false) ¼´¿É
-                            // ÕâÀïÎªÁË°²È«¸²¸ÇÎÄ¼ş£¬ÇÒ¼ÙÉèÈÈ¸üºó»áÖØĞÂ¼ÓÔØ£¬½¨Òé Unload(true) »òÕß Unload(false)
-                            // AssetBundlesSystem Éè¼ÆÎª¼òµ¥ÊµÏÖ£¬ÕâÀï±£ÊØÊ¹ÓÃ false (±£Áô¶ÔÏó) 
-                            // µ«×¢Òâ£º±£Áô¶ÔÏóºóÈô Bundle ÖØĞÂ¼ÓÔØ£¬¾É¶ÔÏóÒıÓÃ¿ÉÄÜ»áÓĞÎÊÌâ¡£
-                            // ÏµÍ³ UpdateBundle Âß¼­ËÆºõÇãÏòÓÚ¸üĞÂ¡£ÕâÀïÊ¹ÓÃ force=true È·±£´¦Àí¡£
-                            UnloadBundle(localPath, unloadAllLoadedObjects: false, force: true); 
+                            // å¼ºåˆ¶å¸è½½ Header ä»¥é‡Šæ”¾æ–‡ä»¶å¥æŸ„ 
+                            // æ³¨æ„ï¼šä½¿ç”¨ skipDestroyObjects=true é˜²æ­¢é”€æ¯æ­£åœ¨ä½¿ç”¨çš„èµ„æºå¯¼è‡´æŠ¥é”™ï¼ˆå…è®¸å†…å­˜æ³„æ¼ç›´åˆ°åœºæ™¯åˆ‡æ¢æˆ–å¼•ç”¨é‡Šæ”¾ï¼‰ï¼Œ
+                            // ä½†æˆ‘ä»¬ä¼šä» assetTable ç§»é™¤å®ƒä»¬ï¼Œç¡®ä¿ä¸‹æ¬¡åŠ è½½è·å–æ–°èµ„æºã€‚
+                            UnloadBundle(localPath, unloadAllLoadedObjects: false, force: true, skipDestroyObjects: true);
                         });
                     }
 
                     File.Copy(downloadedFilePath, localPath, true);
 
-                    // ±£´æ°æ±¾ĞÅÏ¢
+                    // ä¿å­˜ç‰ˆæœ¬ä¿¡æ¯
                     if (infoFromManifest != null)
                     {
                         versionManager.SaveLocalVersion(localVersionFile, infoFromManifest.version);
@@ -419,7 +423,7 @@ namespace ReunionMovement.Core.Resources
                     // invoke event on main thread
                     UnityMainThreadDispatcher.RunOnMainThread(() => OnBundleDownloaded?.Invoke(localPath));
 
-                    // É¾³ı±¸·İ
+                    // åˆ é™¤å¤‡ä»½
                     if (backupPath != null)
                     {
                         try { File.Delete(backupPath); } catch { }
@@ -429,7 +433,7 @@ namespace ReunionMovement.Core.Resources
                 }
                 catch (Exception ex)
                 {
-                    // »Ø¹ö£ºÈç¹û±¸·İ´æÔÚ£¬³¢ÊÔ»Ö¸´
+                    // å›æ»šï¼šå¦‚æœå¤‡ä»½å­˜åœ¨ï¼Œå°è¯•æ¢å¤
                     if (backupPath != null && File.Exists(backupPath))
                     {
                         try
@@ -438,31 +442,31 @@ namespace ReunionMovement.Core.Resources
                         }
                         catch (Exception ex2)
                         {
-                            Log.Error("»Ø¹ö¾É bundle Ê§°Ü: " + ex2.Message);
+                            Log.Error("å›æ»šæ—§ bundle å¤±è´¥: " + ex2.Message);
                         }
                     }
 
                     UnityMainThreadDispatcher.RunOnMainThread(() => OnBundleLoadFailed?.Invoke(bundleUrl));
-                    Log.Error($"Ìæ»» bundle Ê§°Ü: {bundleUrl}, {ex}");
+                    Log.Error($"æ›¿æ¢ bundle å¤±è´¥: {bundleUrl}, {ex}");
                     throw;
                 }
             }
             finally
             {
-                // ÇåÀíÁÙÊ±Ä¿Â¼
+                // æ¸…ç†ä¸´æ—¶ç›®å½•
                 try
                 {
                     if (Directory.Exists(tempRoot)) Directory.Delete(tempRoot, true);
                 }
                 catch (Exception ex)
                 {
-                    Log.Warning($"ÇåÀíÁÙÊ±Ä¿Â¼Ê§°Ü: {tempRoot} -> {ex.Message}");
+                    Log.Warning($"æ¸…ç†ä¸´æ—¶ç›®å½•å¤±è´¥: {tempRoot} -> {ex.Message}");
                 }
             }
         }
 
         /// <summary>
-        /// Í¬²½¼ÓÔØ±¾µØ bundle ²¢»º´æ
+        /// åŒæ­¥åŠ è½½æœ¬åœ° bundle å¹¶ç¼“å­˜
         /// </summary>
         public AssetBundle LoadBundleFromFile(string localPath)
         {
@@ -475,25 +479,25 @@ namespace ReunionMovement.Core.Resources
                     return exist;
                 }
 
-                // Èç¹ûÕıÔÚÒì²½¼ÓÔØ£¬Í¬²½¼ÓÔØÎŞ·¨°²È«½øĞĞ£¨»áµ¼ÖÂ Unity ±¨´í£©£¬±ØĞë×èÈû»ò±¨´í
-                // ÓÉÓÚÊÇÔÚÖ÷Ïß³Ì£¬×èÈûµÈ´ıÒì²½ÈÎÎñÍê³É»áµ¼ÖÂËÀËø£¨ÒòÎªÒì²½ÈÎÎñ»Øµ÷Í¨³£Ò²ÔÚÖ÷Ïß³Ì£©
-                // ÕâÀïÑ¡Ôñ±¨´í²¢·µ»Ø null£¬»òÕß¿¼ÂÇ»ØÍË
+                // å¦‚æœæ­£åœ¨å¼‚æ­¥åŠ è½½ï¼ŒåŒæ­¥åŠ è½½æ— æ³•å®‰å…¨è¿›è¡Œï¼ˆä¼šå¯¼è‡´ Unity æŠ¥é”™ï¼‰ï¼Œå¿…é¡»é˜»å¡æˆ–æŠ¥é”™
+                // ç”±äºæ˜¯åœ¨ä¸»çº¿ç¨‹ï¼Œé˜»å¡ç­‰å¾…å¼‚æ­¥ä»»åŠ¡å®Œæˆä¼šå¯¼è‡´æ­»é”ï¼ˆå› ä¸ºå¼‚æ­¥ä»»åŠ¡å›è°ƒé€šå¸¸ä¹Ÿåœ¨ä¸»çº¿ç¨‹ï¼‰
+                // è¿™é‡Œé€‰æ‹©æŠ¥é”™å¹¶è¿”å› nullï¼Œæˆ–è€…è€ƒè™‘å›é€€
                 if (loadingBundles.ContainsKey(localPath))
                 {
-                    Log.Error($"ÎŞ·¨Í¬²½¼ÓÔØ Bundle£¬ÒòÎª¸Ã Bundle ÕıÔÚÒì²½¼ÓÔØÖĞ: {localPath}");
+                    Log.Error($"æ— æ³•åŒæ­¥åŠ è½½ Bundleï¼Œå› ä¸ºè¯¥ Bundle æ­£åœ¨å¼‚æ­¥åŠ è½½ä¸­: {localPath}");
                     return null;
                 }
 
                 if (!File.Exists(localPath))
                 {
-                    Log.Error($"Bundle ÎÄ¼ş²»´æÔÚ: {localPath}");
+                    Log.Error($"Bundle æ–‡ä»¶ä¸å­˜åœ¨: {localPath}");
                     return null;
                 }
 
                 var ab = AssetBundle.LoadFromFile(localPath);
                 if (ab == null)
                 {
-                    Log.Error($"¼ÓÔØ AssetBundle Ê§°Ü: {localPath}");
+                    Log.Error($"åŠ è½½ AssetBundle å¤±è´¥: {localPath}");
                     return null;
                 }
 
@@ -503,7 +507,7 @@ namespace ReunionMovement.Core.Resources
         }
 
         /// <summary>
-        /// Òì²½¼ÓÔØ±¾µØ bundle ²¢»º´æ
+        /// å¼‚æ­¥åŠ è½½æœ¬åœ° bundle å¹¶ç¼“å­˜
         /// </summary>
         public Task<AssetBundle> LoadBundleFromFileAsync(string localPath)
         {
@@ -517,13 +521,13 @@ namespace ReunionMovement.Core.Resources
                     return Task.FromResult(exist);
                 }
 
-                // ¼ì²éÊÇ·ñÒÑ¾­ÔÚ¼ÓÔØÖĞ
+                // æ£€æŸ¥æ˜¯å¦å·²ç»åœ¨åŠ è½½ä¸­
                 if (loadingBundles.TryGetValue(localPath, out var loadingTask))
                 {
                     return loadingTask;
                 }
 
-                // ´´½¨ĞÂµÄ¼ÓÔØÈÎÎñ²¢»º´æ
+                // åˆ›å»ºæ–°çš„åŠ è½½ä»»åŠ¡å¹¶ç¼“å­˜
                 task = InternalLoadBundleFromFileAsync(localPath);
                 loadingBundles[localPath] = task;
             }
@@ -537,7 +541,7 @@ namespace ReunionMovement.Core.Resources
             {
                 if (!File.Exists(localPath))
                 {
-                    Log.Error($"Bundle ÎÄ¼ş²»´æÔÚ: {localPath}");
+                    Log.Error($"Bundle æ–‡ä»¶ä¸å­˜åœ¨: {localPath}");
                     return null;
                 }
 
@@ -548,20 +552,20 @@ namespace ReunionMovement.Core.Resources
                 var ab = await RunOnMainThread(() => req.assetBundle);
                 if (ab == null)
                 {
-                    Log.Error($"Òì²½¼ÓÔØ AssetBundle Ê§°Ü: {localPath}");
+                    Log.Error($"å¼‚æ­¥åŠ è½½ AssetBundle å¤±è´¥: {localPath}");
                     return null;
                 }
 
                 lock (bundleLock)
                 {
-                    // ¶ş´Î¼ì²é£¬È·±£Ã»ÓĞÓÉÓÚ²¢ÔÚÂß¼­µ¼ÖÂµÄÖØ¸´ (ËäÈ» loadingBundles Ó¦¸ÃÒÑ¾­×èÖ¹ÁË)
+                    // äºŒæ¬¡æ£€æŸ¥ï¼Œç¡®ä¿æ²¡æœ‰ç”±äºå¹¶åœ¨é€»è¾‘å¯¼è‡´çš„é‡å¤ (è™½ç„¶ loadingBundles åº”è¯¥å·²ç»é˜»æ­¢äº†)
                     if (!bundleTable.ContainsKey(localPath))
                     {
                         bundleTable[localPath] = ab;
                     }
                     else
                     {
-                        // ÀíÂÛÉÏ²»Ó¦¸Ã·¢Éú£¬µ«Èç¹û·¢Éú£¬Ğ¶ÔØ¸Õ²Å¼ÓÔØµÄ¸±±¾ÒÔ·ÀÄÚ´æĞ¹Â©
+                        // ç†è®ºä¸Šä¸åº”è¯¥å‘ç”Ÿï¼Œä½†å¦‚æœå‘ç”Ÿï¼Œå¸è½½åˆšæ‰åŠ è½½çš„å‰¯æœ¬ä»¥é˜²å†…å­˜æ³„æ¼
                         if (bundleTable[localPath] != ab)
                         {
                             ab.Unload(true);
@@ -573,7 +577,7 @@ namespace ReunionMovement.Core.Resources
             }
             catch (Exception ex)
             {
-                Log.Error($"InternalLoadBundleFromFileAsync Òì³£: {localPath}, {ex}");
+                Log.Error($"InternalLoadBundleFromFileAsync å¼‚å¸¸: {localPath}, {ex}");
                 return null;
             }
             finally
@@ -586,23 +590,23 @@ namespace ReunionMovement.Core.Resources
         }
         #endregion
 
-        #region ×ÊÔ´¼ÓÔØ API
+        #region èµ„æºåŠ è½½ API
         /// <summary>
-        /// Ê×Ñ¡´Ó bundle ¼ÓÔØ£¨Ö§³ÖÔ¶¶Ëurl»ò±¾µØÂ·¾¶£©£¬Ê§°ÜÔò»ØÍËµ½ Resources
-        /// bundlePath ¿ÉÎª±¾µØÂ·¾¶»òÔ¶¶Ë url
+        /// é¦–é€‰ä» bundle åŠ è½½ï¼ˆæ”¯æŒè¿œç«¯urlæˆ–æœ¬åœ°è·¯å¾„ï¼‰ï¼Œå¤±è´¥åˆ™å›é€€åˆ° Resources
+        /// bundlePath å¯ä¸ºæœ¬åœ°è·¯å¾„æˆ–è¿œç«¯ url
         /// </summary>
         public async Task<T> LoadFromBundleAsync<T>(string bundlePathOrUrl, string assetName, bool isCache = true) where T : Object
         {
             string bundleKey;
             try
             {
-                // ÏÂÔØ£¨Èç¹ûĞèÒª£©²¢µÃµ½±¾µØÂ·¾¶
+                // ä¸‹è½½ï¼ˆå¦‚æœéœ€è¦ï¼‰å¹¶å¾—åˆ°æœ¬åœ°è·¯å¾„
                 string localPath = await DownloadBundleIfNeeded(bundlePathOrUrl);
                 bundleKey = localPath;
                 var ab = await LoadBundleFromFileAsync(localPath);
                 if (ab == null)
                 {
-                    Log.Warning($"Bundle ¼ÓÔØÊ§°Ü£¬³¢ÊÔ»ØÍËµ½ Resources: {bundlePathOrUrl}");
+                    Log.Warning($"Bundle åŠ è½½å¤±è´¥ï¼Œå°è¯•å›é€€åˆ° Resources: {bundlePathOrUrl}");
                     return ResourcesSystem.Instance.Load<T>(assetName, isCache);
                 }
 
@@ -625,7 +629,7 @@ namespace ReunionMovement.Core.Resources
                 var asset = await RunOnMainThread(() => req.asset as T);
                 if (asset == null)
                 {
-                    Log.Error($"Bundle ÖĞÎ´ÕÒµ½×ÊÔ´: {assetName} in {bundlePathOrUrl}");
+                    Log.Error($"Bundle ä¸­æœªæ‰¾åˆ°èµ„æº: {assetName} in {bundlePathOrUrl}");
                     return null;
                 }
 
@@ -633,6 +637,15 @@ namespace ReunionMovement.Core.Resources
                 {
                     lock (assetLock)
                     {
+                        // äºŒæ¬¡æ£€æŸ¥ï¼šåœ¨å¼‚ynchronous åŠ è½½æœŸé—´å¯èƒ½å·²è¢«å…¶ä»–è¯·æ±‚åŠ è½½å¹¶ç¼“å­˜
+                        if (assetTable.TryGetValue(assetKey, out var cached) && cached != null)
+                        {
+                            // å¦‚æœå·²å­˜åœ¨ï¼Œä½¿ç”¨å·²ç¼“å­˜çš„ï¼ˆé€šå¸¸ä¹Ÿæ˜¯åŒä¸€ä¸ªå¯¹è±¡å¼•ç”¨ï¼‰ï¼Œå¹¶å¢åŠ å¼•ç”¨è®¡æ•°
+                            IncrementRefCount(assetKey);
+                            // è¿™é‡Œè¿”å›ç¼“å­˜çš„å¯¹è±¡å¯èƒ½æ›´å®‰å…¨ï¼Œè™½ç„¶ req.asset åº”è¯¥æ˜¯åŒä¸€ä¸ª
+                            return cached as T;
+                        }
+
                         assetTable[assetKey] = asset;
                         assetRefCount[assetKey] = 1;
                     }
@@ -642,19 +655,19 @@ namespace ReunionMovement.Core.Resources
             }
             catch (Exception ex)
             {
-                Log.Error($"LoadFromBundleAsync ´íÎó: {ex.Message}");
+                Log.Error($"LoadFromBundleAsync é”™è¯¯: {ex.Message}");
                 return ResourcesSystem.Instance.Load<T>(assetName, isCache);
             }
         }
 
         /// <summary>
-        /// Í¬²½¼ÓÔØ£º½öÖ§³Ö±¾µØ bundle Â·¾¶»òÒÑ´æÔÚµÄÒÑÏÂÔØ bundle ÎÄ¼ş
-        /// Èô bundlePath ÊÇÔ¶¶Ë URL£¬»á³¢ÊÔ½âÎö±¾µØÒÑÓĞÎÄ¼ş£¬·ñÔòÊ§°Ü
+        /// åŒæ­¥åŠ è½½ï¼šä»…æ”¯æŒæœ¬åœ° bundle è·¯å¾„æˆ–å·²å­˜åœ¨çš„å·²ä¸‹è½½ bundle æ–‡ä»¶
+        /// è‹¥ bundlePath æ˜¯è¿œç«¯ URLï¼Œä¼šå°è¯•è§£ææœ¬åœ°å·²æœ‰æ–‡ä»¶ï¼Œå¦åˆ™å¤±è´¥
         /// </summary>
         public T LoadFromBundle<T>(string bundlePathOrLocalPath, string assetName, bool isCache = true) where T : Object
         {
             string localPath = bundlePathOrLocalPath;
-            // Èç¹ûÊÇ URL£¬³¢ÊÔ¶ÔÓ¦µÄ±¾µØ±£´æÎ»ÖÃ
+            // å¦‚æœæ˜¯ URLï¼Œå°è¯•å¯¹åº”çš„æœ¬åœ°ä¿å­˜ä½ç½®
             if (bundlePathOrLocalPath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                 bundlePathOrLocalPath.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
@@ -665,14 +678,14 @@ namespace ReunionMovement.Core.Resources
 
             if (!File.Exists(localPath))
             {
-                Log.Warning($"±¾µØ bundle Î´ÕÒµ½£¬³¢ÊÔÊ¹ÓÃ Resources ¼ÓÔØ: {bundlePathOrLocalPath}");
+                Log.Warning($"æœ¬åœ° bundle æœªæ‰¾åˆ°ï¼Œå°è¯•ä½¿ç”¨ Resources åŠ è½½: {bundlePathOrLocalPath}");
                 return ResourcesSystem.Instance.Load<T>(assetName, isCache);
             }
 
             var ab = LoadBundleFromFile(localPath);
             if (ab == null)
             {
-                Log.Warning("AssetBundle ¼ÓÔØÊ§°Ü£¬»ØÍË Resources");
+                Log.Warning("AssetBundle åŠ è½½å¤±è´¥ï¼Œå›é€€ Resources");
                 return ResourcesSystem.Instance.Load<T>(assetName, isCache);
             }
 
@@ -690,7 +703,7 @@ namespace ReunionMovement.Core.Resources
             var asset = ab.LoadAsset<T>(assetName);
             if (asset == null)
             {
-                Log.Error($"AssetBundle ÖĞÎ´ÕÒµ½×ÊÔ´ {assetName} in {localPath}");
+                Log.Error($"AssetBundle ä¸­æœªæ‰¾åˆ°èµ„æº {assetName} in {localPath}");
                 return null;
             }
 
@@ -698,6 +711,13 @@ namespace ReunionMovement.Core.Resources
             {
                 lock (assetLock)
                 {
+                    // äºŒæ¬¡æ£€æŸ¥
+                    if (assetTable.TryGetValue(assetKey, out var cached) && cached != null)
+                    {
+                        IncrementRefCount(assetKey);
+                        return cached as T;
+                    }
+
                     assetTable[assetKey] = asset;
                     assetRefCount[assetKey] = 1;
                 }
@@ -707,7 +727,7 @@ namespace ReunionMovement.Core.Resources
         }
 
         /// <summary>
-        /// ¼ÓÔØ Resources£¨Ö±½ÓÎ¯ÍĞµ½ ResourcesSystem£©
+        /// åŠ è½½ Resourcesï¼ˆç›´æ¥å§”æ‰˜åˆ° ResourcesSystemï¼‰
         /// </summary>
         public T LoadFromResources<T>(string path, bool isCache = true) where T : Object
         {
@@ -715,7 +735,7 @@ namespace ReunionMovement.Core.Resources
         }
         #endregion
 
-        #region Ğ¶ÔØ/ÒıÓÃ¼ÆÊı
+        #region å¸è½½/å¼•ç”¨è®¡æ•°
         public void IncrementRefCount(string key)
         {
             lock (assetLock)
@@ -756,9 +776,9 @@ namespace ReunionMovement.Core.Resources
         }
 
         /// <summary>
-        /// Ğ¶ÔØ bundle£¨¿ÉÑ¡ÊÇ·ñÍ¬Ê±Ğ¶ÔØÒÑ¼ÓÔØ¶ÔÏó, ¿ÉÑ¡ÔñÇ¿ÖÆĞ¶ÔØºöÂÔÒıÓÃ¼ÆÊı£©
+        /// å¸è½½ bundleï¼ˆå¯é€‰æ˜¯å¦åŒæ—¶å¸è½½å·²åŠ è½½å¯¹è±¡, å¯é€‰æ‹©å¼ºåˆ¶å¸è½½å¿½ç•¥å¼•ç”¨è®¡æ•°ï¼‰
         /// </summary>
-        public void UnloadBundle(string bundleLocalPath, bool unloadAllLoadedObjects = false, bool force = false)
+        public void UnloadBundle(string bundleLocalPath, bool unloadAllLoadedObjects = false, bool force = false, bool skipDestroyObjects = false)
         {
             if (string.IsNullOrEmpty(bundleLocalPath)) return;
 
@@ -767,32 +787,36 @@ namespace ReunionMovement.Core.Resources
             {
                 if (bundleTable.TryGetValue(bundleLocalPath, out ab))
                 {
-                    // Èç¹û²»ÊÇÇ¿ÖÆ²¢ÇÒ caller ÇëÇóĞ¶ÔØÒÑ¼ÓÔØ¶ÔÏó£¬³öÓÚ°²È«ĞÔÎÒÃÇ²»¶Ô AssetBundle µ÷ÓÃ´ø true µÄ unload
+                    // å¦‚æœä¸æ˜¯å¼ºåˆ¶å¹¶ä¸” caller è¯·æ±‚å¸è½½å·²åŠ è½½å¯¹è±¡ï¼Œå‡ºäºå®‰å…¨æ€§æˆ‘ä»¬ä¸å¯¹ AssetBundle è°ƒç”¨å¸¦ true çš„ unload
                     bool abUnloadAll = unloadAllLoadedObjects && force;
                     try { ab.Unload(abUnloadAll); } catch (Exception ex) { Log.Error(ex.Message); }
                     bundleTable.Remove(bundleLocalPath);
                 }
             }
 
-            // ÇåÀíÏà¹Ø assetTable ÌõÄ¿
+            // æ¸…ç†ç›¸å…³ assetTable æ¡ç›®
             var keysToRemove = new List<string>();
             lock (assetLock)
             {
                 foreach (var kvp in assetTable)
                 {
-                    if (kvp.Key.StartsWith(bundleLocalPath + "::", StringComparison.Ordinal))
+                    if (kvp.Key.StartsWith(bundleLocalPath + "::", StringComparison.OrdinalIgnoreCase))
                     {
                         var key = kvp.Key;
 
                         if (force)
                         {
-                            // Ç¿ÖÆĞ¶ÔØ£ºÖ±½ÓÏú»Ù²¢ÒÆ³ıÒıÓÃ¼ÆÊı
-                            try { UnityMainThreadDispatcher.RunOnMainThread(() => Object.Destroy(kvp.Value)); } catch { }
+                            // å¼ºåˆ¶å¸è½½ï¼šç›´æ¥é”€æ¯å¹¶ç§»é™¤å¼•ç”¨è®¡æ•°
+                            // skipDestroyObjects ä¸º true æ—¶ä»…ä»è¡¨ç§»é™¤å¼•ç”¨ï¼Œä¸é”€æ¯å®é™…å¯¹è±¡ï¼ˆç”¨äºçƒ­æ›´æ–‡ä»¶æ›¿æ¢åœºæ™¯ï¼‰
+                            if (!skipDestroyObjects)
+                            {
+                                try { UnityMainThreadDispatcher.RunOnMainThread(() => Object.Destroy(kvp.Value)); } catch { }
+                            }
                             keysToRemove.Add(key);
                         }
                         else
                         {
-                            // °²È«Ğ¶ÔØ£º×ğÖØÒıÓÃ¼ÆÊı£¬Ö»ÓĞµ±ÒıÓÃ¼ÆÊı <= 0 »ò²»´æÔÚÊ±²ÅÏú»Ù
+                            // å®‰å…¨å¸è½½ï¼šå°Šé‡å¼•ç”¨è®¡æ•°ï¼Œåªæœ‰å½“å¼•ç”¨è®¡æ•° <= 0 æˆ–ä¸å­˜åœ¨æ—¶æ‰é”€æ¯
                             if (!assetRefCount.TryGetValue(key, out var count) || count <= 0)
                             {
                                 try { UnityMainThreadDispatcher.RunOnMainThread(() => Object.Destroy(kvp.Value)); } catch { }
@@ -800,8 +824,8 @@ namespace ReunionMovement.Core.Resources
                             }
                             else
                             {
-                                // ÈÔÓĞÍâ²¿ÒıÓÃ£¬±£Áô¸Ã×ÊÔ´²¢¼ÇÂ¼ÌáÊ¾
-                                Log.Warning($"UnloadBundle: ×ÊÔ´ÈÔ±»ÒıÓÃ£¬Ìø¹ıÏú»Ù: {key} (refCount={count})");
+                                // ä»æœ‰å¤–éƒ¨å¼•ç”¨ï¼Œä¿ç•™è¯¥èµ„æºå¹¶è®°å½•æç¤º
+                                Log.Warning($"UnloadBundle: èµ„æºä»è¢«å¼•ç”¨ï¼Œè·³è¿‡é”€æ¯: {key} (refCount={count})");
                             }
                         }
                     }
@@ -814,7 +838,7 @@ namespace ReunionMovement.Core.Resources
                 }
             }
 
-            // Èç¹û´æÔÚÒÀÀµ»º´æ£¬ÒÆ³ıÓë¸Ã bundle Ïà¹ØµÄ»º´æÏî£¨ÕâÀïÖ»ÒÆ³ıÍêÈ«Æ¥ÅäµÄ bundle Ãû³Æ¼ü£©
+            // å¦‚æœå­˜åœ¨ä¾èµ–ç¼“å­˜ï¼Œç§»é™¤ä¸è¯¥ bundle ç›¸å…³çš„ç¼“å­˜é¡¹ï¼ˆè¿™é‡Œåªç§»é™¤å®Œå…¨åŒ¹é…çš„ bundle åç§°é”®ï¼‰
             lock (dependencyLock)
             {
                 if (dependencyCache.ContainsKey(bundleLocalPath))
@@ -825,19 +849,19 @@ namespace ReunionMovement.Core.Resources
         }
         #endregion
 
-        // ĞÂÔö ÈÈ¸üĞÂÌæ»» API£ºUpdateBundle
+        // æ–°å¢ çƒ­æ›´æ–°æ›¿æ¢ APIï¼šUpdateBundle
         public async Task<bool> UpdateBundle(string bundleName)
         {
             if (versionManager.Manifest == null)
             {
-                Log.Error("UpdateBundle: Manifest Î´¼ÓÔØ");
+                Log.Error("UpdateBundle: Manifest æœªåŠ è½½");
                 return false;
             }
 
             var info = versionManager.Manifest.GetBundle(bundleName);
             if (info == null)
             {
-                Log.Error($"UpdateBundle: Î´ÕÒµ½ bundle ĞÅÏ¢: {bundleName}");
+                Log.Error($"UpdateBundle: æœªæ‰¾åˆ° bundle ä¿¡æ¯: {bundleName}");
                 return false;
             }
 
@@ -845,36 +869,36 @@ namespace ReunionMovement.Core.Resources
 
             try
             {
-                // DownloadBundleIfNeeded »á´¦Àí°æ±¾¼ì²é¡¢ÏÂÔØ¡¢ºÍÎÄ¼ş¸²¸Ç
+                // DownloadBundleIfNeeded ä¼šå¤„ç†ç‰ˆæœ¬æ£€æŸ¥ã€ä¸‹è½½ã€å’Œæ–‡ä»¶è¦†ç›–
                 var newLocal = await DownloadBundleIfNeeded(info.url);
-                
-                // Èç¹û DownloadBundleIfNeeded ·µ»ØÓĞĞ§Â·¾¶£¬ËµÃ÷ Bundle ´æÔÚ£¨¿ÉÄÜÊÇ¸ÕÏÂÔØµÄ£¬Ò²¿ÉÄÜÊÇ¾ÉµÄ£©
+
+                // å¦‚æœ DownloadBundleIfNeeded è¿”å›æœ‰æ•ˆè·¯å¾„ï¼Œè¯´æ˜ Bundle å­˜åœ¨ï¼ˆå¯èƒ½æ˜¯åˆšä¸‹è½½çš„ï¼Œä¹Ÿå¯èƒ½æ˜¯æ—§çš„ï¼‰
                 if (!string.IsNullOrEmpty(newLocal))
                 {
-                    Log.Info($"UpdateBundle: bundle ¼ì²éÍê³É: {bundleName}");
+                    Log.Info($"UpdateBundle: bundle æ£€æŸ¥å®Œæˆ: {bundleName}");
                     return true;
                 }
-                
+
                 return false;
             }
             catch (Exception ex)
             {
-                Log.Error($"UpdateBundle ´íÎó: {ex}");
+                Log.Error($"UpdateBundle é”™è¯¯: {ex}");
                 return false;
             }
         }
 
-        // ĞÂÔö£º¼ÓÔØ bundle£¨´øÒÀÀµ£©
+        // æ–°å¢ï¼šåŠ è½½ bundleï¼ˆå¸¦ä¾èµ–ï¼‰
         public async Task<T> LoadWithDependenciesAsync<T>(string bundleName, string assetName, bool isCache = true) where T : Object
         {
             var info = versionManager.Manifest?.GetBundle(bundleName);
             if (info == null)
             {
-                // Èç¹ûÕÒ²»µ½ manifest ĞÅÏ¢£¬³¢ÊÔÖ±½Ó°´ URL »ò±¾µØ¼ÓÔØ
+                // å¦‚æœæ‰¾ä¸åˆ° manifest ä¿¡æ¯ï¼Œå°è¯•ç›´æ¥æŒ‰ URL æˆ–æœ¬åœ°åŠ è½½
                 return await LoadFromBundleAsync<T>(bundleName, assetName, isCache);
             }
 
-            // ÏÈ¼ì²é»º´æ
+            // å…ˆæ£€æŸ¥ç¼“å­˜
             List<string> cachedDeps = null;
             lock (dependencyLock)
             {
@@ -884,42 +908,43 @@ namespace ReunionMovement.Core.Resources
 
             if (cachedDeps != null)
             {
-                // È·±£ÒÀÀµÒÑ¾­ÏÂÔØ²¢¼ÓÔØ
+                // ç¡®ä¿ä¾èµ–å·²ç»ä¸‹è½½å¹¶åŠ è½½
                 foreach (var depLocal in cachedDeps)
                 {
                     if (File.Exists(depLocal))
                     {
+                        // ä¾èµ–é€šå¸¸æ— éœ€åŠ è½½å…¶ä¸­çš„ Assetï¼Œåªéœ€ load bundle åˆ°å†…å­˜å³å¯
                         await LoadBundleFromFileAsync(depLocal);
                     }
                 }
             }
             else
             {
+                // é€’å½’æ”¶é›†æ‰€æœ‰ä¾èµ–ï¼ˆé˜²æ­¢ Manifest ä»…æä¾›ç›´æ¥ä¾èµ–å¯¼è‡´é—æ¼ï¼‰
+                var allDependencies = new HashSet<string>();
+                CollectDependenciesRecursive(bundleName, allDependencies);
+
                 var resolvedDeps = new List<string>();
 
-                // ÏÂÔØ²¢¼ÓÔØÒÀÀµ
-                if (info.dependencies != null)
+                foreach (var dep in allDependencies)
                 {
-                    foreach (var dep in info.dependencies)
+                    var depInfo = versionManager.Manifest.GetBundle(dep);
+                    // ä¾èµ–å¯èƒ½æ˜¯ bundleNameï¼Œä¹Ÿå¯èƒ½æ˜¯ URL
+                    string depPath = depInfo != null && !string.IsNullOrEmpty(depInfo.url) ? depInfo.url : dep;
+                    try
                     {
-                        var depInfo = versionManager.Manifest.GetBundle(dep);
-                        string depPath = depInfo != null && !string.IsNullOrEmpty(depInfo.url) ? depInfo.url : dep;
-                        try
+                        var local = await DownloadBundleIfNeeded(depPath);
+                        if (!string.IsNullOrEmpty(local))
                         {
-                            var local = await DownloadBundleIfNeeded(depPath);
-                            if (!string.IsNullOrEmpty(local))
-                            {
-                                resolvedDeps.Add(local);
-                                await LoadBundleFromFileAsync(local);
-                            }
+                            resolvedDeps.Add(local);
+                            await LoadBundleFromFileAsync(local);
                         }
-                        catch (Exception ex)
-                        {
-                            Log.Warning($"ÒÀÀµÏÂÔØÊ§°Ü: {dep} -> {ex.Message}");
-                            // Èç¹ûÒÀÀµÏÂÔØÊ§°Ü£¬³¢ÊÔ»ØÍË£ºĞ¶ÔØÒÑÏÂÔØµÄĞÂÒÀÀµ£¨ÓÉ DownloadBundleIfNeeded ÒÑ±£³Ö¾ÉÎÄ¼ş£©
-                            UnityMainThreadDispatcher.RunOnMainThread(() => OnBundleLoadFailed?.Invoke(depPath));
-                            // ¼ÌĞø³¢ÊÔÏÂÒ»¸öÒÀÀµ
-                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning($"ä¾èµ–ä¸‹è½½å¤±è´¥: {dep} -> {ex.Message}");
+                        // ä¾èµ–å¤±è´¥å¯èƒ½å¯¼è‡´ä¸»èµ„æºåŠ è½½å¼‚å¸¸ï¼Œè®°å½•é”™è¯¯
+                        UnityMainThreadDispatcher.RunOnMainThread(() => OnBundleLoadFailed?.Invoke(depPath));
                     }
                 }
 
@@ -929,9 +954,24 @@ namespace ReunionMovement.Core.Resources
                 }
             }
 
-            // Ö÷ bundle
+            // ä¸» bundle
             string pathOrUrl = !string.IsNullOrEmpty(info.url) ? info.url : info.fileName;
             return await LoadFromBundleAsync<T>(pathOrUrl, assetName, isCache);
+        }
+
+        private void CollectDependenciesRecursive(string bundleName, HashSet<string> visited)
+        {
+            var info = versionManager.Manifest?.GetBundle(bundleName);
+            if (info == null || info.dependencies == null) return;
+
+            foreach (var dep in info.dependencies)
+            {
+                if (!visited.Contains(dep))
+                {
+                    visited.Add(dep);
+                    CollectDependenciesRecursive(dep, visited);
+                }
+            }
         }
     }
 }
