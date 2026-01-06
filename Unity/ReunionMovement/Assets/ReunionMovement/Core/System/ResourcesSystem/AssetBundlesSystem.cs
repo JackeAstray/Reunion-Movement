@@ -39,7 +39,7 @@ namespace ReunionMovement.Core.Resources
         // 正在进行的 Bundle 加载任务，防止并发重复加载
         private readonly Dictionary<string, Task<AssetBundle>> loadingBundles = new Dictionary<string, Task<AssetBundle>>(StringComparer.OrdinalIgnoreCase);
 
-        // locks for thread-safety
+        // 用于线程安全的锁
         private readonly object bundleLock = new object();
         private readonly object assetLock = new object();
         private readonly object dependencyLock = new object();
@@ -56,6 +56,10 @@ namespace ReunionMovement.Core.Resources
         // 并发下载去重/队列：url -> Lazy<Task<string>> 确保仅创建一次下载任务
         private readonly Dictionary<string, Lazy<Task<string>>> ongoingDownloads = new Dictionary<string, Lazy<Task<string>>>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// 初始化
+        /// </summary>
+        /// <returns></returns>
         public Task Init()
         {
             initProgress = 0;
@@ -70,11 +74,19 @@ namespace ReunionMovement.Core.Resources
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// 定期更新
+        /// </summary>
+        /// <param name="logicTime"></param>
+        /// <param name="realTime"></param>
         public void Update(float logicTime, float realTime)
         {
             // 无需定期逻辑，下载由 DownloadMgr 负责
         }
 
+        /// <summary>
+        /// 清除所有已加载的 Bundle 和 资源缓存
+        /// </summary>
         public void Clear()
         {
             Log.Debug("AssetBundlesSystem 清除数据");
@@ -118,6 +130,11 @@ namespace ReunionMovement.Core.Resources
         }
 
         #region 帮助方法
+        /// <summary>
+        /// 等待 AsyncOperation 完成
+        /// </summary>
+        /// <param name="op"></param>
+        /// <returns></returns>
         private static Task AwaitAsyncOperation(AsyncOperation op)
         {
             var tcs = new TaskCompletionSource<bool>();
@@ -129,7 +146,11 @@ namespace ReunionMovement.Core.Resources
             op.completed += _ => tcs.TrySetResult(true);
             return tcs.Task;
         }
-
+        /// <summary>
+        /// 在主线程运行无返回值的函数
+        /// </summary>
+        /// <param name="action"></param>
+        /// <returns></returns>
         private static Task RunOnMainThread(Action action)
         {
             var tcs = new TaskCompletionSource<bool>();
@@ -155,6 +176,12 @@ namespace ReunionMovement.Core.Resources
             return tcs.Task;
         }
 
+        /// <summary>
+        /// 在主线程运行有返回值的函数
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="func"></param>
+        /// <returns></returns>
         private static Task<T> RunOnMainThread<T>(Func<T> func)
         {
             var tcs = new TaskCompletionSource<T>();
@@ -180,12 +207,22 @@ namespace ReunionMovement.Core.Resources
             return tcs.Task;
         }
 
+        /// <summary>
+        /// 生成资源缓存 Key
+        /// </summary>
+        /// <param name="bundleKey"></param>
+        /// <param name="assetName"></param>
+        /// <returns></returns>
         private string MakeAssetKey(string bundleKey, string assetName)
         {
             return string.IsNullOrEmpty(bundleKey) ? assetName : bundleKey + "::" + assetName;
         }
 
-        // 尝试更健壮地根据 URL 或名字找到 manifest 中的 BundleInfo
+        /// <summary>
+        /// 尝试更健壮地根据 URL 或名字找到 manifest 中的 BundleInfo
+        /// </summary>
+        /// <param name="identifierOrUrl"></param>
+        /// <returns></returns>
         private BundleInfo FindManifestInfoFor(string identifierOrUrl)
         {
             if (versionManager.Manifest == null) return null;
@@ -226,6 +263,8 @@ namespace ReunionMovement.Core.Resources
         /// 返回本地文件完整路径
         /// 实现：并发去重 + 原子替换（先下载到临时目录，成功后替换），失败时回滚（旧文件保留）
         /// </summary>
+        /// <param name="bundleUrl"></param>
+        /// <returns></returns>
         public async Task<string> DownloadBundleIfNeeded(string bundleUrl)
         {
             if (string.IsNullOrEmpty(bundleUrl)) return string.Empty;
@@ -283,6 +322,12 @@ namespace ReunionMovement.Core.Resources
             }
         }
 
+        /// <summary>
+        /// 实际的下载实现
+        /// </summary>
+        /// <param name="bundleUrl"></param>
+        /// <returns></returns>
+        /// <exception cref="FileNotFoundException"></exception>
         private async Task<string> InternalDownloadBundle(string bundleUrl)
         {
             // 1. 优先使用 Manifest 中的 fileName 以保持目录结构（避免不同目录下同名文件冲突）
@@ -334,7 +379,7 @@ namespace ReunionMovement.Core.Resources
                 }
                 catch (Exception ex)
                 {
-                    // ensure event invoked on main thread
+                    // 确保在主线程触发失败事件
                     UnityMainThreadDispatcher.RunOnMainThread(() => OnBundleLoadFailed?.Invoke(bundleUrl));
                     Log.Error($"开始下载 bundle 失败: {bundleUrl}, {ex}");
                     throw;
@@ -342,13 +387,13 @@ namespace ReunionMovement.Core.Resources
 
                 await tcs.Task; // 等待下载
 
-                // 目标文件可能包含子目录 derived from URL; compute relative file path
+                // 目标文件可能包含基于 URL 的子目录；计算相对文件路径
                 string downloadedFilePath = Path.Combine(tempRoot, ReunionMovement.Common.Util.Download.HTTPHelper.GetRelativePathFromUri(bundleUrl));
 
-                // Fallback: if not found, try filename
+                // 回退：如果未找到，尝试按文件名查找
                 if (!File.Exists(downloadedFilePath))
                 {
-                    // try to find file by name in tempRoot
+                    // 在 tempRoot 中按文件名查找
                     var found = Directory.GetFiles(tempRoot, "*", SearchOption.AllDirectories)
                         .FirstOrDefault(f => Path.GetFileName(f).Equals(fileName, StringComparison.OrdinalIgnoreCase));
                     if (!string.IsNullOrEmpty(found)) downloadedFilePath = found;
@@ -394,7 +439,18 @@ namespace ReunionMovement.Core.Resources
                     var dir = Path.GetDirectoryName(localPath);
                     if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
 
-                    // 如果 Bundle 已加载，必须先卸载，否则 Windows 下无法覆盖文件 (Sharing Violation)
+                    // 修复：检查是否正在加载中，需等待其完成，防止文件占用冲突
+                    Task<AssetBundle> pendingLoadTask = null;
+                    lock (bundleLock)
+                    {
+                        loadingBundles.TryGetValue(localPath, out pendingLoadTask);
+                    }
+                    if (pendingLoadTask != null)
+                    {
+                        try { await pendingLoadTask; } catch { }
+                    }
+
+                    // 如果 Bundle 已加载，必须先卸载，否则 Windows 下无法覆盖文件 (共享冲突)
                     bool isLoaded = false;
                     lock (bundleLock)
                     {
@@ -420,7 +476,7 @@ namespace ReunionMovement.Core.Resources
                         versionManager.SaveLocalVersion(localVersionFile, infoFromManifest.version);
                     }
 
-                    // invoke event on main thread
+                    // 在主线程触发已下载事件
                     UnityMainThreadDispatcher.RunOnMainThread(() => OnBundleDownloaded?.Invoke(localPath));
 
                     // 删除备份
@@ -468,6 +524,8 @@ namespace ReunionMovement.Core.Resources
         /// <summary>
         /// 同步加载本地 bundle 并缓存
         /// </summary>
+        /// <param name="localPath"></param>
+        /// <returns></returns>
         public AssetBundle LoadBundleFromFile(string localPath)
         {
             if (string.IsNullOrEmpty(localPath)) return null;
@@ -509,6 +567,8 @@ namespace ReunionMovement.Core.Resources
         /// <summary>
         /// 异步加载本地 bundle 并缓存
         /// </summary>
+        /// <param name="localPath"></param>
+        /// <returns></returns>
         public Task<AssetBundle> LoadBundleFromFileAsync(string localPath)
         {
             if (string.IsNullOrEmpty(localPath)) return Task.FromResult<AssetBundle>(null);
@@ -535,6 +595,11 @@ namespace ReunionMovement.Core.Resources
             return task;
         }
 
+        /// <summary>
+        /// 实际的异步加载实现
+        /// </summary>
+        /// <param name="localPath"></param>
+        /// <returns></returns>
         private async Task<AssetBundle> InternalLoadBundleFromFileAsync(string localPath)
         {
             try
@@ -545,10 +610,19 @@ namespace ReunionMovement.Core.Resources
                     return null;
                 }
 
-                var req = AssetBundle.LoadFromFileAsync(localPath);
+                AssetBundleCreateRequest req = null;
+                // 修复：必须在主线程发起异步加载请求
+                await RunOnMainThread(() => req = AssetBundle.LoadFromFileAsync(localPath));
+
+                if (req == null)
+                {
+                    Log.Error($"调用 AssetBundle.LoadFromFileAsync 失败 (null request): {localPath}");
+                    return null;
+                }
+
                 await AwaitAsyncOperation(req);
 
-                // Access Unity object on main thread
+                // 在主线程访问 Unity 的 AssetBundle 对象
                 var ab = await RunOnMainThread(() => req.assetBundle);
                 if (ab == null)
                 {
@@ -558,7 +632,7 @@ namespace ReunionMovement.Core.Resources
 
                 lock (bundleLock)
                 {
-                    // 二次检查，确保没有由于并在逻辑导致的重复 (虽然 loadingBundles 应该已经阻止了)
+                    // 二次检查，确保没有由于并发逻辑导致的重复 (虽然 loadingBundles 应该已经阻止了)
                     if (!bundleTable.ContainsKey(localPath))
                     {
                         bundleTable[localPath] = ab;
@@ -595,6 +669,11 @@ namespace ReunionMovement.Core.Resources
         /// 首选从 bundle 加载（支持远端url或本地路径），失败则回退到 Resources
         /// bundlePath 可为本地路径或远端 url
         /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="bundlePathOrUrl"></param>
+        /// <param name="assetName"></param>
+        /// <param name="isCache"></param>
+        /// <returns></returns>
         public async Task<T> LoadFromBundleAsync<T>(string bundlePathOrUrl, string assetName, bool isCache = true) where T : Object
         {
             string bundleKey;
@@ -620,12 +699,12 @@ namespace ReunionMovement.Core.Resources
                     }
                 }
 
-                // Call LoadAssetAsync on main thread
+                // 在主线程调用 LoadAssetAsync
                 AssetBundleRequest req = null;
                 await RunOnMainThread(() => { req = ab.LoadAssetAsync<T>(assetName); });
                 await AwaitAsyncOperation(req);
 
-                // Access the loaded asset on main thread
+                // 在主线程访问已加载的资源
                 var asset = await RunOnMainThread(() => req.asset as T);
                 if (asset == null)
                 {
@@ -637,7 +716,7 @@ namespace ReunionMovement.Core.Resources
                 {
                     lock (assetLock)
                     {
-                        // 二次检查：在异ynchronous 加载期间可能已被其他请求加载并缓存
+                        // 二次检查：在异步加载期间可能已被其他请求加载并缓存
                         if (assetTable.TryGetValue(assetKey, out var cached) && cached != null)
                         {
                             // 如果已存在，使用已缓存的（通常也是同一个对象引用），并增加引用计数
@@ -664,6 +743,11 @@ namespace ReunionMovement.Core.Resources
         /// 同步加载：仅支持本地 bundle 路径或已存在的已下载 bundle 文件
         /// 若 bundlePath 是远端 URL，会尝试解析本地已有文件，否则失败
         /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="bundlePathOrLocalPath"></param>
+        /// <param name="assetName"></param>
+        /// <param name="isCache"></param>
+        /// <returns></returns>
         public T LoadFromBundle<T>(string bundlePathOrLocalPath, string assetName, bool isCache = true) where T : Object
         {
             string localPath = bundlePathOrLocalPath;
@@ -699,7 +783,7 @@ namespace ReunionMovement.Core.Resources
                 }
             }
 
-            // Synchronous load: assume caller on main thread. If not, this may fail.
+            // 同步加载：假设调用者在主线程。如果不是，可能会失败。
             var asset = ab.LoadAsset<T>(assetName);
             if (asset == null)
             {
@@ -736,6 +820,10 @@ namespace ReunionMovement.Core.Resources
         #endregion
 
         #region 卸载/引用计数
+        /// <summary>
+        /// 增加引用计数
+        /// </summary>
+        /// <param name="key"></param>
         public void IncrementRefCount(string key)
         {
             lock (assetLock)
@@ -750,7 +838,10 @@ namespace ReunionMovement.Core.Resources
                 }
             }
         }
-
+        /// <summary>
+        /// 减少引用计数，若计数 <= 0 则销毁资源
+        /// </summary>
+        /// <param name="key"></param>
         public void DecrementRefCount(string key)
         {
             lock (assetLock)
@@ -778,6 +869,10 @@ namespace ReunionMovement.Core.Resources
         /// <summary>
         /// 卸载 bundle（可选是否同时卸载已加载对象, 可选择强制卸载忽略引用计数）
         /// </summary>
+        /// <param name="bundleLocalPath"></param>
+        /// <param name="unloadAllLoadedObjects"></param>
+        /// <param name="force"></param>
+        /// <param name="skipDestroyObjects"></param>
         public void UnloadBundle(string bundleLocalPath, bool unloadAllLoadedObjects = false, bool force = false, bool skipDestroyObjects = false)
         {
             if (string.IsNullOrEmpty(bundleLocalPath)) return;
@@ -849,7 +944,11 @@ namespace ReunionMovement.Core.Resources
         }
         #endregion
 
-        // 新增 热更新替换 API：UpdateBundle
+        /// <summary>
+        /// 更新指定 bundle（根据 manifest 检查版本并下载）
+        /// </summary>
+        /// <param name="bundleName"></param>
+        /// <returns></returns>
         public async Task<bool> UpdateBundle(string bundleName)
         {
             if (versionManager.Manifest == null)
@@ -864,8 +963,6 @@ namespace ReunionMovement.Core.Resources
                 Log.Error($"UpdateBundle: 未找到 bundle 信息: {bundleName}");
                 return false;
             }
-
-            // string oldLocalPath = Path.Combine(PathUtil.GetLocalPath(DownloadType.PersistentAssets), info.fileName); // Removed unused
 
             try
             {
@@ -888,7 +985,14 @@ namespace ReunionMovement.Core.Resources
             }
         }
 
-        // 新增：加载 bundle（带依赖）
+        /// <summary>
+        /// 加载指定 bundle 及其所有依赖项
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="bundleName"></param>
+        /// <param name="assetName"></param>
+        /// <param name="isCache"></param>
+        /// <returns></returns>
         public async Task<T> LoadWithDependenciesAsync<T>(string bundleName, string assetName, bool isCache = true) where T : Object
         {
             var info = versionManager.Manifest?.GetBundle(bundleName);
@@ -898,11 +1002,20 @@ namespace ReunionMovement.Core.Resources
                 return await LoadFromBundleAsync<T>(bundleName, assetName, isCache);
             }
 
-            // 先检查缓存
+            // 修复：获取主 Bundle 的本地路径，以统一使用路径作为 Key（与 UnloadBundle 保持一致）
+            string mainUrlOrName = !string.IsNullOrEmpty(info.url) ? info.url : info.fileName;
+            string mainLocalPath = await DownloadBundleIfNeeded(mainUrlOrName);
+            if (string.IsNullOrEmpty(mainLocalPath))
+            {
+                Log.Error($"LoadWithDependenciesAsync: 无法定位主 bundle: {bundleName}");
+                return null;
+            }
+
+            // 先检查缓存 (使用 mainLocalPath 作为 Key)
             List<string> cachedDeps = null;
             lock (dependencyLock)
             {
-                if (dependencyCache.TryGetValue(bundleName, out var tmp) && tmp != null)
+                if (dependencyCache.TryGetValue(mainLocalPath, out var tmp) && tmp != null)
                     cachedDeps = new List<string>(tmp);
             }
 
@@ -913,7 +1026,7 @@ namespace ReunionMovement.Core.Resources
                 {
                     if (File.Exists(depLocal))
                     {
-                        // 依赖通常无需加载其中的 Asset，只需 load bundle 到内存即可
+                        // 依赖通常无需加载其中的 Asset，只需加载 bundle 到内存即可
                         await LoadBundleFromFileAsync(depLocal);
                     }
                 }
@@ -950,15 +1063,19 @@ namespace ReunionMovement.Core.Resources
 
                 lock (dependencyLock)
                 {
-                    dependencyCache[bundleName] = resolvedDeps;
+                    dependencyCache[mainLocalPath] = resolvedDeps;
                 }
             }
 
-            // 主 bundle
-            string pathOrUrl = !string.IsNullOrEmpty(info.url) ? info.url : info.fileName;
-            return await LoadFromBundleAsync<T>(pathOrUrl, assetName, isCache);
+            // 主 bundle (已经下载过了，直接加载)
+            return await LoadFromBundleAsync<T>(mainLocalPath, assetName, isCache);
         }
 
+        /// <summary>
+        /// 递归收集所有依赖项
+        /// </summary>
+        /// <param name="bundleName"></param>
+        /// <param name="visited"></param>
         private void CollectDependenciesRecursive(string bundleName, HashSet<string> visited)
         {
             var info = versionManager.Manifest?.GetBundle(bundleName);
