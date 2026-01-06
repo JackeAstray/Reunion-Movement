@@ -9,12 +9,16 @@ using ReunionMovement.Core.Resources;
 using ReunionMovement.Common.Util;
 using UnityEditor;
 using UnityEngine;
+using System.Net.Http;
 
 namespace ReunionMovement.EditorTools
 {
     public static class AssetBundleBuilder
     {
         private const string PrefKeySourceRoot = "ReunionMovement_AssetBundleSourceRoot";
+        private const string PrefKeyUploadEndpoint = "ReunionMovement_AssetBundleUploadEndpoint";
+        private const string PrefKeyManifestBaseUrl = "ReunionMovement_AssetBundleManifestBaseUrl";
+        private const string PrefKeyUploadAuthToken = "ReunionMovement_AssetBundleUploadAuthToken";
 
         [MenuItem("工具箱/资源/构建 AssetBundles 并生成 manifest", false, 200)]
         public static void BuildAndCreateManifest()
@@ -123,6 +127,29 @@ namespace ReunionMovement.EditorTools
             string manifestPath = Path.Combine(outputPath, "bundle_manifest.json");
             File.WriteAllText(manifestPath, manifestJson, Encoding.UTF8);
 
+            // 可选：上传到远端并在 manifest 中写入 URL
+            string uploadEndpoint = EditorPrefs.GetString(PrefKeyUploadEndpoint, string.Empty);
+            string manifestBaseUrl = EditorPrefs.GetString(PrefKeyManifestBaseUrl, string.Empty);
+            string authToken = EditorPrefs.GetString(PrefKeyUploadAuthToken, string.Empty);
+
+            if (!string.IsNullOrEmpty(uploadEndpoint) && !string.IsNullOrEmpty(manifestBaseUrl))
+            {
+                try
+                {
+                    UploadBundlesWithProgress(outputPath, bundleInfos, manifestPath, uploadEndpoint, manifestBaseUrl, authToken);
+                    // Refresh manifestJson after upload: read updated manifest
+                    manifestJson = File.ReadAllText(manifestPath);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError("上传 bundle 失败: " + ex.Message);
+                }
+                finally
+                {
+                    EditorUtility.ClearProgressBar();
+                }
+            }
+
             // 复制到 PersistentAssets 便于运行时访问
             string persistentPath = PathUtil.GetLocalPath(DownloadType.PersistentAssets);
             if (!Directory.Exists(persistentPath)) Directory.CreateDirectory(persistentPath);
@@ -167,6 +194,197 @@ namespace ReunionMovement.EditorTools
                 // 如果用户选择项目外目录，也允许，但要保存绝对路径
                 EditorPrefs.SetString(PrefKeySourceRoot, selected);
                 Debug.Log($"已设置 AssetBundle 源目录 (绝对路径): {selected}");
+            }
+        }
+
+        [MenuItem("工具箱/资源/上传 配置", false, 202)]
+        public static void OpenUploadConfig()
+        {
+            UploadConfigWindow.ShowWindow();
+        }
+
+        private static void UploadBundlesWithProgress(string outputPath, List<BundleInfo> bundleInfos, string manifestPath, string uploadEndpoint, string manifestBaseUrl, string authToken)
+        {
+            // Ensure manifestBaseUrl has no trailing slash
+            manifestBaseUrl = manifestBaseUrl.TrimEnd('/');
+
+            using (var client = new HttpClient())
+            {
+                if (!string.IsNullOrEmpty(authToken))
+                {
+                    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authToken);
+                }
+
+                int total = bundleInfos.Count;
+                for (int i = 0; i < total; i++)
+                {
+                    var info = bundleInfos[i];
+                    string filePath = Path.Combine(outputPath, info.fileName);
+
+                    float progress = (float)i / Math.Max(1, total);
+                    if (EditorUtility.DisplayCancelableProgressBar("上传 AssetBundles", $"上传 {info.fileName} ({i + 1}/{total})", progress))
+                    {
+                        Debug.LogWarning("用户取消了上传");
+                        break;
+                    }
+
+                    if (!File.Exists(filePath))
+                    {
+                        Debug.LogWarning($"上传跳过，未找到文件: {filePath}");
+                        continue;
+                    }
+
+                    try
+                    {
+                        using (var content = new MultipartFormDataContent())
+                        {
+                            var fileBytes = File.ReadAllBytes(filePath);
+                            var fileContent = new ByteArrayContent(fileBytes);
+                            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+                            content.Add(fileContent, "file", info.fileName);
+
+                            var resp = client.PostAsync(uploadEndpoint, content).GetAwaiter().GetResult();
+                            if (!resp.IsSuccessStatusCode)
+                            {
+                                Debug.LogError($"上传文件失败: {info.fileName}, 状态码: {resp.StatusCode}");
+                                continue;
+                            }
+
+                            // 解析服务器返回的 body，优先取 JSON 中的 url 字段
+                            try
+                            {
+                                var body = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                                if (!string.IsNullOrEmpty(body))
+                                {
+                                    // 尝试解析 JSON { "url": "https://..." }
+                                    try
+                                    {
+                                        var uploadResp = JsonUtility.FromJson<UploadResponse>(body);
+                                        if (uploadResp != null && !string.IsNullOrEmpty(uploadResp.url))
+                                        {
+                                            info.url = uploadResp.url;
+                                        }
+                                        else
+                                        {
+                                            // fallback to manifestBaseUrl
+                                            info.url = manifestBaseUrl + "/" + info.fileName;
+                                        }
+                                    }
+                                    catch
+                                    {
+                                        info.url = manifestBaseUrl + "/" + info.fileName;
+                                    }
+                                }
+                                else
+                                {
+                                    info.url = manifestBaseUrl + "/" + info.fileName;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.LogWarning($"解析上传响应失败: {ex.Message}");
+                                info.url = manifestBaseUrl + "/" + info.fileName;
+                            }
+
+                            Debug.Log($"上传成功: {info.fileName} -> {info.url}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError($"上传 {info.fileName} 出错: {ex.Message}");
+                    }
+                }
+
+                // 更新 manifest 文件 with URLs
+                try
+                {
+                    var updatedManifest = new BundleManifest { bundles = bundleInfos };
+                    var json = updatedManifest.ToJson();
+                    File.WriteAllText(manifestPath, json, Encoding.UTF8);
+
+                    // 上传 manifest itself
+                    try
+                    {
+                        using (var content = new MultipartFormDataContent())
+                        {
+                            var fileContent = new ByteArrayContent(Encoding.UTF8.GetBytes(json));
+                            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+                            content.Add(fileContent, "file", "bundle_manifest.json");
+
+                            var resp = client.PostAsync(uploadEndpoint, content).GetAwaiter().GetResult();
+                            if (!resp.IsSuccessStatusCode)
+                            {
+                                Debug.LogError($"上传 manifest 失败, 状态码: {resp.StatusCode}");
+                            }
+                            else
+                            {
+                                Debug.Log("manifest 上传成功");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError("上传 manifest 过程中出错: " + ex.Message);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError("写入/上传 manifest 失败: " + ex.Message);
+                }
+            }
+        }
+
+        [Serializable]
+        private class UploadResponse
+        {
+            public string url;
+        }
+
+        // 简单的 EditorWindow 用于设置上传配置
+        public class UploadConfigWindow : EditorWindow
+        {
+            private string uploadEndpoint;
+            private string manifestBaseUrl;
+            private string authToken;
+
+            public static void ShowWindow()
+            {
+                var win = GetWindow<UploadConfigWindow>(true, "AssetBundle 上传配置");
+                win.minSize = new Vector2(600, 150);
+                win.Load();
+                win.Show();
+            }
+
+            void Load()
+            {
+                uploadEndpoint = EditorPrefs.GetString(PrefKeyUploadEndpoint, string.Empty);
+                manifestBaseUrl = EditorPrefs.GetString(PrefKeyManifestBaseUrl, string.Empty);
+                authToken = EditorPrefs.GetString(PrefKeyUploadAuthToken, string.Empty);
+            }
+
+            void OnGUI()
+            {
+                GUILayout.Label("上传配置", EditorStyles.boldLabel);
+                EditorGUILayout.Space();
+
+                uploadEndpoint = EditorGUILayout.TextField(new GUIContent("上传接口(POST):", "接收文件的 HTTP POST 接口，字段名为 'file'"), uploadEndpoint);
+                manifestBaseUrl = EditorGUILayout.TextField(new GUIContent("Manifest 基础 URL:", "客户端访问 bundle 的基础 URL，例如 https://cdn.example.com/assets"), manifestBaseUrl);
+                authToken = EditorGUILayout.TextField(new GUIContent("Bearer Token (可选):", "如果服务器需要认证，请填入 Bearer token"), authToken);
+
+                EditorGUILayout.Space();
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("保存"))
+                {
+                    EditorPrefs.SetString(PrefKeyUploadEndpoint, uploadEndpoint ?? string.Empty);
+                    EditorPrefs.SetString(PrefKeyManifestBaseUrl, manifestBaseUrl ?? string.Empty);
+                    EditorPrefs.SetString(PrefKeyUploadAuthToken, authToken ?? string.Empty);
+                    Close();
+                }
+                if (GUILayout.Button("取消"))
+                {
+                    Close();
+                }
+                EditorGUILayout.EndHorizontal();
             }
         }
     }
