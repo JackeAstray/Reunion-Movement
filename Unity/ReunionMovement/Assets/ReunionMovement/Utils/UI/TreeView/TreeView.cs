@@ -189,5 +189,78 @@ namespace ReunionMovement
             result.transform.SetParent(container);
             return result;
         }
+
+        /// <summary>
+        /// 清除所有已创建的节点与缓存（根节点、缓存池和池父对象），并销毁容器中除模板外的子对象。
+        /// </summary>
+        public void Clear()
+        {
+            if (container == null)
+            {
+                GetComponent();
+            }
+
+            // 销毁根节点对应的 GameObject
+            foreach (var node in treeRootNodes)
+            {
+                if (node == null) continue;
+#if UNITY_EDITOR
+                if (!Application.isPlaying)
+                    UnityEngine.Object.DestroyImmediate(node.gameObject);
+                else
+                    UnityEngine.Object.Destroy(node.gameObject);
+#else
+                UnityEngine.Object.Destroy(node.gameObject);
+#endif
+            }
+            treeRootNodes.Clear();
+
+            // 销毁池中对象
+            foreach (var obj in pool)
+            {
+                if (obj == null) continue;
+#if UNITY_EDITOR
+                if (!Application.isPlaying)
+                    UnityEngine.Object.DestroyImmediate(obj);
+                else
+                    UnityEngine.Object.Destroy(obj);
+#else
+                UnityEngine.Object.Destroy(obj);
+#endif
+            }
+            pool.Clear();
+
+            // 销毁池父对象
+            if (poolParent != null)
+            {
+#if UNITY_EDITOR
+                if (!Application.isPlaying)
+                    UnityEngine.Object.DestroyImmediate(poolParent.gameObject);
+                else
+                    UnityEngine.Object.Destroy(poolParent.gameObject);
+#else
+                UnityEngine.Object.Destroy(poolParent.gameObject);
+#endif
+                poolParent = null;
+            }
+
+            // 清理容器中除模板外的子对象（如果有模板则保留）
+            if (container != null)
+            {
+                for (int i = container.childCount - 1; i >= 0; i--)
+                {
+                    var child = container.GetChild(i);
+                    if (nodePrefab != null && child.gameObject == nodePrefab) continue;
+#if UNITY_EDITOR
+                    if (!Application.isPlaying)
+                        UnityEngine.Object.DestroyImmediate(child.gameObject);
+                    else
+                        UnityEngine.Object.Destroy(child.gameObject);
+#else
+                    UnityEngine.Object.Destroy(child.gameObject);
+#endif
+                }
+            }
+        }
     }
 }
