@@ -11,7 +11,7 @@ namespace ReunionMovement.Core
         public class Option
         {
             // 版本号
-            public string version = "1.0.3";
+            public string version = "1.0.0";
             // 全屏模式
             public bool fullscreen = true;
             // 分辨率宽度
@@ -30,10 +30,10 @@ namespace ReunionMovement.Core
             public float brightness = 1.0f;
 
             #region 声音
-            //自动暂停
-            public bool autoPause = true;
-            // 主音量设置
-            public bool masterVolumeMuted = true;
+            //自动暂停（默认关以避免加载时静音）
+            public bool autoPause = false;
+            // 主音量设置（默认不静音）
+            public bool masterVolumeMuted = false;
             // 主音量
             public float masterVolume = 0.8f;
             // 音乐设置
@@ -277,6 +277,24 @@ namespace ReunionMovement.Core
             catch (Exception ex)
             {
                 Debug.LogError($"ApplyOption 异常: {ex}");
+            }
+        }
+
+        /// <summary>
+        /// 重置游戏选项为默认值并保存/应用。
+        /// 编辑器模式下可通过菜单调用：Tools/ReunionMovement/Reset Game Options
+        /// </summary>
+        public static void ResetOptions()
+        {
+            try
+            {
+                currentOption = new Option();
+                SaveOptions();
+                ApplyOptions();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"ResetOptions 异常: {ex}");
             }
         }
     }
