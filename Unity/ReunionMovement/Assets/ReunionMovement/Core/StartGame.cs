@@ -62,6 +62,8 @@ namespace ReunionMovement.Core
         {
             Log.Debug("游戏启动");
 
+            GameOption.ResetOptions();
+
             // 临时设置游戏选项
             //GameOption.currentOption.sfxMuted = false;
             //GameOption.currentOption.musicMuted = false;
