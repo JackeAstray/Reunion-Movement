@@ -269,8 +269,8 @@ namespace ReunionMovement.Core.Sound
                             go.transform.localPosition = Vector3.zero;
                         }
                         SoundItem soundObj = go.GetComponent<SoundItem>();
-                        float effectiveVolume = volume == -1f ? GameOption.currentOption.musicVolume : volume;
-                        soundObj.Processing(clip, emitter, loop, effectiveVolume, GameOption.currentOption.musicMuted, pitch);
+                        float effectiveVolume = volume == -1f ? GameOption.currentOption.sfxVolume : volume;
+                        soundObj.Processing(clip, emitter, loop, effectiveVolume, GameOption.currentOption.sfxVolume, pitch);
                     }
                 }
             }
