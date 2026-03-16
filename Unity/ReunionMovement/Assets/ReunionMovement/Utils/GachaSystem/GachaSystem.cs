@@ -158,9 +158,6 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         private GachaItem Get3StarItem()
         {
-            // 重置四星计数器（根据网页7保底规则）
-            pity4Star = 0;
-
             // 从常驻三星池随机选取
             return SelectRandomItem(standard3StarPool);
         }

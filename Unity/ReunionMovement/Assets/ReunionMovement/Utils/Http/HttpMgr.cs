@@ -268,9 +268,9 @@ namespace ReunionMovement.Common.Util.HttpService
 
             if (httpRequests.TryGetValue(request, out Coroutine coroutine))
             {
-                if (httpRequests.ContainsKey(request))
+                if (coroutine != null)
                 {
-                    StopCoroutine(httpRequests[request]);
+                    StopCoroutine(coroutine);
                 }
 
                 httpRequests.Remove(request);
@@ -279,7 +279,8 @@ namespace ReunionMovement.Common.Util.HttpService
 
         public void Update()
         {
-            foreach (var httpRequest in httpRequests.Keys)
+            // 防御性拷贝，避免在进度回调中修改请求队列导致 foreach 抛出 InvalidOperationException
+            foreach (var httpRequest in httpRequests.Keys.ToList())
             {
                 (httpRequest as IUpdateProgress)?.UpdateProgress();
             }

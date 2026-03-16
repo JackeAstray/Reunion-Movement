@@ -7,7 +7,7 @@ namespace ReunionMovement.Common.Util
     /// <summary>
     /// 对象池
     /// </summary>
-    public class ObjectSpawnPool : MonoBehaviour
+    public class ObjectSpawnPool
     {
         private GameObject spawnTem;
         private int limit = 100;
