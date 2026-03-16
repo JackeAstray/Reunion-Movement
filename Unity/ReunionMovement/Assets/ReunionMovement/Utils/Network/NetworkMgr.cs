@@ -8,6 +8,7 @@ namespace ReunionMovement.Common.Util
         List<INetworkChannel> channelDict;
         List<INetworkChannel> channelDictRemove;
         private Thread netRun;
+        private volatile bool isRunning = false;
         private readonly object syncRoot = new object();
 
         public int NetworkChannelCount
@@ -175,6 +176,7 @@ namespace ReunionMovement.Common.Util
 #endif
             if (netRun == null)
             {
+                isRunning = true;
                 netRun = new Thread(new ThreadStart(ThreadOnUpdate)) { IsBackground = true };
                 netRun.Start();
             }
@@ -185,11 +187,11 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         private void ThreadOnUpdate()
         {
-            while (true)
+            while (isRunning)
             {
                 try
                 {
-                    Update();
+                    TickUpdate();
                 }
                 catch (System.Exception ex)
                 {
@@ -206,11 +208,11 @@ namespace ReunionMovement.Common.Util
         {
             if (netRun == null)
             {
-                Update();
+                TickUpdate();
             }
         }
 
-        private void Update()
+        private void TickUpdate()
         {
             // perform removals and prepare tick list under lock, but execute ticks outside lock
             List<INetworkChannel> removals = null;
@@ -262,6 +264,13 @@ namespace ReunionMovement.Common.Util
 
         public void OnTermination()
         {
+            isRunning = false;
+            if (netRun != null)
+            {
+                netRun.Join(100);
+                netRun = null;
+            }
+
             List<INetworkChannel> toClose;
             lock (syncRoot)
             {
@@ -273,6 +282,11 @@ namespace ReunionMovement.Common.Util
             {
                 try { toClose[i].Close(); } catch { }
             }
+        }
+
+        private void OnDestroy()
+        {
+            OnTermination();
         }
     }
 }

@@ -169,7 +169,7 @@ namespace ReunionMovement.Common.Util
         private void ResetCounters()
         {
             pity5Star = 0;
-            pity4Star = 0; // 四星保底独立重置[5](@ref)
+            // 获取五星不重置四星保底（独立重置）
         }
 
         /// <summary>

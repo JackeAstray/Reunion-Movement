@@ -175,7 +175,7 @@ namespace ReunionMovement.Common.Util.Download
             OnDownloadInvoked?.Invoke();
             pendingUris = Uris.ToArray();
             numFilesRemaining = Uris.Length;
-            startTime = DateTime.Now.Millisecond;
+            startTime = Environment.TickCount;
             downloading = true;
 
             initialCount = Uris.Length;
@@ -211,7 +211,7 @@ namespace ReunionMovement.Common.Util.Download
             if (!Downloading)
             {
                 downloading = true;
-                startTime = DateTime.Now.Millisecond;
+                startTime = Environment.TickCount;
                 initialCount = 1;
             }
 
@@ -353,7 +353,7 @@ namespace ReunionMovement.Common.Util.Download
                 else if (NumThreads == 0)
                 {
                     OnDownloadsSuccess?.Invoke();
-                    endTime = DateTime.Now.Millisecond;
+                    endTime = Environment.TickCount;
                     downloading = false;
                 }
             });
@@ -399,7 +399,7 @@ namespace ReunionMovement.Common.Util.Download
                     else if (NumThreads == 0)
                     {
                         OnDownloadsSuccess?.Invoke();
-                        endTime = DateTime.Now.Millisecond;
+                        endTime = Environment.TickCount;
                         downloading = false;
                     }
                 }
@@ -430,7 +430,7 @@ namespace ReunionMovement.Common.Util.Download
             downloading = false;
             OnCancel?.Invoke();
             OnCancelInvoked?.Invoke();
-            endTime = DateTime.Now.Millisecond;
+            endTime = Environment.TickCount;
             HandleAbandonOnFailure();
             return Task.FromResult(true);
         }

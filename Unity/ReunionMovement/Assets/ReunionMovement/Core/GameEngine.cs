@@ -74,14 +74,14 @@ namespace ReunionMovement.Core
             appEngine.gameModules = modules;
             appEngine.gameEntry = entry;
 
+            _ = appEngine.InitAsync();
+
             return appEngine;
         }
 
         protected override void Awake()
         {
             base.Awake();
-
-            _ = InitAsync();
         }
 
         void Start()
@@ -100,7 +100,6 @@ namespace ReunionMovement.Core
         private async Task InitAsync()
         {
             var t0 = Time.realtimeSinceStartup; // 记录开始时间
-            await Task.Yield();
 
             isBeforeInit = true;
             if (gameEntry != null)
@@ -164,9 +163,12 @@ namespace ReunionMovement.Core
                 UpdatePer300msEvent?.Invoke();
             }
 
-            foreach (ICustommSystem module in gameModules)
+            if (gameModules != null)
             {
-                module.Update(Time.deltaTime, Time.unscaledDeltaTime);
+                foreach (ICustommSystem module in gameModules)
+                {
+                    module.Update(Time.deltaTime, Time.unscaledDeltaTime);
+                }
             }
         }
 

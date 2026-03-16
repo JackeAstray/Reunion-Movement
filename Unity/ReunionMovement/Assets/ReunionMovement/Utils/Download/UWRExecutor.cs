@@ -169,7 +169,7 @@ namespace ReunionMovement.Common.Util.Download
                 return null;
             }
 
-            startTime = DateTime.Now.Millisecond;
+            startTime = Environment.TickCount;
 
             UnityWebRequestAsyncOperation resp = null;
             UnityWebRequest uwr = null;
@@ -185,7 +185,7 @@ namespace ReunionMovement.Common.Util.Download
                     }
                     progress = 1.0f;
                     OnDownloadSuccess?.Invoke();
-                    endTime = DateTime.Now.Millisecond;
+                    endTime = Environment.TickCount;
                     bytesDownloaded = (int)new FileInfo(DownloadResultPath).Length;
                 };
             }
@@ -232,15 +232,18 @@ namespace ReunionMovement.Common.Util.Download
                 }
             }
 
-            resp.completed += (obj) =>
+            if (resp != null)
             {
-                if (uwr.result != UnityWebRequest.Result.Success)
+                resp.completed += (obj) =>
                 {
-                    DidError = true;
-                    OnDownloadError?.Invoke(0, uwr.error);
-                    Cancel();
-                }
-            };
+                    if (uwr.result != UnityWebRequest.Result.Success)
+                    {
+                        DidError = true;
+                        OnDownloadError?.Invoke(0, uwr.error);
+                        Cancel();
+                    }
+                };
+            }
             return resp;
         }
 
@@ -264,7 +267,7 @@ namespace ReunionMovement.Common.Util.Download
             if (fileSize == expectedSize)
             {
                 OnDownloadSuccess?.Invoke();
-                endTime = DateTime.Now.Millisecond;
+                endTime = Environment.TickCount;
                 CompletedMultipartDownload = true;
             }
         }

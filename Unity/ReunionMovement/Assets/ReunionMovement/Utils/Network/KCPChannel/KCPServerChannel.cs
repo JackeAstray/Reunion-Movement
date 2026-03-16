@@ -158,7 +158,7 @@ namespace ReunionMovement.Common.Util
         {
             var rcvLen = arrSeg.Count;
             var rcvData = new byte[rcvLen];
-            Array.Copy(arrSeg.Array, 1, rcvData, 0, rcvLen);
+            Array.Copy(arrSeg.Array, arrSeg.Offset, rcvData, 0, rcvLen);
             onDataReceived?.Invoke(conv, rcvData);
         }
     }

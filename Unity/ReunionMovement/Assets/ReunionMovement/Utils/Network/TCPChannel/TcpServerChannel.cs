@@ -37,7 +37,7 @@ namespace ReunionMovement.Common.Util
 
         public string Host
         {
-            get { return server.listener.LocalEndpoint.ToString(); }
+            get { return server.listener?.LocalEndpoint?.ToString() ?? string.Empty; }
         }
         public TcpServerChannel(string channelName, int port)
         {
@@ -94,7 +94,9 @@ namespace ReunionMovement.Common.Util
         }
         void OnReceiveDataHandler(int conv, ArraySegment<byte> arrSeg)
         {
-            onDataReceived?.Invoke(conv, arrSeg.Array);
+            byte[] data = new byte[arrSeg.Count];
+            Buffer.BlockCopy(arrSeg.Array, arrSeg.Offset, data, 0, arrSeg.Count);
+            onDataReceived?.Invoke(conv, data);
         }
     }
 }

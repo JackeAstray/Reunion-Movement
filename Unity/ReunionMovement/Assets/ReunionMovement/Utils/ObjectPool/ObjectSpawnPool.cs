@@ -42,19 +42,33 @@ namespace ReunionMovement.Common.Util
         public GameObject Spawn()
         {
             GameObject obj = null;
-            if (objectQueue.Count > 0)
+            while (objectQueue.Count > 0)
             {
                 obj = objectQueue.Dequeue();
+                if (obj != null)
+                {
+                    break;
+                }
+                else
+                {
+                    // 对象已被外部销毁（Destroy），不再可用
+                    currentCount--;
+                    obj = null;
+                }
             }
-            else if (currentCount < limit)
+
+            if (obj == null)
             {
-                obj = ObjectPoolMgr.CloneGameObject(spawnTem);
-                currentCount++;
-            }
-            else
-            {
-                Log.Warning("已达到对象池限制。无法生成更多对象。");
-                return null;
+                if (currentCount < limit)
+                {
+                    obj = ObjectPoolMgr.CloneGameObject(spawnTem);
+                    currentCount++;
+                }
+                else
+                {
+                    Log.Warning("已达到对象池限制。无法生成更多对象。");
+                    return null;
+                }
             }
 
             obj.SetActive(true);
