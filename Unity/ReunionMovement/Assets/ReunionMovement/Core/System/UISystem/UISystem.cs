@@ -116,6 +116,11 @@ namespace ReunionMovement.Core.UI
                 return;
             }
             var windowAsset = uiObj.GetComponent<UIWindowAsset>();
+            if (windowAsset == null)
+            {
+                Log.Error($"UI对象 {uiObj.name} 缺少 UIWindowAsset 组件！");
+                return;
+            }
             var parent = windowAsset.panelType switch
             {
                 PanelType.MainUI => mainUIRoot.transform,
@@ -157,19 +162,27 @@ namespace ReunionMovement.Core.UI
             uiObj.transform.localRotation = Quaternion.identity;
             uiObj.transform.localScale = Vector3.one;
 
-            var uiController = uiObj.GetComponent<UIController>();
+            var uiController = uiObj.GetComponent<UIController>() ?? CreateUIController(uiObj, name);
+            if (uiController == null)
+            {
+                Log.Error($"加载 UI {name} 失败，找不到或无法创建 UIController 脚本！");
+                UnityEngine.Object.Destroy(uiObj);
+                return null;
+            }
+
             var uiLoadState = new UILoadState(name)
             {
-                uiWindow = uiController ?? CreateUIController(uiObj, name),
+                uiWindow = uiController,
                 isLoading = false,
                 openWhenFinish = openWhenFinish,
                 openArgs = args,
                 isOnInit = true
             };
             uiLoadState.uiWindow.uiName = name;
+            uiStateCache.Add(name, uiLoadState);
+
             InitWindow(uiLoadState, uiLoadState.uiWindow, uiLoadState.openWhenFinish, uiLoadState.openArgs);
 
-            uiStateCache.Add(name, uiLoadState);
             return uiLoadState;
         }
 
@@ -198,15 +211,7 @@ namespace ReunionMovement.Core.UI
 
             if (!open)
             {
-                if (!uiState.isStaticUI)
-                {
-                    CloseWindow(uiBase.uiName); // Destroy
-                    return;
-                }
-                else
-                {
-                    uiBase.gameObject.SetActive(false);
-                }
+                uiBase.gameObject.SetActive(false);
             }
 
             uiState.OnUIWindowLoadedCallbacks(uiState);
@@ -225,14 +230,14 @@ namespace ReunionMovement.Core.UI
         {
             UILoadState uiState;
 
-            if (uiStateCache.TryGetValue(uiName, out uiState))
+            if (!uiStateCache.TryGetValue(uiName, out uiState))
             {
                 // 只加载，不打开
                 uiState = LoadWindow(uiName, false);
                 uiStateCache[uiName] = uiState;
             }
 
-            uiState.DoCallback(callback, args);
+            uiState?.DoCallback(callback, args);
         }
 
         /// <summary>
@@ -362,7 +367,7 @@ namespace ReunionMovement.Core.UI
         /// <param name="t"></param>
         public void CloseWindow(Type t)
         {
-            CloseWindow(t.Name.Remove(0, 3)); // XUI remove
+            CloseWindow(t.Name);
         }
 
         /// <summary>
@@ -414,16 +419,9 @@ namespace ReunionMovement.Core.UI
         /// </summary>
         public void DestroyAllWindows()
         {
-            List<string> LoadList = new List<string>();
+            CloseAllWindows();
 
-            foreach (KeyValuePair<string, UILoadState> uiWindow in uiStateCache)
-            {
-                if (IsLoad(uiWindow.Key))
-                {
-                    LoadList.Add(uiWindow.Key);
-                }
-            }
-
+            List<string> LoadList = new List<string>(uiStateCache.Keys);
             foreach (string item in LoadList)
             {
                 DestroyWindow(item);
@@ -504,7 +502,7 @@ namespace ReunionMovement.Core.UI
         /// </summary>
         public bool IsOpen<T>() where T : UIController
         {
-            string uiName = typeof(T).Name.Remove(0, 3);
+            string uiName = typeof(T).Name;
             return IsOpen(uiName);
         }
 
@@ -603,7 +601,7 @@ namespace ReunionMovement.Core.UI
         /// <param name="args"></param>
         public void ToggleWindow<T>(params object[] args)
         {
-            string uiName = typeof(T).Name.Remove(0, 3); // 去掉"CUI"
+            string uiName = typeof(T).Name;
             ToggleWindow(uiName, args);
         }
 
@@ -657,7 +655,13 @@ namespace ReunionMovement.Core.UI
 
         public virtual UIController CreateUIController(GameObject uiObj, string uiTemplateName)
         {
-            UIController uiBase = uiObj.AddComponent(System.Type.GetType("ReunionMovement.Core.UI." + uiTemplateName + ", Assembly-CSharp")) as UIController;
+            Type type = System.Type.GetType("ReunionMovement.Core.UI." + uiTemplateName + ", Assembly-CSharp");
+            if (type == null)
+            {
+                Log.Error($"CreateUIController: 未能找到UI脚本组件 ReunionMovement.Core.UI.{uiTemplateName}！");
+                return null;
+            }
+            UIController uiBase = uiObj.AddComponent(type) as UIController;
             return uiBase;
         }
 

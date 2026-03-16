@@ -148,7 +148,7 @@ namespace ReunionMovement.Common.Util.Timer
         /// </summary>
         public float GetRemainingTime()
         {
-            return isCountingDown ? duration - elapsed : elapsed;
+            return Mathf.Max(0f, duration - elapsed);
         }
     }
 }

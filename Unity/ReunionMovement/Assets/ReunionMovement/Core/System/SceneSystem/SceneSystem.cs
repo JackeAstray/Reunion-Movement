@@ -215,13 +215,14 @@ namespace ReunionMovement.Core.Scene
                 await Task.Yield();
             }
 
-            OnTargetSceneLoaded();
-
-            Log.Debug("目标场景加载完成！");
             if (!openLoad)
             {
                 ExecuteBslcc();
             }
+
+            OnTargetSceneLoaded();
+
+            Log.Debug("目标场景加载完成！");
 
             ExecuteSlcc();
         }
@@ -234,7 +235,6 @@ namespace ReunionMovement.Core.Scene
             isLoading = false;
             currentSceneName = targetSceneName;
             targetSceneName = null;
-            beforeSceneLoadingCompletionCallback = null;
         }
 
         /// <summary>
@@ -243,6 +243,7 @@ namespace ReunionMovement.Core.Scene
         private void ExecuteBslcc()
         {
             beforeSceneLoadingCompletionCallback?.Invoke();
+            beforeSceneLoadingCompletionCallback = null;
         }
         /// <summary>
         /// 场景加载完成回调
