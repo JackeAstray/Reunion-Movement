@@ -55,7 +55,7 @@ namespace ReunionMovement.Common.Util.Timer
         /// </summary>
         public void PauseAllTimers()
         {
-            foreach (Timer timer in timers)
+            foreach (Timer timer in timers.ToArray())
             {
                 timer.Pause();
             }
@@ -66,7 +66,7 @@ namespace ReunionMovement.Common.Util.Timer
         /// </summary>
         public void ResumeAllTimers()
         {
-            foreach (Timer timer in timers)
+            foreach (Timer timer in timers.ToArray())
             {
                 timer.Resume();
             }

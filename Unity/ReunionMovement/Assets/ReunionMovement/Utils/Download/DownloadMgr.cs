@@ -101,7 +101,9 @@ namespace ReunionMovement.Common.Util.Download
                     {
                         if (imageCache.TryGetValue(url, out Texture2D oldTex) && oldTex != null)
                         {
-                            UnityEngine.Object.Destroy(oldTex);
+                            UnityEngine.Object.Destroy(response.texture);
+                            onComplete?.Invoke(oldTex);
+                            return;
                         }
                         imageCache[url] = response.texture;
 
@@ -110,7 +112,11 @@ namespace ReunionMovement.Common.Util.Download
                         onComplete?.Invoke(response.texture);
                     }
                 })
-                .OnError(error => Log.Error($"下载图片失败: {error}"))
+                .OnError(error => 
+                {
+                    Log.Error($"下载图片失败: {error}");
+                    onComplete?.Invoke(null);
+                })
                 .Send();
         }
 
@@ -197,7 +203,15 @@ namespace ReunionMovement.Common.Util.Download
                 error?.Invoke(errorMsg);
             };
 
-            await ufd.Download();
+            try
+            {
+                await ufd.Download();
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"下载过程中发生异常: {ex.Message}");
+                error?.Invoke(ex.Message);
+            }
         }
 
 

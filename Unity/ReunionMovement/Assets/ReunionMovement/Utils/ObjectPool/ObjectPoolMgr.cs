@@ -43,7 +43,6 @@ namespace ReunionMovement.Common.Util
             if (spawnPools.TryGetValue(name, out var pool))
             {
                 pool.Clear();
-                Destroy(pool);
                 spawnPools.Remove(name);
             }
             else
