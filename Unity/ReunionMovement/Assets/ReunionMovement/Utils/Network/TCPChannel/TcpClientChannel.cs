@@ -75,10 +75,13 @@ namespace ReunionMovement.Common.Util
         {
             Disconnect();
             onAbort?.Invoke();
+            onAbort = null;
         }
         void OnReceiveDataHandler(ArraySegment<byte> arrSeg)
         {
-            onDataReceived?.Invoke(arrSeg.Array);
+            byte[] data = new byte[arrSeg.Count];
+            Buffer.BlockCopy(arrSeg.Array, arrSeg.Offset, data, 0, arrSeg.Count);
+            onDataReceived?.Invoke(data);
         }
     }
 }

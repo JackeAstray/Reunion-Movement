@@ -190,13 +190,19 @@ namespace ReunionMovement.Common.Util.StateMachine
         {
             try
             {
-                currentState?.OnStop?.Invoke();
-                OnStateExit?.Invoke(currentState.label);
-                stateHistory.Push(currentState);
+                TLabel oldLabel = default(TLabel);
+                if (currentState != null)
+                {
+                    oldLabel = currentState.label;
+                    currentState.OnStop?.Invoke();
+                    OnStateExit?.Invoke(currentState.label);
+                    stateHistory.Push(currentState);
+                }
+
                 currentState = stateDictionary[newState];
                 currentState?.OnStart?.Invoke();
                 OnStateEnter?.Invoke(newState);
-                OnStateChanged?.Invoke(stateHistory.Peek().label, newState);
+                OnStateChanged?.Invoke(oldLabel, newState);
             }
             catch (Exception ex)
             {
