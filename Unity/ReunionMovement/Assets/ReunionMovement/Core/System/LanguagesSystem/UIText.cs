@@ -23,6 +23,22 @@ namespace ReunionMovement.Core.Languages
 
         void Start()
         {
+            // 如果游戏已经初始化完毕，直接执行；否则等待初始化完成的广播
+            if (StartGame.IsGameInitFinished)
+            {
+                OnGameInitFinished();
+            }
+            else
+            {
+                StartGame.OnGameInitComplete += OnGameInitFinished;
+            }
+        }
+
+        /// <summary>
+        /// 游戏初始化完成后的回调方法，注册语言系统观察者并更新文本
+        /// </summary>
+        private void OnGameInitFinished()
+        {
             tmpTextComponent = GetComponent<TMP_Text>();
             textComponent = GetComponent<Text>();
             if (tmpTextComponent == null && textComponent == null)
