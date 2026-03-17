@@ -22,6 +22,10 @@ namespace ReunionMovement.Core
     /// </summary>
     public class StartGame : GameEntry
     {
+        // 全局游戏初始化状态标记与事件
+        public static bool IsGameInitFinished { get; private set; }
+        public static event Action OnGameInitComplete;
+
         protected override IList<ICustommSystem> CreateModules()
         {
             var modules = base.CreateModules();
@@ -77,6 +81,10 @@ namespace ReunionMovement.Core
 
             // 加载场景
             //await SceneSystem.Instance.LoadScene("Temp", true);
+
+            // 对于在场景大量散落的组件，使用静态标志位和事件通知，避免遗漏
+            IsGameInitFinished = true;
+            OnGameInitComplete?.Invoke();
 
             return Task.CompletedTask;
         }
