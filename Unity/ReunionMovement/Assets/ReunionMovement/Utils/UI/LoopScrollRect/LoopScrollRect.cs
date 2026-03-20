@@ -228,41 +228,23 @@ namespace ReunionMovement.Common.Util
                 var rt = go.GetComponent<RectTransform>();
                 rt.localScale = Vector3.one;
 
-                // 保证项使用左上对齐（与注释中推荐的 pivot/anchor 一致），避免被父布局拉伸。
-                // 如果你的 prefab 已经正确设置，这两行可以去掉；但在遇到“宽度比预期大”问题时建议保持明确设置。
                 rt.pivot = new Vector2(0, 1);
-                rt.anchorMin = rt.anchorMax = new Vector2(0, 1);
 
-                // 显式设置位置，防止初始位置为 (0,0) 导致错位
                 if (direction == Direction.Vertical)
                 {
-                    // 保证主轴在 y，非主轴 x 固定为 0（左对齐）
+                    // 纵向滚动：项在横向拉伸，自动跟随 content 宽度
+                    rt.anchorMin = new Vector2(0, 1);
+                    rt.anchorMax = new Vector2(1, 1);
+                    rt.sizeDelta = new Vector2(0, itemSize); // 宽度自适应 (0 offset)，高度为 itemSize
                     rt.anchoredPosition = new Vector2(0f, -i * (itemSize + spacing));
                 }
                 else
                 {
-                    // 保证主轴在 x，非主轴 y 固定为 0（顶对齐）
+                    // 横向滚动：项在纵向拉伸，自动跟随 content 高度
+                    rt.anchorMin = new Vector2(0, 0);
+                    rt.anchorMax = new Vector2(0, 1);
+                    rt.sizeDelta = new Vector2(itemSize, 0); // 宽度为 itemSize，高度自适应 (0 offset)
                     rt.anchoredPosition = new Vector2(i * (itemSize + spacing), 0f);
-                }
-
-                // 在生成池内初始可见项的循环中，根据 direction 决定主轴与非主轴尺寸：
-                // - 主轴尺寸使用计算得到的 itemSize（保持固定项高/宽）
-                // - 非主轴尺寸使用 content 的当前宽/高以填满 content（若 content 为 0 则回退到 prefab 原始尺寸）
-                if (direction == Direction.Vertical)
-                {
-                    // 主轴：高度已设置为 itemSize；非主轴：使用 content 宽度（fallback 到 prefab 宽度）
-                    rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, itemSize);
-                    float width = content.rect.width;
-                    if (width <= 0) width = itemPrefab.rect.width;
-                    rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
-                }
-                else
-                {
-                    // 主轴：宽度已设置为 itemSize；非主轴：使用 content 高度（fallback 到 prefab 高度）
-                    rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, itemSize);
-                    float height = content.rect.height;
-                    if (height <= 0) height = itemPrefab.rect.height;
-                    rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
                 }
 
                 pooledItems.Add(rt);
