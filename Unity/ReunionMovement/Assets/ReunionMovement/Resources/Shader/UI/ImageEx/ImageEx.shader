@@ -1202,6 +1202,46 @@ Shader "ReunionMovement/UI/ImageEx"
                      }
 
                      float shadowMask = blurSample.a;
+
+                     // 让阴影同样遵循程序化形状的 SDF（例如矩形圆角）
+                     #if RECTANGLE || CIRCLE || PENTAGON || TRIANGLE || HEXAGON || CHAMFERBOX || PARALLELOGRAM || NSTAR_POLYGON || HEART || BLOBBYCROSS || SQUIRCLE || NTRIANGLE_ROUNDED
+                         float sdfDataShadow = 0;
+                         float pixelScaleShadow = clamp(1.0/_FalloffDistance, 1.0/2048.0, 2048.0);
+                         #if RECTANGLE
+                             sdfDataShadow = rectangleScene(IN.shapeData);
+                         #elif CIRCLE
+                             sdfDataShadow = circleScene(IN.shapeData);
+                         #elif PENTAGON
+                             sdfDataShadow = pentagonScene(IN.shapeData);
+                         #elif TRIANGLE
+                             sdfDataShadow = triangleScene(IN.shapeData);
+                         #elif HEXAGON
+                             sdfDataShadow = hexagonScene(IN.shapeData);
+                         #elif CHAMFERBOX
+                             sdfDataShadow = chamferBoxScene(IN.shapeData);
+                         #elif PARALLELOGRAM
+                             sdfDataShadow = parallelogramScene(IN.shapeData);
+                         #elif NSTAR_POLYGON
+                             sdfDataShadow = nStarPolygonScene(IN.shapeData);
+                         #elif HEART
+                             sdfDataShadow = heartScene(IN.shapeData);
+                         #elif BLOBBYCROSS
+                             sdfDataShadow = blobbyCrossScene(IN.shapeData);
+                         #elif SQUIRCLE
+                             sdfDataShadow = squircleScene(IN.shapeData);
+                         #elif NTRIANGLE_ROUNDED
+                             sdfDataShadow = nTriangleRoundedScene(IN.shapeData);
+                         #endif
+
+                         // 以原始形状遮罩为主，少量混合外扩遮罩，避免模糊边缘硬裁且不丢失圆角
+                         float blurFac = saturate(_ShadowBlurIntensity);
+                         float shadowShapeExpand = _FalloffDistance * 0.12 * blurFac;
+                         float shapeMaskCore = sampleSdf(sdfDataShadow, pixelScaleShadow);
+                         float shapeMaskExpanded = sampleSdf(sdfDataShadow - shadowShapeExpand, pixelScaleShadow);
+                         float shapeMask = lerp(shapeMaskCore, shapeMaskExpanded, 0.35 * blurFac);
+                         shadowMask *= shapeMask;
+                     #endif
+
                      float shadowAlpha = shadowMask * _ShadowColor.a * IN.color.a;
                      half4 shadowOut = half4(_ShadowColor.rgb * shadowAlpha, shadowAlpha);
 

@@ -361,24 +361,16 @@ namespace UnityEngine.UI.ImageExtensions
                 // 使用黑色通道标记阴影顶点，保留原始透明度
                 Color32 shadowColor = new Color32(0, 0, 0, color.a);
 
-                // 预计算在四边形空间中的归一化偏移，以便 SDF UV 偏移保持一致
-                float boundsWidth = bounds.z - bounds.x;
-                float boundsHeight = bounds.w - bounds.y;
-                float offsetU = boundsWidth != 0 ? shadowOffsetLocal.x / boundsWidth : 0f;
-                float offsetV = boundsHeight != 0 ? shadowOffsetLocal.y / boundsHeight : 0f;
-
                 for (int i = 0; i < 4; ++i)
                 {
                     Vector3 pos = quadPositions[i] + new Vector3(shadowOffsetLocal.x, shadowOffsetLocal.y, 0);
 
+                    // 阴影四边形只偏移顶点位置，保持 uv1 与原图一致，避免偏移后因 Clamp01 导致的 SDF 裁剪。
                     float uBase = Mathf.InverseLerp(bounds.x, bounds.z, quadPositions[i].x);
                     float vBase = Mathf.InverseLerp(bounds.y, bounds.w, quadPositions[i].y);
 
-                    float uShadow = Mathf.Clamp01(uBase + offsetU);
-                    float vShadow = Mathf.Clamp01(vBase + offsetV);
-
-                    float u = Mathf.Lerp(epsilon, 1 - epsilon, uShadow);
-                    float v = Mathf.Lerp(epsilon, 1 - epsilon, vShadow);
+                    float u = Mathf.Lerp(epsilon, 1 - epsilon, uBase);
+                    float v = Mathf.Lerp(epsilon, 1 - epsilon, vBase);
                     Vector2 uv1 = new Vector2(u, v);
 
                     Vector2 sampleTexCoord = quadUVs[i];
