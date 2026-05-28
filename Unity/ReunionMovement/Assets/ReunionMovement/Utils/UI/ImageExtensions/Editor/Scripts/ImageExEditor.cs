@@ -339,7 +339,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                     EditorGUI.showMixedValue = false;
                     if (EditorGUI.EndChangeCheck()) spShadowColor.colorValue = newShadowColor;
 
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("shadowBlurIntensity"), new GUIContent("阴影模糊强度"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("shadowBlurIntensity"), new GUIContent("阴影衰减距离"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingWidth"), new GUIContent("采样宽度"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingScale"), new GUIContent("采样缩放"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("allowOutOfBoundsShadow"), new GUIContent("允许超出边界阴影"));

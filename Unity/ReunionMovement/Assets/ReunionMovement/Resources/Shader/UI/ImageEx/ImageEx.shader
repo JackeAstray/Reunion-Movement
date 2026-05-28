@@ -90,9 +90,9 @@ Shader "ReunionMovement/UI/ImageEx"
         _TransitionTexClampPadding ("过渡图块夹边距（像素）", Range(0, 4)) = 1
         [Toggle] _TransitionUseUv0 ("过渡使用精灵 UV0", Float) = 1
 
-        // 阴影相关属性（用于控制投影/镜像阴影的颜色、模糊、采样与镜像行为）
+        // 阴影相关属性（用于控制投影/镜像阴影的颜色、衰减、采样与镜像行为）
         [HDR] _ShadowColor ("Shadow Color", Color) = (0,0,0,0.5)
-        _ShadowBlurIntensity ("Shadow Blur Intensity", Range(0,8)) = 1
+        _ShadowBlurIntensity ("Shadow Decay Intensity", Range(0,100)) = 1
         _SamplingWidth ("Sampling Width", Float) = 1
         _SamplingScale ("Sampling Scale", Float) = 1
         _AllowOutOfBoundsShadow ("Allow Out Of Bounds Shadow", Float) = 1
@@ -353,6 +353,18 @@ Shader "ReunionMovement/UI/ImageEx"
                     return float4(color, alpha);
                 }
             #endif
+
+            // 共享 SDF alpha 遮罩计算：主图与阴影复用同一套结果
+            float computeSdfMask(float sdfData, float pixelScale)
+            {
+                #if STROKE
+                    return sampleSdfStrip(sdfData, _StrokeWidth + _OutlineWidth, pixelScale);
+                #elif OUTLINED_STROKE
+                    return sampleSdfStrip(sdfData, _OutlineWidth + _StrokeWidth, pixelScale);
+                #else
+                    return sampleSdf(sdfData, pixelScale);
+                #endif
+            }
             
             //矩形
             #if RECTANGLE
@@ -1117,96 +1129,49 @@ Shader "ReunionMovement/UI/ImageEx"
                      half4 blurSample = 0;
                      bool allowOOB = _AllowOutOfBoundsShadow > 0.5;
 
-                     // 支持多种阴影模式：单次采样（快速）、高斯模糊、以及三层阴影（Shadow3）
-                     if (_ShadowMode == 2)
-                     {
-                         // Shadow3：三层采样，偏移逐层增大、权重逐层减小（用于模拟分层软阴影）
-                         float2 baseUv = texcoord;
-                         if (!allowOOB) baseUv = saturate(baseUv);
-                         float2 step = texel * (0.5 + saturate(_ShadowBlurIntensity));
-                         float2 uv0 = baseUv;
-                         float2 uv1 = texcoord + step;
-                         float2 uv2 = texcoord + step * 2.0;
-                         if (!allowOOB) { uv1 = saturate(uv1); uv2 = saturate(uv2); }
-                         const float w0 = 0.55;
-                         const float w1 = 0.30;
-                         const float w2 = 0.15;
-                         blurSample += tex2D(_MainTex, uv0) * w0;
-                         blurSample += tex2D(_MainTex, uv1) * w1;
-                         blurSample += tex2D(_MainTex, uv2) * w2;
-                     }
-                     else
-                     {
-                         if (_ShadowBlurIntensity <= 0.001)
-                         {
-                             float2 sampleUv = texcoord;
-                             if (!allowOOB) sampleUv = saturate(sampleUv);
-                             blurSample = tex2D(_MainTex, sampleUv);
-                         }
-                         else
-                         {
-                             const float w[9] = {1.0/16.0, 2.0/16.0, 1.0/16.0,
-                                                  2.0/16.0, 4.0/16.0, 2.0/16.0,
-                                                  1.0/16.0, 2.0/16.0, 1.0/16.0};
-                             float s = saturate(_ShadowBlurIntensity);
-                             float2 off;
-                             int idx = 0;
-                             for (int y = -1; y <= 1; ++y)
-                             {
-                                 for (int x = -1; x <= 1; ++x)
-                                 {
-                                     off = float2(x, y) * texel * (0.5 + s);
-                                     float2 uv = texcoord + off;
-                                     if (!allowOOB) uv = saturate(uv);
-                                     idx = (y + 1) * 3 + (x + 1);
-                                     blurSample += tex2D(_MainTex, uv) * w[idx];
-                                 }
-                             }
-                         }
-                     }
+                     float2 sampleUv = texcoord;
+                     if (!allowOOB) sampleUv = saturate(sampleUv);
+                     fixed4 baseSample = tex2D(_MainTex, sampleUv) + _TextureSampleAdd;
 
-                     // 如果为镜像模式（Shadow Mirror），则采样镜像纹理并根据设置生成反射效果而非模糊阴影。
+                     // 如果为镜像模式（Shadow Mirror），则采样镜像纹理并根据设置生成反射效果而非阴影。
                      // 注意：镜像模式会使用 _ShadowMirrorDirection/_ShadowMirrorScale/_ShadowMirrorOffset 控制变换。
                      if (_ShadowMode == 3)
                      {
-                         float2 sampleUv = texcoord;
-                         // 镜像方向：0 = 垂直（翻转 Y），1 = 水平（翻转 X）
+                         float2 mirrorUv = texcoord;
                          if (_ShadowMirrorDirection == 1)
                          {
-                             sampleUv.x = 1.0 - (sampleUv.x - 0.5) * _ShadowMirrorScale - 0.5 + _ShadowMirrorOffset.x;
+                             mirrorUv.x = 1.0 - (mirrorUv.x - 0.5) * _ShadowMirrorScale - 0.5 + _ShadowMirrorOffset.x;
                          }
                          else
                          {
-                             sampleUv.y = 1.0 - (sampleUv.y - 0.5) * _ShadowMirrorScale - 0.5 + _ShadowMirrorOffset.y;
+                             mirrorUv.y = 1.0 - (mirrorUv.y - 0.5) * _ShadowMirrorScale - 0.5 + _ShadowMirrorOffset.y;
                          }
-                         if (!_AllowOutOfBoundsShadow) sampleUv = saturate(sampleUv);
-                         fixed4 baseSample = tex2D(_MainTex, sampleUv) + _TextureSampleAdd;
-                         float baseA = baseSample.a;
-                         float shadowAlpha = baseA * _ShadowColor.a * IN.color.a;
-                         half4 shadowOut = half4(_ShadowColor.rgb * shadowAlpha, shadowAlpha);
+                         if (!_AllowOutOfBoundsShadow) mirrorUv = saturate(mirrorUv);
+                         fixed4 mirrorSample = tex2D(_MainTex, mirrorUv) + _TextureSampleAdd;
+                         float mirrorA = mirrorSample.a;
+                         float mirrorShadowAlpha = mirrorA * _ShadowColor.a * IN.color.a;
+                         half4 mirrorShadowOut = half4(_ShadowColor.rgb * mirrorShadowAlpha, mirrorShadowAlpha);
 
-                         // 可选：当请求时，显示原始采样颜色而不是被阴影色调色的结果
                          if (_ShadowMirrorShowSource > 0.5)
                          {
-                             // 在阴影四边形的顶点颜色（通常为黑色）和全局 _Color 之间进行颜色混合
                              half4 tint = lerp(_ShadowColor, _Color, clamp(_ShadowMirrorTintMix, 0.0, 1.0));
-                             half4 src = baseSample * tint;
-                             // 同样将过渡应用于源
+                             half4 src = mirrorSample * tint;
                              #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
                                  src = apply_transition_filter(src, transAlpha, transitionFilterUv);
                              #endif
                              return src;
                          }
 
-                         return shadowOut;
+                         return mirrorShadowOut;
                      }
 
-                     float shadowMask = blurSample.a;
+                     float shadowMask = baseSample.a;
 
-                     // 让阴影同样遵循程序化形状的 SDF（例如矩形圆角）
+                     // 阴影复用 ImageEx 现有的衰减逻辑：仍使用相同 sampleSdf 曲线，但由阴影参数驱动距离
                      #if RECTANGLE || CIRCLE || PENTAGON || TRIANGLE || HEXAGON || CHAMFERBOX || PARALLELOGRAM || NSTAR_POLYGON || HEART || BLOBBYCROSS || SQUIRCLE || NTRIANGLE_ROUNDED
                          float sdfDataShadow = 0;
-                         float pixelScaleShadow = clamp(1.0/_FalloffDistance, 1.0/2048.0, 2048.0);
+                         float shadowFalloffDistance = max(_ShadowBlurIntensity, 0.0001);
+                         float pixelScaleShadow = clamp(1.0 / shadowFalloffDistance, 1.0 / 2048.0, 2048.0);
                          #if RECTANGLE
                              sdfDataShadow = rectangleScene(IN.shapeData);
                          #elif CIRCLE
@@ -1233,26 +1198,19 @@ Shader "ReunionMovement/UI/ImageEx"
                              sdfDataShadow = nTriangleRoundedScene(IN.shapeData);
                          #endif
 
-                         // 以原始形状遮罩为主，少量混合外扩遮罩，避免模糊边缘硬裁且不丢失圆角
-                         float blurFac = saturate(_ShadowBlurIntensity);
-                         float shadowShapeExpand = _FalloffDistance * 0.12 * blurFac;
-                         float shapeMaskCore = sampleSdf(sdfDataShadow, pixelScaleShadow);
-                         float shapeMaskExpanded = sampleSdf(sdfDataShadow - shadowShapeExpand, pixelScaleShadow);
-                         float shapeMask = lerp(shapeMaskCore, shapeMaskExpanded, 0.35 * blurFac);
-                         shadowMask *= shapeMask;
+                         shadowMask *= computeSdfMask(sdfDataShadow, pixelScaleShadow);
                      #endif
 
                      float shadowAlpha = shadowMask * _ShadowColor.a * IN.color.a;
                      half4 shadowOut = half4(_ShadowColor.rgb * shadowAlpha, shadowAlpha);
 
-                     // 对生成的阴影结果应用过渡滤镜，这样阴影在过渡（例如 dissolve/melt）过程中保持一致性
                      #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
                          shadowOut = apply_transition_filter(shadowOut, transAlpha, transitionFilterUv);
                      #endif
 
                      return shadowOut;
                   }
-                  
+
                 color = ApplyBlur(texcoord) * color;
 
                 // 继续主片元路径：先对主纹理进行可选模糊采样（ApplyBlur），然后按功能模块（渐变、SDF、描边、过渡）依次处理颜色与 alpha
