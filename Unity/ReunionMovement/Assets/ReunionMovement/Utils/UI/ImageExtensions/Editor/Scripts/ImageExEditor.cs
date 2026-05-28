@@ -315,54 +315,54 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             }
             EditorGUILayout.EndVertical();
 
+            EditorGUILayout.Space();
+
+            EditorGUILayout.BeginVertical("Box");
+            {
+                // Shadow mode styled similarly to Transition Mode: a single field then indented settings.
+                EditorGUILayout.PropertyField(spAppendShadow, new GUIContent("阴影模式"));
+                if (spAppendShadow.boolValue)
+                {
+                    EditorGUILayout.LabelField("阴影设置", EditorStyles.boldLabel);
+                    EditorGUI.indentLevel++;
+
+                    EditorGUILayout.PropertyField(spShadowOffsetLocal, new GUIContent("阴影偏移 (本地)"));
+
+                    // Shadow type dropdown
+                    EditorGUILayout.PropertyField(spShadowMode, new GUIContent("阴影类型"));
+
+                    // 阴影颜色（HDR）
+                    SerializedProperty spShadowColor = serializedObject.FindProperty("shadowColor");
+                    EditorGUI.BeginChangeCheck();
+                    EditorGUI.showMixedValue = spShadowColor.hasMultipleDifferentValues;
+                    Color newShadowColor = EditorGUILayout.ColorField(new GUIContent("阴影颜色"), spShadowColor.colorValue, true, true, true);
+                    EditorGUI.showMixedValue = false;
+                    if (EditorGUI.EndChangeCheck()) spShadowColor.colorValue = newShadowColor;
+
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("shadowBlurIntensity"), new GUIContent("阴影模糊强度"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingWidth"), new GUIContent("采样宽度"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingScale"), new GUIContent("采样缩放"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("allowOutOfBoundsShadow"), new GUIContent("允许超出边界阴影"));
+
+                    // Show 'show source' only when ShadowMode is Mirror
+                    if (!spShadowMode.hasMultipleDifferentValues && spShadowMode.intValue == (int)ImageEx.ShadowMode.Mirror)
+                    {
+                        EditorGUILayout.PropertyField(spShadowMirrorDirection, new GUIContent("镜像方向"));
+                        EditorGUILayout.PropertyField(spShadowMirrorScale, new GUIContent("镜像缩放"));
+                        EditorGUILayout.PropertyField(spShadowMirrorOffset, new GUIContent("镜像偏移"));
+                        if (spShadowMirrorShowSource != null)
+                            EditorGUILayout.PropertyField(spShadowMirrorShowSource, new GUIContent("显示原图"));
+                        if (spShadowMirrorTintMix != null)
+                            EditorGUILayout.PropertyField(spShadowMirrorTintMix, new GUIContent("镜像混合"));
+                    }
+
+                    EditorGUI.indentLevel--;
+                }
+            }
+            EditorGUILayout.EndVertical();
+
             if (spShape.enumValueIndex == (int)DrawShape.None)
             {
-                EditorGUILayout.Space();
-
-                EditorGUILayout.BeginVertical("Box");
-                {
-                    // Shadow mode styled similarly to Transition Mode: a single field then indented settings.
-                    EditorGUILayout.PropertyField(spAppendShadow, new GUIContent("阴影模式"));
-                    if (spAppendShadow.boolValue)
-                    {
-                        EditorGUILayout.LabelField("阴影设置", EditorStyles.boldLabel);
-                        EditorGUI.indentLevel++;
-
-                        EditorGUILayout.PropertyField(spShadowOffsetLocal, new GUIContent("阴影偏移 (本地)"));
-
-                        // Shadow type dropdown
-                        EditorGUILayout.PropertyField(spShadowMode, new GUIContent("阴影类型"));
-
-                        // 阴影颜色（HDR）
-                        SerializedProperty spShadowColor = serializedObject.FindProperty("shadowColor");
-                        EditorGUI.BeginChangeCheck();
-                        EditorGUI.showMixedValue = spShadowColor.hasMultipleDifferentValues;
-                        Color newShadowColor = EditorGUILayout.ColorField(new GUIContent("阴影颜色"), spShadowColor.colorValue, true, true, true);
-                        EditorGUI.showMixedValue = false;
-                        if (EditorGUI.EndChangeCheck()) spShadowColor.colorValue = newShadowColor;
-
-                        EditorGUILayout.PropertyField(serializedObject.FindProperty("shadowBlurIntensity"), new GUIContent("阴影模糊强度"));
-                        EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingWidth"), new GUIContent("采样宽度"));
-                        EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingScale"), new GUIContent("采样缩放"));
-                        EditorGUILayout.PropertyField(serializedObject.FindProperty("allowOutOfBoundsShadow"), new GUIContent("允许超出边界阴影"));
-
-                        // Show 'show source' only when ShadowMode is Mirror
-                        if (!spShadowMode.hasMultipleDifferentValues && spShadowMode.intValue == (int)ImageEx.ShadowMode.Mirror)
-                        {
-                            EditorGUILayout.PropertyField(spShadowMirrorDirection, new GUIContent("镜像方向"));
-                            EditorGUILayout.PropertyField(spShadowMirrorScale, new GUIContent("镜像缩放"));
-                            EditorGUILayout.PropertyField(spShadowMirrorOffset, new GUIContent("镜像偏移"));
-                            if (spShadowMirrorShowSource != null)
-                                EditorGUILayout.PropertyField(spShadowMirrorShowSource, new GUIContent("显示原图"));
-                            if (spShadowMirrorTintMix != null)
-                                EditorGUILayout.PropertyField(spShadowMirrorTintMix, new GUIContent("镜像混合"));
-                        }
-
-                        EditorGUI.indentLevel--;
-                    }
-                }
-                EditorGUILayout.EndVertical();
-
                 // Flip controls (placed under Shadow settings, enabled only when DrawShape == None)
                 EditorGUILayout.Space();
                 EditorGUILayout.BeginVertical("Box");
