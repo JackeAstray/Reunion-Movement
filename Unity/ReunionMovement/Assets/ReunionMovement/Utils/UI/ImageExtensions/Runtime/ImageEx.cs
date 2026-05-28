@@ -18,6 +18,7 @@ namespace ReunionMovement.UI.ImageExtensions
         [SerializeField][Range(0, 100)] private float shadowBlurIntensity = 1f;
         [SerializeField] private float samplingWidth = 1f;
         [SerializeField] private float samplingScale = 1f;
+        [SerializeField][Range(0.1f, 4f)] private float shadowScale = 1f;
         [SerializeField] private bool allowOutOfBoundsShadow = true;
         [SerializeField] private ShadowMode shadowMode = ShadowMode.Shadow;
 
@@ -194,6 +195,7 @@ namespace ReunionMovement.UI.ImageExtensions
         private static readonly int shadowBlurIntensity_Sp = Shader.PropertyToID("_ShadowBlurIntensity");
         private static readonly int samplingWidth_Sp = Shader.PropertyToID("_SamplingWidth");
         private static readonly int samplingScale_Sp = Shader.PropertyToID("_SamplingScale");
+        private static readonly int shadowScale_Sp = Shader.PropertyToID("_ShadowScale");
         private static readonly int allowOutOfBoundsShadow_Sp = Shader.PropertyToID("_AllowOutOfBoundsShadow");
         private static readonly int shadowMode_Sp = Shader.PropertyToID("_ShadowMode");
         private static readonly int shadowMirrorDirection_Sp = Shader.PropertyToID("_ShadowMirrorDirection");
@@ -1128,6 +1130,19 @@ namespace ReunionMovement.UI.ImageExtensions
         }
 
         /// <summary>
+        /// 阴影缩放比例。1 为原始大小，>1 放大，<1 缩小。
+        /// </summary>
+        public float ShadowScale
+        {
+            get => shadowScale;
+            set
+            {
+                shadowScale = Mathf.Clamp(value, 0.1f, 4f);
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
         /// 是否允许阴影超出边界绘制
         /// </summary>
         public bool AllowOutOfBoundsShadow
@@ -1273,6 +1288,8 @@ namespace ReunionMovement.UI.ImageExtensions
             TransitionClamp = transitionClamp;
             TransitionTexClampPadding = transitionTexClampPadding;
             TransitionUseUv0 = transitionUseUv0;
+
+            ShadowScale = shadowScale;
 
             base.OnValidate();
             base.SetMaterialDirty();
@@ -1469,7 +1486,7 @@ namespace ReunionMovement.UI.ImageExtensions
                     if (flipVertical) effectiveShadowOffset.y = -effectiveShadowOffset.y;
 
                     ImageHelper.GenerateSimpleSprite(vh, preserveAspect, canvas, rectTransform, ActiveSprite,
-                        color, falloffDistance, appendShadow, effectiveShadowOffset);
+                        color, falloffDistance, appendShadow, effectiveShadowOffset, shadowScale);
                     break;
                 case Type.Filled:
                     ImageHelper.GenerateFilledSprite(vh, preserveAspect, canvas, rectTransform, ActiveSprite,
@@ -1564,6 +1581,7 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.SetFloat(shadowBlurIntensity_Sp, shadowBlurIntensity);
             mat.SetFloat(samplingWidth_Sp, samplingWidth);
             mat.SetFloat(samplingScale_Sp, samplingScale);
+            mat.SetFloat(shadowScale_Sp, shadowScale);
             mat.SetFloat(allowOutOfBoundsShadow_Sp, allowOutOfBoundsShadow ? 1f : 0f);
             mat.SetInt(shadowMode_Sp, (int)shadowMode);
             mat.SetInt(shadowMirrorDirection_Sp, (int)shadowMirrorDirection);
@@ -1852,6 +1870,7 @@ namespace ReunionMovement.UI.ImageExtensions
             shadowMode = (ShadowMode)mat.GetInt(shadowMode_Sp);
             samplingWidth = mat.GetFloat(samplingWidth_Sp);
             samplingScale = mat.GetFloat(samplingScale_Sp);
+            shadowScale = Mathf.Clamp(mat.GetFloat(shadowScale_Sp), 0.1f, 4f);
             allowOutOfBoundsShadow = mat.GetFloat(allowOutOfBoundsShadow_Sp) == 1;
 
             triangle.InitValuesFromMaterial(ref mat);

@@ -22,6 +22,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
         private SerializedProperty spShape;
         private SerializedProperty spStrokeWidth, spOutlineWidth, spOutlineColor, spFalloffDistance, spEnableDashedOutline, spCustomTime;
         private SerializedProperty spShadowMirrorDirection;
+        private SerializedProperty spShadowScale;
         private SerializedProperty spShadowMirrorScale, spShadowMirrorOffset;
         private SerializedProperty spShadowMirrorShowSource;
         private SerializedProperty spShadowMirrorTintMix;
@@ -60,6 +61,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             spEnableDashedOutline = serializedObject.FindProperty("enableDashedOutline");
             spCustomTime = serializedObject.FindProperty("customTime");
             spShadowMirrorDirection = serializedObject.FindProperty("shadowMirrorDirection");
+            spShadowScale = serializedObject.FindProperty("shadowScale");
             spShadowMirrorScale = serializedObject.FindProperty("shadowMirrorScale");
             spShadowMirrorOffset = serializedObject.FindProperty("shadowMirrorOffset");
             spShadowMirrorShowSource = serializedObject.FindProperty("shadowMirrorShowSource");
@@ -340,6 +342,8 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                     if (EditorGUI.EndChangeCheck()) spShadowColor.colorValue = newShadowColor;
 
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("shadowBlurIntensity"), new GUIContent("阴影衰减距离"));
+                    if (spShadowScale != null)
+                        EditorGUILayout.PropertyField(spShadowScale, new GUIContent("阴影缩放"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingWidth"), new GUIContent("采样宽度"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingScale"), new GUIContent("采样缩放"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("allowOutOfBoundsShadow"), new GUIContent("允许超出边界阴影"));
@@ -363,7 +367,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
 
             if (spShape.enumValueIndex == (int)DrawShape.None)
             {
-                // Flip controls (placed under Shadow settings, enabled only when DrawShape == None)
+                // 翻转控件（放置在“阴影”设置下，仅在DrawShape==None时启用）
                 EditorGUILayout.Space();
                 EditorGUILayout.BeginVertical("Box");
                 {
