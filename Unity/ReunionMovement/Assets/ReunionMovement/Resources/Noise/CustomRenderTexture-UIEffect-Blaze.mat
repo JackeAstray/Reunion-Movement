@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: CustomRenderTexture-UIEffect-Blaze
-  m_Shader: {fileID: 4800000, guid: dfaeac7731fb141568e45d384ea8121b, type: 3}
+  m_Shader: {fileID: 4800000, guid: 2db85f52dda3c724a836a0426f3250ae, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -28,7 +28,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: 3a87e98e830a24617ab95c19122cb1e0, type: 3}
+        m_Texture: {fileID: 2800000, guid: 9cd54f7c9ad00984a86d3f631eb9683c, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
