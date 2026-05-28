@@ -96,6 +96,7 @@ Shader "ReunionMovement/UI/ImageEx"
         _SamplingWidth ("Sampling Width", Float) = 1
         _SamplingScale ("Sampling Scale", Float) = 1
         _AllowOutOfBoundsShadow ("Allow Out Of Bounds Shadow", Float) = 1
+        _ShadowScale ("Shadow Scale", Range(0.1, 4)) = 1
         _ShadowMode ("Shadow Mode", Int) = 0
         _ShadowMirrorDirection ("Shadow Mirror Direction", Int) = 0
         _ShadowMirrorScale ("Shadow Mirror Scale", Float) = 1
@@ -202,6 +203,7 @@ Shader "ReunionMovement/UI/ImageEx"
             float _SamplingWidth;
             float _SamplingScale;
             float _AllowOutOfBoundsShadow;
+            float _ShadowScale;
             int _ShadowMode;
             int _ShadowMirrorDirection;
             float _ShadowMirrorScale;
@@ -1129,6 +1131,8 @@ Shader "ReunionMovement/UI/ImageEx"
                      half4 blurSample = 0;
                      bool allowOOB = _AllowOutOfBoundsShadow > 0.5;
 
+                     // 阴影缩放已在网格阶段完成，这里保持原始采样，避免与 SDF 再次缩放叠加导致圆角失真
+                     float shadowScale = max(_ShadowScale, 0.0001);
                      float2 sampleUv = texcoord;
                      if (!allowOOB) sampleUv = saturate(sampleUv);
                      fixed4 baseSample = tex2D(_MainTex, sampleUv) + _TextureSampleAdd;
@@ -1137,7 +1141,7 @@ Shader "ReunionMovement/UI/ImageEx"
                      // 注意：镜像模式会使用 _ShadowMirrorDirection/_ShadowMirrorScale/_ShadowMirrorOffset 控制变换。
                      if (_ShadowMode == 3)
                      {
-                         float2 mirrorUv = texcoord;
+                         float2 mirrorUv = sampleUv;
                          if (_ShadowMirrorDirection == 1)
                          {
                              mirrorUv.x = 1.0 - (mirrorUv.x - 0.5) * _ShadowMirrorScale - 0.5 + _ShadowMirrorOffset.x;
@@ -1172,6 +1176,8 @@ Shader "ReunionMovement/UI/ImageEx"
                          float sdfDataShadow = 0;
                          float shadowFalloffDistance = max(_ShadowBlurIntensity, 0.0001);
                          float pixelScaleShadow = clamp(1.0 / shadowFalloffDistance, 1.0 / 2048.0, 2048.0);
+
+                         // 阴影缩放已在网格阶段完成，SDF 使用原 shapeData 以保持圆角与边缘形状一致
                          #if RECTANGLE
                              sdfDataShadow = rectangleScene(IN.shapeData);
                          #elif CIRCLE

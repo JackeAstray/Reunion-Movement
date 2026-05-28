@@ -24,7 +24,7 @@ namespace UnityEngine.UI.ImageExtensions
         public static void GenerateSimpleSprite(VertexHelper vh, bool preserveAspect, Canvas canvas,
             RectTransform rectTransform, Sprite activeSprite, Color32 color, float falloffDistance)
         {
-            GenerateSimpleSprite(vh, preserveAspect, canvas, rectTransform, activeSprite, color, falloffDistance, false, Vector2.zero);
+            GenerateSimpleSprite(vh, preserveAspect, canvas, rectTransform, activeSprite, color, falloffDistance, false, Vector2.zero, 1f);
         }
 
         /// <summary>
@@ -41,7 +41,7 @@ namespace UnityEngine.UI.ImageExtensions
         /// <param name="appendShadow">是否附加阴影四边形。</param>
         /// <param name="shadowOffsetLocal">阴影的本地偏移量（以像素为单位，局部空间）。</param>
         public static void GenerateSimpleSprite(VertexHelper vh, bool preserveAspect, Canvas canvas,
-            RectTransform rectTransform, Sprite activeSprite, Color32 color, float falloffDistance, bool appendShadow, Vector2 shadowOffsetLocal)
+            RectTransform rectTransform, Sprite activeSprite, Color32 color, float falloffDistance, bool appendShadow, Vector2 shadowOffsetLocal, float shadowScale = 1f)
         {
             vh.Clear();
 
@@ -65,7 +65,7 @@ namespace UnityEngine.UI.ImageExtensions
             suv[2] = new Vector2(uv.z, uv.w);
             suv[3] = new Vector2(uv.z, uv.y);
 
-            AddQuad(vh, sxy, color, suv, size, fullBounds, appendShadow, shadowOffsetLocal);
+            AddQuad(vh, sxy, color, suv, size, fullBounds, appendShadow, shadowOffsetLocal, shadowScale);
         }
 
         /// <summary>
@@ -349,7 +349,8 @@ namespace UnityEngine.UI.ImageExtensions
             Vector2 size,
             Vector4 bounds,
             bool appendShadow,
-            Vector2 shadowOffsetLocal)
+            Vector2 shadowOffsetLocal,
+            float shadowScale = 1f)
         {
             // 插入 UV 以避免边缘出现纹理包裹伪影
             float epsilon = 0.001f;
@@ -361,11 +362,16 @@ namespace UnityEngine.UI.ImageExtensions
                 // 使用黑色通道标记阴影顶点，保留原始透明度
                 Color32 shadowColor = new Color32(0, 0, 0, color.a);
 
+                Vector2 shadowCenter = new Vector2((bounds.x + bounds.z) * 0.5f, (bounds.y + bounds.w) * 0.5f);
+                float safeShadowScale = Mathf.Max(0.0001f, shadowScale);
+
                 for (int i = 0; i < 4; ++i)
                 {
-                    Vector3 pos = quadPositions[i] + new Vector3(shadowOffsetLocal.x, shadowOffsetLocal.y, 0);
+                    Vector2 basePos = quadPositions[i];
+                    Vector2 scaledPos = (basePos - shadowCenter) * safeShadowScale + shadowCenter;
+                    Vector3 pos = (Vector3)scaledPos + new Vector3(shadowOffsetLocal.x, shadowOffsetLocal.y, 0);
 
-                    // 阴影四边形只偏移顶点位置，保持 uv1 与原图一致，避免偏移后因 Clamp01 导致的 SDF 裁剪。
+                    // 阴影四边形保持原始 uv1，以便 shader 内使用统一 shapeData 进行可控缩放与 SDF 计算。
                     float uBase = Mathf.InverseLerp(bounds.x, bounds.z, quadPositions[i].x);
                     float vBase = Mathf.InverseLerp(bounds.y, bounds.w, quadPositions[i].y);
 
