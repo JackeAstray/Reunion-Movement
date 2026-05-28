@@ -2294,8 +2294,8 @@ MonoBehaviour:
   m_PixelsPerUnitMultiplier: 1
   appendShadow: 1
   shadowOffsetLocal: {x: 5, y: -5}
-  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
-  shadowBlurIntensity: 1
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5882353}
+  shadowBlurIntensity: 0
   samplingWidth: 1
   samplingScale: 1
   allowOutOfBoundsShadow: 1
@@ -6143,7 +6143,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 939927898}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 31a19414c41e5ae4aae2af33fee712f6, type: 3}
   m_Name: 

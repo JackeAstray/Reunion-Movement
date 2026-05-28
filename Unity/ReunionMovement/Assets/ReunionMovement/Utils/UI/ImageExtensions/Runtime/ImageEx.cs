@@ -15,7 +15,7 @@ namespace ReunionMovement.UI.ImageExtensions
         [SerializeField] private bool appendShadow = false;
         [SerializeField] private Vector2 shadowOffsetLocal = new Vector2(8, -8);
         [SerializeField][ColorUsage(true, true)] private Color shadowColor = new Color(0, 0, 0, 0.5f);
-        [SerializeField][Range(0, 8)] private float shadowBlurIntensity = 1f;
+        [SerializeField][Range(0, 100)] private float shadowBlurIntensity = 1f;
         [SerializeField] private float samplingWidth = 1f;
         [SerializeField] private float samplingScale = 1f;
         [SerializeField] private bool allowOutOfBoundsShadow = true;
