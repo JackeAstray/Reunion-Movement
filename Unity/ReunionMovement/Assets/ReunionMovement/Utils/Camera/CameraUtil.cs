@@ -222,6 +222,12 @@ namespace ReunionMovement.Common.Util
             }
         }
 
+        /// <summary>
+        /// 根据水平和垂直输入沿摄像机的局部右向和上向平移目标位置，并按摄像机速度缩放；若设置了限制区域，则将位置约束在该盒形碰撞体内。
+        /// </summary>
+        /// <remarks>移动量以 csmoCameraSpeed * 0.001f 缩放，并在存在 restrictedZone 时将位置夹在盒形碰撞体内。</remarks>
+        /// <param name="horz">水平方向输入；正值将目标向摄像机左侧移动。</param>
+        /// <param name="vert">垂直方向输入；正值将目标向摄像机下方移动。</param>
         private void MoveCamera(float horz, float vert)
         {
             Vector3 moveDirection = (csmoCamera.transform.right * -horz) + (csmoCamera.transform.up * -vert);
@@ -230,16 +236,31 @@ namespace ReunionMovement.Common.Util
 
             if (restrictedZone != null)
             {
-                Vector3 newPosition = targetPos.position;
-                if (restrictedZone.bounds.Contains(newPosition))
-                {
-                    targetPos.position = newPosition;
-                }
-                else
-                {
-                    targetPos.position = restrictedZone.bounds.ClosestPoint(newPosition);
-                }
+                targetPos.position = ClampPointToBoxCollider(restrictedZone, targetPos.position);
             }
+        }
+
+        /// <summary>
+        /// 将给定的世界坐标点限制在指定 BoxCollider 的边界内并返回限制后的世界坐标点。
+        /// </summary>
+        /// <remarks>先将点转换到 BoxCollider 的局部空间，基于 center 和 size 计算最小/最大边界，对局部坐标的各分量使用
+        /// Mathf.Clamp，然后将结果转换回世界空间。</remarks>
+        /// <param name="box">裁剪所依据的 BoxCollider。</param>
+        /// <param name="worldPoint">待裁剪的世界坐标点。</param>
+        /// <returns>裁剪到 BoxCollider 边界内的世界坐标点。</returns>
+        private Vector3 ClampPointToBoxCollider(BoxCollider box, Vector3 worldPoint)
+        {
+            Transform boxTransform = box.transform;
+            Vector3 localPoint = boxTransform.InverseTransformPoint(worldPoint);
+
+            Vector3 min = box.center - (box.size * 0.5f);
+            Vector3 max = box.center + (box.size * 0.5f);
+
+            localPoint.x = Mathf.Clamp(localPoint.x, min.x, max.x);
+            localPoint.y = Mathf.Clamp(localPoint.y, min.y, max.y);
+            localPoint.z = Mathf.Clamp(localPoint.z, min.z, max.z);
+
+            return boxTransform.TransformPoint(localPoint);
         }
 
         /// <summary>
