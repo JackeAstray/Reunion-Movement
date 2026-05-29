@@ -114,6 +114,11 @@ namespace ReunionMovement.Common.Util
             currentDistance = distance;
         }
 
+        private void OnDestroy()
+        {
+            EnhancedTouchSupport.Disable();
+        }
+
         void Update()
         {
             if (checkPointerOverUI && IsPointerOverUI())
