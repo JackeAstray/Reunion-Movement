@@ -157,11 +157,11 @@ Shader "ReunionMovement/UI/ImageEx"
             #pragma multi_compile_local _ UNITY_UI_ALPHACLIP
             
             #pragma multi_compile_local _ CIRCLE TRIANGLE RECTANGLE PENTAGON HEXAGON CHAMFERBOX PARALLELOGRAM NSTAR_POLYGON HEART BLOBBYCROSS SQUIRCLE NTRIANGLE_ROUNDED
-                        
+
             #pragma multi_compile_local _ STROKE OUTLINED OUTLINED_STROKE
-            #pragma multi_compile_local _ GRADIENT_LINEAR GRADIENT_RADIAL GRADIENT_CORNER
-            #pragma multi_compile_local _ BLUR_FAST BLUR_MEDIUM BLUR_DETAIL
-            #pragma multi_compile_local _ TRANSITION_FADE TRANSITION_CUTOFF TRANSITION_DISSOLVE TRANSITION_SHINY TRANSITION_MASK TRANSITION_MELT TRANSITION_BURN TRANSITION_PATTERN TRANSITION_BLAZE
+            #pragma shader_feature_local _ GRADIENT_LINEAR GRADIENT_RADIAL GRADIENT_CORNER
+            #pragma shader_feature_local _ BLUR_FAST BLUR_MEDIUM BLUR_DETAIL
+            #pragma shader_feature_local _ TRANSITION_FADE TRANSITION_CUTOFF TRANSITION_DISSOLVE TRANSITION_SHINY TRANSITION_MASK TRANSITION_MELT TRANSITION_BURN TRANSITION_PATTERN TRANSITION_BLAZE
 
             struct appdata_t
             {
