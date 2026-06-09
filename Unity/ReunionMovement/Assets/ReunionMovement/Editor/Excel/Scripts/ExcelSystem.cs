@@ -9,6 +9,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
 
@@ -19,6 +20,7 @@ namespace ReunionMovement.EditorTools
         static readonly string toDirSO = "Assets/ReunionMovement/Editor/Excel/Resources";                                           // 源文件路径
         static readonly string scriptOutPutPath = "Assets/ReunionMovement/GenerateScript/AutoScripts/";                             // 脚本输出路径
         static readonly string scriptableOutPutPath = "Assets/ReunionMovement/Resources/ScriptableObjects/";                        // 脚本对象输出路径
+        static readonly string jsonOutPutPath = "Assets/ReunionMovement/Resources/AutoDatabase/";                                   // Json输出路径
 
         static int tableRows_Max = 3;                                           // 最大行数
         static int tableRows_1 = 0;                                             // 第一行中文名称
@@ -584,7 +586,119 @@ namespace ReunionMovement
         }
         #endregion
 
+        #region 表格 -> Json
+        [MenuItem("工具箱/表格处理/表格 -> JSON", false, 3)]
+        public static void ExcelToJson()
+        {
+            List<string> xlsxFiles = GetAllConfigFiles(toDirSO);
+
+            if (xlsxFiles.Count <= 0)
+            {
+                Log.Error("未找到任何表格！");
+                return;
+            }
+
+            foreach (var path in xlsxFiles)
+            {
+                ExcelToJson(path);
+            }
+
+            Log.Debug("表格转为Json完成！");
+        }
+
+        /// <summary>
+        /// Excel 转 Json
+        /// </summary>
+        /// <param name="path"></param>
+        public static void ExcelToJson(string path)
+        {
+            //等待编译结束
+            if (EditorApplication.isCompiling)
+            {
+                EditorUtility.DisplayDialog("警告", "等待编译结束。", "OK");
+                return;
+            }
+
+            //查看路径是否存在
+            if (Directory.Exists(jsonOutPutPath) == false)
+            {
+                Directory.CreateDirectory(jsonOutPutPath);
+            }
+
+            //构造Excel工具类
+            ExcelUtility excel = new ExcelUtility(path);
+
+            if (excel.ResultSet == null)
+            {
+                string msg = string.Format("文件“{0}”不是表格！", path);
+                Log.Warning(msg);
+                return;
+            }
+
+            //获取Excel文件的绝对路径
+            string output = jsonOutPutPath + Path.GetFileName(path);
+            output = output.Replace(".xlsx", ".json");
+            excel.ConvertToJson(output);
+
+            //刷新本地资源
+            AssetDatabase.Refresh();
+        }
+        #endregion
+
         #region 工具
+
+        /// <summary>
+        /// 根据字段类型枚举获取对应的解析类型
+        /// </summary>
+        /// <param name="fieldType"></param>
+        /// <returns></returns>
+        private static Type GetParseType(FieldTypes fieldType)
+        {
+            switch (fieldType)
+            {
+                case FieldTypes.Bool:
+                    return typeof(bool);
+                case FieldTypes.Int:
+                    return typeof(int);
+                case FieldTypes.Ints:
+                    return typeof(List<int>);
+                case FieldTypes.Float:
+                    return typeof(float);
+                case FieldTypes.Floats:
+                    return typeof(List<float>);
+                case FieldTypes.Double:
+                    return typeof(double);
+                case FieldTypes.Doubles:
+                    return typeof(List<double>);
+                case FieldTypes.Long:
+                    return typeof(long);
+                case FieldTypes.Longs:
+                    return typeof(List<long>);
+                case FieldTypes.Vector2:
+                    return typeof(Vector2);
+                case FieldTypes.Vector3:
+                    return typeof(Vector3);
+                case FieldTypes.Vector4:
+                    return typeof(Vector4);
+                case FieldTypes.Rect:
+                    return typeof(Rect);
+                case FieldTypes.Color:
+                    return typeof(Color);
+                case FieldTypes.String:
+                    return typeof(string);
+                case FieldTypes.Strings:
+                    return typeof(List<string>);
+                case FieldTypes.Object:
+                    return typeof(string);
+                case FieldTypes.CustomType:
+                case FieldTypes.CustomTypeList:
+                case FieldTypes.Unknown:
+                case FieldTypes.UnknownList:
+                default:
+                    return typeof(string);
+            }
+        }
+
         /// <summary>
         /// 解析单元格字符串到目标类型
         /// </summary>
@@ -600,10 +714,17 @@ namespace ReunionMovement
             {
                 var list = (IList)Activator.CreateInstance(type);
                 var itemType = type.GetGenericArguments()[0];
-                var items = value.Split(new[] { ';', '；' }, StringSplitOptions.RemoveEmptyEntries);
+
+                string trimValue = value.Trim();
+                if (trimValue.StartsWith("[") && trimValue.EndsWith("]"))
+                {
+                    trimValue = trimValue.Substring(1, trimValue.Length - 2);
+                }
+
+                var items = trimValue.Split(new[] { ';', '；', ',', '，' }, StringSplitOptions.RemoveEmptyEntries);
                 foreach (var item in items)
                 {
-                    list.Add(ParseValue(item, itemType)); // 递归调用时未传fieldType，因为itemType已定
+                    list.Add(ParseValue(item.Trim(), itemType)); // 递归调用时未传fieldType，因为itemType已定
                 }
                 return list;
             }
