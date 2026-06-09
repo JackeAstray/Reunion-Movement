@@ -11,7 +11,6 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Rendering.Universal;
 
 namespace ReunionMovement.EditorTools
 {
@@ -89,8 +88,6 @@ namespace ReunionMovement.EditorTools
             { FieldTypes.Object, "object" }
         };
         #endregion
-
-
 
         #region 表格 -> 脚本
         [MenuItem("工具箱/表格处理/表格 -> 脚本", false, 1)]
@@ -511,19 +508,46 @@ namespace ReunionMovement
                     foreach (DataColumn column in table.Columns)
                     {
                         string fieldName = table.Rows[tableRows_3][column].ToString().Trim();
-                        if (string.IsNullOrEmpty(fieldName))
+                        string fieldTypeStr = table.Rows[tableRows_2][column].ToString().Trim();
+
+                        if (string.IsNullOrEmpty(fieldName) || string.IsNullOrEmpty(fieldTypeStr))
                         {
                             continue;
                         }
+
                         string fieldValue = row[column].ToString().Trim();
 
-                        // 获取字段信息
+                        // 解析类型
+                        FieldTypes fieldType = GetFieldType(fieldTypeStr);
+
+                        if (fieldType == FieldTypes.Unknown)
+                        {
+                            FieldTypes tempFieldType = FieldTypes.UnknownList;
+                            if (fieldTypeStr.StartsWith("[") && fieldTypeStr.EndsWith("]"))
+                            {
+                                fieldTypeStr = fieldTypeStr.Substring(1, fieldTypeStr.Length - 2).Trim();
+                            }
+                            else if (fieldTypeStr.EndsWith("[]"))
+                            {
+                                fieldTypeStr = fieldTypeStr.Substring(0, fieldTypeStr.Length - 2).Trim();
+                            }
+                            else
+                            {
+                                tempFieldType = FieldTypes.Unknown;
+                            }
+
+                            fieldType = tempFieldType == FieldTypes.UnknownList ? FieldTypes.CustomTypeList : FieldTypes.CustomType;
+                        }
+
+                        // 获取字段信息，利用 GetFieldTypeString 得到的类型也可以用于后续校验（如需要）
+                        string expectedTypeStr = GetFieldTypeString(fieldType, fieldTypeStr);
+
                         FieldInfo field = config.GetType().GetField(fieldName, BindingFlags.Public | BindingFlags.Instance);
                         if (field != null)
                         {
                             try
                             {
-                                object value = ParseValue(fieldValue, field.FieldType);
+                                object value = ParseValue(fieldValue, field.FieldType, fieldType);
                                 field.SetValue(config, value);
                             }
                             catch (Exception ex)
@@ -533,7 +557,7 @@ namespace ReunionMovement
                         }
                         else
                         {
-                            Log.Warning($"在类型 '{configType.Name}' 中未找到公共字段：{fieldName}");
+                            Log.Warning($"在类型 '{configType.Name}' 中未找到公共字段：{fieldName} (期望类型: {expectedTypeStr})");
                         }
                     }
 
@@ -564,7 +588,7 @@ namespace ReunionMovement
         /// <summary>
         /// 解析单元格字符串到目标类型
         /// </summary>
-        private static object ParseValue(string value, Type type)
+        private static object ParseValue(string value, Type type, FieldTypes fieldType = FieldTypes.Unknown)
         {
             if (string.IsNullOrEmpty(value))
             {
@@ -579,33 +603,34 @@ namespace ReunionMovement
                 var items = value.Split(new[] { ';', '；' }, StringSplitOptions.RemoveEmptyEntries);
                 foreach (var item in items)
                 {
-                    list.Add(ParseValue(item, itemType));
+                    list.Add(ParseValue(item, itemType)); // 递归调用时未传fieldType，因为itemType已定
                 }
                 return list;
             }
 
             // Vector类型
-            if (type == typeof(Vector2) || type == typeof(Vector3) || type == typeof(Vector4))
+            if (type == typeof(Vector2) || type == typeof(Vector3) || type == typeof(Vector4) ||
+                fieldType == FieldTypes.Vector2 || fieldType == FieldTypes.Vector3 || fieldType == FieldTypes.Vector4)
             {
                 string[] parts = value.Trim('(', ')').Split(',');
-                if (type == typeof(Vector2) && parts.Length == 2)
+                if ((type == typeof(Vector2) || fieldType == FieldTypes.Vector2) && parts.Length == 2)
                     return new Vector2(float.Parse(parts[0]), float.Parse(parts[1]));
-                if (type == typeof(Vector3) && parts.Length == 3)
+                if ((type == typeof(Vector3) || fieldType == FieldTypes.Vector3) && parts.Length == 3)
                     return new Vector3(float.Parse(parts[0]), float.Parse(parts[1]), float.Parse(parts[2]));
-                if (type == typeof(Vector4) && parts.Length == 4)
+                if ((type == typeof(Vector4) || fieldType == FieldTypes.Vector4) && parts.Length == 4)
                     return new Vector4(float.Parse(parts[0]), float.Parse(parts[1]), float.Parse(parts[2]), float.Parse(parts[3]));
             }
-            
+
             // Rect类型
-            if (type == typeof(Rect))
+            if (type == typeof(Rect) || fieldType == FieldTypes.Rect)
             {
                 string[] parts = value.Trim('(', ')').Split(',');
-                 if (parts.Length == 4)
+                if (parts.Length == 4)
                     return new Rect(float.Parse(parts[0]), float.Parse(parts[1]), float.Parse(parts[2]), float.Parse(parts[3]));
             }
 
             // Color类型
-            if (type == typeof(Color))
+            if (type == typeof(Color) || fieldType == FieldTypes.Color)
             {
                 if (ColorUtility.TryParseHtmlString(value, out Color color))
                 {
