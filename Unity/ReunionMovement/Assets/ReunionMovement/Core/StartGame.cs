@@ -54,7 +54,12 @@ namespace ReunionMovement.Core
         public override Task OnBeforeInitAsync()
         {
             Log.Debug("初始化前执行");
-            GameOption.LoadOptions();
+
+            if (Application.platform != RuntimePlatform.WebGLPlayer)
+            {
+                GameOption.LoadOptions();
+            }
+
             return Task.CompletedTask;
         }
 
@@ -66,7 +71,10 @@ namespace ReunionMovement.Core
         {
             Log.Debug("游戏启动");
 
-            GameOption.ResetOptions();
+            if (Application.platform != RuntimePlatform.WebGLPlayer)
+            {
+                GameOption.ResetOptions();
+            }
 
             // 临时设置游戏选项
             //GameOption.currentOption.sfxMuted = false;
