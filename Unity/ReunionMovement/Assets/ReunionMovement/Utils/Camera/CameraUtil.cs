@@ -90,6 +90,12 @@ namespace ReunionMovement.Common.Util
         }
         #endregion
 
+        #region 动画过渡
+        private Coroutine targetPosCoroutine;
+        private Coroutine cameraViewCoroutine;
+        private Coroutine cameraZoomCoroutine;
+        #endregion
+
         void Start()
         {
             if (targetPos == null)
@@ -307,7 +313,7 @@ namespace ReunionMovement.Common.Util
                 Vector2 mousePosition = mouse.position.ReadValue();
                 if (raycastBase.CastRayFromScreenPoint(mousePosition, out RaycastHit hitInfo))
                 {
-                    Log.Debug("Hit: " + hitInfo.collider.name);
+                    Log.Debug($"CameraUtil: Hit {hitInfo.collider.gameObject.name} at {hitInfo.point}");
                 }
             }
 
@@ -318,11 +324,13 @@ namespace ReunionMovement.Common.Util
                 {
                     if (raycastBase.CastRayFromScreenPoint(t.screenPosition, out RaycastHit hitInfo))
                     {
-                        Log.Debug("Hit: " + hitInfo.collider.name);
+                        Log.Debug($"CameraUtil: Hit {hitInfo.collider.gameObject.name} at {hitInfo.point}");
                     }
                 }
             }
         }
+
+
 
         /// <summary>
         /// 旋转摄像机
@@ -383,11 +391,22 @@ namespace ReunionMovement.Common.Util
             csmoCamera.transform.position = target + (csmoCamera.transform.rotation * (Vector3.back * currentDistance)) + (csmoCamera.transform.right * lateralOffset) + (Vector3.up * offsetHeight);
         }
 
+        /// <summary>
+        /// 设置摄像机远近
+        /// </summary>
+        /// <param name="delta">变化量</param>
+        private void SetZoom(float delta)
+        {
+            distance += delta;
+            distance = Mathf.Clamp(distance, minDistance, maxDistance);
+            UpdatePosition();
+        }
+
         #region 公开方法
         /// <summary>
         /// 设置目标
         /// </summary>
-        /// <param name="target"></param>
+        /// <param name="target">目标对象</param>
         public void SetTarget(Transform target)
         {
             targetPos = target;
@@ -404,46 +423,134 @@ namespace ReunionMovement.Common.Util
         /// <summary>
         /// 设置目标位置
         /// </summary>
-        /// <param name="pos"></param>
+        /// <param name="pos">目标世界坐标</param>
+        /// <param name="duration">过渡时间（秒），≤0 则瞬间设置</param>
         public void SetTargetPos(Vector3 pos, float duration = 0.5f)
         {
-            targetPos.localPosition = pos;
+            if (targetPosCoroutine != null)
+                StopCoroutine(targetPosCoroutine);
+
+            if (duration <= 0f)
+            {
+                targetPos.position = pos;
+            }
+            else
+            {
+                targetPosCoroutine = StartCoroutine(AnimateTargetPos(pos, duration));
+            }
         }
 
         /// <summary>
         /// 设置摄像机视角
         /// </summary>
-        /// <param name="x"></param>
-        /// <param name="y"></param>
-        public void SetCameraView(float x, float y)
+        /// <param name="x">目标水平角度</param>
+        /// <param name="y">目标垂直角度</param>
+        /// <param name="duration">过渡时间（秒），≤0 则瞬间设置</param>
+        public void SetCameraView(float x, float y, float duration = 0.5f)
         {
-            rotX = ClampAngle(x, minRotX, maxRotX);
-            rotY = Mathf.Clamp(y, minRotY, maxRotY);
-            Quaternion addRot = Quaternion.Euler(0f, rotX, 0f);
-            destRot = addRot * Quaternion.Euler(rotY, 0f, 0f);
+            if (cameraViewCoroutine != null)
+                StopCoroutine(cameraViewCoroutine);
 
-            csmoCamera.transform.localEulerAngles = destRot.eulerAngles;
-
-            UpdatePosition();
+            if (duration <= 0f)
+            {
+                rotX = ClampAngle(x, minRotX, maxRotX);
+                rotY = Mathf.Clamp(y, minRotY, maxRotY);
+                Quaternion addRot = Quaternion.Euler(0f, rotX, 0f);
+                destRot = addRot * Quaternion.Euler(rotY, 0f, 0f);
+                csmoCamera.transform.localEulerAngles = destRot.eulerAngles;
+                UpdatePosition();
+            }
+            else
+            {
+                cameraViewCoroutine = StartCoroutine(AnimateCameraView(x, y, duration));
+            }
         }
 
         /// <summary>
         /// 设置摄像机远近
         /// </summary>
-        /// <param name="value"></param>
+        /// <param name="value">目标距离</param>
+        /// <param name="duration">过渡时间（秒），≤0 则瞬间设置</param>
         public void SetCameraZoom(float value, float duration = 0.5f)
         {
-            distance = value;
+            if (cameraZoomCoroutine != null)
+                StopCoroutine(cameraZoomCoroutine);
+
+            if (duration <= 0f)
+            {
+                distance = value;
+            }
+            else
+            {
+                cameraZoomCoroutine = StartCoroutine(AnimateCameraZoom(value, duration));
+            }
+        }
+        #endregion
+
+
+        #region 动画协程
+        /// <summary>
+        /// 平滑移动目标位置
+        /// </summary>
+        private System.Collections.IEnumerator AnimateTargetPos(Vector3 targetWorldPos, float duration)
+        {
+            Vector3 startPos = targetPos.position;
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                targetPos.position = Vector3.Lerp(startPos, targetWorldPos, t);
+                yield return null;
+            }
+            targetPos.position = targetWorldPos;
         }
 
         /// <summary>
-        /// 设置摄像头远近
+        /// 平滑旋转摄像机视角
         /// </summary>
-        public void SetZoom(float delta)
+        private System.Collections.IEnumerator AnimateCameraView(float targetX, float targetY, float duration)
         {
-            distance += delta;
-            distance = Mathf.Clamp(distance, minDistance, maxDistance);
+            float startX = rotX;
+            float startY = rotY;
+            targetX = ClampAngle(targetX, minRotX, maxRotX);
+            targetY = Mathf.Clamp(targetY, minRotY, maxRotY);
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                rotX = Mathf.LerpAngle(startX, targetX, t);
+                rotY = Mathf.Lerp(startY, targetY, t);
+                Quaternion addRot = Quaternion.Euler(0f, rotX, 0f);
+                destRot = addRot * Quaternion.Euler(rotY, 0f, 0f);
+                csmoCamera.transform.rotation = destRot;
+                UpdatePosition();
+                yield return null;
+            }
+            rotX = targetX;
+            rotY = targetY;
+            Quaternion finalRot = Quaternion.Euler(0f, rotX, 0f) * Quaternion.Euler(rotY, 0f, 0f);
+            destRot = finalRot;
+            csmoCamera.transform.rotation = destRot;
             UpdatePosition();
+        }
+
+        /// <summary>
+        /// 平滑缩放摄像机距离
+        /// </summary>
+        private System.Collections.IEnumerator AnimateCameraZoom(float targetDistance, float duration)
+        {
+            float startDistance = distance;
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                distance = Mathf.Lerp(startDistance, targetDistance, t);
+                yield return null;
+            }
+            distance = targetDistance;
         }
         #endregion
 
