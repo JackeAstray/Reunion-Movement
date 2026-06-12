@@ -13,8 +13,10 @@ namespace ReunionMovement.Common.Util
     {
         #region 目标
         // 目标对象
+        [Tooltip("摄像机跟随的目标对象，若不设置则默认查找名为 'Target' 的子对象")]
         public Transform targetPos;
         // 目标对象(原始)
+        [Tooltip("原始目标对象，提供一个默认位置以便重置，若不设置则默认查找名为 'Target' 的子对象")]
         public Transform targetPosOriginal;
         #endregion
 
@@ -25,27 +27,44 @@ namespace ReunionMovement.Common.Util
         [Space(10)]
 
         // 移动速度
+        [Tooltip("摄像机移动速度，数值越大移动越快")]
         public float csmoCameraSpeed = 50;
         // 如果不为空，摄像机将限制在该盒子碰撞器内
+        [Tooltip("如果不为空，摄像机将限制在该盒子碰撞器内")]
         public BoxCollider restrictedZone;
         // 鼠标
+        [Tooltip("鼠标输入，若不设置则自动获取")]
         private Mouse mouse;
         // 射线管理器
+        [Tooltip("射线检测管理器，负责从屏幕点发出射线并检测碰撞，自动使用指定的 layerMask 和摄像机")]
         private RaycastBase raycastBase;
         // 是否检查鼠标是否在UI上
+        [Tooltip("是否检查鼠标或触摸输入是否在UI上，启用后当输入在UI上时将不会进行摄像机控制")]
         public bool checkPointerOverUI = true;
         // 当前摄像机距离
+        [Tooltip("当前摄像机距离，自动更新以反映实际距离，启用遮挡物检测时会根据遮挡物调整")]
         private float currentDistance;
         // 鼠标点击射线检测层
+        [Tooltip("鼠标点击射线检测层")]
         public LayerMask layerMask;
+        // EnhancedTouch 全局引用计数，避免多实例互相关闭
+        private static int enhancedTouchRefCount;
+
+        // 启用到达 0 距离后继续沿摄像机 Z 轴前进
+        [Tooltip("启用到达 0 距离后继续沿摄像机 Z 轴前进")]
+        public bool enableForwardZoomAfterZero = false;
+        // 前进缩放累计位移（目标点沿摄像机 Z 轴前进的总量，用于回退）
+        private float forwardZoomDistance = 0f;
         #endregion
 
         [Space(10)]
 
         #region 遮挡物检测
+        [Tooltip("启用遮挡物检测，摄像机会自动调整位置以避免被遮挡物挡住")]
         // 是否启用遮挡物检测
         public bool enableObstructionCheck = true;
         // 遮挡物层
+        [Tooltip("遮挡物层")]
         public LayerMask obstructionMask;
         #endregion
 
@@ -53,24 +72,38 @@ namespace ReunionMovement.Common.Util
 
         #region 摄像机旋转/远近
         // 初始角度
+        [Tooltip("初始水平旋转角度（度）")]
         public float rotX = 0;
+        [Tooltip("初始垂直旋转角度（度）")]
         public float rotY = 0;
-
+        [Tooltip("摄像机高度偏移")]
         public float offsetHeight = 0f;
+        [Tooltip("摄像机水平偏移")]
         public float lateralOffset = 0f;
+        [Tooltip("摄像机距离目标的偏移距离")]
         public float offsetDistance = 30f;
+        [Tooltip("摄像机最大距离")]
         public float maxDistance = 30f;                     //最大距离
+        [Tooltip("摄像机最小距离")]
         public float minDistance = 10f;                     //最小距离
+        [Tooltip("摄像机缩放速度")]
         public float zoomSpeed = 50f;                       //缩放速度
+        [Tooltip("摄像机缩放值")]
         public float zoomValue = 50f;                       //缩放值
+        [Tooltip("摄像机旋转速度")]
         public float rotateSpeed = 15f;                     //转速
         [Space(10)]
+        [Tooltip("摄像机最大上下旋转角度")]
         public float maxRotY = 90f;                         //最大上下旋转角度
+        [Tooltip("摄像机最小上下旋转角度")]
         public float minRotY = -90f;                        //最小上下旋转角度
         [Space(10)]
+        [Tooltip("摄像机最小左右旋转角度")]
         public float minRotX = -180f;                       // 最小左右旋转角度
+        [Tooltip("摄像机最大左右旋转角度")]
         public float maxRotX = 180f;                        // 最大左右旋转角度
         [Space(10)]
+        [Tooltip("默认距离")]
         public float distance = 30f;                        //默认距离
         Quaternion destRot = Quaternion.identity;
         #endregion
@@ -79,8 +112,11 @@ namespace ReunionMovement.Common.Util
 
         #region 旋转控制
         // 旋转控制变量
+        [Tooltip("启用自动旋转，摄像机会以固定速度自动绕目标旋转")]
         public bool isRotating = false;
+        [Tooltip("自动旋转方向，左为逆时针，右为顺时针，None 为不旋转")]
         public RotationDirection rotationDirection = RotationDirection.None;
+        [Tooltip("自动旋转速度，单位为度/秒")]
         public float autoRotateSpeed = 15f;                 //自动转速
         public enum RotationDirection
         {
@@ -109,24 +145,61 @@ namespace ReunionMovement.Common.Util
             }
 
             mouse = Mouse.current;
-            EnhancedTouchSupport.Enable();
+            if (enhancedTouchRefCount == 0)
+            {
+                EnhancedTouchSupport.Enable();
+            }
+            enhancedTouchRefCount++;
 
             if (csmoCamera == null)
             {
-                csmoCamera = transform.Find("Camera").GetComponent<Camera>();
+                Transform cameraTransform = transform.Find("Camera");
+                if (cameraTransform != null)
+                {
+                    csmoCamera = cameraTransform.GetComponent<Camera>();
+                }
+                if (csmoCamera == null)
+                {
+                    csmoCamera = GetComponentInChildren<Camera>();
+                }
+            }
+
+            if (csmoCamera == null)
+            {
+                Debug.LogError("CameraUtil: 未找到可用 Camera 组件。", this);
+                enabled = false;
+                return;
+            }
+
+            if (targetPos == null)
+            {
+                Debug.LogError("CameraUtil: 未找到 Target 目标对象。", this);
+                enabled = false;
+                return;
             }
 
             raycastBase = new RaycastBase(layerMask, csmoCamera);
+            distance = Mathf.Clamp(distance, GetEffectiveMinDistance(), maxDistance);
             currentDistance = distance;
+            UpdatePosition();
         }
 
         private void OnDestroy()
         {
-            EnhancedTouchSupport.Disable();
+            enhancedTouchRefCount = Mathf.Max(0, enhancedTouchRefCount - 1);
+            if (enhancedTouchRefCount == 0)
+            {
+                EnhancedTouchSupport.Disable();
+            }
         }
 
         void Update()
         {
+            if (csmoCamera == null || targetPos == null)
+            {
+                return;
+            }
+
             if (checkPointerOverUI && IsPointerOverUI())
             {
                 return;
@@ -145,11 +218,23 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         private bool IsPointerOverUI()
         {
-            // 鼠标
-            if (mouse != null && mouse.leftButton.isPressed)
+            if (EventSystem.current == null)
             {
-                return EventSystem.current.IsPointerOverGameObject();
+                return false;
             }
+
+            // 鼠标（任意主要交互输入都检查）
+            if (mouse != null)
+            {
+                bool mouseInteracting = mouse.leftButton.isPressed ||
+                                        mouse.rightButton.isPressed ||
+                                        Mathf.Abs(mouse.scroll.ReadValue().y) > 0.01f;
+                if (mouseInteracting)
+                {
+                    return EventSystem.current.IsPointerOverGameObject();
+                }
+            }
+
             // 触摸
             if (Touch.activeTouches.Count > 0)
             {
@@ -219,7 +304,8 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         private void HandleAutoRotation()
         {
-            if (isRotating && !mouse.leftButton.isPressed && !mouse.rightButton.isPressed)
+            bool hasMouseInput = mouse != null && (mouse.leftButton.isPressed || mouse.rightButton.isPressed);
+            if (isRotating && !hasMouseInput)
             {
                 float rotationStep = autoRotateSpeed * Time.deltaTime;
                 if (rotationDirection == RotationDirection.Left)
@@ -358,24 +444,39 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         private void UpdatePosition()
         {
+            float minZoomDistance = GetEffectiveMinDistance();
+            distance = Mathf.Clamp(distance, minZoomDistance, maxDistance);
             offsetDistance = Mathf.MoveTowards(offsetDistance, distance, Time.deltaTime * zoomSpeed);
 
+            if (!enableForwardZoomAfterZero)
+            {
+                forwardZoomDistance = 0f;
+            }
+            forwardZoomDistance = Mathf.Max(0f, forwardZoomDistance);
+
             Vector3 target = targetPos != null ? targetPos.position : Vector3.zero;
-            Vector3 desiredCameraPos = (target + (Vector3.up * offsetHeight)) +
-                                      (csmoCamera.transform.rotation * (Vector3.forward * -offsetDistance)) +
-                                      (csmoCamera.transform.right * lateralOffset);
+
+            // 基础摄像机位置（不含任何额外偏移，直接由目标点和后退距离决定）
+            Vector3 baseCameraPos = target + (Vector3.up * offsetHeight) +
+                                   (csmoCamera.transform.rotation * (Vector3.back * offsetDistance)) +
+                                   (csmoCamera.transform.right * lateralOffset);
 
             if (enableObstructionCheck)
             {
-                // 遮挡检测
-                Vector3 direction = desiredCameraPos - target;
+                Vector3 direction = baseCameraPos - target;
                 float desiredDistance = direction.magnitude;
-                Ray ray = new Ray(target, direction.normalized);
-                RaycastHit hit;
-                if (Physics.Raycast(ray, out hit, desiredDistance, obstructionMask))
+                if (desiredDistance > 0.0001f)
                 {
-                    currentDistance = hit.distance - 0.2f; // 0.2f为缓冲距离，防止摄像机贴面
-                    currentDistance = Mathf.Clamp(currentDistance, minDistance, desiredDistance);
+                    Ray ray = new Ray(target, direction.normalized);
+                    if (Physics.Raycast(ray, out RaycastHit hit, desiredDistance, obstructionMask))
+                    {
+                        currentDistance = Mathf.Clamp(hit.distance - 0.2f, minZoomDistance, desiredDistance);
+                        offsetDistance = Mathf.Min(offsetDistance, currentDistance);
+                    }
+                    else
+                    {
+                        currentDistance = Mathf.MoveTowards(currentDistance, offsetDistance, Time.deltaTime * zoomSpeed);
+                    }
                 }
                 else
                 {
@@ -387,18 +488,66 @@ namespace ReunionMovement.Common.Util
                 currentDistance = Mathf.MoveTowards(currentDistance, offsetDistance, Time.deltaTime * zoomSpeed);
             }
 
-            // 重新计算摄像机位置
-            csmoCamera.transform.position = target + (csmoCamera.transform.rotation * (Vector3.back * currentDistance)) + (csmoCamera.transform.right * lateralOffset) + (Vector3.up * offsetHeight);
+            // 使用 currentDistance 重建位置
+            Vector3 finalCameraPos = target + (Vector3.up * offsetHeight) +
+                                    (csmoCamera.transform.rotation * (Vector3.back * currentDistance)) +
+                                    (csmoCamera.transform.right * lateralOffset);
+
+            csmoCamera.transform.position = finalCameraPos;
         }
 
         /// <summary>
         /// 设置摄像机远近
         /// </summary>
-        /// <param name="delta">变化量</param>
+        /// <param name="delta">变化量，负值=放大拉近，正值=缩小拉远</param>
         private void SetZoom(float delta)
         {
-            distance += delta;
-            distance = Mathf.Clamp(distance, minDistance, maxDistance);
+            float minZoomDistance = GetEffectiveMinDistance();
+
+            if (enableForwardZoomAfterZero)
+            {
+                if (delta < 0f)
+                {
+                    // 放大：先缩近距离，到最小值后移动目标点沿摄像机Z轴前进
+                    float desiredDistance = distance + delta;
+                    distance = Mathf.Max(minZoomDistance, desiredDistance);
+                    float leftover = desiredDistance - distance;
+                    if (leftover < 0f)
+                    {
+                        float forwardAmount = -leftover;
+                        Vector3 oldTargetPos = targetPos.position;
+                        Vector3 newTargetPos = oldTargetPos + csmoCamera.transform.forward * forwardAmount;
+                        if (restrictedZone != null)
+                        {
+                            newTargetPos = ClampPointToBoxCollider(restrictedZone, newTargetPos);
+                        }
+                        targetPos.position = newTargetPos;
+                        // 记录实际前进量（可能被 restrictedZone 限制）
+                        float actualForward = Vector3.Dot(newTargetPos - oldTargetPos, csmoCamera.transform.forward);
+                        forwardZoomDistance += Mathf.Max(0f, actualForward);
+                    }
+                }
+                else if (delta > 0f)
+                {
+                    // 缩小：先回退目标点前进量，再增加距离
+                    float consumeForward = Mathf.Min(forwardZoomDistance, delta);
+                    if (consumeForward > 0f)
+                    {
+                        forwardZoomDistance -= consumeForward;
+                        targetPos.position -= csmoCamera.transform.forward * consumeForward;
+                    }
+                    distance += (delta - consumeForward);
+                }
+
+                distance = Mathf.Clamp(distance, minZoomDistance, maxDistance);
+                forwardZoomDistance = Mathf.Max(0f, forwardZoomDistance);
+            }
+            else
+            {
+                forwardZoomDistance = 0f;
+                distance = Mathf.Clamp(distance + delta, minZoomDistance, maxDistance);
+            }
+
             UpdatePosition();
         }
 
@@ -476,13 +625,17 @@ namespace ReunionMovement.Common.Util
             if (cameraZoomCoroutine != null)
                 StopCoroutine(cameraZoomCoroutine);
 
+            float clampedValue = Mathf.Clamp(value, GetEffectiveMinDistance(), maxDistance);
+
             if (duration <= 0f)
             {
-                distance = value;
+                distance = clampedValue;
+                forwardZoomDistance = 0f;
+                UpdatePosition();
             }
             else
             {
-                cameraZoomCoroutine = StartCoroutine(AnimateCameraZoom(value, duration));
+                cameraZoomCoroutine = StartCoroutine(AnimateCameraZoom(clampedValue, duration));
             }
         }
         #endregion
@@ -541,18 +694,27 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         private System.Collections.IEnumerator AnimateCameraZoom(float targetDistance, float duration)
         {
+            float clampedTargetDistance = Mathf.Clamp(targetDistance, GetEffectiveMinDistance(), maxDistance);
             float startDistance = distance;
             float elapsed = 0f;
             while (elapsed < duration)
             {
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / duration);
-                distance = Mathf.Lerp(startDistance, targetDistance, t);
+                distance = Mathf.Lerp(startDistance, clampedTargetDistance, t);
+                forwardZoomDistance = 0f;
                 yield return null;
             }
-            distance = targetDistance;
+            distance = clampedTargetDistance;
+            forwardZoomDistance = 0f;
+            UpdatePosition();
         }
         #endregion
+
+        private float GetEffectiveMinDistance()
+        {
+            return enableForwardZoomAfterZero ? 0f : minDistance;
+        }
 
         // 辅助：把角度归一化到 -180~180 并在范围内夹取
         private float ClampAngle(float angle, float min, float max)
