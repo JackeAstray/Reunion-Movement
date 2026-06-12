@@ -162,6 +162,10 @@ Shader "ReunionMovement/UI/ImageEx"
             #pragma shader_feature_local _ GRADIENT_LINEAR GRADIENT_RADIAL GRADIENT_CORNER
             #pragma shader_feature_local _ BLUR_FAST BLUR_MEDIUM BLUR_DETAIL
             #pragma shader_feature_local _ TRANSITION_FADE TRANSITION_CUTOFF TRANSITION_DISSOLVE TRANSITION_SHINY TRANSITION_MASK TRANSITION_MELT TRANSITION_BURN TRANSITION_PATTERN TRANSITION_BLAZE
+            // UIEffect 风格：将可选功能提升为可剥离关键词（默认不启用，保持现有属性分支行为）
+            #pragma shader_feature_local _ DASHED_OUTLINE_STATIC
+            #pragma shader_feature_local _ TRANSITION_CLAMP_STATIC
+            #pragma shader_feature_local _ TRANSITION_UV_EFFECT_STATIC
 
             struct appdata_t
             {
@@ -333,28 +337,8 @@ Shader "ReunionMovement/UI/ImageEx"
                 float _NTriangleRoundedNumber;
             #endif
 
-            //渐变
-            #if GRADIENT_LINEAR || GRADIENT_RADIAL
-                float4 SampleGradient(float Time)
-                {
-                    float3 color = colors[0].rgb;
-                    [unroll]
-                    for (int c = 1; c < 8; c ++)
-                    {
-                        float colorPos = saturate((Time - colors[c - 1].w) / (colors[c].w - colors[c - 1].w)) * step(c, _GradientColorLength - 1);
-                        color = lerp(color, colors[c].rgb, lerp(colorPos, step(0.01, colorPos), _GradientInterpolationType));
-                    }
-                    
-                    float alpha = alphas[0].x;
-                    [unroll]
-                    for (int a = 1; a < 8; a ++)
-                    {
-                        float alphaPos = saturate((Time - alphas[a - 1].y) / (alphas[a].y - alphas[a - 1].y)) * step(a, _GradientAlphaLength - 1);
-                        alpha = lerp(alpha, alphas[a].x, lerp(alphaPos, step(0.01, alphaPos), _GradientInterpolationType));
-                    }
-                    return float4(color, alpha);
-                }
-            #endif
+            // 渐变（GRADIENT）模块
+            #include "ImageEx.Gradient.cginc"
 
             // 共享 SDF alpha 遮罩计算：主图与阴影复用同一套结果
             float computeSdfMask(float sdfData, float pixelScale)
@@ -826,222 +810,24 @@ Shader "ReunionMovement/UI/ImageEx"
             }
             // -------------------- 矩形（RECTANGLE） 结束 --------------------
             // -------------------- 过渡（TRANSITION） 开始 --------------------
-
-            half4 apply_color_filter(int mode, half4 inColor, half4 factor, float intensity, float glow)
-            {
-                half4 color = inColor;
-                if (mode == 1) // Color.Multiply
-                {
-                    color.rgb = color.rgb * factor.rgb;
-                    color *= factor.a;
-                }
-                else if (mode == 2) // Color.Additive
-                {
-                    color.rgb = color.rgb + factor.rgb * color.a * factor.a;
-                }
-                else if (mode == 3) // Color.Subtractive
-                {
-                    color.rgb = color.rgb - factor.rgb * color.a * color.a;
-                }
-                else if (mode == 4) // Color.Replace
-                {
-                    color.rgb = factor.rgb * color.a;
-                    color *= factor.a;
-                }
-                else if (mode == 5) // Color.MultiplyLuminance
-                {
-                    color.rgb = (1 + Luminance(color.rgb)) * factor.rgb * factor.a / 2 * color.a;
-                }
-                else if (mode == 6) // Color.MultiplyAdditive
-                {
-                    color.rgb = color.rgb * (1 + factor.rgb * factor.a);
-                }
-                else if (mode == 7) // Color.HsvModifier
-                {
-                    const float3 hsv = rgb_to_hsv(color.rgb);
-                    color.rgb = hsv_to_rgb(hsv + factor.rgb) * color.a * color.a;
-                    color.a = inColor.a * factor.a;
-                }
-                else if (mode == 8) // Color.Contrast
-                {
-                    color.rgb = ((color.rgb - 0.5) * (factor.r + 1) + 0.5 + factor.g * 1.5) * color.a * factor.a;
-                    color.a = color.a * factor.a;
-                }
-
-                if (0 < mode)
-                {
-                    color = lerp(inColor, color, intensity);
-                    color.a *= 1 - glow * intensity;
-                }
-
-                return color;
-            }
-
-            float transition_rate()
-            {
-                if (abs(_TransitionAutoPlaySpeed) > 0.001)
-                    return frac(_TransitionAutoPlaySpeed * _Time.y + _TransitionRate);
-                return _TransitionRate;
-            }
-
-            float transition_alpha(float2 uvLocal)
-            {
-                float2 uv = uvLocal;
-                if (_TransitionTexRotation != 0)
-                    uv = rotateUV(uv, radians(_TransitionTexRotation), float2(0.5, 0.5));
-                
-                uv = uv * _TransitionTex_ST.xy + _TransitionTex_ST.zw;
-
-                // 说明：
-                // - Shiny/Mask/Melt/Burn 模式对纹理环绕带来的接缝很敏感。
-                // - 当使用 _TransitionTexRotation 时，UV 可能超出 [0,1] 区间；如果纹理为 Repeat 且使用双线性滤波，会出现随旋转移动的接缝。
-                // 对这些过渡模式，我们会无条件将 UV 限制在有效范围内以避免接缝。
-                #if TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN
-                    uv = saturate(uv);
-                #else
-                    if (_TransitionClamp > 0.5)
-                    {
-                        uv = saturate(uv);
-                    }
-                #endif
-                
-                float2 uvSample = uv + _Time.y * _TransitionTex_Speed;
-
-                // 当 WrapMode=Repeat 且 FilterMode=Bilinear 时，在图块边缘采样会与对边混合，导致随旋转移动的接缝。
-                // 为避免直接对齐采样像素（会破坏平滑运动），对每个重复图块内部使用少量像素的内边距进行 clamp。
-                #if TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN
-                    float2 pad = _TransitionTex_TexelSize.xy * max(_TransitionTexClampPadding, 0);
-                    float2 tileUv = frac(uvSample);
-                    tileUv = clamp(tileUv, pad, 1.0 - pad);
-                    uvSample = floor(uvSample) + tileUv;
-                #endif
-
-                // 强制使用 LOD 0，避免 mip 级别混合导致在锐利过渡图案上出现接缝。
-                float alpha = tex2Dlod(_TransitionTex, float4(uvSample, 0, 0)).a;
-                alpha = _TransitionReverse ? 1 - alpha : alpha;
-
-                // 避免出现精确的 0/1 值（某些过渡模式会放大边缘精度问题），对 alpha 做微小夹取
-                #if TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN
-                    alpha = clamp(alpha, 1e-4, 1.0 - 1e-4);
-                #endif
-
-                return alpha;
-            }
-
-
-            float2 move_transition_filter(float4 uvMask, float alpha)
-            {
-                #if !TRANSITION_MELT && !TRANSITION_BURN
-                    return 0;
-                #endif
-
-                const float factor = alpha - transition_rate() * (1 + _TransitionWidth * 1.5) + _TransitionWidth;
-                const float band = max(0, _TransitionWidth - factor);
-
-                #if TRANSITION_MELT
-                    return float2(0, +band * band * (uvMask.w - uvMask.y) / max(0.01, _TransitionWidth));
-                #elif TRANSITION_BURN
-                    return float2(0, -band * band * (uvMask.w - uvMask.y) / max(0.01, _TransitionWidth));
-                #endif
-
-                return 0;
-            }
-
-            half4 apply_transition_filter(half4 color, float alpha, float2 uvLocal)
-            {
-                #if TRANSITION_FADE
-                    color *= saturate(alpha + 1 - transition_rate() * 2);
-                #elif TRANSITION_CUTOFF
-                    color *= step(0.001, alpha - transition_rate());
-                #elif TRANSITION_PATTERN
-                    const half4 patternColor = apply_color_filter(_TransitionColorFilter, half4(color.rgb, 1), half4(_TransitionColor.rgb * color.a, 1), _TransitionColor.a, _TransitionColorGlow);
-                    
-                    float isPattern = min(inv_lerp(_TransitionRange.x, _TransitionRange.y, uvLocal.x), 0.995) < (_TransitionPatternReverse ? alpha : 1 - alpha);
-                    isPattern = _TransitionPatternReverse ? isPattern : 1 - isPattern;
-                    
-                    color.rgb = lerp(color.rgb, patternColor.rgb, isPattern);
-                #elif TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN
-                    const float factor = alpha - transition_rate() * (1 + _TransitionWidth) + _TransitionWidth;
-                    const float softness = max(0.0001, _TransitionWidth * _TransitionSoftness);
-                    const half bandLerp = saturate((_TransitionWidth - factor) * 2 / softness);
-                    const half softLerp = saturate(factor * 2 / softness);
-                    
-                    half4 bandColor = apply_color_filter(_TransitionColorFilter, half4(color.rgb, 1),
-                                             half4(_TransitionColor.rgb, 1), _TransitionColor.a, _TransitionColorGlow);
-                    bandColor *= color.a;
-
-                    #if TRANSITION_MELT
-                        color = lerp(color, bandColor, bandLerp);
-                        return color;
-                    #elif TRANSITION_BURN
-                        color = lerp(color, bandColor, bandLerp * 1.25);
-                        color.a *= 1 - inv_lerp(0.85, 1.0, bandLerp * 1.25);
-                        color.rgb *= (1 - inv_lerp(0.85, 1.0, bandLerp * 1.3)) * color.a;
-                        return color;
-                    #endif
-
-                    half lerpFactor = bandLerp * softLerp;
-                    color = lerp(color, bandColor, lerpFactor);
-
-                    #if TRANSITION_DISSOLVE
-                        color *= softLerp;
-                    #elif TRANSITION_MASK
-                        color *= bandLerp * softLerp;
-                    #endif
-                #elif TRANSITION_BLAZE
-                    const float maxValue = transition_rate();
-                    const float minValue = maxValue - _TransitionWidth / 2;
-                    const float rate = 1 - inv_lerp(minValue, maxValue, alpha * (1 - _TransitionWidth / 2));
-                    const float4 gradColor = tex2D(_TransitionGradientTex, float2(rate, 0.5)); // 将过渡纹理用作渐变
-                    const float4 burntColor = gradColor * color;
-                    const float4 flameColor = float4(gradColor.rgb, gradColor.a * color.a);
-
-                    color = lerp(burntColor, flameColor, step(0.5, rate));
-                    color.rgb *= color.a;
-                #endif
-
-                return color;
-            }
+            #include "ImageEx.Transition.cginc"
             // -------------------- 过渡（TRANSITION） 结束 ---------------------
 
-            half4 ApplyBlur(float2 uv)
-            {
-                #if BLUR_FAST || BLUR_MEDIUM || BLUR_DETAIL
-                    if (_BlurIntensity > 0)
-                    {
-                        #if BLUR_FAST
-                            const int KERNEL_SIZE = 5;
-                            const float KERNEL_[5] = {0.2486, 0.7046, 1.0, 0.7046, 0.2486};
-                        #elif BLUR_MEDIUM
-                            const int KERNEL_SIZE = 9;
-                            const float KERNEL_[9] = { 0.0438, 0.1719, 0.4566, 0.8204, 1.0, 0.8204, 0.4566, 0.1719, 0.0438};
-                        #elif BLUR_DETAIL
-                            const int KERNEL_SIZE = 13;
-                            const float KERNEL_[13] = { 0.0438, 0.1138, 0.2486, 0.4566, 0.7046, 0.9141, 1.0, 0.9141, 0.7046, 0.4566, 0.2486, 0.1138, 0.0438};
-                        #endif
+            // -------------------- 模糊（BLUR） 开始 --------------------
+            #include "ImageEx.Blur.cginc"
+            // -------------------- 模糊（BLUR） 结束 ---------------------
 
-                        float4 o = 0;
-                        float sum = 0;
-                        float2 shift = 0;
-                        const half2 blurStep = _MainTex_TexelSize.xy * _BlurIntensity * 2;
+            // -------------------- 描边（OUTLINE） 开始 --------------------
+            #include "ImageEx.Outline.cginc"
+            // -------------------- 描边（OUTLINE） 结束 ---------------------
 
-                        for (int x = 0; x < KERNEL_SIZE; x++)
-                        {
-                            shift.x = blurStep.x * (float(x) - KERNEL_SIZE / 2);
-                            for (int y = 0; y < KERNEL_SIZE; y++)
-                            {
-                                shift.y = blurStep.y * (float(y) - KERNEL_SIZE / 2);
-                                float2 bluredUv = uv + shift;
-                                float weight = KERNEL_[x] * KERNEL_[y];
-                                o += (tex2D(_MainTex, bluredUv) + _TextureSampleAdd) * weight;
-                                sum += weight;
-                            }
-                        }
-                        return sum > 0 ? o / sum : (tex2D(_MainTex, uv) + _TextureSampleAdd);
-                    }
-                #endif
-                return (tex2D(_MainTex, uv) + _TextureSampleAdd);
-            }
+            // -------------------- 阴影（SHADOW） 开始 --------------------
+            #include "ImageEx.Shadow.cginc"
+            // -------------------- 阴影（SHADOW） 结束 ---------------------
+
+            // -------------------- 形状分发（SHAPE DISPATCH） 开始 --------------------
+            #include "ImageEx.ShapeDispatch.cginc"
+            // -------------------- 形状分发（SHAPE DISPATCH） 结束 ---------------------
 
             //顶点着色器
             v2f vert(appdata_t v)
@@ -1096,7 +882,12 @@ Shader "ReunionMovement/UI/ImageEx"
                 half4 color = IN.color;
                 half2 texcoord = IN.texcoord;
                 float2 effectsUv = IN.effectsUv;
-                float2 transitionBaseUv = (_TransitionUseUv0 > 0.5) ? texcoord : effectsUv;
+                float2 transitionBaseUv = texcoord;
+                #if TRANSITION_UV_EFFECT_STATIC
+                    transitionBaseUv = effectsUv;
+                #else
+                    transitionBaseUv = (_TransitionUseUv0 > 0.5) ? texcoord : effectsUv;
+                #endif
                 float2 transitionUv = transitionBaseUv;
                 float2 transitionFilterUv = transitionBaseUv;
 
@@ -1126,96 +917,8 @@ Shader "ReunionMovement/UI/ImageEx"
 
                 if (isShadowVertex)
                 {
-                    float2 texel = _MainTex_TexelSize.xy * _SamplingScale * _SamplingWidth;
-
-                     half4 blurSample = 0;
-                     bool allowOOB = _AllowOutOfBoundsShadow > 0.5;
-
-                     // 阴影缩放已在网格阶段完成，这里保持原始采样，避免与 SDF 再次缩放叠加导致圆角失真
-                     float shadowScale = max(_ShadowScale, 0.0001);
-                     float2 sampleUv = texcoord;
-                     if (!allowOOB) sampleUv = saturate(sampleUv);
-                     fixed4 baseSample = tex2D(_MainTex, sampleUv) + _TextureSampleAdd;
-
-                     // 如果为镜像模式（Shadow Mirror），则采样镜像纹理并根据设置生成反射效果而非阴影。
-                     // 注意：镜像模式会使用 _ShadowMirrorDirection/_ShadowMirrorScale/_ShadowMirrorOffset 控制变换。
-                     if (_ShadowMode == 3)
-                     {
-                         float2 mirrorUv = sampleUv;
-                         if (_ShadowMirrorDirection == 1)
-                         {
-                             mirrorUv.x = 1.0 - (mirrorUv.x - 0.5) * _ShadowMirrorScale - 0.5 + _ShadowMirrorOffset.x;
-                         }
-                         else
-                         {
-                             mirrorUv.y = 1.0 - (mirrorUv.y - 0.5) * _ShadowMirrorScale - 0.5 + _ShadowMirrorOffset.y;
-                         }
-                         if (!_AllowOutOfBoundsShadow) mirrorUv = saturate(mirrorUv);
-                         fixed4 mirrorSample = tex2D(_MainTex, mirrorUv) + _TextureSampleAdd;
-                         float mirrorA = mirrorSample.a;
-                         float mirrorShadowAlpha = mirrorA * _ShadowColor.a * IN.color.a;
-                         half4 mirrorShadowOut = half4(_ShadowColor.rgb * mirrorShadowAlpha, mirrorShadowAlpha);
-
-                         if (_ShadowMirrorShowSource > 0.5)
-                         {
-                             half4 tint = lerp(_ShadowColor, _Color, clamp(_ShadowMirrorTintMix, 0.0, 1.0));
-                             half4 src = mirrorSample * tint;
-                             #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
-                                 src = apply_transition_filter(src, transAlpha, transitionFilterUv);
-                             #endif
-                             return src;
-                         }
-
-                         return mirrorShadowOut;
-                     }
-
-                     float shadowMask = baseSample.a;
-
-                     // 阴影复用 ImageEx 现有的衰减逻辑：仍使用相同 sampleSdf 曲线，但由阴影参数驱动距离
-                     #if RECTANGLE || CIRCLE || PENTAGON || TRIANGLE || HEXAGON || CHAMFERBOX || PARALLELOGRAM || NSTAR_POLYGON || HEART || BLOBBYCROSS || SQUIRCLE || NTRIANGLE_ROUNDED
-                         float sdfDataShadow = 0;
-                         float shadowFalloffDistance = max(_ShadowBlurIntensity, 0.0001);
-                         float pixelScaleShadow = clamp(1.0 / shadowFalloffDistance, 1.0 / 2048.0, 2048.0);
-
-                         // 阴影缩放已在网格阶段完成，SDF 使用原 shapeData 以保持圆角与边缘形状一致
-                         #if RECTANGLE
-                             sdfDataShadow = rectangleScene(IN.shapeData);
-                         #elif CIRCLE
-                             sdfDataShadow = circleScene(IN.shapeData);
-                         #elif PENTAGON
-                             sdfDataShadow = pentagonScene(IN.shapeData);
-                         #elif TRIANGLE
-                             sdfDataShadow = triangleScene(IN.shapeData);
-                         #elif HEXAGON
-                             sdfDataShadow = hexagonScene(IN.shapeData);
-                         #elif CHAMFERBOX
-                             sdfDataShadow = chamferBoxScene(IN.shapeData);
-                         #elif PARALLELOGRAM
-                             sdfDataShadow = parallelogramScene(IN.shapeData);
-                         #elif NSTAR_POLYGON
-                             sdfDataShadow = nStarPolygonScene(IN.shapeData);
-                         #elif HEART
-                             sdfDataShadow = heartScene(IN.shapeData);
-                         #elif BLOBBYCROSS
-                             sdfDataShadow = blobbyCrossScene(IN.shapeData);
-                         #elif SQUIRCLE
-                             sdfDataShadow = squircleScene(IN.shapeData);
-                         #elif NTRIANGLE_ROUNDED
-                             sdfDataShadow = nTriangleRoundedScene(IN.shapeData);
-                         #endif
-
-                         shadowMask *= computeSdfMask(sdfDataShadow, pixelScaleShadow);
-                     #endif
-
-                     float shadowAlpha = shadowMask * _ShadowColor.a * IN.color.a;
-                     half4 shadowOut = half4(_ShadowColor.rgb * shadowAlpha, shadowAlpha);
-
-                     #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
-                         shadowOut = apply_transition_filter(shadowOut, transAlpha, transitionFilterUv);
-                     #endif
-
-                     return shadowOut;
-                  }
+                    return RenderShadow(IN, texcoord, transAlpha, transitionFilterUv);
+                }
 
                 color = ApplyBlur(texcoord) * color;
 
@@ -1223,75 +926,12 @@ Shader "ReunionMovement/UI/ImageEx"
                 // 保留原始的基础采样颜色
                 fixed4 baseSample = (tex2D(_MainTex, texcoord) + _TextureSampleAdd) * IN.color;
 
-                #if GRADIENT_LINEAR || GRADIENT_RADIAL
-                    colors[0] = _GradientColor0;
-                    colors[1] = _GradientColor1;
-                    colors[2] = _GradientColor2;
-                    colors[3] = _GradientColor3;
-                    colors[4] = _GradientColor4;
-                    colors[5] = _GradientColor5;
-                    colors[6] = _GradientColor6;
-                    colors[7] = _GradientColor7;
-                    
-                    alphas[0] = _GradientAlpha0;
-                    alphas[1] = _GradientAlpha1;
-                    alphas[2] = _GradientAlpha2;
-                    alphas[3] = _GradientAlpha3;
-                    alphas[4] = _GradientAlpha4;
-                    alphas[5] = _GradientAlpha5;
-                    alphas[6] = _GradientAlpha6;
-                    alphas[7] = _GradientAlpha7;
-                #endif
-                 
-                #if GRADIENT_LINEAR
-                    half gradientRotation = radians(_GradientRotation);
-                    half t = cos(gradientRotation) * (effectsUv.x -0.5) + 
-                             sin(gradientRotation) * (effectsUv.y -0.5) +0.5;
-                    half4 grad = SampleGradient(t);
-                    color *= grad;
-                #endif
-                #if GRADIENT_RADIAL
-                    half fac = saturate(length(effectsUv - float2(.5, .5)) *2);
-                    half4 grad = SampleGradient(clamp(fac,0,1));
-                    color *= grad;
-                #endif
-                
-                #if GRADIENT_CORNER
-                    half4 topCol = lerp(_CornerGradientColor2, _CornerGradientColor3, effectsUv.x);
-                    half4 bottomCol = lerp(_CornerGradientColor0, _CornerGradientColor1, effectsUv.x);
-                    half4 finalCol = lerp(topCol, bottomCol, effectsUv.y);
-                    
-                    color *= finalCol;
-                #endif
+                ApplyGradientColor(color, effectsUv);
                 
                 #if RECTANGLE || CIRCLE || PENTAGON || TRIANGLE || HEXAGON || CHAMFERBOX || PARALLELOGRAM || NSTAR_POLYGON || HEART || BLOBBYCROSS || SQUIRCLE || NTRIANGLE_ROUNDED
-                    float sdfData = 0;
-                    float pixelScale = clamp(1.0/_FalloffDistance, 1.0/2048.0, 2048.0);
-                    #if RECTANGLE
-                        sdfData = rectangleScene(IN.shapeData);
-                    #elif CIRCLE
-                        sdfData = circleScene(IN.shapeData);
-                    #elif PENTAGON
-                        sdfData = pentagonScene(IN.shapeData);
-                    #elif TRIANGLE
-                        sdfData = triangleScene(IN.shapeData);
-                    #elif HEXAGON
-                        sdfData = hexagonScene(IN.shapeData);
-                    #elif CHAMFERBOX
-                        sdfData = chamferBoxScene(IN.shapeData);
-                    #elif PARALLELOGRAM
-                        sdfData = parallelogramScene(IN.shapeData);
-                    #elif NSTAR_POLYGON
-                        sdfData = nStarPolygonScene(IN.shapeData);
-                    #elif HEART
-                        sdfData = heartScene(IN.shapeData);
-                    #elif BLOBBYCROSS
-                        sdfData = blobbyCrossScene(IN.shapeData);
-                    #elif SQUIRCLE
-                        sdfData = squircleScene(IN.shapeData);
-                    #elif NTRIANGLE_ROUNDED
-                        sdfData = nTriangleRoundedScene(IN.shapeData);
-                    #endif
+                    float sdfData;
+                    float pixelScale;
+                    ComputeSdfData(IN, sdfData, pixelScale);
 
                     #if !OUTLINED && !STROKE && !OUTLINED_STROKE
                         float sdf = sampleSdf(sdfData, pixelScale);
@@ -1303,35 +943,7 @@ Shader "ReunionMovement/UI/ImageEx"
                         color.a *= sdf;
                     #endif
                     
-                    #if OUTLINED
-                        float alpha = sampleSdf(sdfData, pixelScale);
-                        float lerpFac = sampleSdf(sdfData + _OutlineWidth, pixelScale);
-            
-                        if (_EnableDashedOutline == 1)
-                        {
-                            // 传递图形类型
-                            float dashedEffect = generateDashedEffect(IN, _CustomTime, IN.shapeData.z / IN.shapeData.w, _DrawShape); 
-
-                            if (_DrawShape == 1)
-                            {
-                                color = half4(lerp(color.rgb, _OutlineColor.rgb, dashedEffect), lerp(_OutlineColor.a, color.a, dashedEffect));
-                            }
-                            else if (_DrawShape == 3)
-                            {
-                                color = half4(lerp(color.rgb, _OutlineColor.rgb, dashedEffect), lerp(_OutlineColor.a, color.a, dashedEffect));
-                            }
-                            else
-                            {
-                                color = half4(lerp(_OutlineColor.rgb, color.rgb, lerpFac), lerp(_OutlineColor.a, color.a, lerpFac));
-                            }
-                        }
-                        else
-                        {
-                            // 普通描边效果
-                            color = half4(lerp(_OutlineColor.rgb, color.rgb, lerpFac), lerp(_OutlineColor.a, color.a, lerpFac));
-                        }
-                        color.a *= alpha;
-                    #endif
+                    ApplyOutlinedSdf(color, IN, sdfData, pixelScale);
                      
                     #if OUTLINED_STROKE
                         float alpha = sampleSdfStrip(sdfData, _OutlineWidth + _StrokeWidth, pixelScale);
