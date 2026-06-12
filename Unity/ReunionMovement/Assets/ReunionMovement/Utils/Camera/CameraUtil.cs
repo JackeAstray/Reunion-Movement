@@ -416,8 +416,6 @@ namespace ReunionMovement.Common.Util
             }
         }
 
-
-
         /// <summary>
         /// 旋转摄像机
         /// </summary>
@@ -447,12 +445,6 @@ namespace ReunionMovement.Common.Util
             float minZoomDistance = GetEffectiveMinDistance();
             distance = Mathf.Clamp(distance, minZoomDistance, maxDistance);
             offsetDistance = Mathf.MoveTowards(offsetDistance, distance, Time.deltaTime * zoomSpeed);
-
-            if (!enableForwardZoomAfterZero)
-            {
-                forwardZoomDistance = 0f;
-            }
-            forwardZoomDistance = Mathf.Max(0f, forwardZoomDistance);
 
             Vector3 target = targetPos != null ? targetPos.position : Vector3.zero;
 
@@ -529,18 +521,9 @@ namespace ReunionMovement.Common.Util
                 }
                 else if (delta > 0f)
                 {
-                    // 缩小：先回退目标点前进量，再增加距离
-                    float consumeForward = Mathf.Min(forwardZoomDistance, delta);
-                    if (consumeForward > 0f)
-                    {
-                        forwardZoomDistance -= consumeForward;
-                        targetPos.position -= csmoCamera.transform.forward * consumeForward;
-                    }
-                    distance += (delta - consumeForward);
+                    // 缩小：直接增加距离，退出前进模式，目标点位置不变
+                    distance = Mathf.Clamp(distance + delta, minZoomDistance, maxDistance);
                 }
-
-                distance = Mathf.Clamp(distance, minZoomDistance, maxDistance);
-                forwardZoomDistance = Mathf.Max(0f, forwardZoomDistance);
             }
             else
             {
