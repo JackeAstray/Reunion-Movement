@@ -47,14 +47,20 @@ namespace ReunionMovement.Common.Util
         // 鼠标点击射线检测层
         [Tooltip("鼠标点击射线检测层")]
         public LayerMask layerMask;
+        [Space(10)]
         // EnhancedTouch 全局引用计数，避免多实例互相关闭
         private static int enhancedTouchRefCount;
-
         // 启用到达 0 距离后继续沿摄像机 Z 轴前进
         [Tooltip("启用到达 0 距离后继续沿摄像机 Z 轴前进")]
         public bool enableForwardZoomAfterZero = false;
         // 前进缩放累计位移（目标点沿摄像机 Z 轴前进的总量，用于回退）
         private float forwardZoomDistance = 0f;
+        // 双指手势状态（每帧更新，确保平移/缩放互斥）
+        private bool hasTwoFingerTouchGesture;
+        private bool isTwoFingerPanGesture;
+        private Vector2 twoFingerPanDelta;
+        private float twoFingerPinchDelta;
+        private const float twoFingerGestureEpsilon = 0.01f;
         #endregion
 
         [Space(10)]
@@ -205,6 +211,7 @@ namespace ReunionMovement.Common.Util
                 return;
             }
 
+            UpdateTwoFingerGestureState();
             HandleCameraMovement();
             HandleCameraRotation();
             HandleCameraZoom();
@@ -250,6 +257,61 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
+        /// 更新双指手势状态（平移/缩放互斥，平移优先）
+        /// </summary>
+        private void UpdateTwoFingerGestureState()
+        {
+            hasTwoFingerTouchGesture = false;
+            isTwoFingerPanGesture = false;
+            twoFingerPanDelta = Vector2.zero;
+            twoFingerPinchDelta = 0f;
+
+            if (Touch.activeTouches.Count != 2)
+            {
+                return;
+            }
+
+            var t0 = Touch.activeTouches[0];
+            var t1 = Touch.activeTouches[1];
+            if (t0.phase != UnityEngine.InputSystem.TouchPhase.Moved && t1.phase != UnityEngine.InputSystem.TouchPhase.Moved)
+            {
+                return;
+            }
+
+            hasTwoFingerTouchGesture = true;
+
+            Vector2 delta0 = t0.delta;
+            Vector2 delta1 = t1.delta;
+            twoFingerPanDelta = (delta0 + delta1) * 0.5f;
+
+            float prevDist = (t0.screenPosition - delta0 - (t1.screenPosition - delta1)).magnitude;
+            float currDist = (t0.screenPosition - t1.screenPosition).magnitude;
+            twoFingerPinchDelta = currDist - prevDist;
+
+            float panAmount = twoFingerPanDelta.magnitude;
+            float zoomAmount = Mathf.Abs(twoFingerPinchDelta);
+
+            if (panAmount <= twoFingerGestureEpsilon && zoomAmount <= twoFingerGestureEpsilon)
+            {
+                return;
+            }
+
+            if (panAmount > twoFingerGestureEpsilon && zoomAmount <= twoFingerGestureEpsilon)
+            {
+                isTwoFingerPanGesture = true;
+                return;
+            }
+
+            if (panAmount <= twoFingerGestureEpsilon && zoomAmount > twoFingerGestureEpsilon)
+            {
+                return;
+            }
+
+            float directionSimilarity = Vector2.Dot(delta0.normalized, delta1.normalized);
+            isTwoFingerPanGesture = directionSimilarity >= 0f || panAmount >= zoomAmount;
+        }
+
+        /// <summary>
         /// 处理摄像机移动
         /// </summary>
         private void HandleCameraMovement()
@@ -262,16 +324,10 @@ namespace ReunionMovement.Common.Util
                 MoveCamera(horz, vert);
             }
 
-            // 触摸双指拖动
-            if (Touch.activeTouches.Count == 2)
+            // 触摸双指拖动（优先级高于双指缩放）
+            if (hasTwoFingerTouchGesture && isTwoFingerPanGesture)
             {
-                var t0 = Touch.activeTouches[0];
-                var t1 = Touch.activeTouches[1];
-                if (t0.phase == UnityEngine.InputSystem.TouchPhase.Moved && t1.phase == UnityEngine.InputSystem.TouchPhase.Moved)
-                {
-                    Vector2 avgDelta = (t0.delta + t1.delta) / 2f;
-                    MoveCamera(avgDelta.x, avgDelta.y);
-                }
+                MoveCamera(twoFingerPanDelta.x, twoFingerPanDelta.y);
             }
         }
 
@@ -373,18 +429,10 @@ namespace ReunionMovement.Common.Util
                 SetZoom(delta * -zoomValue);
             }
 
-            // 触摸双指缩放
-            if (Touch.activeTouches.Count == 2)
+            // 触摸双指缩放（当判定为平移时不触发）
+            if (hasTwoFingerTouchGesture && !isTwoFingerPanGesture)
             {
-                var t0 = Touch.activeTouches[0];
-                var t1 = Touch.activeTouches[1];
-                if (t0.phase == UnityEngine.InputSystem.TouchPhase.Moved || t1.phase == UnityEngine.InputSystem.TouchPhase.Moved)
-                {
-                    float prevDist = (t0.screenPosition - t0.delta - (t1.screenPosition - t1.delta)).magnitude;
-                    float currDist = (t0.screenPosition - t1.screenPosition).magnitude;
-                    float pinchDelta = currDist - prevDist;
-                    SetZoom(-pinchDelta * 0.05f); // 缩放灵敏度可调
-                }
+                SetZoom(-twoFingerPinchDelta * 0.05f); // 缩放灵敏度可调
             }
         }
 
