@@ -72,6 +72,9 @@ namespace ReunionMovement.Common.Util
         // 遮挡物层
         [Tooltip("遮挡物层")]
         public LayerMask obstructionMask;
+        [Space(5)]
+        [Tooltip("遮挡检测时摄像机距离目标的安全偏移量（单位：米），用于避免相机紧贴碰撞表面")]
+        public float obstructionOffset = 0.2f;
         #endregion
 
         [Space(10)]
@@ -510,7 +513,7 @@ namespace ReunionMovement.Common.Util
                     Ray ray = new Ray(target, direction.normalized);
                     if (Physics.Raycast(ray, out RaycastHit hit, desiredDistance, obstructionMask))
                     {
-                        currentDistance = Mathf.Clamp(hit.distance - 0.2f, minZoomDistance, desiredDistance);
+                        currentDistance = Mathf.Clamp(hit.distance - obstructionOffset, minZoomDistance, desiredDistance);
                         offsetDistance = Mathf.Min(offsetDistance, currentDistance);
                     }
                     else
