@@ -1,11 +1,10 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 namespace ReunionMovement.Common.Util
 {
     /// <summary>
-    /// FPS计数器工具
+    /// FPS计数器工具（使用 TextMeshPro 替代旧版 OnGUI）
     /// </summary>
     public class FPSCounter : MonoBehaviour
     {
@@ -37,8 +36,7 @@ namespace ReunionMovement.Common.Util
         private float okFps;
         private float badFps;
 
-        private Rect rect;
-        private GUIStyle style;
+        private TMP_Text fpsText;
 
         private void Awake()
         {
@@ -48,21 +46,45 @@ namespace ReunionMovement.Common.Util
             okFps = targetFrameRate - percent * 10;
             badFps = targetFrameRate - percent * 40;
 
-            int linesHeight = 40;
-            int linesWidth = 130;
-            int xPos = (anchor == Anchor.RightTop || anchor == Anchor.RightBottom) ? Screen.width - linesWidth : 0;
-            int yPos = (anchor == Anchor.LeftBottom || anchor == Anchor.RightBottom) ? Screen.height - linesHeight : 0;
-            xPos += xOffset;
-            yPos += yOffset;
-            rect = new Rect(xPos, yPos, linesWidth, linesHeight);
-
-            style = new GUIStyle
-            {
-                fontSize = 30,
-                normal = { textColor = goodColor }
-            };
-
             elapsed = updateInterval;
+
+            // 自动创建 Canvas + TMP_Text 显示 FPS
+            CreateFpsDisplay();
+        }
+
+        private void CreateFpsDisplay()
+        {
+            var canvasGo = new GameObject("FPSCanvas");
+            canvasGo.transform.SetParent(transform);
+            var canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 32767;
+            canvasGo.AddComponent<UnityEngine.UI.CanvasScaler>();
+
+            var textGo = new GameObject("FPSText");
+            textGo.transform.SetParent(canvasGo.transform, false);
+            fpsText = textGo.AddComponent<TextMeshProUGUI>();
+            fpsText.fontSize = 30;
+            fpsText.color = goodColor;
+            fpsText.text = "FPS: --";
+
+            // 定位锚点
+            var rt = fpsText.rectTransform;
+            rt.sizeDelta = new Vector2(130, 40);
+            rt.anchorMin = rt.anchorMax = rt.pivot = GetAnchorVector();
+            rt.anchoredPosition = new Vector2(xOffset, yOffset);
+        }
+
+        private Vector2 GetAnchorVector()
+        {
+            return anchor switch
+            {
+                Anchor.LeftTop => new Vector2(0, 1),
+                Anchor.LeftBottom => new Vector2(0, 0),
+                Anchor.RightTop => new Vector2(1, 1),
+                Anchor.RightBottom => new Vector2(1, 0),
+                _ => new Vector2(0, 1),
+            };
         }
 
         private void Update()
@@ -83,15 +105,19 @@ namespace ReunionMovement.Common.Util
                 fps = frames / elapsed;
                 elapsed = 0;
                 frames = 0;
+
+                if (fpsText != null)
+                {
+                    fpsText.text = $"FPS: {(int)fps}";
+                    fpsText.color = fps <= badFps ? badColor : (fps <= okFps ? okColor : goodColor);
+                }
             }
         }
 
-        private void OnGUI()
+        private void OnDestroy()
         {
-            if (editorOnly && !Application.isEditor) return;
-
-            style.normal.textColor = fps <= badFps ? badColor : (fps <= okFps ? okColor : goodColor);
-            GUI.Label(rect, $"FPS: {(int)fps}", style);
+            if (fpsText != null)
+                Destroy(fpsText.transform.parent?.gameObject);
         }
     }
 }

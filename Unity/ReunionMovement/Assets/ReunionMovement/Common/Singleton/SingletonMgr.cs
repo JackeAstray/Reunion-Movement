@@ -7,8 +7,6 @@ namespace ReunionMovement.Common
     /// </summary>
     public class SingletonMgr<T> : MonoBehaviour where T : MonoBehaviour
     {
-        private static readonly object lockObj = new object();
-
         private static T instance;
         public static T Instance
         {
@@ -16,13 +14,7 @@ namespace ReunionMovement.Common
             {
                 if (instance == null)
                 {
-                    lock (lockObj)
-                    {
-                        if (instance == null)
-                        {
-                            instance = CreateInstance();
-                        }
-                    }
+                    instance = CreateInstance();
                 }
                 return instance;
             }

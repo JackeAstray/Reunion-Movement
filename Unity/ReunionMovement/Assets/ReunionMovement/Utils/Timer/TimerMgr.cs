@@ -43,9 +43,9 @@ namespace ReunionMovement.Common.Util.Timer
         /// </summary>
         public void CancelAllTimers()
         {
-            foreach (var timer in timers.ToArray())
+            for (int i = timers.Count - 1; i >= 0; i--)
             {
-                timer.Cancel();
+                timers[i].Cancel();
             }
             timers.Clear();
         }
@@ -55,9 +55,9 @@ namespace ReunionMovement.Common.Util.Timer
         /// </summary>
         public void PauseAllTimers()
         {
-            foreach (Timer timer in timers.ToArray())
+            for (int i = 0; i < timers.Count; i++)
             {
-                timer.Pause();
+                timers[i].Pause();
             }
         }
 
@@ -66,25 +66,24 @@ namespace ReunionMovement.Common.Util.Timer
         /// </summary>
         public void ResumeAllTimers()
         {
-            foreach (Timer timer in timers.ToArray())
+            for (int i = 0; i < timers.Count; i++)
             {
-                timer.Resume();
+                timers[i].Resume();
             }
         }
 
         /// <summary>
-        /// 更新所有计时器
+        /// 更新所有计时器（倒序遍历，安全移除且零分配）
         /// </summary>
         private void Update()
         {
-            // 用ToArray防止遍历时移除
-            foreach (var timer in timers.ToArray())
+            for (int i = timers.Count - 1; i >= 0; i--)
             {
+                var timer = timers[i];
                 timer.Update(Time.deltaTime);
-                // 自动移除已完成或取消的计时器（可选）
                 if (timer.state == Timer.TimerState.Finished || timer.state == Timer.TimerState.Cancelled)
                 {
-                    timers.Remove(timer);
+                    timers.RemoveAt(i);
                 }
             }
         }

@@ -54,10 +54,10 @@ namespace ReunionMovement.Core
         // 每1s事件更新一次
         public static Action UpdatePer1sEvent;
 
-        // 更新间隔时间 (每1s)
-        private float time_update_per1s;
-        // 更新间隔时间 (每300ms)
-        private float time_update_per300ms;
+        // 累积时间 (每1s)
+        private float accumTime1s;
+        // 累积时间 (每300ms)
+        private float accumTime300ms;
 
         private bool isWindowsEditor;
 
@@ -151,23 +151,26 @@ namespace ReunionMovement.Core
         protected virtual void Update()
         {
             UpdateEvent?.Invoke();
-            float time = Time.time;
-            if (time > time_update_per1s)
+
+            accumTime1s += Time.deltaTime;
+            accumTime300ms += Time.deltaTime;
+
+            if (accumTime1s >= 1.0f)
             {
-                time_update_per1s = time + 1.0f;
+                accumTime1s -= 1.0f;
                 UpdatePer1sEvent?.Invoke();
             }
-            if (time > time_update_per300ms)
+            if (accumTime300ms >= 0.3f)
             {
-                time_update_per300ms = time + 0.3f;
+                accumTime300ms -= 0.3f;
                 UpdatePer300msEvent?.Invoke();
             }
 
             if (gameModules != null)
             {
-                foreach (ICustommSystem module in gameModules)
+                for (int i = 0; i < gameModules.Count; i++)
                 {
-                    module.Update(Time.deltaTime, Time.unscaledDeltaTime);
+                    gameModules[i].Update(Time.deltaTime, Time.unscaledDeltaTime);
                 }
             }
         }

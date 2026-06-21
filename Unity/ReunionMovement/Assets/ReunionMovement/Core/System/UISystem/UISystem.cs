@@ -28,7 +28,7 @@ namespace ReunionMovement.Core.UI
         #endregion
 
         // UI加载状态缓存（用于跟踪每个UI窗口的加载状态）
-        private Dictionary<string, UILoadState> uiStateCache = new Dictionary<string, UILoadState>();
+        private Dictionary<string, UILoadState> uiStateCache = new Dictionary<string, UILoadState>(32);
 
         public static event Action<UIController> onInitEvent;
         public static event Action<UIController> onOpenEvent;

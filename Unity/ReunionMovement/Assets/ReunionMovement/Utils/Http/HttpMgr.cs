@@ -39,11 +39,12 @@ namespace ReunionMovement.Common.Util.HttpService
         #region Super Headers
         /// <summary>
         /// SuperHeaders是键值对，将被添加到每个后续的HttpRequest中。
+        /// 返回只读包装以避免每次调用都分配新字典。
         /// </summary>
-        /// <returns>A dictionary of super-headers.</returns>
-        public Dictionary<string, string> GetSuperHeaders()
+        /// <returns>A read-only wrapper of super-headers.</returns>
+        public IReadOnlyDictionary<string, string> GetSuperHeaders()
         {
-            return new Dictionary<string, string>(superHeaders);
+            return superHeaders;
         }
 
         /// <summary>

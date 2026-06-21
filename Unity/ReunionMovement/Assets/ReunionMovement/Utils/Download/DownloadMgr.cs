@@ -12,6 +12,8 @@ namespace ReunionMovement.Common.Util.Download
     public class DownloadMgr : SingletonMgr<DownloadMgr>
     {
         private readonly Dictionary<string, Texture2D> imageCache = new Dictionary<string, Texture2D>();
+        private readonly LinkedList<string> imageCacheOrder = new LinkedList<string>(); // LRU 访问顺序
+        private const int MaxImageCacheSize = 50;
         private readonly Dictionary<string, string> mimeTypeToExtension = new Dictionary<string, string>
         {
             {"text/html",".html"},
@@ -53,6 +55,7 @@ namespace ReunionMovement.Common.Util.Download
                 }
             }
             imageCache.Clear();
+            imageCacheOrder.Clear();
             Log.Debug("DownloadManagerModule 清除数据");
         }
 
@@ -75,9 +78,10 @@ namespace ReunionMovement.Common.Util.Download
         /// <param name="suffix"></param>
         public void DownloadImage_Http(string url, Action<float> onProgress, Action<Texture2D> onComplete)
         {
-            // 1. 内存查找
+            // 1. 内存查找（命中时提升 LRU 顺序）
             if (imageCache.TryGetValue(url, out Texture2D cachedTexture) && cachedTexture != null)
             {
+                TouchCacheEntry(url);
                 onComplete?.Invoke(cachedTexture);
                 return;
             }
@@ -87,7 +91,7 @@ namespace ReunionMovement.Common.Util.Download
             if (TryLoadFromLocal(localPath, out Texture2D localTexture) && localTexture != null)
             {
                 // 加入内存缓存
-                imageCache[url] = localTexture;
+                AddToImageCache(url, localTexture);
                 onComplete?.Invoke(localTexture);
                 return;
             }
@@ -105,7 +109,7 @@ namespace ReunionMovement.Common.Util.Download
                             onComplete?.Invoke(oldTex);
                             return;
                         }
-                        imageCache[url] = response.texture;
+                        AddToImageCache(url, response.texture);
 
                         // 保存到本地（确保目录存在于SaveToLocal中）
                         SaveToLocal(response.texture, localPath);
@@ -128,7 +132,7 @@ namespace ReunionMovement.Common.Util.Download
         /// <param name="uiPlane"></param>
         /// <param name="set"></param>
         /// <param name="action"></param>
-        public async void DownloadFiles(List<string> url,
+        public async Task DownloadFiles(List<string> url,
             string savePath,
             Action<float> progress = null,
             Action action = null,
@@ -269,6 +273,40 @@ namespace ReunionMovement.Common.Util.Download
             {
                 Log.Error($"保存失败: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// 加入图片缓存（含 LRU 淘汰）
+        /// </summary>
+        private void AddToImageCache(string url, Texture2D tex)
+        {
+            if (tex == null) return;
+
+            // 淘汰最旧的条目直到低于上限
+            while (imageCache.Count >= MaxImageCacheSize && imageCacheOrder.First != null)
+            {
+                var oldest = imageCacheOrder.First.Value;
+                imageCacheOrder.RemoveFirst();
+                if (imageCache.TryGetValue(oldest, out var oldTex) && oldTex != null && oldTex != tex)
+                {
+                    UnityEngine.Object.Destroy(oldTex);
+                }
+                imageCache.Remove(oldest);
+            }
+
+            imageCache[url] = tex;
+            // 移到链表尾部（最新）
+            imageCacheOrder.Remove(url);
+            imageCacheOrder.AddLast(url);
+        }
+
+        /// <summary>
+        /// 更新缓存条目访问顺序
+        /// </summary>
+        private void TouchCacheEntry(string url)
+        {
+            imageCacheOrder.Remove(url);
+            imageCacheOrder.AddLast(url);
         }
 
         /// <summary>

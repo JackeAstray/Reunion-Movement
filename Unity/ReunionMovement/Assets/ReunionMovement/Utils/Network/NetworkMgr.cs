@@ -5,8 +5,8 @@ namespace ReunionMovement.Common.Util
 {
     public sealed class NetworkMgr : SingletonMgr<NetworkMgr>
     {
-        List<INetworkChannel> channelDict;
-        List<INetworkChannel> channelDictRemove;
+        List<INetworkChannel> channelDict = new List<INetworkChannel>();
+        List<INetworkChannel> channelDictRemove = new List<INetworkChannel>();
         private Thread netRun;
         private volatile bool isRunning = false;
         private readonly object syncRoot = new object();
@@ -162,8 +162,11 @@ namespace ReunionMovement.Common.Util
 
         public void OnInit(object createParam)
         {
-            channelDict = new List<INetworkChannel>();
-            channelDictRemove = new List<INetworkChannel>();
+            lock (syncRoot)
+            {
+                channelDict.Clear();
+                channelDictRemove.Clear();
+            }
         }
 
         /// <summary>

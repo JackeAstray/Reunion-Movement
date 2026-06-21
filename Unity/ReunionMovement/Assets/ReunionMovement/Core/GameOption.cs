@@ -51,11 +51,16 @@ namespace ReunionMovement.Core
 
         public static Option currentOption = new Option();
 
+        private static bool isLoaded = false;
+
         /// <summary>
-        /// 加载游戏选项从 PlayerPrefs
+        /// 加载游戏选项从 PlayerPrefs（仅首次加载，后续从内存读取）
         /// </summary>
         public static void LoadOptions()
         {
+            if (isLoaded) return;
+            isLoaded = true;
+
             currentOption.version = PlayerPrefs.GetString("version", currentOption.version);
             currentOption.fullscreen = PlayerPrefs.GetInt("fullscreen", currentOption.fullscreen ? 1 : 0) == 1;
             currentOption.resolutionWidth = PlayerPrefs.GetInt("resolutionWidth", currentOption.resolutionWidth);
