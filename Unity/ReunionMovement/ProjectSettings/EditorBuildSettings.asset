@@ -21,6 +21,6 @@ EditorBuildSettings:
     path: Assets/ReunionMovement/Scenes/Example/Camera Example.unity
     guid: 69789fc2c50ce874db3e41384e6be5e7
   m_configObjects:
-    com.unity.addressableassets: {fileID: 11400000, guid: def0599c4d176a34a949d8c866b681a0, type: 2}
+    com.unity.addressableassets: {fileID: 11400000, guid: 993b5380091a96e479ac2955d74bba4f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

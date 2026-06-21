@@ -359,8 +359,7 @@ namespace UnityEngine.UI.ImageExtensions
             if (appendShadow)
             {
                 int startIndex2 = vertexHelper.currentVertCount;
-                // 使用黑色通道标记阴影顶点，保留原始透明度
-                Color32 shadowColor = new Color32(0, 0, 0, color.a);
+                // 使用 tangent.w=1 标记阴影顶点，保持原始顶点颜色，避免黑色 Tint 与阴影标记冲突
 
                 Vector2 shadowCenter = new Vector2((bounds.x + bounds.z) * 0.5f, (bounds.y + bounds.w) * 0.5f);
                 float safeShadowScale = Mathf.Max(0.0001f, shadowScale);
@@ -381,8 +380,8 @@ namespace UnityEngine.UI.ImageExtensions
 
                     Vector2 sampleTexCoord = quadUVs[i];
 
-                    vertexHelper.AddVert(pos, shadowColor, sampleTexCoord, uv1, size, Vector2.zero,
-                        Vector3.zero, Vector4.zero);
+                    vertexHelper.AddVert(pos, color, sampleTexCoord, uv1, size, Vector2.zero,
+                        Vector3.zero, new Vector4(0, 0, 0, 1));
                 }
 
                 vertexHelper.AddTriangle(startIndex2, startIndex2 + 1, startIndex2 + 2);

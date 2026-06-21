@@ -23,7 +23,7 @@ uniform float _SamplingWidth;
 uniform float _SamplingScale;
 uniform float _AllowOutOfBoundsShadow;
 uniform float _ShadowScale;
-uniform int _ShadowMode;
+uniform float _ShadowMode;
 uniform int _ShadowMirrorDirection;
 uniform float _ShadowMirrorScale;
 uniform float2 _ShadowMirrorOffset;
@@ -46,6 +46,9 @@ half4 RM_RenderShadow(
     float vertexAlpha
 )
 {
+    // 阴影模式为 0 时直接返回全透明，作为安全兜底
+    if (_ShadowMode < 0.5) return half4(0, 0, 0, 0);
+
     half4 shadowOut = half4(0, 0, 0, 0); // 默认返回值，消除 "potentially uninitialized" 警告
 
     float2 texel = _MainTex_TexelSize.xy * _SamplingScale * _SamplingWidth;

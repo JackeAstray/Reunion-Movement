@@ -180,6 +180,7 @@ Shader "ReunionMovement/UI/ImageEx"
                 float2 texcoord: TEXCOORD0;
                 float2 uv1: TEXCOORD1;
                 float2 size: TEXCOORD2;
+                float4 tangent: TANGENT; // tangent.w 用于阴影顶点标记
                 
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -192,6 +193,7 @@ Shader "ReunionMovement/UI/ImageEx"
                 float4 shapeData: TEXCOORD1;
                 float2 effectsUv: TEXCOORD2;
                 float4 worldPosition : TEXCOORD3;
+                fixed isShadowVertexFlag : TEXCOORD4; // tangent.w 阴影顶点标记
                 
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -287,6 +289,7 @@ Shader "ReunionMovement/UI/ImageEx"
                 #ifdef UNITY_HALF_TEXEL_OFFSET
                     OUT.vertex.xy += (_ScreenParams.zw - 1.0) * float2(-1.0, 1.0);
                 #endif
+                OUT.isShadowVertexFlag = v.tangent.w;
                 OUT.color = v.color * _Color;
 
                 return OUT;
@@ -331,9 +334,8 @@ Shader "ReunionMovement/UI/ImageEx"
                 #endif
 
                 // 检测是否为阴影顶点，并使用单独逻辑渲染阴影（仍包含过渡处理）
-                bool isShadowVertex = color.a > 0.001 && color.r < 0.001 && color.g < 0.001 && color.b < 0.001;
-
-                if (isShadowVertex)
+                // 使用 tangent.w 标记检测阴影顶点，避免黑色 Tint 导致误判
+                if (IN.isShadowVertexFlag > 0.5)
                 {
                     return RM_RenderShadow(IN.shapeData, _FalloffDistance, _StrokeWidth, _OutlineWidth, texcoord, transAlpha, transitionFilterUv, IN.color.a);
                 }

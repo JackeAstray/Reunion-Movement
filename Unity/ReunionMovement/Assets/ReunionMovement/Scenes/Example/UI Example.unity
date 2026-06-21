@@ -5118,7 +5118,7 @@ MonoBehaviour:
   m_PixelsPerUnitMultiplier: 1
   appendShadow: 1
   shadowOffsetLocal: {x: 8, y: -8}
-  shadowColor: {r: 1, g: 0.1537725, b: 0, a: 1}
+  shadowColor: {r: 1, g: 0.1537725, b: 0, a: 0.7058824}
   shadowBlurIntensity: 1
   samplingWidth: 1
   samplingScale: 1
@@ -5817,7 +5817,7 @@ MonoBehaviour:
   m_PixelsPerUnitMultiplier: 1
   appendShadow: 1
   shadowOffsetLocal: {x: 8, y: -8}
-  shadowColor: {r: 1, g: 0.15294118, b: 0, a: 1}
+  shadowColor: {r: 1, g: 0.15294118, b: 0, a: 0.7058824}
   shadowBlurIntensity: 1
   samplingWidth: 1
   samplingScale: 1
@@ -6681,7 +6681,7 @@ MonoBehaviour:
   m_PixelsPerUnitMultiplier: 1
   appendShadow: 1
   shadowOffsetLocal: {x: 8, y: -8}
-  shadowColor: {r: 1, g: 0.11957219, b: 0, a: 1}
+  shadowColor: {r: 1, g: 0.11957219, b: 0, a: 0.7058824}
   shadowBlurIntensity: 8
   samplingWidth: 1
   samplingScale: 1
