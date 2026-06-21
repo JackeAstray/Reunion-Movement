@@ -1,4 +1,7 @@
-﻿const float pi = 3.14159;
+﻿#ifndef RM_COMMON
+#define RM_COMMON
+
+const float pi = 3.14159;
 const float pi2 = 6.28318; // 2 * pi
 const float pi3 = 9.42478; // 3 * pi
 
@@ -177,3 +180,5 @@ float sdSprite(sampler2D tex, float2 uv, float2 texelSize, float threshold)
     
     return dist;
 }
+
+#endif // RM_COMMON

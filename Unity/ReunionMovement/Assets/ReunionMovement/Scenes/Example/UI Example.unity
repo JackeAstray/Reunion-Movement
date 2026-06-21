@@ -3445,7 +3445,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1479144323}
   m_Direction: 2
   m_Value: 1
-  m_Size: 0.3134978
+  m_Size: 0.26995647
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -4868,7 +4868,7 @@ MonoBehaviour:
   transitionTexRotation: 0
   transitionKeepAspectRatio: 1
   transitionRate: 0.15
-  transitionColor: {r: 0.4274208, g: 0.51635635, b: 0.8018868, a: 1}
+  transitionColor: {r: 0.1579299, g: 0.17060955, b: 0.8584906, a: 1}
   transitionWidth: 0.2
   transitionSoftness: 0.2
   transitionReverse: 0

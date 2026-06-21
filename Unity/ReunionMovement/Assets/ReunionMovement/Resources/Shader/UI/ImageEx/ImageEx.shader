@@ -153,6 +153,13 @@ Shader "ReunionMovement/UI/ImageEx"
             #include "../../Base/2D_SDF.cginc"
             #include "../../Base/Common.cginc"
             
+            // ============================================================
+            // ReunionMovement 通用模块 (Common/)
+            // 渐变 / 过渡 / 模糊 / 描边 / 形状 / 阴影
+            // ============================================================
+            #include "../../Common/RM_SDFShapes.cginc"
+            #include "../../Common/RM_Gradient.cginc"
+            
             #pragma multi_compile_local _ UNITY_UI_CLIP_RECT
             #pragma multi_compile_local _ UNITY_UI_ALPHACLIP
             
@@ -162,7 +169,6 @@ Shader "ReunionMovement/UI/ImageEx"
             #pragma shader_feature_local _ GRADIENT_LINEAR GRADIENT_RADIAL GRADIENT_CORNER
             #pragma shader_feature_local _ BLUR_FAST BLUR_MEDIUM BLUR_DETAIL
             #pragma shader_feature_local _ TRANSITION_FADE TRANSITION_CUTOFF TRANSITION_DISSOLVE TRANSITION_SHINY TRANSITION_MASK TRANSITION_MELT TRANSITION_BURN TRANSITION_PATTERN TRANSITION_BLAZE
-            // UIEffect 风格：将可选功能提升为可剥离关键词（默认不启用，保持现有属性分支行为）
             #pragma shader_feature_local _ DASHED_OUTLINE_STATIC
             #pragma shader_feature_local _ TRANSITION_CLAMP_STATIC
             #pragma shader_feature_local _ TRANSITION_UV_EFFECT_STATIC
@@ -190,644 +196,56 @@ Shader "ReunionMovement/UI/ImageEx"
                 UNITY_VERTEX_OUTPUT_STEREO
             };
             
-            int _DrawShape;
-
-            sampler2D _MainTex; float4 _MainTex_ST;
-            fixed4 _Color;
+            sampler2D _MainTex;
+            float4 _MainTex_ST;
+            float4 _MainTex_TexelSize;
+            float4 _TextureSampleAdd;
             fixed4 _TextureSize;
-            fixed4 _TextureSampleAdd;
             float4 _ClipRect;
             half _PixelWorldScale;
-            half _StrokeWidth;
-            half _StrokeFill;
-            float4 _MainTex_TexelSize;
-            // 阴影与采样相关的 uniform 变量
-            half4 _ShadowColor;
-            float _ShadowBlurIntensity;
-            float _SamplingWidth;
-            float _SamplingScale;
-            float _AllowOutOfBoundsShadow;
-            float _ShadowScale;
-            int _ShadowMode;
-            int _ShadowMirrorDirection;
-            float _ShadowMirrorScale;
-            float2 _ShadowMirrorOffset;
-            float _ShadowMirrorShowSource;
-            float _ShadowMirrorTintMix;
-
-            half _OutlineWidth;
-            half4 _OutlineColor;
-            int _EnableDashedOutline;
-            float _CustomTime;
-
-            int _BlurType;
-            half _BlurIntensity;
-
-            int _TransitionMode;
-            sampler2D _TransitionTex; float4 _TransitionTex_ST;
-            float4 _TransitionTex_TexelSize;
-            half _TransitionTexRotation;
-            half _TransitionRate;
-            half4 _TransitionColor;
-            half _TransitionWidth;
-            half _TransitionSoftness;
-            int _TransitionReverse;
-            half2 _TransitionTex_Speed;
-            int _TransitionPatternReverse;
-            half _TransitionAutoPlaySpeed;
-            int _TransitionColorFilter;
-            int _TransitionColorGlow;
-            sampler2D _TransitionGradientTex;
-            half2 _TransitionRange;
-            half _TransitionClamp;
-            half _TransitionTexClampPadding;
-            half _TransitionUseUv0;
-
-            half _FalloffDistance;
             half _ShapeRotation;
             half _ConstrainRotation;
             half _FlipHorizontal;
             half _FlipVertical;
 
-            #if RECTANGLE
-                float4 _RectangleCornerRadius;
-            #endif
+            // 注：形状参数 (RectangleCornerRadius, CircleRadius 等) 已在 RM_SDFShapes.cginc 中声明
+            // 注：渐变参数 (GradientColor0-7 等) 已在 RM_Gradient.cginc 中声明
             
-            #if CIRCLE
-                float _CircleRadius;
-                float _CircleFitRadius;
-            #endif
-            
-            #if PENTAGON
-                float4 _PentagonCornerRadius;
-                float _PentagonTipRadius;
-                float _PentagonTipSize;
-            #endif
-            
-            #if TRIANGLE
-                float3 _TriangleCornerRadius;
-            #endif
-            
-            #if HEXAGON
-                half2 _HexagonTipSize;
-                half2 _HexagonTipRadius;
-                half4 _HexagonCornerRadius;
-            #endif
+            // ============================================================
+            // 别名映射：将旧函数名映射到 Common 模块的 RM_* 版本
+            // ============================================================
+            #define rectangleScene       RM_RectangleScene
+            #define circleScene          RM_CircleScene
+            #define triangleScene        RM_TriangleScene
+            #define pentagonScene        RM_PentagonScene
+            #define hexagonScene         RM_HexagonScene
+            #define chamferBoxScene      RM_ChamferBoxScene
+            #define parallelogramScene   RM_ParallelogramScene
+            #define nStarPolygonScene    RM_NStarPolygonScene
+            #define heartScene           RM_HeartScene
+            #define blobbyCrossScene     RM_BlobbyCrossScene
+            #define squircleScene        RM_SquircleScene
+            #define nTriangleRoundedScene RM_NTriangleRoundedScene
+            #define computeSdfMask(sdf, ps)  RM_ComputeSdfMask(sdf, ps, _StrokeWidth, _OutlineWidth)
+            #define ComputeSdfData(IN, sdf, ps) RM_ComputeSdfData(IN.shapeData, _FalloffDistance, sdf, ps)
+            #define generateDashedEffect(IN, t, ar, st) RM_GenerateDashedEffect(IN.shapeData, t, ar, st)
+            #define ApplyGradientColor(c, uv)   RM_ApplyGradientColor(c, uv)
+            #define ApplyBlur(uv)               RM_ApplyBlur(uv)
+            #define ApplyOutlinedSdf(c, IN, sdf, ps) RM_ApplyOutlinedSdf(c, IN.shapeData, sdf, ps)
+            #define apply_transition_filter(c, a, uv)  RM_ApplyTransitionFilter(c, a, uv)
+            #define transition_alpha(uv)         RM_TransitionAlpha(uv)
+            #define move_transition_filter(m, a) RM_MoveTransitionFilter(m, a)
+            #define transition_rate()            RM_TransitionRate()
+            #define apply_color_filter(m, c, f, i, g) RM_ApplyColorFilter(m, c, f, i, g)
 
-            #if CHAMFERBOX
-                float2 _ChamferBoxSize;
-                float4 _ChamferBoxRadius;
-            #endif
-
-            #if PARALLELOGRAM
-                float _ParallelogramValue; 
-            #endif
-
-            #if NSTAR_POLYGON
-                float _NStarPolygonSideCount;
-                float _NStarPolygonCornerRadius;
-                float _NStarPolygonInset;
-                float2 _NStarPolygonOffset;
-            #endif
-                        
-            #if GRADIENT_LINEAR || GRADIENT_RADIAL
-                half4 colors[8];
-                half4 alphas[8];
-                half _GradientInterpolationType;
-                half _GradientColorLength;
-                half _GradientAlphaLength;
-                half _GradientRotation;
-                
-                half4 _GradientColor0;
-                half4 _GradientColor1;
-                half4 _GradientColor2;
-                half4 _GradientColor3;
-                half4 _GradientColor4;
-                half4 _GradientColor5;
-                half4 _GradientColor6;
-                half4 _GradientColor7;
-                
-                half4 _GradientAlpha0;
-                half4 _GradientAlpha1;
-                half4 _GradientAlpha2;
-                half4 _GradientAlpha3;
-                half4 _GradientAlpha4;
-                half4 _GradientAlpha5;
-                half4 _GradientAlpha6;
-                half4 _GradientAlpha7;
-            #endif
-            
-            #if GRADIENT_CORNER
-                half4 _CornerGradientColor0;
-                half4 _CornerGradientColor1;
-                half4 _CornerGradientColor2;
-                half4 _CornerGradientColor3;
-            #endif
-            
-            #if BLOBBYCROSS
-                float _BlobbyCrossTime;
-            #endif
-            
-            #if SQUIRCLE
-                float _SquircleTime;
-            #endif
-
-            #if NTRIANGLE_ROUNDED
-                float _NTriangleRoundedTime;
-                float _NTriangleRoundedNumber;
-            #endif
-
-            // 渐变（GRADIENT）模块
-            #include "ImageEx.Gradient.cginc"
-
-            // 共享 SDF alpha 遮罩计算：主图与阴影复用同一套结果
-            float computeSdfMask(float sdfData, float pixelScale)
-            {
-                #if STROKE
-                    return sampleSdfStrip(sdfData, _StrokeWidth + _OutlineWidth, pixelScale);
-                #elif OUTLINED_STROKE
-                    return sampleSdfStrip(sdfData, _OutlineWidth + _StrokeWidth, pixelScale);
-                #else
-                    return sampleSdf(sdfData, pixelScale);
-                #endif
-            }
-            
-            //矩形
-            #if RECTANGLE
-                half rectangleScene(float4 additionalData)
-                {
-                    float2 texcoord = additionalData.xy;
-                    float2 size = float2(additionalData.z, additionalData.w);
-                    float4 radius = _RectangleCornerRadius;
-                    half4 c  = half4(texcoord, size - texcoord);
-                    half rect = min(min(min(c.x, c.y), c.z), c.w);
-
-                    bool4 cornerRects;
-                    cornerRects.x = texcoord.x < radius.x && texcoord.y < radius.x;
-                    cornerRects.y = texcoord.x > size.x - radius.y && texcoord.y < radius.y;
-                    cornerRects.z = texcoord.x > size.x - radius.z && texcoord.y > size.y - radius.z;
-                    cornerRects.w = texcoord.x < radius.w && texcoord.y > size.y - radius.w;
-
-                    half cornerMask = any(cornerRects);
-
-                    half4 cornerCircles;
-                    cornerCircles.x = radius.x - length(texcoord - radius.xx);
-                    cornerCircles.y = radius.y - length(texcoord - half2(size.x - radius.y, radius.y));
-                    cornerCircles.z = radius.z - length(texcoord - (half2(size.x, size.y) - radius.zz));
-                    cornerCircles.w = radius.w - length(texcoord - half2(radius.w, size.y - radius.w));
-
-                    cornerCircles = min(max(cornerCircles, 0) * cornerRects, rect);
-                    half corners = max(max(max(cornerCircles.x, cornerCircles.y), cornerCircles.z), cornerCircles.w);
-                    corners = max(corners, 0.0) * cornerMask;
-
-                    return rect*(cornerMask-1) - corners;
-                }
-            #endif
-            
-            //圆
-            #if CIRCLE
-                float circleScene(float4 additionalData)
-                {
-                    float2 texcoord = additionalData.xy;
-                    float2 size = float2(additionalData.z, additionalData.w);
-                    float width = size.x;
-                    float height = size.y;
-                    float radius = lerp(_CircleRadius, min(width, height) / 2.0, _CircleFitRadius);
-                    half sdf = sdCircle(texcoord - float2(width / 2.0, height / 2.0), radius);
-                    return sdf;
-                }
-            #endif
-            
-            //三角形
-            #if TRIANGLE
-                half triangleScene(float4 additionalData)
-                {
-                    float2 texcoord = additionalData.xy;
-                    float2 size = float2(additionalData.z, additionalData.w);
-                    float width = size.x;
-                    float height = size.y;
-                    
-                    half sdf = sdTriangleIsosceles(texcoord - half2(width / 2.0, height), half2(width / 2.0, -height));
-                    
-                    _TriangleCornerRadius = max(_TriangleCornerRadius, half3(0.001, 0.001, 0.001));
-
-                    // 左角
-                    half halfWidth = width / 2.0;
-                    half m = height / halfWidth;
-                    half d = sqrt(1.0 + m * m);
-                    half c = 0.0;
-                    half k = -_TriangleCornerRadius.x * d + c;
-                    half x = (_TriangleCornerRadius.x - k) / m;
-                    half2 circlePivot = half2(x, _TriangleCornerRadius.x);
-                    half cornerCircle = sdCircle(texcoord - circlePivot, _TriangleCornerRadius.x);
-
-                    x = (circlePivot.y + circlePivot.x / m - c) / (m + 1.0 / m);
-                    half y = m * x + c;
-                    half fy = map(texcoord.x, x, circlePivot.x, y, circlePivot.y);
-                    sdf = texcoord.y < fy && texcoord.x < circlePivot.x ? cornerCircle: sdf;
-
-                    // 右角
-                    m = -m; c = 2.0 * height;
-                    k = -_TriangleCornerRadius.y * d + c;
-                    x = (_TriangleCornerRadius.y - k) / m;
-                    circlePivot = half2(x, _TriangleCornerRadius.y);
-                    cornerCircle = sdCircle(texcoord - circlePivot, _TriangleCornerRadius.y);
-                    x = (circlePivot.y + circlePivot.x / m - c) / (m + 1.0 / m); y = m * x + c;
-                    fy = map(texcoord.x, circlePivot.x, x, circlePivot.y, y);
-                    sdf = texcoord.x > circlePivot.x && texcoord.y < fy ? cornerCircle: sdf;
-                    
-                    // 上角
-                    k = -_TriangleCornerRadius.z * sqrt(1.0 + m * m) + c;
-                    y = m * (width / 2.0) + k;
-                    circlePivot = half2(halfWidth, y);
-                    cornerCircle = sdCircle(texcoord - circlePivot, _TriangleCornerRadius.z);
-                    x = (circlePivot.y + circlePivot.x / m - c) / (m + 1.0 / m); y = m * x + c;
-                    fy = map(texcoord.x, width - x, x, -1.0, 1.0);
-                    fy = lerp(circlePivot.y, y, abs(fy));
-                    sdf = texcoord.y > fy ? cornerCircle: sdf;
-                    
-                    return sdf;
-                }
-            #endif
-            
-            //五边形
-            #if PENTAGON
-                half pentagonScene(float4 additionalData)
-                {
-                    
-                    float2 texcoord = additionalData.xy;
-                    float2 size = float2(additionalData.z, additionalData.w);
-                    float width = size.x;
-                    float height = size.y;
-                    
-                    // 实心五边形
-                    half baseRect = sdRectanlge(texcoord - half2(width / 2.0, height / 2.0), width, height);
-                    half scale = height / _PentagonTipSize;
-                    half rhombus = sdRhombus(texcoord - float2(width / 2, _PentagonTipSize * scale), float2(width / 2, _PentagonTipSize) * scale);
-                    half sdfPentagon = sdfDifference(baseRect, sdfDifference(baseRect, rhombus));
-                    
-                    // 底部圆角
-                    _PentagonTipRadius = max(_PentagonTipRadius, 0.001);
-                    float halfWidth = width / 2;
-                    float m = -_PentagonTipSize / halfWidth;
-                    float d = sqrt(1 + m * m);
-                    float c = _PentagonTipSize;
-                    float k = _PentagonTipRadius * d + _PentagonTipSize;
-                    
-                    half2 circlePivot = half2(halfWidth, m * halfWidth + k);
-                    half cornerCircle = sdCircle(texcoord - circlePivot, _PentagonTipRadius);
-                    half x = (circlePivot.y + circlePivot.x / m - c) / (m + 1 / m);
-                    half y = m * x + c;
-                    half fy = map(texcoord.x, x, width - x, -1, 1);
-                    fy = lerp(_PentagonTipRadius, y, abs(fy));
-                    sdfPentagon = texcoord.y < fy ? cornerCircle: sdfPentagon;
-                    
-                    // 左中圆角
-                    k = _PentagonCornerRadius.w * d + _PentagonTipSize;
-                    circlePivot = half2(_PentagonCornerRadius.w, m * _PentagonCornerRadius.w + k);
-                    cornerCircle = sdCircle(texcoord - circlePivot, _PentagonCornerRadius.w);
-                    x = (circlePivot.y + circlePivot.x / m - c) / (m + 1 / m); y = m * x + c;
-                    fy = map(texcoord.x, x, circlePivot.x, y, circlePivot.y);
-                    sdfPentagon = texcoord.y > fy && texcoord.y < circlePivot.y ? cornerCircle: sdfPentagon;
-                    
-                    // 右中圆角
-                    m = -m; k = _PentagonCornerRadius.z * d - _PentagonTipSize;
-                    circlePivot = half2(width - _PentagonCornerRadius.z, m * (width - _PentagonCornerRadius.z) + k);
-                    cornerCircle = sdCircle(texcoord - circlePivot, _PentagonCornerRadius.z);
-                    x = (circlePivot.y + circlePivot.x / m - c) / (m + 1 / m); y = m * x + c;
-                    fy = map(texcoord.x, circlePivot.x, x, circlePivot.y, y);
-                    sdfPentagon = texcoord.y > fy && texcoord.y < circlePivot.y ? cornerCircle: sdfPentagon;
-                    
-                    // 顶部圆角
-                    cornerCircle = sdCircle(texcoord - half2(_PentagonCornerRadius.x, height - _PentagonCornerRadius.x), _PentagonCornerRadius.x);
-                    bool mask = texcoord.x < _PentagonCornerRadius.x && texcoord.y > height - _PentagonCornerRadius.x;
-                    sdfPentagon = mask ? cornerCircle: sdfPentagon;
-                    cornerCircle = sdCircle(texcoord - half2(width - _PentagonCornerRadius.y, height - _PentagonCornerRadius.y), _PentagonCornerRadius.y);
-                    mask = texcoord.x > width - _PentagonCornerRadius.y && texcoord.y > height - _PentagonCornerRadius.y;
-                    sdfPentagon = mask ? cornerCircle: sdfPentagon;
-                    
-                    return sdfPentagon;
-                }
-            #endif
-            
-            //六边形
-            #if HEXAGON
-                half hexagonScene(float4 additionalData)
-                {
-                    float2 texcoord = additionalData.xy;
-                    float2 size = float2(additionalData.z, additionalData.w);
-                    float width = size.x;
-                    float height = size.y;
-                    
-                    half baseRect = sdRectanlge(texcoord - half2(width / 2.0, height / 2.0), width, height);
-                    half scale = width / _HexagonTipSize.x;
-                    half rhombus1 = sdRhombus(texcoord - float2(_HexagonTipSize.x * scale, height / 2.0), float2(_HexagonTipSize.x, height / 2.0) * scale);
-                    scale = width / _HexagonTipSize.y;
-                    half rhombus2 = sdRhombus(texcoord - float2(width - _HexagonTipSize.y * scale, height / 2.0), float2(_HexagonTipSize.y, height / 2.0) * scale);
-                    half sdfHexagon = sdfDifference(sdfDifference(baseRect, -rhombus1), -rhombus2);
-
-                    // 左圆角
-                    float halfHeight = height / 2.0;
-                    float m = -halfHeight / _HexagonTipSize.x;
-                    float c = halfHeight;
-                    float d = sqrt(1.0 + m * m);
-                    float k = _HexagonTipRadius.x * d + c;
-                    // 中间
-                    half2 circlePivot = half2((halfHeight - k) / m, halfHeight);
-                    half cornerCircle = sdCircle(texcoord - circlePivot, _HexagonTipRadius.x);
-                    half x = (circlePivot.y + circlePivot.x / m - c) / (m + 1.0 / m);
-                    half y = m * x + c;
-                    half fy = map(texcoord.x, x, circlePivot.x, y, circlePivot.y);
-                    sdfHexagon = texcoord.y > fy && texcoord.y < height - fy ? cornerCircle: sdfHexagon;
-                 
-                    // 底部
-                    k = _HexagonCornerRadius.x * d + c;
-                    circlePivot = half2((_HexagonCornerRadius.x - k) / m, _HexagonCornerRadius.x);
-                    cornerCircle = sdCircle(texcoord - circlePivot, _HexagonCornerRadius.x);
-                    x = (circlePivot.y + circlePivot.x / m - c) / (m + 1.0 / m); y = m * x + c;
-                    fy = map(texcoord.x, x, circlePivot.x, y, circlePivot.y);
-                    sdfHexagon = texcoord.y < fy && texcoord.x < circlePivot.x ? cornerCircle: sdfHexagon;
-
-                    // 顶部
-                    k = _HexagonCornerRadius.w * d + c;
-                    circlePivot = half2((_HexagonCornerRadius.w - k) / m, height - _HexagonCornerRadius.w);
-                    cornerCircle = sdCircle(texcoord - circlePivot, _HexagonCornerRadius.w);
-                    x = (_HexagonCornerRadius.w + circlePivot.x / m - c) / (m + 1.0 / m); y = m * x + c;
-                    fy = map(texcoord.x, x, circlePivot.x, height - y, circlePivot.y);
-                    sdfHexagon = texcoord.y > fy && texcoord.x < circlePivot.x ? cornerCircle: sdfHexagon;
-     
-                    // 右圆角
-                    m = halfHeight / _HexagonTipSize.y;
-                    d = sqrt(1.0 + m * m);
-                    c = halfHeight - m * width;
-                    k = _HexagonTipRadius.y * d + c;
-                    
-                    // 中间
-                    circlePivot = half2((halfHeight - k) / m, halfHeight);
-                    cornerCircle = sdCircle(texcoord - circlePivot, _HexagonTipRadius.y);
-                    x = (circlePivot.y + circlePivot.x / m - c) / (m + 1.0 / m); y = m * x + c;
-                    fy = map(texcoord.x, circlePivot.x, x, circlePivot.y, y);
-                    sdfHexagon = texcoord.y > fy && texcoord.y < height - fy ? cornerCircle: sdfHexagon;
-                    
-                    // 底部
-                    k = _HexagonCornerRadius.y * d + c;
-                    circlePivot = half2((_HexagonCornerRadius.y - k) / m, _HexagonCornerRadius.y);
-                    cornerCircle = sdCircle(texcoord - circlePivot, _HexagonCornerRadius.y);
-                    x = (circlePivot.y + circlePivot.x / m - c) / (m + 1.0 / m); y = m * x + c;
-                    fy = map(texcoord.x, circlePivot.x, x, circlePivot.y, y);
-                    sdfHexagon = texcoord.y < fy && texcoord.x > circlePivot.x ? cornerCircle: sdfHexagon;
-                    
-                    // 顶部
-                    k = _HexagonCornerRadius.z * d + c;
-                    circlePivot = half2((_HexagonCornerRadius.z - k) / m, height - _HexagonCornerRadius.z);
-                    cornerCircle = sdCircle(texcoord - circlePivot, _HexagonCornerRadius.z);
-                    x = (_HexagonCornerRadius.z + circlePivot.x / m - c) / (m + 1.0 / m); y = m * x + c;
-                    fy = map(texcoord.x, circlePivot.x, x, circlePivot.y, height - y);
-                    sdfHexagon = texcoord.y > fy && texcoord.x > circlePivot.x ? cornerCircle: sdfHexagon;
-                    
-                    return sdfHexagon;
-                }
-            #endif
-
-            // 倒角方体
-            #if CHAMFERBOX
-                half chamferBoxScene(float4 additionalData)
-                {
-                    float2 texcoord = additionalData.xy;
-                    float2 size = float2(additionalData.z, additionalData.w);
-                    float2 p = (2.0 * texcoord - size) / size.y;
-                    float2 box = _ChamferBoxSize;
-                    float4 chamfer = _ChamferBoxRadius;
-                    chamfer = min(chamfer, float4(min(box.x, box.y), min(box.x, box.y), min(box.x, box.y), min(box.x, box.y)));
-
-                    float big = 1e5;
-                    float d0 = (p.x <= 0 && p.y <= 0) ? sdChamferBox(p, box, chamfer.x) : big;                // 左下
-                    float d1 = (p.x >= 0 && p.y <= 0) ? sdChamferBox(float2(-p.x,  p.y), box, chamfer.y) : big; // 右下
-                    float d2 = (p.x >= 0 && p.y >= 0) ? sdChamferBox(float2(-p.x, -p.y), box, chamfer.z) : big; // 右上
-                    float d3 = (p.x <= 0 && p.y >= 0) ? sdChamferBox(float2( p.x, -p.y), box, chamfer.w) : big; // 左上
-
-                    float d = min(min(d0, d1), min(d2, d3));
-                    return d * 80.0;
-                }
-            #endif
-            
-            // 平行四边形
-            #if PARALLELOGRAM
-                half parallelogramScene(float4 additionalData)
-                {
-                    float2 texcoord = additionalData.xy;
-                    float2 size = float2(additionalData.z, additionalData.w);
-
-                    // 归一化到中心
-                    float2 p = (2.0 * texcoord - size) / size.y;
-
-                    // 动态斜率（可用时间或参数控制，这里用常量）
-                    float sk = 0.5 * sin(_ParallelogramValue);
-
-                    // 宽高参数（可根据UI参数调整）
-                    float wi = (size.x / size.y) * 0.58;
-                    float he = 1;
-
-                    float d = sdParallelogram(p, wi, he, sk);
-
-                    // 放大SDF以适配像素空间
-                    return d * 80.0;
-                }
-            #endif
-
-            //N星形多边形
-            #if NSTAR_POLYGON
-                half nStarPolygonScene(float4 additionalData)
-                {
-                    float2 texcoord = additionalData.xy;
-                    float width = additionalData.z;
-                    float height = additionalData.w;
-                    float size = height / 2 - _NStarPolygonCornerRadius;
-                    half str = sdNStarPolygon(texcoord - half2(width / 2, height / 2) - _NStarPolygonOffset, size, _NStarPolygonSideCount, _NStarPolygonInset) - _NStarPolygonCornerRadius;
-                    return str;
-                }
-            #endif
-            
-            //心形
-            #if HEART
-                half heartScene(float4 additionalData)
-                {
-                    //得到纹理坐标
-                    float2 texcoord = additionalData.xy;
-                    //得到宽
-                    float width = additionalData.z;
-                    //得到高
-                    float height = additionalData.w;
-
-                    float radius = min(width, height) * 0.8;
-
-                    float2 value = texcoord - float2(width * 0.5, height * 0.1);
-                    half sdf = sdHeart(value, radius) * 110;
-                    return sdf;
-                }
-            #endif
-
-            //水滴十字
-            #if BLOBBYCROSS
-                half blobbyCrossScene(float4 additionalData)
-                {
-                     //得到纹理坐标
-                    float2 texcoord = additionalData.xy;
-                    //得到宽
-                    float width = additionalData.z;
-                    //得到高
-                    float height = additionalData.w;
-
-                    float2 p = (2.0 * texcoord - additionalData.zw) / width;
-                    p *= 2.0;
-
-                    float time = _BlobbyCrossTime;
-                    float he = sin(time * 0.43 + 4.0);
-                    he = (0.001 + abs(he)) * ((he >= 0.0) ? 1.0 : -1.0);
-                    float ra = 0.1 + 0.5 * (0.5 + 0.5 * sin(time * 1.7)) + max(0.0, he - 0.7);
-
-                    float d = sdBlobbyCross(p, he) - ra;
-
-                    d = d * 35;
-
-                    return d;
-                }
-            #endif
-
-            //方圆形 菱形
-            #if SQUIRCLE
-                half squircleScene(float4 additionalData)
-                {
-                    float2 texcoord = additionalData.xy;
-                    float width = additionalData.z;
-                    float height = additionalData.w;
-
-                    float2 p = (2.0 * texcoord - additionalData.zw) / width;
-
-                    // 增加归一化处理，确保中心区域平滑
-                    float n = 3.0 + 3 * sin(9.8 * _SquircleTime / 2.0);
-                    float d = sdSquircle(p, n);
-                    d = d * 80;
-
-                    return d;
-                }
-            #endif
-
-            //N三角形圆角
-            #if NTRIANGLE_ROUNDED
-
-            half nTriangleRoundedScene(float4 additionalData)
-            {
-                float2 texcoord = additionalData.xy;
-                float width = additionalData.z;
-                float height = additionalData.w;
-
-
-                float2 p = (2.0 * texcoord - float2(width,height)) / max(width,height);
-
-                // 动态时间控制
-                float time = _NTriangleRoundedTime;
-                float number = _NTriangleRoundedNumber;
-                float rounding = 0.1 - 0.1 * cos(radians(360.0) * time);
-                float n = floor(3.0 + fmod(1.0 * number, 15.0));
-
-                // 应用角度重复
-                p = opRepAng(p, radians(360.0) / n, radians(30));
-
-                // 计算三角形的内切圆半径和边长
-                float r = 1.0;
-                float r_in = r * cos(radians(180.0) / n);
-                float side_length = 2.0 * r_in * tan(radians(180.0) / n);
-
-                // 计算带圆角的等腰三角形的 SDF
-                float d = sdTriangleIsoscelesRounded(p.yx, float2(0.5 * side_length, r_in), rounding);
-
-                // 返回 SDF 值，放大以适配像素空间
-                return d * 80.0;
-            }
-            #endif
-
-            // -------------------- 矩形（RECTANGLE） 开始 --------------------
-            float generateDashedEffect(v2f IN, float time, float aspectRatio, int shapeType)
-            {
-                // 定义虚线的波长和占空比
-                float wavelength = 0.2; // 虚线的周期（以归一化坐标为基准）
-                float dashRatio = 0.5;  // 虚线的占空比
-
-                float dashedEffect = 0.0;
-
-                if (shapeType == 1) // CIRCLE
-                {
-                    #if CIRCLE
-                    // 计算图形中心
-                    float2 center = float2(IN.shapeData.z * 0.5, IN.shapeData.w * 0.5);
-                    // 当前点的角度
-                    float angle = atan2(IN.shapeData.y - center.y, IN.shapeData.x - center.x); 
-                    float normalizedAngle = (angle + 3.1415926) / (2.0 * 3.1415926); // 归一化到 [0, 1]
-
-                    // 计算当前点到中心的距离
-                    float distance = length(float2(IN.shapeData.x - center.x, IN.shapeData.y - center.y));
-                    
-                    float width = IN.shapeData.z;
-                    float height = IN.shapeData.w;
-                    float radius = lerp(_CircleRadius, min(width, height) / 2.0, _CircleFitRadius);
-
-                    // 定义内外边界
-                    float outerRadius = radius;       // 外边界半径（边缘部分）
-                    float innerRadius = radius - _OutlineWidth; // 内边界半径（裁剪中间部分）;
-                    
-                    float edgeMask = smoothstep(innerRadius, innerRadius + 0.01, distance) * 
-                                     (1.0 - smoothstep(outerRadius - 0.01, outerRadius, distance));
-
-                    // 基于角度生成虚线
-                    float dashPattern = step(0.5, frac(normalizedAngle * 15.0 + _CustomTime));
-                    dashedEffect = dashPattern * edgeMask; // 结合边缘遮罩
-                    #endif
-                }
-                else if (shapeType == 3) // RECTANGLE
-                {
-                    float2 uv = IN.shapeData.xy / float2(IN.shapeData.z, IN.shapeData.w); // 归一化 UV 坐标
-                    time = fmod(time, wavelength / 2);
-
-                    // 矩形虚线逻辑
-                    float dashedTop = generateDashedPattern(uv.x + time, wavelength, dashRatio);
-                    float dashedBottom = generateDashedPattern(uv.x - time, wavelength, dashRatio);
-                    float dashedLeft = generateDashedPattern(uv.y + time, wavelength, dashRatio);
-                    float dashedRight = generateDashedPattern(uv.y - time, wavelength, dashRatio);
-
-                    float edgeWidth = _OutlineWidth / IN.shapeData.w;
-                    float edgeTop = getEdge(1.0 - uv.y, edgeWidth, 1.0);
-                    float edgeBottom = getEdge(uv.y, edgeWidth, 1.0);
-                    float edgeLeft = getEdge(uv.x, edgeWidth, aspectRatio);
-                    float edgeRight = getEdge(1.0 - uv.x, edgeWidth, aspectRatio);
-
-                    dashedEffect = edgeTop * dashedTop +
-                                   edgeBottom * dashedBottom +
-                                   edgeLeft * dashedLeft +
-                                   edgeRight * dashedRight;
-                }
-                return saturate(dashedEffect);
-            }
-            // -------------------- 矩形（RECTANGLE） 结束 --------------------
-            // -------------------- 过渡（TRANSITION） 开始 --------------------
-            #include "ImageEx.Transition.cginc"
-            // -------------------- 过渡（TRANSITION） 结束 ---------------------
-
-            // -------------------- 模糊（BLUR） 开始 --------------------
-            #include "ImageEx.Blur.cginc"
-            // -------------------- 模糊（BLUR） 结束 ---------------------
-
-            // -------------------- 描边（OUTLINE） 开始 --------------------
-            #include "ImageEx.Outline.cginc"
-            // -------------------- 描边（OUTLINE） 结束 ---------------------
-
-            // -------------------- 阴影（SHADOW） 开始 --------------------
-            #include "ImageEx.Shadow.cginc"
-            // -------------------- 阴影（SHADOW） 结束 ---------------------
-
-            // -------------------- 形状分发（SHAPE DISPATCH） 开始 --------------------
-            #include "ImageEx.ShapeDispatch.cginc"
-            // -------------------- 形状分发（SHAPE DISPATCH） 结束 ---------------------
+            // -------------------- 过渡（TRANSITION） --------------------
+            #include "../../Common/RM_Transition.cginc"
+            // -------------------- 模糊（BLUR） --------------------
+            #include "../../Common/RM_Blur.cginc"
+            // -------------------- 描边（OUTLINE） --------------------
+            #include "../../Common/RM_Outline.cginc"
+            // -------------------- 阴影（SHADOW） --------------------
+            #include "../../Common/RM_Shadow.cginc"
 
             //顶点着色器
             v2f vert(appdata_t v)
@@ -917,7 +335,7 @@ Shader "ReunionMovement/UI/ImageEx"
 
                 if (isShadowVertex)
                 {
-                    return RenderShadow(IN, texcoord, transAlpha, transitionFilterUv);
+                    return RM_RenderShadow(IN.shapeData, _FalloffDistance, _StrokeWidth, _OutlineWidth, texcoord, transAlpha, transitionFilterUv, IN.color.a);
                 }
 
                 color = ApplyBlur(texcoord) * color;
