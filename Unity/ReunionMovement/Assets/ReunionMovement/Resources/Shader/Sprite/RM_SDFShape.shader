@@ -1,4 +1,8 @@
-Shader "ReunionMovement/UI/ImageEx"
+// ============================================================
+// ReunionMovement SDF Shape Shader for 2D SpriteRenderer
+// 基于 Common/ 通用模块，适用于 SpriteRenderer 组件
+// ============================================================
+Shader "ReunionMovement/Sprite/SDFShape"
 {
     Properties
     {
@@ -64,7 +68,6 @@ Shader "ReunionMovement/UI/ImageEx"
         
         _OutlineWidth ("轮廓宽", float) = 0
         _OutlineColor ("轮廓颜色", Color) = (0, 0, 0, 1)
-        // 虚线开关、自定义时间
         _EnableDashedOutline ("启用虚线轮廓", int) = 0 
         _CustomTime ("自定义时间值", Float) = 0
 
@@ -90,7 +93,6 @@ Shader "ReunionMovement/UI/ImageEx"
         _TransitionTexClampPadding ("过渡图块夹边距（像素）", Range(0, 4)) = 1
         [Toggle] _TransitionUseUv0 ("过渡使用精灵 UV0", Float) = 1
 
-        // 阴影相关属性（用于控制投影/镜像阴影的颜色、衰减、采样与镜像行为）
         [HDR] _ShadowColor ("Shadow Color", Color) = (0,0,0,0.5)
         _ShadowBlurIntensity ("Shadow Decay Intensity", Range(0,100)) = 1
         _SamplingWidth ("Sampling Width", Float) = 1
@@ -108,37 +110,18 @@ Shader "ReunionMovement/UI/ImageEx"
         _SquircleTime ("方圆形形状的动态时间参数", Float) = 1
         _NTriangleRoundedTime ("N三角形圆角形状的动态时间参数", Float) = 0
         _NTriangleRoundedNumber ("N三角形圆角形状的边数", Float) = 0
-
-        _StencilComp ("模板比较", Float) = 8
-        _Stencil ("模板ID", Float) = 0
-        _StencilOp ("模板操作", Float) = 0
-        _StencilWriteMask ("模板写入掩码", Float) = 255
-        _StencilReadMask ("模板读取掩码", Float) = 255
         
-        _ColorMask ("颜色掩码", Float) = 15
-        
-        [Toggle(UNITY_UI_ALPHACLIP)] _UseUIAlphaClip ("使用Alpha剪辑", Float) = 0
+        [Toggle] _PixelSnap ("Pixel Snap", Float) = 0
     }
     
     SubShader
     {
         Tags { "Queue" = "Transparent" "IgnoreProjector" = "True" "RenderType" = "Transparent" "PreviewType" = "Plane" "CanUseSpriteAtlas" = "True" }
         
-        Stencil
-        {
-            Ref [_Stencil]
-            Comp [_StencilComp]
-            Pass [_StencilOp]
-            ReadMask [_StencilReadMask]
-            WriteMask [_StencilWriteMask]
-        }
-        
         Cull Off
         Lighting Off
         ZWrite Off
-        ZTest [unity_GUIZTestMode]
         Blend SrcAlpha OneMinusSrcAlpha
-        ColorMask [_ColorMask]
         
         Pass
         {
@@ -149,22 +132,16 @@ Shader "ReunionMovement/UI/ImageEx"
             #pragma fragment frag
             
             #include "UnityCG.cginc"
-            #include "UnityUI.cginc"
-            #include "../../Base/2D_SDF.cginc"
-            #include "../../Base/Common.cginc"
+            #include "../Base/2D_SDF.cginc"
+            #include "../Base/Common.cginc"
             
             // ============================================================
-            // ReunionMovement 通用模块 (Common/)
-            // 渐变 / 过渡 / 模糊 / 描边 / 形状 / 阴影
+            // ReunionMovement 通用模块
             // ============================================================
-            #include "../../Common/RM_SDFShapes.cginc"
-            #include "../../Common/RM_Gradient.cginc"
-            
-            #pragma multi_compile_local _ UNITY_UI_CLIP_RECT
-            #pragma multi_compile_local _ UNITY_UI_ALPHACLIP
+            #include "../Common/RM_SDFShapes.cginc"
+            #include "../Common/RM_Gradient.cginc"
             
             #pragma multi_compile_local _ CIRCLE TRIANGLE RECTANGLE PENTAGON HEXAGON CHAMFERBOX PARALLELOGRAM NSTAR_POLYGON HEART BLOBBYCROSS SQUIRCLE NTRIANGLE_ROUNDED
-
             #pragma multi_compile_local _ STROKE OUTLINED OUTLINED_STROKE
             #pragma shader_feature_local _ GRADIENT_LINEAR GRADIENT_RADIAL GRADIENT_CORNER
             #pragma shader_feature_local _ BLUR_FAST BLUR_MEDIUM BLUR_DETAIL
@@ -172,16 +149,13 @@ Shader "ReunionMovement/UI/ImageEx"
             #pragma shader_feature_local _ DASHED_OUTLINE_STATIC
             #pragma shader_feature_local _ TRANSITION_CLAMP_STATIC
             #pragma shader_feature_local _ TRANSITION_UV_EFFECT_STATIC
+            #pragma multi_compile _ PIXELSNAP_ON
 
             struct appdata_t
             {
                 float4 vertex: POSITION;
                 float4 color: COLOR;
                 float2 texcoord: TEXCOORD0;
-                float2 uv1: TEXCOORD1;
-                float2 size: TEXCOORD2;
-                
-                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
             
             struct v2f
@@ -191,29 +165,21 @@ Shader "ReunionMovement/UI/ImageEx"
                 float2 texcoord: TEXCOORD0;
                 float4 shapeData: TEXCOORD1;
                 float2 effectsUv: TEXCOORD2;
-                float4 worldPosition : TEXCOORD3;
-                
-                UNITY_VERTEX_OUTPUT_STEREO
             };
+            
             
             sampler2D _MainTex;
             float4 _MainTex_ST;
             float4 _MainTex_TexelSize;
             float4 _TextureSampleAdd;
             fixed4 _TextureSize;
-            float4 _ClipRect;
             half _PixelWorldScale;
             half _ShapeRotation;
             half _ConstrainRotation;
             half _FlipHorizontal;
             half _FlipVertical;
 
-            // 注：形状参数 (RectangleCornerRadius, CircleRadius 等) 已在 RM_SDFShapes.cginc 中声明
-            // 注：渐变参数 (GradientColor0-7 等) 已在 RM_Gradient.cginc 中声明
-            
-            // ============================================================
-            // 别名映射：将旧函数名映射到 Common 模块的 RM_* 版本
-            // ============================================================
+            // 别名映射
             #define rectangleScene       RM_RectangleScene
             #define circleScene          RM_CircleScene
             #define triangleScene        RM_TriangleScene
@@ -227,76 +193,61 @@ Shader "ReunionMovement/UI/ImageEx"
             #define squircleScene        RM_SquircleScene
             #define nTriangleRoundedScene RM_NTriangleRoundedScene
             #define computeSdfMask(sdf, ps)  RM_ComputeSdfMask(sdf, ps, _StrokeWidth, _OutlineWidth)
-            #define ComputeSdfData(IN, sdf, ps) RM_ComputeSdfData(IN.shapeData, _FalloffDistance, sdf, ps)
-            #define generateDashedEffect(IN, t, ar, st) RM_GenerateDashedEffect(IN.shapeData, t, ar, st)
+            #define ComputeSdfData(shapeData, fd, sdf, ps) RM_ComputeSdfData(shapeData, fd, sdf, ps)
+            #define generateDashedEffect(sd, t, ar, st) RM_GenerateDashedEffect(sd, t, ar, st)
             #define ApplyGradientColor(c, uv)   RM_ApplyGradientColor(c, uv)
             #define ApplyBlur(uv)               RM_ApplyBlur(uv)
-            #define ApplyOutlinedSdf(c, IN, sdf, ps) RM_ApplyOutlinedSdf(c, IN.shapeData, sdf, ps)
+            #define ApplyOutlinedSdf(c, sd, sdf, ps) RM_ApplyOutlinedSdf(c, sd, sdf, ps)
             #define apply_transition_filter(c, a, uv)  RM_ApplyTransitionFilter(c, a, uv)
             #define transition_alpha(uv)         RM_TransitionAlpha(uv)
             #define move_transition_filter(m, a) RM_MoveTransitionFilter(m, a)
             #define transition_rate()            RM_TransitionRate()
             #define apply_color_filter(m, c, f, i, g) RM_ApplyColorFilter(m, c, f, i, g)
 
-            // -------------------- 过渡（TRANSITION） --------------------
-            #include "../../Common/RM_Transition.cginc"
-            // -------------------- 模糊（BLUR） --------------------
-            #include "../../Common/RM_Blur.cginc"
-            // -------------------- 描边（OUTLINE） --------------------
-            #include "../../Common/RM_Outline.cginc"
-            // -------------------- 阴影（SHADOW） --------------------
-            #include "../../Common/RM_Shadow.cginc"
+            #include "../Common/RM_Transition.cginc"
+            #include "../Common/RM_Blur.cginc"
+            #include "../Common/RM_Outline.cginc"
+            #include "../Common/RM_Shadow.cginc"
 
-            //顶点着色器
+            // Sprite 顶点着色器
             v2f vert(appdata_t v)
             {
                 v2f OUT;
-                UNITY_SETUP_INSTANCE_ID(v);
-                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(OUT);
-                OUT.worldPosition = v.vertex;
                 OUT.vertex = UnityObjectToClipPos(v.vertex);
                 OUT.texcoord = v.texcoord;
-                OUT.effectsUv = v.uv1;
+                OUT.effectsUv = v.texcoord;
                 
-                // 将翻转应用到纹理 UV 与 effects UV，确保采样与过渡在水平/垂直翻转时表现正确
-                // _FlipHorizontal/_FlipVertical 由 ImageEx 组件以 0/1 的形式设置
                 OUT.texcoord.x = lerp(OUT.texcoord.x, 1 - OUT.texcoord.x, _FlipHorizontal);
                 OUT.texcoord.y = lerp(OUT.texcoord.y, 1 - OUT.texcoord.y, _FlipVertical);
                 OUT.effectsUv.x = lerp(OUT.effectsUv.x, 1 - OUT.effectsUv.x, _FlipHorizontal);
                 OUT.effectsUv.y = lerp(OUT.effectsUv.y, 1 - OUT.effectsUv.y, _FlipVertical);
                 
-                float2 size = float2(v.size.x + _FalloffDistance, v.size.y + _FalloffDistance);
+                // Sprite 尺寸从纹理尺寸计算（像素空间）
+                float2 size = float2(_TextureSize.x + _FalloffDistance, _TextureSize.y + _FalloffDistance);
                 float shapeRotation = radians(_ShapeRotation);
-                size = _ConstrainRotation > 0.0 && frac(abs(shapeRotation) / 3.14159) > 0.1? float2(size.y, size.x) : size;
+                size = _ConstrainRotation > 0.0 && frac(abs(shapeRotation) / 3.14159) > 0.1 ? float2(size.y, size.x) : size;
                 
-                float2 shapeUv = _ConstrainRotation > 0 ? v.uv1 : v.uv1 * size;
-                shapeUv = rotateUV(shapeUv, shapeRotation, _ConstrainRotation > 0? float2(0.5, 0.5) : size * 0.5);
-                shapeUv*= _ConstrainRotation > 0.0? size : 1.0;
+                float2 shapeUv = _ConstrainRotation > 0 ? v.texcoord : v.texcoord * size;
+                shapeUv = rotateUV(shapeUv, shapeRotation, _ConstrainRotation > 0 ? float2(0.5, 0.5) : size * 0.5);
+                shapeUv *= _ConstrainRotation > 0.0 ? size : 1.0;
                 
-                // 在形状数据上应用翻转（shapeUv 在像素空间中），确保程序化形状的 SDF 计算也考虑翻转
-                // _FlipHorizontal/_FlipVertical 由 ImageEx 组件以 0/1 的形式设置
                 shapeUv.x = lerp(shapeUv.x, abs(size.x - shapeUv.x), _FlipHorizontal);
                 shapeUv.y = lerp(shapeUv.y, abs(size.y - shapeUv.y), _FlipVertical);
                 
                 OUT.shapeData = float4(shapeUv.x, shapeUv.y, size.x, size.y);
-                
-                // 对形状数据应用翻转（shapeUv 以像素空间表示），以确保程序化形状的 SDF 考虑翻转
                 OUT.shapeData.x = lerp(OUT.shapeData.x, OUT.shapeData.z - OUT.shapeData.x, _FlipHorizontal);
                 OUT.shapeData.y = lerp(OUT.shapeData.y, OUT.shapeData.w - OUT.shapeData.y, _FlipVertical);
                 
-                #ifdef UNITY_HALF_TEXEL_OFFSET
-                    OUT.vertex.xy += (_ScreenParams.zw - 1.0) * float2(-1.0, 1.0);
+                #ifdef PIXELSNAP_ON
+                    OUT.vertex = UnityPixelSnap(OUT.vertex);
                 #endif
+                
                 OUT.color = v.color * _Color;
-
                 return OUT;
             }
             
-            //片元着色器
             fixed4 frag(v2f IN): SV_Target
             {
-                // Prepare UVs/transition info before deciding shadow or main fragment so shadow can follow transitions.
-                // 在决定使用阴影分支或主图分支之前，准备 UV 与过渡信息，以便阴影能跟随过渡状态
                 half4 color = IN.color;
                 half2 texcoord = IN.texcoord;
                 float2 effectsUv = IN.effectsUv;
@@ -309,7 +260,6 @@ Shader "ReunionMovement/UI/ImageEx"
                 float2 transitionUv = transitionBaseUv;
                 float2 transitionFilterUv = transitionBaseUv;
 
-                // 过渡逻辑（计算 transAlpha，并为 Melt/Burn 模式允许移动 UV）
                 float transAlpha = 1;
                 #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
                     #if TRANSITION_PATTERN
@@ -325,12 +275,10 @@ Shader "ReunionMovement/UI/ImageEx"
                         transAlpha = transition_alpha(transitionBaseUv);
                     #endif
 
-                    // Move UVs for Melt/Burn
-                    float4 uvMask = float4(0, 0, 1, 1); // Simplified mask for full rect
+                    float4 uvMask = float4(0, 0, 1, 1);
                     texcoord += move_transition_filter(uvMask, transAlpha);
                 #endif
 
-                // 检测是否为阴影顶点，并使用单独逻辑渲染阴影（仍包含过渡处理）
                 bool isShadowVertex = color.a > 0.001 && color.r < 0.001 && color.g < 0.001 && color.b < 0.001;
 
                 if (isShadowVertex)
@@ -339,17 +287,13 @@ Shader "ReunionMovement/UI/ImageEx"
                 }
 
                 color = ApplyBlur(texcoord) * color;
-
-                // 继续主片元路径：先对主纹理进行可选模糊采样（ApplyBlur），然后按功能模块（渐变、SDF、描边、过渡）依次处理颜色与 alpha
-                // 保留原始的基础采样颜色
                 fixed4 baseSample = (tex2D(_MainTex, texcoord) + _TextureSampleAdd) * IN.color;
-
                 ApplyGradientColor(color, effectsUv);
                 
                 #if RECTANGLE || CIRCLE || PENTAGON || TRIANGLE || HEXAGON || CHAMFERBOX || PARALLELOGRAM || NSTAR_POLYGON || HEART || BLOBBYCROSS || SQUIRCLE || NTRIANGLE_ROUNDED
                     float sdfData;
                     float pixelScale;
-                    ComputeSdfData(IN, sdfData, pixelScale);
+                    ComputeSdfData(IN.shapeData, _FalloffDistance, sdfData, pixelScale);
 
                     #if !OUTLINED && !STROKE && !OUTLINED_STROKE
                         float sdf = sampleSdf(sdfData, pixelScale);
@@ -361,7 +305,7 @@ Shader "ReunionMovement/UI/ImageEx"
                         color.a *= sdf;
                     #endif
                     
-                    ApplyOutlinedSdf(color, IN, sdfData, pixelScale);
+                    ApplyOutlinedSdf(color, IN.shapeData, sdfData, pixelScale);
                      
                     #if OUTLINED_STROKE
                         float alpha = sampleSdfStrip(sdfData, _OutlineWidth + _StrokeWidth, pixelScale);
@@ -372,24 +316,19 @@ Shader "ReunionMovement/UI/ImageEx"
                     #endif
                 #endif
 
-                // 应用过渡过滤器
                 #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
-                    // transAlpha 和 transitionFilterUv 已在前面计算，可在此处使用
                     color = apply_transition_filter(color, transAlpha, transitionFilterUv);
                 #endif
 
                 #if !RECTANGLE && !CIRCLE && !PENTAGON && !TRIANGLE && !HEXAGON && !CHAMFERBOX && !PARALLELOGRAM && !NSTAR_POLYGON && !HEART && !BLOBBYCROSS && !SQUIRCLE && !NTRIANGLE_ROUNDED
                     #if OUTLINED || STROKE || OUTLINED_STROKE
                         float width = _OutlineWidth;
-
                         #if STROKE || OUTLINED_STROKE
                             width += _StrokeWidth;
                         #endif
-
                         if (width > 0)
                         {
                             float2 d = _MainTex_TexelSize.xy * width;
-                            
                             half a00 = (tex2D(_MainTex, texcoord + float2(-d.x, -d.y)) + _TextureSampleAdd).a;
                             half a01 = (tex2D(_MainTex, texcoord + float2(-d.x, 0.0)) + _TextureSampleAdd).a;
                             half a02 = (tex2D(_MainTex, texcoord + float2(-d.x, +d.y)) + _TextureSampleAdd).a;
@@ -398,14 +337,10 @@ Shader "ReunionMovement/UI/ImageEx"
                             half a20 = (tex2D(_MainTex, texcoord + float2(+d.x, -d.y)) + _TextureSampleAdd).a;
                             half a21 = (tex2D(_MainTex, texcoord + float2(+d.x, 0.0)) + _TextureSampleAdd).a;
                             half a22 = (tex2D(_MainTex, texcoord + float2(+d.x, +d.y)) + _TextureSampleAdd).a;
-
                             half sobel_h = a00 * -1.0 + a01 * -2.0 + a02 * -1.0 + a20 * 1.0 + a21 * 2.0 + a22 * 1.0;
                             half sobel_v = a00 * -1.0 + a10 * -2.0 + a20 * -1.0 + a02 * 1.0 + a12 * 2.0 + a22 * 1.0;
-
                             half sobel = sqrt(sobel_h * sobel_h + sobel_v * sobel_v);
                             sobel = saturate(sobel);
-
-                            // 原有描边逻辑
                             #if STROKE
                                 color.a = sobel * _OutlineColor.a * IN.color.a;
                             #else
@@ -414,20 +349,9 @@ Shader "ReunionMovement/UI/ImageEx"
                             #endif
                         }
                         #if STROKE
-                        else
-                        {
-                            color.a = 0;
-                        }
+                        else { color.a = 0; }
                         #endif
                     #endif
-                #endif
-
-                #ifdef UNITY_UI_CLIP_RECT
-                    color.a *= UnityGet2DClipping(IN.worldPosition.xy, _ClipRect);
-                #endif
-                
-                #ifdef UNITY_UI_ALPHACLIP
-                    clip(color.a - 0.001);
                 #endif
 
                 return fixed4(color);

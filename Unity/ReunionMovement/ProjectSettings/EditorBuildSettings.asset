@@ -14,10 +14,10 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/ReunionMovement/Scenes/Temp.unity
     guid: a7037d7e56ed7914f97040f7038914d8
-  - enabled: 0
+  - enabled: 1
     path: Assets/ReunionMovement/Scenes/Example/UI Example.unity
     guid: e426d5e3f46fb194b92152e152ab0020
-  - enabled: 1
+  - enabled: 0
     path: Assets/ReunionMovement/Scenes/Example/Camera Example.unity
     guid: 69789fc2c50ce874db3e41384e6be5e7
   m_configObjects:

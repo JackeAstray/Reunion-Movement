@@ -91,9 +91,9 @@ Shader "ReunionMovement/GalaxyStar2"
                 fragColor = clamp(fragColor, 0.0, 1.0);
 
                 //动态星星    
-                for (int i = 0; i <= _STAR_NUMBER; i++)
+                for (int j = 0; j <= _STAR_NUMBER; j++)
                 {
-                    float n = float(i);
+                    float n = float(j);
                     //设置星星的位置
                     float x = rand(n) * res + (_Time.y + 100.0) * _SPEED;
                     float3 pos = float3(x, rand(n + 1.) , rand(n + 2.));
