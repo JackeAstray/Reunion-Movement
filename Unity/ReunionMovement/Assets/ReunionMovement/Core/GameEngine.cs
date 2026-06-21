@@ -59,8 +59,6 @@ namespace ReunionMovement.Core
         // 累积时间 (每300ms)
         private float accumTime300ms;
 
-        private bool isWindowsEditor;
-
         /// <summary>
         /// 启动入口
         /// </summary>
@@ -87,11 +85,6 @@ namespace ReunionMovement.Core
         void Start()
         {
             isAppPlaying = true;
-
-            if (Application.platform == RuntimePlatform.WindowsEditor)
-            {
-                isWindowsEditor = true;
-            }
         }
 
         /// <summary>
@@ -129,20 +122,18 @@ namespace ReunionMovement.Core
         {
             foreach (ICustommSystem initModule in modules)
             {
-                if (isWindowsEditor)
-                {
-                    var startInitTime = Time.time;
-                    var startMem = GC.GetTotalMemory(false);
-                }
+#if UNITY_EDITOR
+                var startMem = GC.GetTotalMemory(false);
+#endif
 
                 var startTime = Time.realtimeSinceStartup;
                 await initModule.Init();
                 var endTime = Time.realtimeSinceStartup;
 
-                if (isWindowsEditor)
-                {
-                    var nowMem = GC.GetTotalMemory(false);
-                }
+#if UNITY_EDITOR
+                var nowMem = GC.GetTotalMemory(false);
+                Log.Debug($"Module {initModule.GetType().Name} 内存增量: {nowMem - startMem} bytes");
+#endif
 
                 Log.Debug($"Module {initModule.GetType().Name} InitAsync耗时: {Math.Round(endTime - startTime, 3)}秒");
             }

@@ -39,7 +39,7 @@ public class DownloadExample : MonoBehaviour
         DownloadMgr.Instance.DownloadImage_Http(url, OnProgress, OnTexture2D_SpriteCache);
 
         string loaclPath = PathUtil.GetLocalPath(DownloadType.PersistentImage);
-        DownloadMgr.Instance.DownloadFiles(urlList, loaclPath, OnProgress);
+        _ = DownloadMgr.Instance.DownloadFiles(urlList, loaclPath, OnProgress);
     }
 
     void OnDestroy()

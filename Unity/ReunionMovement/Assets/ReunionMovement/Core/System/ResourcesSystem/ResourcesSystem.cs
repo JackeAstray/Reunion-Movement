@@ -30,6 +30,8 @@ namespace ReunionMovement.Core.Resources
 
         private Dictionary<string, Object> resourceTable = new Dictionary<string, Object>();
         private Dictionary<string, int> resourceRefCount = new Dictionary<string, int>();
+        // 图集缓存，避免每次 GetAtlasSprite 重复 Resources.Load
+        private Dictionary<string, SpriteAtlas> atlasCache = new Dictionary<string, SpriteAtlas>();
 
         public Task Init()
         {
@@ -49,6 +51,7 @@ namespace ReunionMovement.Core.Resources
             Log.Debug("ResourcesSystem 清除数据");
             resourceTable.Clear();
             resourceRefCount.Clear();
+            atlasCache.Clear();
             isInited = false;
         }
 
@@ -134,14 +137,21 @@ namespace ReunionMovement.Core.Resources
 
         #region 功能
         /// <summary>
-        /// 从图集加载精灵
+        /// 从图集加载精灵（带缓存）
         /// </summary>
         /// <param name="atlasName">图集路径名称</param>
         /// <param name="spriteName">精灵路径名称 </param>
         /// <returns></returns>
         public Sprite GetAtlasSprite(string atlasName, string spriteName)
         {
-            var atlas = UnityEngine.Resources.Load<SpriteAtlas>(atlasName);
+            if (!atlasCache.TryGetValue(atlasName, out var atlas))
+            {
+                atlas = UnityEngine.Resources.Load<SpriteAtlas>(atlasName);
+                if (atlas != null)
+                {
+                    atlasCache[atlasName] = atlas;
+                }
+            }
             if (atlas is null)
             {
                 Log.Error($"图集：{atlasName}不存在，请检查！");

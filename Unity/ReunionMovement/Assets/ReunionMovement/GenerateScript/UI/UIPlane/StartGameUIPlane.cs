@@ -36,7 +36,7 @@ namespace ReunionMovement.Core.UI
                     logo1.TransitionRate = 0f;
                     logo2.TransitionRate = 0f;
 
-                    SoundSystem.Instance.PlaySfx(300015);
+                    _ = SoundSystem.Instance.PlaySfx(300015);
 
                     DOTween.To(() => logo1.TransitionRate, x => logo1.TransitionRate = x, 1f, 1f).SetEase(Ease.Linear);
                     DOTween.To(() => logo2.TransitionRate, x => logo2.TransitionRate = x, 1f, 0.9f).SetEase(Ease.Linear);

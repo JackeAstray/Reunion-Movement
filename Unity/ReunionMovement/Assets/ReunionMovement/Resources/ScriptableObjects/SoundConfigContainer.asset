@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8919a83e524045c4aa96b5dfeb56aaf2, type: 3}
   m_Name: SoundConfigContainer
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReunionMovement.SoundConfigContainer
   configs:
   - Id: 1
     Number: 100001

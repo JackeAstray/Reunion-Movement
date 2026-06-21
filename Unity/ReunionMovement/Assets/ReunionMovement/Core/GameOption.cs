@@ -269,12 +269,11 @@ namespace ReunionMovement.Core
                         if (value is string s && Enum.TryParse<Multilingual>(s, out var le)) currentOption.language = le;
                         break;
                     default:
-                        // 对于不在上面列表的 key，只是写入 PlayerPrefs
-                        SetOption(key, value);
+                        // 对于不在上面列表的 key，不在此重复 SetOption（下方统一调用一次）
                         break;
                 }
 
-                // 持久化并应用
+                // 持久化并应用（SetOption 对所有 key 仅调用一次）
                 SetOption(key, value);
                 PlayerPrefs.Save();
                 ApplyOptions();

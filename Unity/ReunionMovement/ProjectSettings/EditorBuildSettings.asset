@@ -18,7 +18,7 @@ EditorBuildSettings:
     path: Assets/ReunionMovement/Scenes/Example/UI Example.unity
     guid: e426d5e3f46fb194b92152e152ab0020
   - enabled: 0
-    path: Assets/ReunionMovement/Scenes/Example/Camera Example.unity
+    path: Assets/ReunionMovement/Scenes/Example/Camera Billboard Example.unity
     guid: 69789fc2c50ce874db3e41384e6be5e7
   m_configObjects:
     com.unity.addressableassets: {fileID: 11400000, guid: 993b5380091a96e479ac2955d74bba4f, type: 2}
