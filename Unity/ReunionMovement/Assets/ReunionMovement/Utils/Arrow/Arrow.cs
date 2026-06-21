@@ -40,6 +40,9 @@ namespace ReunionMovement.Common.Util
             {
                 return;
             }
+            // 如果相机引用丢失，重新获取
+            if (mainCamera == null)
+                mainCamera = Camera.main;
             Setup();
         }
 
@@ -69,7 +72,7 @@ namespace ReunionMovement.Common.Util
 
         public void SetupWorld()
         {
-            if (origin == null)
+            if (origin == null || mainCamera == null)
                 return;
             Vector2 originPosOnScreen = mainCamera.WorldToScreenPoint(origin.position);
             myRect.anchoredPosition = new Vector2(originPosOnScreen.x - Screen.width / 2, originPosOnScreen.y - Screen.height / 2) / canvas.scaleFactor;

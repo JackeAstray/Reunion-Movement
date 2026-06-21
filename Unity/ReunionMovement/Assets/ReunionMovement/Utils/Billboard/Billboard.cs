@@ -25,13 +25,23 @@ namespace ReunionMovement.Common.Util
         {
             if (targetTF == null)
             {
-                targetTF = Camera.main.transform;
+                var cam = Camera.main;
+                if (cam != null)
+                    targetTF = cam.transform;
             }
             originalRotation = transform.rotation;
         }
 
         void Update()
         {
+            // 如果目标引用丢失，尝试重新获取主相机
+            if (targetTF == null)
+            {
+                var cam = Camera.main;
+                if (cam != null)
+                    targetTF = cam.transform;
+            }
+
             if (targetTF == null)
             {
                 Log.Error("目标不存在，请查找原因！");

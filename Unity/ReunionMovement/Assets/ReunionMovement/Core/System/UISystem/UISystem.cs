@@ -3,8 +3,6 @@ using ReunionMovement.Core.Base;
 using ReunionMovement.Core.Resources;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -195,12 +193,11 @@ namespace ReunionMovement.Core.UI
         /// <param name="args"></param>
         private void InitWindow(UILoadState uiState, UIController uiBase, bool open, params object[] args)
         {
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
+            float startTime = Time.realtimeSinceStartup;
             uiBase.OnInit();
-            stopwatch.Stop();
+            float elapsed = Time.realtimeSinceStartup - startTime;
 
-            Log.Debug($"OnInit UI {uiBase.gameObject.name}, cost {stopwatch.ElapsedMilliseconds * 0.001f}");
+            Log.Debug($"OnInit UI {uiBase.gameObject.name}, cost {elapsed}");
 
             onInitEvent?.Invoke(uiBase);
 
@@ -349,12 +346,11 @@ namespace ReunionMovement.Core.UI
                 uiBase.BeforeOpen(args, () =>
                 {
                     uiBase.gameObject.SetActive(true);
-                    System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
-                    stopwatch.Start();
+                    float setStartTime = Time.realtimeSinceStartup;
                     uiBase.OnSet(args);
-                    stopwatch.Stop();
+                    float setElapsed = Time.realtimeSinceStartup - setStartTime;
 
-                    Log.Debug(string.Format("OnOpen UI {0}, cost {1}", uiBase.gameObject.name, stopwatch.Elapsed.TotalMilliseconds * 0.001f));
+                    Log.Debug(string.Format("OnOpen UI {0}, cost {1}", uiBase.gameObject.name, setElapsed));
 
                     onSetEvent?.Invoke(uiBase);
                 });
@@ -522,63 +518,93 @@ namespace ReunionMovement.Core.UI
         /// <summary>
         /// 获取所有已打开窗口的名称
         /// </summary>
-        /// <returns></returns>
         public List<string> GetAllOpenWindowNames()
         {
             List<string> openNames = new List<string>();
+            GetAllOpenWindowNames(openNames);
+            return openNames;
+        }
+
+        /// <summary>
+        /// 获取所有已打开窗口的名称（使用外部 List 避免分配）
+        /// </summary>
+        public void GetAllOpenWindowNames(List<string> result)
+        {
+            result.Clear();
             foreach (var kv in uiStateCache)
             {
                 if (IsOpen(kv.Key))
-                    openNames.Add(kv.Key);
+                    result.Add(kv.Key);
             }
-            return openNames;
         }
 
         /// <summary>
         /// 获取所有已打开窗口的UIController实例
         /// </summary>
-        /// <returns></returns>
         public List<UIController> GetAllOpenWindows()
         {
             List<UIController> openWindows = new List<UIController>();
+            GetAllOpenWindows(openWindows);
+            return openWindows;
+        }
+
+        /// <summary>
+        /// 获取所有已打开窗口的UIController实例（使用外部 List 避免分配）
+        /// </summary>
+        public void GetAllOpenWindows(List<UIController> result)
+        {
+            result.Clear();
             foreach (var kv in uiStateCache)
             {
                 if (IsOpen(kv.Key) && kv.Value.uiWindow != null)
-                    openWindows.Add(kv.Value.uiWindow);
+                    result.Add(kv.Value.uiWindow);
             }
-            return openWindows;
         }
 
         /// <summary>
         /// 根据名称模糊查找窗口
         /// </summary>
-        /// <param name="partialName"></param>
-        /// <returns></returns>
         public List<string> FindWindowsByName(string partialName)
         {
             var result = new List<string>();
+            FindWindowsByName(partialName, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 根据名称模糊查找窗口（使用外部 List 避免分配）
+        /// </summary>
+        public void FindWindowsByName(string partialName, List<string> result)
+        {
+            result.Clear();
             foreach (var key in uiStateCache.Keys)
             {
                 if (key.Contains(partialName))
                     result.Add(key);
             }
-            return result;
         }
 
         /// <summary>
         /// 获取指定类型的所有窗口名称
         /// </summary>
-        /// <param name="panelType"></param>
-        /// <returns></returns>
         public List<string> GetWindowNamesByPanelType(PanelType panelType)
         {
             var result = new List<string>();
+            GetWindowNamesByPanelType(panelType, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 获取指定类型的所有窗口名称（使用外部 List 避免分配）
+        /// </summary>
+        public void GetWindowNamesByPanelType(PanelType panelType, List<string> result)
+        {
+            result.Clear();
             foreach (var kv in uiStateCache)
             {
                 if (kv.Value.uiWindow != null && kv.Value.uiWindow.WindowAsset.panelType == panelType)
                     result.Add(kv.Key);
             }
-            return result;
         }
 
         /// <summary>
@@ -625,19 +651,41 @@ namespace ReunionMovement.Core.UI
         /// <summary>
         /// 根据UI名称设置窗口优先级，并重新排序
         /// </summary>
-        /// <param name="uiName"></param>
-        /// <param name="priority"></param>
         public void SetWindowPriority(string uiName, int priority)
         {
             var ui = GetUIBase(uiName);
-            if (ui != null)
+            if (ui != null && ui.transform.parent != null)
             {
                 ui.priority = priority;
-                // 按优先级排序
-                var siblings = ui.transform.parent.Cast<Transform>().OrderBy(t => (t.GetComponent<UIController>()?.priority) ?? 0).ToList();
-                for (int i = 0; i < siblings.Count; i++)
+                // 获取同级所有 UIController 并按优先级排序（避免 LINQ 分配）
+                var parent = ui.transform.parent;
+                int childCount = parent.childCount;
+                var controllers = new UIController[childCount];
+                int count = 0;
+                for (int i = 0; i < childCount; i++)
                 {
-                    siblings[i].SetSiblingIndex(i);
+                    var ctrl = parent.GetChild(i).GetComponent<UIController>();
+                    if (ctrl != null)
+                    {
+                        controllers[count++] = ctrl;
+                    }
+                }
+                // 冒泡排序（子节点数通常很小）
+                for (int i = 0; i < count - 1; i++)
+                {
+                    for (int j = 0; j < count - 1 - i; j++)
+                    {
+                        if (controllers[j].priority > controllers[j + 1].priority)
+                        {
+                            var temp = controllers[j];
+                            controllers[j] = controllers[j + 1];
+                            controllers[j + 1] = temp;
+                        }
+                    }
+                }
+                for (int i = 0; i < count; i++)
+                {
+                    controllers[i].transform.SetSiblingIndex(i);
                 }
             }
         }
@@ -668,16 +716,13 @@ namespace ReunionMovement.Core.UI
         /// <summary>
         /// 记录操作的耗时
         /// </summary>
-        /// <param name="action"></param>
-        /// <param name="message"></param>
         private void LogElapsedTime(Action action, string message)
         {
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
+            float startTime = Time.realtimeSinceStartup;
             action();
-            stopwatch.Stop();
+            float elapsed = Time.realtimeSinceStartup - startTime;
 
-            Log.Debug($"{message}, cost {stopwatch.ElapsedMilliseconds * 0.001f}");
+            Log.Debug($"{message}, cost {elapsed}");
         }
 
         /// <summary>

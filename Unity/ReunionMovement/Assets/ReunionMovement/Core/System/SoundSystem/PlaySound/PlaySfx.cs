@@ -32,7 +32,7 @@ namespace ReunionMovement.Core.Sound
         /// <param name="id"></param>
         public void PlaySfxById(int id)
         {
-            SoundSystem.Instance.PlaySfx(id, emitter, loop, volume, pitch);
+            _ = SoundSystem.Instance.PlaySfx(id, emitter, loop, volume, pitch);
         }
 
         /// <summary>
@@ -40,7 +40,7 @@ namespace ReunionMovement.Core.Sound
         /// </summary>
         public void PlaySfxClip()
         {
-            SoundSystem.Instance.PlaySfx(sfxIndex, emitter, loop, volume, pitch);
+            _ = SoundSystem.Instance.PlaySfx(sfxIndex, emitter, loop, volume, pitch);
         }
 
         /// <summary>

@@ -79,11 +79,12 @@ namespace ReunionMovement.Common
         }
 
         /// <summary>
-        /// 创建单例实例
+        /// 创建单例实例（仅在场景中无现有实例时作为兜底）
         /// </summary>
         private static T CreateInstance()
         {
-            T foundInstance = FindAnyObjectByType<T>();
+            // 使用 FindFirstObjectByType（比 FindAnyObjectByType 更适合单例语义）
+            T foundInstance = FindFirstObjectByType<T>();
             if (foundInstance == null)
             {
                 GameObject singletonObject = new GameObject();

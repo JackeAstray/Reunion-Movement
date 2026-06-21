@@ -54,6 +54,13 @@ namespace ReunionMovement.Core.Sound
         private Dictionary<GameObject, IObjectPool<GameObject>> pooledObjects = new Dictionary<GameObject, IObjectPool<GameObject>>();
         //生成对象池 特效
         private Dictionary<GameObject, GameObject> sfxObjects = new Dictionary<GameObject, GameObject>();
+        // 淡入淡出状态机（避免 async Task.Yield 每帧分配）
+        private enum FadeState { None, FadingIn, FadingOut }
+        private FadeState fadeState = FadeState.None;
+        private float fadeTimer;
+        private float fadeStartVolume;
+        private float fadeTargetVolume;
+        private TaskCompletionSource<bool> fadeTcs;        
         #endregion
 
         // 确保 AudioSource 存在（如果被销毁则重建）
@@ -114,7 +121,28 @@ namespace ReunionMovement.Core.Sound
 
         public void Update(float logicTime, float realTime)
         {
-
+            // 淡入淡出状态机驱动
+            if (fadeState != FadeState.None)
+            {
+                fadeTimer += logicTime;
+                float t = fadeDuration > 0 ? Mathf.Clamp01(fadeTimer / fadeDuration) : 1f;
+                if (source != null)
+                {
+                    source.volume = Mathf.Lerp(fadeStartVolume, fadeTargetVolume, t);
+                }
+                if (t >= 1f)
+                {
+                    if (fadeState == FadeState.FadingOut && source != null)
+                    {
+                        source.volume = 0f;
+                        source.Stop();
+                    }
+                    var tcs = fadeTcs;
+                    fadeState = FadeState.None;
+                    fadeTcs = null;
+                    tcs?.TrySetResult(true);
+                }
+            }
         }
 
         public void Clear()
@@ -128,6 +156,28 @@ namespace ReunionMovement.Core.Sound
             }
             pooledObjects.Clear();
             sfxObjects.Clear();
+        }
+
+        /// <summary>
+        /// 设置音乐属性（供 GameOption 直接调用，避免反射）
+        /// </summary>
+        public void SetMusicProperties(float volume, bool muted)
+        {
+            EnsureAudioSource();
+            if (source != null)
+            {
+                source.volume = volume;
+                source.mute = muted;
+            }
+        }
+
+        /// <summary>
+        /// 设置音效属性
+        /// </summary>
+        public void SetSfxProperties(float volume, bool muted)
+        {
+            // 当前音效通过 SoundItem 逐个设置，此方法用于批量更新
+            // 可通过遍历活跃音效对象实现
         }
 
         /// <summary>
@@ -196,51 +246,35 @@ namespace ReunionMovement.Core.Sound
         }
 
         /// <summary>
-        /// 渐入
+        /// 渐入（由 Update 驱动，避免每帧 async 状态机分配）
         /// </summary>
-        /// <returns></returns>
-        private async Task FadeIn()
+        private Task FadeIn()
         {
-            // 如果 AudioSource 被销毁或不存在，则直接退出
             EnsureAudioSource();
-            if (source == null) return;
+            if (source == null) return Task.CompletedTask;
 
-            float startVolume = 0;
-            float currentFadeTime = 0f;
-            targetVolume = GameOption.currentOption.musicVolume;
-
-            while (currentFadeTime < fadeDuration)
-            {
-                currentFadeTime += Time.deltaTime;
-                float t = fadeDuration > 0 ? Mathf.Clamp01(currentFadeTime / fadeDuration) : 1;
-                source.volume = Mathf.Lerp(startVolume, targetVolume, t);
-                await Task.Yield();
-            }
-            source.volume = targetVolume; // 确保达到目标音量
+            fadeStartVolume = 0f;
+            fadeTargetVolume = GameOption.currentOption.musicVolume;
+            fadeTimer = 0f;
+            fadeState = FadeState.FadingIn;
+            fadeTcs = new TaskCompletionSource<bool>();
+            return fadeTcs.Task;
         }
 
         /// <summary>
-        /// 渐出
+        /// 渐出（由 Update 驱动，避免每帧 async 状态机分配）
         /// </summary>
-        /// <returns></returns>
-        private async Task FadeOut()
+        private Task FadeOut()
         {
             EnsureAudioSource();
-            if (source == null) return;
+            if (source == null) return Task.CompletedTask;
 
-            float startVolume = source.volume;
-            float currentFadeTime = 0f;
-
-            while (currentFadeTime < fadeDuration)
-            {
-                currentFadeTime += Time.deltaTime;
-                float t = fadeDuration > 0 ? Mathf.Clamp01(currentFadeTime / fadeDuration) : 1;
-                source.volume = Mathf.Lerp(startVolume, 0.0f, t);
-                await Task.Yield();
-            }
-
-            source.volume = 0f; // 确保音量为0
-            source.Stop();
+            fadeStartVolume = source.volume;
+            fadeTargetVolume = 0f;
+            fadeTimer = 0f;
+            fadeState = FadeState.FadingOut;
+            fadeTcs = new TaskCompletionSource<bool>();
+            return fadeTcs.Task;
         }
 
         #region 播放声音
@@ -250,29 +284,34 @@ namespace ReunionMovement.Core.Sound
         /// <param name="index">声音配置索引</param>
         /// <param name="emitter">声音发射器</param>
         /// <param name="loop">是否循环</param>
-        public async void PlaySfx(int index, Transform emitter = null, bool loop = false, float volume = -1f, float pitch = 1f)
+        public async Task PlaySfx(int index, Transform emitter = null, bool loop = false, float volume = -1f, float pitch = 1f)
         {
-            if (soundConfigDict != null && soundConfigDict.TryGetValue(index, out SoundConfig soundConfig))
+            try
             {
-                // 获取音频剪辑
-                AudioClip clip = await GetAudioClipAsync(soundConfig.Path, soundConfig.Name);
-                if (clip != null)
+                if (soundConfigDict != null && soundConfigDict.TryGetValue(index, out SoundConfig soundConfig))
                 {
-                    // 假设第一个池是所有音效的池，如果需要多种音效池，这里需要修改
-                    GameObject obj = startupPools[0].prefab;
-                    GameObject go = Spawn(obj);
-                    if (go != null)
+                    AudioClip clip = await GetAudioClipAsync(soundConfig.Path, soundConfig.Name);
+                    if (clip != null && startupPools.Count > 0)
                     {
-                        if (emitter != null)
+                        GameObject obj = startupPools[0].prefab;
+                        GameObject go = Spawn(obj);
+                        if (go != null)
                         {
-                            go.transform.SetParent(emitter);
-                            go.transform.localPosition = Vector3.zero;
+                            if (emitter != null)
+                            {
+                                go.transform.SetParent(emitter);
+                                go.transform.localPosition = Vector3.zero;
+                            }
+                            SoundItem soundObj = go.GetComponent<SoundItem>();
+                            float effectiveVolume = volume == -1f ? GameOption.currentOption.sfxVolume : volume;
+                            soundObj.Processing(clip, emitter, loop, effectiveVolume, GameOption.currentOption.sfxMuted, pitch);
                         }
-                        SoundItem soundObj = go.GetComponent<SoundItem>();
-                        float effectiveVolume = volume == -1f ? GameOption.currentOption.sfxVolume : volume;
-                        soundObj.Processing(clip, emitter, loop, effectiveVolume, GameOption.currentOption.sfxMuted, pitch);
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"PlaySfx 异常: {ex.Message}");
             }
         }
 

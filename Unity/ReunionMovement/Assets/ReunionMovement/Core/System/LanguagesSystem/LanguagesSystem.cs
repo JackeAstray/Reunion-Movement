@@ -27,6 +27,7 @@ namespace ReunionMovement.Core.Languages
 
         public Multilingual multilingual = Multilingual.ZH_CN;
         private LanguagesContainer languagesContainer;
+        private Dictionary<int, LanguagesConfig> languagesDict;
 
         public Task Init()
         {
@@ -37,6 +38,15 @@ namespace ReunionMovement.Core.Languages
             if (languagesContainer == null || languagesContainer.configs == null)
             {
                 Log.Error("LanguagesContainer或其configs为空, 语言系统初始化失败!");
+            }
+            else
+            {
+                // 构建字典以加速查找 O(1)
+                languagesDict = new Dictionary<int, LanguagesConfig>(languagesContainer.configs.Count);
+                foreach (var lang in languagesContainer.configs)
+                {
+                    languagesDict[lang.Number] = lang;
+                }
             }
 
             initProgress = 100;
@@ -59,6 +69,7 @@ namespace ReunionMovement.Core.Languages
             isInited = false;
             initProgress = 0;
             languagesContainer = null;
+            languagesDict = null;
         }
 
         /// <summary>
@@ -88,10 +99,9 @@ namespace ReunionMovement.Core.Languages
         /// <returns></returns>
         public string GetTextById(int number)
         {
-            if (languagesContainer != null && languagesContainer.configs != null)
+            if (languagesContainer != null && languagesContainer.configs != null && languagesDict != null)
             {
-                ReunionMovement.Languages language = languagesContainer.configs.Find(l => l.Number == number);
-                if (language != null)
+                if (languagesDict.TryGetValue(number, out var language))
                 {
                     // 根据当前多语言设置返回对应的文本
                     switch (multilingual)

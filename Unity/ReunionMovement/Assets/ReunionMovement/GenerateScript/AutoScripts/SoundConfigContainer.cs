@@ -1,4 +1,4 @@
-//此脚本为工具生成，请勿手动创建 2025-08-10 22:51:12.754 <ExcelTo>
+//此脚本为工具生成，请勿手动创建 2026-06-21 17:04:11.231 <ExcelTo>
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -10,6 +10,7 @@ namespace ReunionMovement
     [CreateAssetMenu(fileName = "SoundConfigContainer", menuName = "ScriptableObjects/SoundConfigContainer", order = 0)]
     public class SoundConfigContainer : ScriptableObject
     {
+        
         public List<SoundConfig> configs;
     }
 }

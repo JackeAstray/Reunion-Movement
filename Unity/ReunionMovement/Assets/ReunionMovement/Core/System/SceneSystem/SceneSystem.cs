@@ -192,7 +192,7 @@ namespace ReunionMovement.Core.Scene
             }
 
             CallbackProgress(0.15f);
-            await Task.Delay(TimeSpan.FromSeconds(startProgressWaitingTime));
+            await Task.Delay((int)(startProgressWaitingTime * 1000));
 
             //加载进度
             while (async.progress < 0.9f)
@@ -201,7 +201,7 @@ namespace ReunionMovement.Core.Scene
                 await Task.Yield();
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(endProgressWaitingTime));
+            await Task.Delay((int)(endProgressWaitingTime * 1000));
 
             CallbackProgress(1f);
 
