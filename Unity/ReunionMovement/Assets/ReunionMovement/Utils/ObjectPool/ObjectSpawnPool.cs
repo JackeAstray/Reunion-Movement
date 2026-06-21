@@ -13,6 +13,7 @@ namespace ReunionMovement.Common.Util
         private int limit = 100;
         private int currentCount = 0;
         private Queue<GameObject> objectQueue = new Queue<GameObject>();
+        private HashSet<GameObject> pooledSet = new HashSet<GameObject>();
         private Action<GameObject> onSpawn;
         private Action<GameObject> onDespawn;
 
@@ -45,6 +46,7 @@ namespace ReunionMovement.Common.Util
             while (objectQueue.Count > 0)
             {
                 obj = objectQueue.Dequeue();
+                pooledSet.Remove(obj);
                 if (obj != null)
                 {
                     break;
@@ -83,8 +85,8 @@ namespace ReunionMovement.Common.Util
         {
             if (obj == null) return;
 
-            // 防止重复回收
-            if (objectQueue.Contains(obj))
+            // 防止重复回收（O(1) HashSet 查找）
+            if (!pooledSet.Add(obj))
                 return;
 
             onDespawn?.Invoke(obj);
@@ -96,6 +98,7 @@ namespace ReunionMovement.Common.Util
             }
             else
             {
+                pooledSet.Remove(obj);
                 ObjectPoolMgr.Kill(obj);
                 currentCount--;
             }
@@ -109,6 +112,7 @@ namespace ReunionMovement.Common.Util
             while (objectQueue.Count > 0)
             {
                 var obj = objectQueue.Dequeue();
+                pooledSet.Remove(obj);
                 if (obj)
                 {
                     ObjectPoolMgr.Kill(obj);

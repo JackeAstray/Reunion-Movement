@@ -188,7 +188,7 @@ namespace ReunionMovement.Core.UI
             {
                 canvasGroup.alpha = t / duration;
                 t += Time.deltaTime;
-                await Task.Yield();
+                await Task.Delay(16);
             }
             canvasGroup.alpha = 1;
         }
@@ -206,7 +206,7 @@ namespace ReunionMovement.Core.UI
             {
                 canvasGroup.alpha = 1 - t / duration;
                 t += Time.deltaTime;
-                await Task.Yield();
+                await Task.Delay(16);
             }
             canvasGroup.alpha = 0;
             gameObject.SetActive(false);
