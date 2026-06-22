@@ -91,6 +91,46 @@ namespace ReunionMovement.UI.ImageExtensions
             Contrast = 8,
         }
 
+        public enum ToneFilter
+        {
+            None = 0,
+            Grayscale = 1,
+            Sepia = 2,
+            Negative = 3,
+            Retro = 4,
+            Posterize = 5
+        }
+
+        public enum EdgeMode
+        {
+            None = 0,
+            Plain = 1,
+            Shiny = 2
+        }
+
+        public enum SamplingFilter
+        {
+            None = 0,
+            Pixelation = 4,
+            RgbShift = 5,
+            EdgeLuminance = 6,
+            EdgeAlpha = 7
+        }
+
+        public enum TargetMode
+        {
+            None = 0,
+            Hue = 1,
+            Luminance = 2
+        }
+
+        public enum PatternArea
+        {
+            All = 0,
+            Inner = 1,
+            Edge = 2
+        }
+
         #region 常量
         public const string shaderName = "ReunionMovement/UI/ImageEx";
         #endregion
@@ -160,6 +200,39 @@ namespace ReunionMovement.UI.ImageExtensions
         [SerializeField] private NTriangleRoundedImg nTriangleRounded = new NTriangleRoundedImg();
 
         [SerializeField] private GradientEffect gradientEffect = new GradientEffect();
+
+        // -------------------- 色调滤镜（TONE） --------------------
+        [SerializeField] private ToneFilter m_ToneFilter = ToneFilter.None;
+        [SerializeField][Range(0, 1)] private float m_ToneIntensity = 1f;
+
+        // -------------------- 独立颜色滤镜（COLOR FILTER） --------------------
+        [SerializeField] private ColorMode m_ColorFilterMode = ColorMode.None;
+        [SerializeField] private Color m_ColorValue = Color.white;
+        [SerializeField][Range(0, 1)] private float m_ColorIntensity = 1f;
+        [SerializeField] private bool m_ColorGlow = false;
+
+        // -------------------- 边缘效果（EDGE） --------------------
+        [SerializeField] private EdgeMode m_EdgeMode = EdgeMode.None;
+        [SerializeField][Range(0, 1)] private float m_EdgeWidth = 0.5f;
+        [SerializeField] private ColorMode m_EdgeColorFilterMode = ColorMode.Replace;
+        [SerializeField][ColorUsage(true, true)] private Color m_EdgeColor = Color.white;
+        [SerializeField] private bool m_EdgeColorGlow = false;
+        [SerializeField][Range(0, 1)] private float m_EdgeShinyRate = 0.5f;
+        [SerializeField][Range(0, 1)] private float m_EdgeShinyWidth = 0.5f;
+        [SerializeField][Range(-5, 5)] private float m_EdgeShinyAutoPlaySpeed = 1f;
+
+        // -------------------- 采样增强（SAMPLING） --------------------
+        [SerializeField] private SamplingFilter m_SamplingMode = SamplingFilter.None;
+        [SerializeField][Range(0, 1)] private float m_SamplingIntensity = 0.5f;
+
+        // -------------------- 目标模式（TARGET） --------------------
+        [SerializeField] private TargetMode m_TargetMode = TargetMode.None;
+        [SerializeField] private Color m_TargetColor = Color.white;
+        [SerializeField][Range(0, 1)] private float m_TargetRange = 0.1f;
+        [SerializeField][Range(0, 1)] private float m_TargetSoftness = 0.5f;
+
+        // -------------------- 图案区域（PATTERN AREA） --------------------
+        [SerializeField] private PatternArea m_PatternArea = PatternArea.All;
         #endregion
 
         #region Material PropertyIds
@@ -214,6 +287,35 @@ namespace ReunionMovement.UI.ImageExtensions
         private static readonly int constrainedRotation_Sp = Shader.PropertyToID("_ConstrainRotation");
         private static readonly int flipHorizontal_Sp = Shader.PropertyToID("_FlipHorizontal");
         private static readonly int flipVertical_Sp = Shader.PropertyToID("_FlipVertical");
+
+        // 色调滤镜
+        private static readonly int toneIntensity_Sp = Shader.PropertyToID("_ToneIntensity");
+
+        // 独立颜色滤镜
+        private static readonly int colorFilter_Sp = Shader.PropertyToID("_ColorFilter");
+        private static readonly int colorValue_Sp = Shader.PropertyToID("_ColorValue");
+        private static readonly int colorIntensity_Sp = Shader.PropertyToID("_ColorIntensity");
+        private static readonly int colorGlow_Sp = Shader.PropertyToID("_ColorGlow");
+
+        // 边缘效果
+        private static readonly int edgeWidth_Sp = Shader.PropertyToID("_EdgeWidth");
+        private static readonly int edgeColorFilter_Sp = Shader.PropertyToID("_EdgeColorFilter");
+        private static readonly int edgeColor_Sp = Shader.PropertyToID("_EdgeColor");
+        private static readonly int edgeColorGlow_Sp = Shader.PropertyToID("_EdgeColorGlow");
+        private static readonly int edgeShinyRate_Sp = Shader.PropertyToID("_EdgeShinyRate");
+        private static readonly int edgeShinyWidth_Sp = Shader.PropertyToID("_EdgeShinyWidth");
+        private static readonly int edgeShinyAutoPlaySpeed_Sp = Shader.PropertyToID("_EdgeShinyAutoPlaySpeed");
+
+        // 采样增强
+        private static readonly int samplingIntensity_Sp = Shader.PropertyToID("_SamplingIntensity");
+
+        // 目标模式
+        private static readonly int targetColor_Sp = Shader.PropertyToID("_TargetColor");
+        private static readonly int targetRange_Sp = Shader.PropertyToID("_TargetRange");
+        private static readonly int targetSoftness_Sp = Shader.PropertyToID("_TargetSoftness");
+
+        // 图案区域
+        private static readonly int patternArea_Sp = Shader.PropertyToID("_PatternArea");
 
         #endregion
 
@@ -768,6 +870,291 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        // ============================================================
+        // 色调滤镜（TONE FILTER）
+        // ============================================================
+
+        /// <summary>
+        /// 色调滤镜类型：None / Grayscale / Sepia / Negative / Retro / Posterize
+        /// </summary>
+        public ToneFilter Tone
+        {
+            get => m_ToneFilter;
+            set
+            {
+                m_ToneFilter = value;
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 色调滤镜强度 0~1
+        /// </summary>
+        public float ToneIntensity
+        {
+            get => m_ToneIntensity;
+            set
+            {
+                m_ToneIntensity = Mathf.Clamp01(value);
+                SetMaterialDirty();
+            }
+        }
+
+        // ============================================================
+        // 独立颜色滤镜（COLOR FILTER）
+        // ============================================================
+
+        /// <summary>
+        /// 颜色滤镜模式：None / Multiply / Additive / Subtractive / Replace / MultiplyLuminance / MultiplyAdditive / HsvModifier / Contrast
+        /// </summary>
+        public ColorMode ColorFilterMode
+        {
+            get => m_ColorFilterMode;
+            set
+            {
+                m_ColorFilterMode = value;
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 颜色滤镜的值（含义取决于模式）
+        /// </summary>
+        public Color ColorValue
+        {
+            get => m_ColorValue;
+            set
+            {
+                m_ColorValue = value;
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 颜色滤镜强度 0~1
+        /// </summary>
+        public float ColorIntensity
+        {
+            get => m_ColorIntensity;
+            set
+            {
+                m_ColorIntensity = Mathf.Clamp01(value);
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 颜色滤镜发光效果
+        /// </summary>
+        public bool ColorGlow
+        {
+            get => m_ColorGlow;
+            set
+            {
+                m_ColorGlow = value;
+                SetMaterialDirty();
+            }
+        }
+
+        // ============================================================
+        // 边缘效果（EDGE MODE）
+        // ============================================================
+
+        /// <summary>
+        /// 边缘效果模式：None / Plain / Shiny
+        /// </summary>
+        public EdgeMode Edge
+        {
+            get => m_EdgeMode;
+            set
+            {
+                m_EdgeMode = value;
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 边缘宽度 0~1
+        /// </summary>
+        public float EdgeWidth
+        {
+            get => m_EdgeWidth;
+            set
+            {
+                m_EdgeWidth = Mathf.Clamp01(value);
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 边缘颜色滤镜模式
+        /// </summary>
+        public ColorMode EdgeColorFilterMode
+        {
+            get => m_EdgeColorFilterMode;
+            set
+            {
+                m_EdgeColorFilterMode = value;
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 边缘颜色（支持 HDR）
+        /// </summary>
+        public Color EdgeColor
+        {
+            get => m_EdgeColor;
+            set
+            {
+                m_EdgeColor = value;
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 边缘颜色发光
+        /// </summary>
+        public bool EdgeColorGlow
+        {
+            get => m_EdgeColorGlow;
+            set
+            {
+                m_EdgeColorGlow = value;
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 边缘高光位置 0~1（Shiny 模式）
+        /// </summary>
+        public float EdgeShinyRate
+        {
+            get => m_EdgeShinyRate;
+            set
+            {
+                m_EdgeShinyRate = Mathf.Clamp01(value);
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 边缘高光宽度 0~1（Shiny 模式）
+        /// </summary>
+        public float EdgeShinyWidth
+        {
+            get => m_EdgeShinyWidth;
+            set
+            {
+                m_EdgeShinyWidth = Mathf.Clamp01(value);
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 边缘高光自动播放速度 -5~5（Shiny 模式）
+        /// </summary>
+        public float EdgeShinyAutoPlaySpeed
+        {
+            get => m_EdgeShinyAutoPlaySpeed;
+            set
+            {
+                m_EdgeShinyAutoPlaySpeed = Mathf.Clamp(value, -5f, 5f);
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 采样模式：None / Pixelation / RgbShift / EdgeLuminance / EdgeAlpha
+        /// </summary>
+        public SamplingFilter Sampling
+        {
+            get => m_SamplingMode;
+            set
+            {
+                m_SamplingMode = value;
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 采样强度 0~1（像素化/色散/边缘检测强度）
+        /// </summary>
+        public float SamplingIntensity
+        {
+            get => m_SamplingIntensity;
+            set
+            {
+                m_SamplingIntensity = Mathf.Clamp01(value);
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 目标模式：None / Hue / Luminance
+        /// </summary>
+        public TargetMode Target
+        {
+            get => m_TargetMode;
+            set
+            {
+                m_TargetMode = value;
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 目标颜色
+        /// </summary>
+        public Color TargetColor
+        {
+            get => m_TargetColor;
+            set
+            {
+                m_TargetColor = value;
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 目标范围 0~1
+        /// </summary>
+        public float TargetRange
+        {
+            get => m_TargetRange;
+            set
+            {
+                m_TargetRange = Mathf.Clamp01(value);
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 目标柔和度 0~1
+        /// </summary>
+        public float TargetSoftness
+        {
+            get => m_TargetSoftness;
+            set
+            {
+                m_TargetSoftness = Mathf.Clamp01(value);
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 图案区域：All / Inner / Edge
+        /// </summary>
+        public PatternArea TransitionPatternArea
+        {
+            get => m_PatternArea;
+            set
+            {
+                m_PatternArea = value;
+                SetMaterialDirty();
+            }
+        }
+
         /// <summary>
         /// 模糊类型
         /// </summary>
@@ -1289,6 +1676,31 @@ namespace ReunionMovement.UI.ImageExtensions
             TransitionTexClampPadding = transitionTexClampPadding;
             TransitionUseUv0 = transitionUseUv0;
 
+            // Phase 1
+            Tone = m_ToneFilter;
+            ToneIntensity = m_ToneIntensity;
+            ColorFilterMode = m_ColorFilterMode;
+            ColorValue = m_ColorValue;
+            ColorIntensity = m_ColorIntensity;
+            ColorGlow = m_ColorGlow;
+            Edge = m_EdgeMode;
+            EdgeWidth = m_EdgeWidth;
+            EdgeColorFilterMode = m_EdgeColorFilterMode;
+            EdgeColor = m_EdgeColor;
+            EdgeColorGlow = m_EdgeColorGlow;
+            EdgeShinyRate = m_EdgeShinyRate;
+            EdgeShinyWidth = m_EdgeShinyWidth;
+            EdgeShinyAutoPlaySpeed = m_EdgeShinyAutoPlaySpeed;
+
+            // Phase 2
+            Sampling = m_SamplingMode;
+            SamplingIntensity = m_SamplingIntensity;
+            Target = m_TargetMode;
+            TargetColor = m_TargetColor;
+            TargetRange = m_TargetRange;
+            TargetSoftness = m_TargetSoftness;
+            TransitionPatternArea = m_PatternArea;
+
             ShadowScale = shadowScale;
 
             base.OnValidate();
@@ -1758,6 +2170,96 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.SetFloat(shapeRotation_Sp, shapeRotation);
             mat.SetInt(constrainedRotation_Sp, constrainRotation ? 1 : 0);
 
+            // -------------------- 色调滤镜（TONE） --------------------
+            mat.SetFloat(toneIntensity_Sp, m_ToneIntensity);
+            switch (m_ToneFilter)
+            {
+                case ToneFilter.None:
+                    break;
+                case ToneFilter.Grayscale:
+                    mat.EnableKeyword("TONE_GRAYSCALE");
+                    break;
+                case ToneFilter.Sepia:
+                    mat.EnableKeyword("TONE_SEPIA");
+                    break;
+                case ToneFilter.Negative:
+                    mat.EnableKeyword("TONE_NEGATIVE");
+                    break;
+                case ToneFilter.Retro:
+                    mat.EnableKeyword("TONE_RETRO");
+                    break;
+                case ToneFilter.Posterize:
+                    mat.EnableKeyword("TONE_POSTERIZE");
+                    break;
+            }
+
+            // -------------------- 独立颜色滤镜（COLOR FILTER） --------------------
+            mat.SetInt(colorFilter_Sp, (int)m_ColorFilterMode);
+            mat.SetColor(colorValue_Sp, m_ColorValue);
+            mat.SetFloat(colorIntensity_Sp, m_ColorIntensity);
+            mat.SetInt(colorGlow_Sp, m_ColorGlow ? 1 : 0);
+            if (m_ColorFilterMode != ColorMode.None)
+            {
+                mat.EnableKeyword("COLOR_FILTER");
+            }
+
+            // -------------------- 边缘效果（EDGE） --------------------
+            mat.SetFloat(edgeWidth_Sp, m_EdgeWidth);
+            mat.SetInt(edgeColorFilter_Sp, (int)m_EdgeColorFilterMode);
+            mat.SetColor(edgeColor_Sp, m_EdgeColor);
+            mat.SetInt(edgeColorGlow_Sp, m_EdgeColorGlow ? 1 : 0);
+            mat.SetFloat(edgeShinyRate_Sp, m_EdgeShinyRate);
+            mat.SetFloat(edgeShinyWidth_Sp, m_EdgeShinyWidth);
+            mat.SetFloat(edgeShinyAutoPlaySpeed_Sp, m_EdgeShinyAutoPlaySpeed);
+            switch (m_EdgeMode)
+            {
+                case EdgeMode.None:
+                    break;
+                case EdgeMode.Plain:
+                    mat.EnableKeyword("EDGE_PLAIN");
+                    break;
+                case EdgeMode.Shiny:
+                    mat.EnableKeyword("EDGE_SHINY");
+                    break;
+            }
+
+            // -------------------- 采样增强（SAMPLING） --------------------
+            mat.SetFloat(samplingIntensity_Sp, m_SamplingIntensity);
+            switch (m_SamplingMode)
+            {
+                case SamplingFilter.Pixelation:
+                    mat.EnableKeyword("SAMPLING_PIXELATION");
+                    break;
+                case SamplingFilter.RgbShift:
+                    mat.EnableKeyword("SAMPLING_RGB_SHIFT");
+                    break;
+                case SamplingFilter.EdgeLuminance:
+                    mat.EnableKeyword("SAMPLING_EDGE_LUMINANCE");
+                    break;
+                case SamplingFilter.EdgeAlpha:
+                    mat.EnableKeyword("SAMPLING_EDGE_ALPHA");
+                    break;
+            }
+
+            // -------------------- 目标模式（TARGET） --------------------
+            mat.SetColor(targetColor_Sp, m_TargetColor);
+            mat.SetFloat(targetRange_Sp, m_TargetRange);
+            mat.SetFloat(targetSoftness_Sp, m_TargetSoftness);
+            switch (m_TargetMode)
+            {
+                case TargetMode.None:
+                    break;
+                case TargetMode.Hue:
+                    mat.EnableKeyword("TARGET_HUE");
+                    break;
+                case TargetMode.Luminance:
+                    mat.EnableKeyword("TARGET_LUMINANCE");
+                    break;
+            }
+
+            // -------------------- 图案区域（PATTERN AREA） --------------------
+            mat.SetInt(patternArea_Sp, (int)m_PatternArea);
+
             return mat;
         }
 
@@ -1806,6 +2308,25 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.DisableKeyword("TRANSITION_BURN");
             mat.DisableKeyword("TRANSITION_PATTERN");
             mat.DisableKeyword("TRANSITION_BLAZE");
+
+            mat.DisableKeyword("TONE_GRAYSCALE");
+            mat.DisableKeyword("TONE_SEPIA");
+            mat.DisableKeyword("TONE_NEGATIVE");
+            mat.DisableKeyword("TONE_RETRO");
+            mat.DisableKeyword("TONE_POSTERIZE");
+
+            mat.DisableKeyword("COLOR_FILTER");
+
+            mat.DisableKeyword("EDGE_PLAIN");
+            mat.DisableKeyword("EDGE_SHINY");
+
+            mat.DisableKeyword("SAMPLING_PIXELATION");
+            mat.DisableKeyword("SAMPLING_RGB_SHIFT");
+            mat.DisableKeyword("SAMPLING_EDGE_LUMINANCE");
+            mat.DisableKeyword("SAMPLING_EDGE_ALPHA");
+
+            mat.DisableKeyword("TARGET_HUE");
+            mat.DisableKeyword("TARGET_LUMINANCE");
         }
 
         /// <summary>
@@ -1888,6 +2409,35 @@ namespace ReunionMovement.UI.ImageExtensions
 
             // GradientEffect
             gradientEffect.InitValuesFromMaterial(ref mat);
+
+            // 色调滤镜
+            m_ToneIntensity = mat.GetFloat(toneIntensity_Sp);
+
+            // 独立颜色滤镜
+            m_ColorFilterMode = (ColorMode)mat.GetInt(colorFilter_Sp);
+            m_ColorValue = mat.GetColor(colorValue_Sp);
+            m_ColorIntensity = mat.GetFloat(colorIntensity_Sp);
+            m_ColorGlow = mat.GetInt(colorGlow_Sp) == 1;
+
+            // 边缘效果
+            m_EdgeWidth = mat.GetFloat(edgeWidth_Sp);
+            m_EdgeColorFilterMode = (ColorMode)mat.GetInt(edgeColorFilter_Sp);
+            m_EdgeColor = mat.GetColor(edgeColor_Sp);
+            m_EdgeColorGlow = mat.GetInt(edgeColorGlow_Sp) == 1;
+            m_EdgeShinyRate = mat.GetFloat(edgeShinyRate_Sp);
+            m_EdgeShinyWidth = mat.GetFloat(edgeShinyWidth_Sp);
+            m_EdgeShinyAutoPlaySpeed = mat.GetFloat(edgeShinyAutoPlaySpeed_Sp);
+
+            // 采样增强
+            m_SamplingIntensity = mat.GetFloat(samplingIntensity_Sp);
+
+            // 目标模式
+            m_TargetColor = mat.GetColor(targetColor_Sp);
+            m_TargetRange = mat.GetFloat(targetRange_Sp);
+            m_TargetSoftness = mat.GetFloat(targetSoftness_Sp);
+
+            // 图案区域
+            m_PatternArea = (PatternArea)mat.GetInt(patternArea_Sp);
         }
 
 #if UNITY_EDITOR

@@ -29,6 +29,7 @@ uniform half2 _TransitionRange;
 uniform half _TransitionClamp;
 uniform half _TransitionTexClampPadding;
 uniform half _TransitionUseUv0;
+uniform int _PatternArea;
 
 half4 RM_ApplyColorFilter(int mode, half4 inColor, half4 factor, float intensity, float glow)
 {
@@ -74,7 +75,9 @@ half4 RM_ApplyColorFilter(int mode, half4 inColor, half4 factor, float intensity
     if (0 < mode)
     {
         color = lerp(inColor, color, intensity);
-        color.a *= 1 - glow * intensity;
+        // 发光效果：提升 RGB 亮度而非降低 Alpha（原 UIEffect 公式 color.a *= 1-glow*intensity 配合 Bloom 使用，
+        // 但无 Bloom 时会直接变透明，改为真正的亮度提升）
+        color.rgb = lerp(color.rgb, color.rgb * 1.5, glow * intensity);
     }
 
     return color;
@@ -145,7 +148,7 @@ float2 RM_MoveTransitionFilter(float4 uvMask, float alpha)
     return 0;
 }
 
-half4 RM_ApplyTransitionFilter(half4 color, float alpha, float2 uvLocal)
+half4 RM_ApplyTransitionFilter(half4 color, float alpha, float2 uvLocal, float edgeFactor)
 {
 #if TRANSITION_FADE
         color *= saturate(alpha + 1 - RM_TransitionRate() * 2);
@@ -157,7 +160,12 @@ half4 RM_ApplyTransitionFilter(half4 color, float alpha, float2 uvLocal)
         float isPattern = min(inv_lerp(_TransitionRange.x, _TransitionRange.y, uvLocal.x), 0.995) < (_TransitionPatternReverse ? alpha : 1 - alpha);
         isPattern = _TransitionPatternReverse ? isPattern : 1 - isPattern;
 
-        color.rgb = lerp(color.rgb, patternColor.rgb, isPattern);
+        // Pattern Area: 0=All, 1=Inner, 2=Edge
+        float patternFactor = 1;
+        if (_PatternArea == 1) patternFactor = 1 - edgeFactor;
+        else if (_PatternArea == 2) patternFactor = edgeFactor;
+
+        color.rgb = lerp(color.rgb, patternColor.rgb, patternFactor * isPattern);
 #elif TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN
         const float factor = alpha - RM_TransitionRate() * (1 + _TransitionWidth) + _TransitionWidth;
         const float softness = max(0.0001, _TransitionWidth * _TransitionSoftness);

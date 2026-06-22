@@ -36,6 +36,21 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
         private SerializedProperty spTransitionTexScale, spTransitionTexOffset, spTransitionTexRotation, spTransitionKeepAspectRatio;
         private SerializedProperty spTransitionSpeed, spTransitionPatternReverse, spTransitionAutoPlaySpeed, spTransitionColorFilter, spTransitionColorGlow, spTransitionGradient, spTransitionGradientValue, spTransitionRange;
 
+        // Phase 1: 色调滤镜
+        private SerializedProperty spToneFilter, spToneIntensity;
+        // Phase 1: 独立颜色滤镜
+        private SerializedProperty spColorFilterMode, spColorValue, spColorIntensity, spColorGlow;
+        // Phase 1: 边缘效果
+        private SerializedProperty spEdgeMode, spEdgeWidth, spEdgeColorFilterMode, spEdgeColor, spEdgeColorGlow;
+        private SerializedProperty spEdgeShinyRate, spEdgeShinyWidth, spEdgeShinyAutoPlaySpeed;
+
+        // Phase 2: 采样增强
+        private SerializedProperty spSamplingMode, spSamplingIntensity;
+        // Phase 2: 目标模式
+        private SerializedProperty spTargetMode, spTargetColor, spTargetRange, spTargetSoftness;
+        // Phase 2: 图案区域
+        private SerializedProperty spPatternArea;
+
         private bool gsInitialized, shaderChannelsNeedUpdate;
 
         protected override void OnEnable()
@@ -122,6 +137,35 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             spTransitionGradient = serializedObject.FindProperty("transitionGradient");
             spTransitionGradientValue = serializedObject.FindProperty("transitionGradientValue");
             spTransitionRange = serializedObject.FindProperty("transitionRange");
+
+            // Phase 1: 色调滤镜
+            spToneFilter = serializedObject.FindProperty("m_ToneFilter");
+            spToneIntensity = serializedObject.FindProperty("m_ToneIntensity");
+            // Phase 1: 独立颜色滤镜
+            spColorFilterMode = serializedObject.FindProperty("m_ColorFilterMode");
+            spColorValue = serializedObject.FindProperty("m_ColorValue");
+            spColorIntensity = serializedObject.FindProperty("m_ColorIntensity");
+            spColorGlow = serializedObject.FindProperty("m_ColorGlow");
+            // Phase 1: 边缘效果
+            spEdgeMode = serializedObject.FindProperty("m_EdgeMode");
+            spEdgeWidth = serializedObject.FindProperty("m_EdgeWidth");
+            spEdgeColorFilterMode = serializedObject.FindProperty("m_EdgeColorFilterMode");
+            spEdgeColor = serializedObject.FindProperty("m_EdgeColor");
+            spEdgeColorGlow = serializedObject.FindProperty("m_EdgeColorGlow");
+            spEdgeShinyRate = serializedObject.FindProperty("m_EdgeShinyRate");
+            spEdgeShinyWidth = serializedObject.FindProperty("m_EdgeShinyWidth");
+            spEdgeShinyAutoPlaySpeed = serializedObject.FindProperty("m_EdgeShinyAutoPlaySpeed");
+
+            // Phase 2: 采样增强
+            spSamplingMode = serializedObject.FindProperty("m_SamplingMode");
+            spSamplingIntensity = serializedObject.FindProperty("m_SamplingIntensity");
+            // Phase 2: 目标模式
+            spTargetMode = serializedObject.FindProperty("m_TargetMode");
+            spTargetColor = serializedObject.FindProperty("m_TargetColor");
+            spTargetRange = serializedObject.FindProperty("m_TargetRange");
+            spTargetSoftness = serializedObject.FindProperty("m_TargetSoftness");
+            // Phase 2: 图案区域
+            spPatternArea = serializedObject.FindProperty("m_PatternArea");
         }
 
         public override void OnInspectorGUI()
@@ -224,6 +268,66 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             }
             EditorGUILayout.EndVertical();
 
+            // ==================== 采样增强（SAMPLING） ====================
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spSamplingMode, new GUIContent("采样模式"));
+                if (spSamplingMode.enumValueIndex != (int)ImageEx.SamplingFilter.None)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(spSamplingIntensity, new GUIContent("采样强度"));
+                    EditorGUI.indentLevel--;
+                }
+            }
+            EditorGUILayout.EndVertical();
+
+            // ==================== 目标模式（TARGET MODE） ====================
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spTargetMode, new GUIContent("目标模式"));
+                if (spTargetMode.enumValueIndex != (int)ImageEx.TargetMode.None)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(spTargetColor, new GUIContent("目标颜色"));
+                    EditorGUILayout.PropertyField(spTargetRange, new GUIContent("目标范围"));
+                    EditorGUILayout.PropertyField(spTargetSoftness, new GUIContent("目标柔和度"));
+                    EditorGUI.indentLevel--;
+                }
+            }
+            EditorGUILayout.EndVertical();
+
+            // ==================== 色调滤镜（TONE FILTER） ====================
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spToneFilter, new GUIContent("色调滤镜"));
+                if (spToneFilter.enumValueIndex != (int)ImageEx.ToneFilter.None)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(spToneIntensity, new GUIContent("滤镜强度"));
+                    EditorGUI.indentLevel--;
+                }
+            }
+            EditorGUILayout.EndVertical();
+
+            // ==================== 独立颜色滤镜（COLOR FILTER） ====================
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spColorFilterMode, new GUIContent("颜色滤镜"));
+                if (spColorFilterMode.enumValueIndex != (int)ImageEx.ColorMode.None)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(spColorValue, new GUIContent("滤镜值"));
+                    EditorGUILayout.PropertyField(spColorIntensity, new GUIContent("滤镜强度"));
+                    EditorGUILayout.PropertyField(spColorGlow, new GUIContent("发光"));
+                    EditorGUI.indentLevel--;
+                }
+            }
+            EditorGUILayout.EndVertical();
+
             EditorGUILayout.Space();
             EditorGUILayout.BeginVertical("Box");
             {
@@ -296,6 +400,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                     if (mode == ImageEx.TransitionMode.Pattern)
                     {
                         EditorGUILayout.PropertyField(spTransitionPatternReverse, new GUIContent("图案反向"));
+                        EditorGUILayout.PropertyField(spPatternArea, new GUIContent("图案区域"));
                     }
 
                     if (mode != ImageEx.TransitionMode.Fade && mode != ImageEx.TransitionMode.Cutoff && mode != ImageEx.TransitionMode.Blaze)
@@ -364,7 +469,42 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                 }
             }
             EditorGUILayout.EndVertical();
+            // ==================== 边缘效果（EDGE MODE） ====================
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spEdgeMode, new GUIContent("边缘效果"));
+                if (spEdgeMode.enumValueIndex != (int)ImageEx.EdgeMode.None)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(spEdgeWidth, new GUIContent("边缘宽度"));
 
+                    EditorGUILayout.PropertyField(spEdgeColorFilterMode, new GUIContent("颜色滤镜"));
+
+                    // 边缘颜色（HDR）
+                    EditorGUI.BeginChangeCheck();
+                    EditorGUI.showMixedValue = spEdgeColor.hasMultipleDifferentValues;
+                    Color newEdgeColor = EditorGUILayout.ColorField(new GUIContent("边缘颜色"), spEdgeColor.colorValue, true, true, true);
+                    EditorGUI.showMixedValue = false;
+                    if (EditorGUI.EndChangeCheck()) spEdgeColor.colorValue = newEdgeColor;
+
+                    EditorGUILayout.PropertyField(spEdgeColorGlow, new GUIContent("发光"));
+
+                    // Shiny 模式特有参数
+                    if (!spEdgeMode.hasMultipleDifferentValues && spEdgeMode.enumValueIndex == (int)ImageEx.EdgeMode.Shiny)
+                    {
+                        EditorGUILayout.LabelField("高光设置", EditorStyles.boldLabel);
+                        EditorGUI.indentLevel++;
+                        EditorGUILayout.PropertyField(spEdgeShinyRate, new GUIContent("高光位置"));
+                        EditorGUILayout.PropertyField(spEdgeShinyWidth, new GUIContent("高光宽度"));
+                        EditorGUILayout.PropertyField(spEdgeShinyAutoPlaySpeed, new GUIContent("自动速度"));
+                        EditorGUI.indentLevel--;
+                    }
+
+                    EditorGUI.indentLevel--;
+                }
+            }
+            EditorGUILayout.EndVertical();
             if (spShape.enumValueIndex == (int)DrawShape.None)
             {
                 // 翻转控件（放置在“阴影”设置下，仅在DrawShape==None时启用）

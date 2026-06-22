@@ -109,6 +109,39 @@ Shader "ReunionMovement/UI/ImageEx"
         _NTriangleRoundedTime ("N三角形圆角形状的动态时间参数", Float) = 0
         _NTriangleRoundedNumber ("N三角形圆角形状的边数", Float) = 0
 
+        // -------------------- 色调滤镜（TONE） --------------------
+        _ToneFilter ("色调滤镜", int) = 0
+        _ToneIntensity ("色调滤镜强度", Range(0, 1)) = 1
+
+        // -------------------- 独立颜色滤镜（COLOR FILTER） --------------------
+        _ColorFilter ("颜色滤镜模式", int) = 0
+        _ColorValue ("颜色滤镜值", Color) = (1, 1, 1, 1)
+        _ColorIntensity ("颜色滤镜强度", Range(0, 1)) = 1
+        _ColorGlow ("颜色滤镜发光", int) = 0
+
+        // -------------------- 边缘效果（EDGE） --------------------
+        _EdgeMode ("边缘效果模式", int) = 0
+        _EdgeWidth ("边缘宽度", Range(0, 1)) = 0.5
+        _EdgeColorFilter ("边缘颜色滤镜", int) = 4
+        [HDR] _EdgeColor ("边缘颜色", Color) = (1, 1, 1, 1)
+        _EdgeColorGlow ("边缘颜色发光", int) = 0
+        _EdgeShinyRate ("边缘高光位置", Range(0, 1)) = 0.5
+        _EdgeShinyWidth ("边缘高光宽度", Range(0, 1)) = 0.5
+        _EdgeShinyAutoPlaySpeed ("边缘高光自动速度", Range(-5, 5)) = 1
+
+        // -------------------- 采样增强（SAMPLING） --------------------
+        _SamplingMode ("采样模式", int) = 0
+        _SamplingIntensity ("采样强度", Range(0, 1)) = 0.5
+
+        // -------------------- 目标模式（TARGET） --------------------
+        _TargetMode ("目标模式", int) = 0
+        _TargetColor ("目标颜色", Color) = (1, 1, 1, 1)
+        _TargetRange ("目标范围", Range(0, 1)) = 0.1
+        _TargetSoftness ("目标柔和度", Range(0, 1)) = 0.5
+
+        // -------------------- 图案区域（PATTERN AREA） --------------------
+        _PatternArea ("图案区域", int) = 0
+
         _StencilComp ("模板比较", Float) = 8
         _Stencil ("模板ID", Float) = 0
         _StencilOp ("模板操作", Float) = 0
@@ -172,6 +205,11 @@ Shader "ReunionMovement/UI/ImageEx"
             #pragma shader_feature_local _ DASHED_OUTLINE_STATIC
             #pragma shader_feature_local _ TRANSITION_CLAMP_STATIC
             #pragma shader_feature_local _ TRANSITION_UV_EFFECT_STATIC
+            #pragma shader_feature_local _ TONE_GRAYSCALE TONE_SEPIA TONE_NEGATIVE TONE_RETRO TONE_POSTERIZE
+            #pragma shader_feature_local _ COLOR_FILTER
+            #pragma shader_feature_local _ EDGE_PLAIN EDGE_SHINY
+            #pragma shader_feature_local _ SAMPLING_PIXELATION SAMPLING_RGB_SHIFT SAMPLING_EDGE_LUMINANCE SAMPLING_EDGE_ALPHA
+            #pragma shader_feature_local _ TARGET_HUE TARGET_LUMINANCE
 
             struct appdata_t
             {
@@ -234,7 +272,7 @@ Shader "ReunionMovement/UI/ImageEx"
             #define ApplyGradientColor(c, uv)   RM_ApplyGradientColor(c, uv)
             #define ApplyBlur(uv)               RM_ApplyBlur(uv)
             #define ApplyOutlinedSdf(c, IN, sdf, ps) RM_ApplyOutlinedSdf(c, IN.shapeData, sdf, ps)
-            #define apply_transition_filter(c, a, uv)  RM_ApplyTransitionFilter(c, a, uv)
+            #define apply_transition_filter(c, a, uv, ef)  RM_ApplyTransitionFilter(c, a, uv, ef)
             #define transition_alpha(uv)         RM_TransitionAlpha(uv)
             #define move_transition_filter(m, a) RM_MoveTransitionFilter(m, a)
             #define transition_rate()            RM_TransitionRate()
@@ -248,6 +286,16 @@ Shader "ReunionMovement/UI/ImageEx"
             #include "../../Common/RM_Outline.cginc"
             // -------------------- 阴影（SHADOW） --------------------
             #include "../../Common/RM_Shadow.cginc"
+            // -------------------- 色调滤镜（TONE） --------------------
+            #include "../../Common/RM_ToneFilter.cginc"
+            // -------------------- 独立颜色滤镜（COLOR FILTER） --------------------
+            #include "../../Common/RM_ColorFilter.cginc"
+            // -------------------- 边缘效果（EDGE） --------------------
+            #include "../../Common/RM_Edge.cginc"
+            // -------------------- 采样增强（SAMPLING） --------------------
+            #include "../../Common/RM_Sampling.cginc"
+            // -------------------- 目标模式（TARGET） --------------------
+            #include "../../Common/RM_Target.cginc"
 
             //顶点着色器
             v2f vert(appdata_t v)
@@ -340,13 +388,27 @@ Shader "ReunionMovement/UI/ImageEx"
                     return RM_RenderShadow(IN.shapeData, _FalloffDistance, _StrokeWidth, _OutlineWidth, texcoord, transAlpha, transitionFilterUv, IN.color.a);
                 }
 
-                color = ApplyBlur(texcoord) * color;
+                // 统一采样入口：模糊（BLUR_*）或 Phase2 采样模式（Pixelation/RGB Shift/Edge）
+                #if SAMPLING_PIXELATION || SAMPLING_RGB_SHIFT || SAMPLING_EDGE_LUMINANCE || SAMPLING_EDGE_ALPHA
+                    color = RM_ApplySampling(texcoord) * color;
+                #else
+                    color = ApplyBlur(texcoord) * color;
+                #endif
 
                 // 继续主片元路径：先对主纹理进行可选模糊采样（ApplyBlur），然后按功能模块（渐变、SDF、描边、过渡）依次处理颜色与 alpha
                 // 保留原始的基础采样颜色
                 fixed4 baseSample = (tex2D(_MainTex, texcoord) + _TextureSampleAdd) * IN.color;
 
+                // 计算边缘因子（在渐变之前，基于原始纹理 alpha 做 12 方向邻域检测）
+                float edgeFactor = 0;
+                #if EDGE_PLAIN || EDGE_SHINY
+                    edgeFactor = RM_ComputeEdgeFactor(texcoord, _EdgeWidth);
+                #endif
+
                 ApplyGradientColor(color, effectsUv);
+
+                // 应用色调滤镜（Tone Filter）：灰度化 / 怀旧 / 负片 / 复古 / 色调分离
+                color = RM_ApplyToneFilter(color);
                 
                 #if RECTANGLE || CIRCLE || PENTAGON || TRIANGLE || HEXAGON || CHAMFERBOX || PARALLELOGRAM || NSTAR_POLYGON || HEART || BLOBBYCROSS || SQUIRCLE || NTRIANGLE_ROUNDED
                     float sdfData;
@@ -377,7 +439,7 @@ Shader "ReunionMovement/UI/ImageEx"
                 // 应用过渡过滤器
                 #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
                     // transAlpha 和 transitionFilterUv 已在前面计算，可在此处使用
-                    color = apply_transition_filter(color, transAlpha, transitionFilterUv);
+                    color = apply_transition_filter(color, transAlpha, transitionFilterUv, edgeFactor);
                 #endif
 
                 #if !RECTANGLE && !CIRCLE && !PENTAGON && !TRIANGLE && !HEXAGON && !CHAMFERBOX && !PARALLELOGRAM && !NSTAR_POLYGON && !HEART && !BLOBBYCROSS && !SQUIRCLE && !NTRIANGLE_ROUNDED
@@ -427,7 +489,23 @@ Shader "ReunionMovement/UI/ImageEx"
                 #ifdef UNITY_UI_CLIP_RECT
                     color.a *= UnityGet2DClipping(IN.worldPosition.xy, _ClipRect);
                 #endif
-                
+
+                // 应用独立颜色滤镜（Color Filter）：乘法 / 加法 / 减法 / 替换 / HSV 偏移 / 对比度
+                #if COLOR_FILTER
+                    color = RM_ApplyStandaloneColorFilter(color);
+                #endif
+
+                // 应用边缘效果（Edge Mode）：普通边缘发光 / 旋转高光边缘
+                #if EDGE_PLAIN || EDGE_SHINY
+                    color = RM_ApplyEdge(color, edgeFactor, effectsUv);
+                #endif
+
+                // 应用目标模式（Target Mode）：基于色相/亮度的目标颜色过滤
+                #if TARGET_HUE || TARGET_LUMINANCE
+                    half targetRate = RM_GetTargetRate(baseSample.rgb);
+                    color = RM_ApplyTarget(color, baseSample, targetRate);
+                #endif
+
                 #ifdef UNITY_UI_ALPHACLIP
                     clip(color.a - 0.001);
                 #endif
