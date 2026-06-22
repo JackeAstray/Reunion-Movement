@@ -82,7 +82,7 @@ half4 RM_RenderShadow(
             half4 tint = lerp(_ShadowColor, _Color, clamp(_ShadowMirrorTintMix, 0.0, 1.0));
             half4 src = mirrorSample * tint;
             #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
-                src = RM_ApplyTransitionFilter(src, transAlpha, transitionFilterUv);
+                src = RM_ApplyTransitionFilter(src, transAlpha, transitionFilterUv, 0);
             #endif
             return src;
         }
@@ -107,7 +107,7 @@ half4 RM_RenderShadow(
     shadowOut = half4(_ShadowColor.rgb * shadowAlpha, shadowAlpha);
 
     #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
-        shadowOut = RM_ApplyTransitionFilter(shadowOut, transAlpha, transitionFilterUv);
+        shadowOut = RM_ApplyTransitionFilter(shadowOut, transAlpha, transitionFilterUv, 0);
     #endif
 
     return shadowOut;
