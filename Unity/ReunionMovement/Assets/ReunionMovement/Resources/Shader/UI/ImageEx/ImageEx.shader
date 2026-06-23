@@ -103,6 +103,8 @@ Shader "ReunionMovement/UI/ImageEx"
         _ShadowMirrorOffset ("Shadow Mirror Offset", Vector) = (0,0,0,0)
         _ShadowMirrorShowSource ("Shadow Mirror Show Source", Float) = 0
         _ShadowMirrorTintMix ("Shadow Mirror Tint Mix", Range(0,1)) = 0.5
+        _ShadowColorFilter ("Shadow Color Filter", int) = 0
+        _ShadowColorGlow ("Shadow Color Glow", int) = 0
 
         _BlobbyCrossTime ("水滴十字形状的动态时间参数", Float) = 0
         _SquircleTime ("方圆形形状的动态时间参数", Float) = 1
@@ -142,6 +144,25 @@ Shader "ReunionMovement/UI/ImageEx"
         // -------------------- 图案区域（PATTERN AREA） --------------------
         _PatternArea ("图案区域", int) = 0
 
+        // -------------------- 渐变纹理（GRADIENT TEXTURE） --------------------
+        [Toggle] _EnableGradientTex ("启用渐变纹理", int) = 0
+        _GradientTex ("渐变纹理", 2D) = "white" {}
+        _GradientOffset ("渐变偏移", Range(-1, 1)) = 0
+        _GradientScale ("渐变缩放", Range(0.1, 5)) = 1
+
+        // -------------------- 细节纹理（DETAIL FILTER） --------------------
+        _DetailMode ("细节滤镜模式", int) = 0
+        _DetailTex ("细节纹理", 2D) = "white" {}
+        _DetailTex_ST ("细节纹理ST", Vector) = (1, 1, 0, 0)
+        _DetailTex_Speed ("细节纹理速度", Vector) = (0, 0, 0, 0)
+        _DetailIntensity ("细节强度", Range(0, 1)) = 1
+        _DetailThreshold ("细节阈值", Vector) = (0, 1, 0, 0)
+        [HDR] _DetailColor ("细节颜色", Color) = (1, 1, 1, 1)
+
+        // -------------------- 混合模式（BLEND TYPE） --------------------
+        _SrcBlend ("源混合", Float) = 5
+        _DstBlend ("目标混合", Float) = 10
+
         _StencilComp ("模板比较", Float) = 8
         _Stencil ("模板ID", Float) = 0
         _StencilOp ("模板操作", Float) = 0
@@ -170,7 +191,7 @@ Shader "ReunionMovement/UI/ImageEx"
         Lighting Off
         ZWrite Off
         ZTest [unity_GUIZTestMode]
-        Blend SrcAlpha OneMinusSrcAlpha
+        Blend [_SrcBlend] [_DstBlend]
         ColorMask [_ColorMask]
         
         Pass
@@ -210,6 +231,8 @@ Shader "ReunionMovement/UI/ImageEx"
             #pragma shader_feature_local _ EDGE_PLAIN EDGE_SHINY
             #pragma shader_feature_local _ SAMPLING_PIXELATION SAMPLING_RGB_SHIFT SAMPLING_EDGE_LUMINANCE SAMPLING_EDGE_ALPHA
             #pragma shader_feature_local _ TARGET_HUE TARGET_LUMINANCE
+            #pragma shader_feature_local _ GRADIENT_TEXTURE
+            #pragma shader_feature_local _ DETAIL_MASKING DETAIL_MULTIPLY DETAIL_ADDITIVE DETAIL_SUBTRACTIVE DETAIL_REPLACE DETAIL_MULTIPLY_ADDITIVE
 
             struct appdata_t
             {
@@ -296,6 +319,8 @@ Shader "ReunionMovement/UI/ImageEx"
             #include "../../Common/RM_Sampling.cginc"
             // -------------------- 目标模式（TARGET） --------------------
             #include "../../Common/RM_Target.cginc"
+            // -------------------- 细节纹理（DETAIL） --------------------
+            #include "../../Common/RM_Detail.cginc"
 
             //顶点着色器
             v2f vert(appdata_t v)
@@ -499,6 +524,9 @@ Shader "ReunionMovement/UI/ImageEx"
                 #if EDGE_PLAIN || EDGE_SHINY
                     color = RM_ApplyEdge(color, edgeFactor, effectsUv);
                 #endif
+
+                // 应用细节纹理滤镜（Detail Filter）
+                color = RM_ApplyDetailFilter(color, effectsUv);
 
                 // 应用目标模式（Target Mode）：基于色相/亮度的目标颜色过滤
                 #if TARGET_HUE || TARGET_LUMINANCE

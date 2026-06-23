@@ -69,6 +69,44 @@ namespace UnityEngine.UI.ImageExtensions
         }
 
         /// <summary>
+        /// 仅添加阴影四边形到 VertexHelper（不清除现有数据）。
+        /// 用于多次调用以生成 Shadow3（迭代投影）或 Outline8（八方向轮廓）。
+        /// </summary>
+        public static void AddShadowQuad(VertexHelper vh, Vector4 drawingDims, Vector4 uv,
+            Color32 color, Vector2 shadowOffsetLocal, float shadowScale = 1f, float shadowFade = 1f)
+        {
+            Vector2 size = new Vector2(drawingDims.z - drawingDims.x, drawingDims.w - drawingDims.y);
+
+            Vector3[] sxy = new Vector3[4];
+            sxy[0] = new Vector2(drawingDims.x, drawingDims.y);
+            sxy[1] = new Vector2(drawingDims.x, drawingDims.w);
+            sxy[2] = new Vector2(drawingDims.z, drawingDims.w);
+            sxy[3] = new Vector2(drawingDims.z, drawingDims.y);
+
+            Vector3[] suv = new Vector3[4];
+            suv[0] = new Vector2(uv.x, uv.y);
+            suv[1] = new Vector2(uv.x, uv.w);
+            suv[2] = new Vector2(uv.z, uv.w);
+            suv[3] = new Vector2(uv.z, uv.y);
+
+            AddQuad(vh, sxy, color, suv, size, drawingDims, true, shadowOffsetLocal, shadowScale, shadowFade);
+        }
+
+        /// <summary>
+        /// 便捷重载：自动从 RectTransform/Sprite 计算绘制区域和 UV，然后添加阴影四边形。
+        /// </summary>
+        public static void AddShadowQuad(VertexHelper vh, bool preserveAspect, Canvas canvas,
+            RectTransform rectTransform, Sprite activeSprite, Color32 color,
+            Vector2 shadowOffsetLocal, float shadowScale = 1f, float shadowFade = 1f)
+        {
+            Vector4 v = GetDrawingDimensions(preserveAspect, activeSprite, canvas, rectTransform);
+            Vector4 uv = (activeSprite != null)
+                ? Sprites.DataUtility.GetOuterUV(activeSprite)
+                : new Vector4(0, 0, 1, 1);
+            AddShadowQuad(vh, v, uv, color, shadowOffsetLocal, shadowScale, shadowFade);
+        }
+
+        /// <summary>
         /// 生成带填充（包括水平、垂直、径向填充）的精灵网格。
         /// 支持 <see cref="Image.FillMethod"/> 的所有填充方式（Horizontal / Vertical / Radial90 / Radial180 / Radial360）。
         /// </summary>
@@ -350,7 +388,8 @@ namespace UnityEngine.UI.ImageExtensions
             Vector4 bounds,
             bool appendShadow,
             Vector2 shadowOffsetLocal,
-            float shadowScale = 1f)
+            float shadowScale = 1f,
+            float shadowFade = 1f)
         {
             // 插入 UV 以避免边缘出现纹理包裹伪影
             float epsilon = 0.001f;
@@ -363,6 +402,9 @@ namespace UnityEngine.UI.ImageExtensions
 
                 Vector2 shadowCenter = new Vector2((bounds.x + bounds.z) * 0.5f, (bounds.y + bounds.w) * 0.5f);
                 float safeShadowScale = Mathf.Max(0.0001f, shadowScale);
+                Color32 shadowColor = shadowFade < 0.999f
+                    ? new Color32(color.r, color.g, color.b, (byte)(color.a * shadowFade))
+                    : color;
 
                 for (int i = 0; i < 4; ++i)
                 {
@@ -370,7 +412,6 @@ namespace UnityEngine.UI.ImageExtensions
                     Vector2 scaledPos = (basePos - shadowCenter) * safeShadowScale + shadowCenter;
                     Vector3 pos = (Vector3)scaledPos + new Vector3(shadowOffsetLocal.x, shadowOffsetLocal.y, 0);
 
-                    // 阴影四边形保持原始 uv1，以便 shader 内使用统一 shapeData 进行可控缩放与 SDF 计算。
                     float uBase = Mathf.InverseLerp(bounds.x, bounds.z, quadPositions[i].x);
                     float vBase = Mathf.InverseLerp(bounds.y, bounds.w, quadPositions[i].y);
 
@@ -380,7 +421,7 @@ namespace UnityEngine.UI.ImageExtensions
 
                     Vector2 sampleTexCoord = quadUVs[i];
 
-                    vertexHelper.AddVert(pos, color, sampleTexCoord, uv1, size, Vector2.zero,
+                    vertexHelper.AddVert(pos, shadowColor, sampleTexCoord, uv1, size, Vector2.zero,
                         Vector3.zero, new Vector4(0, 0, 0, 1));
                 }
 

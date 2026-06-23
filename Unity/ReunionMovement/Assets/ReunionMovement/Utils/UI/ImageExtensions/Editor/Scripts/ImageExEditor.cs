@@ -26,6 +26,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
         private SerializedProperty spShadowMirrorScale, spShadowMirrorOffset;
         private SerializedProperty spShadowMirrorShowSource;
         private SerializedProperty spShadowMirrorTintMix;
+        private SerializedProperty spShadowColorFilter, spShadowColorGlow;
 
         private SerializedProperty spMaterialSettings, spMaterial, spImageType;
 
@@ -50,6 +51,14 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
         private SerializedProperty spTargetMode, spTargetColor, spTargetRange, spTargetSoftness;
         // Phase 2: 图案区域
         private SerializedProperty spPatternArea;
+
+        // Phase 3: 细节纹理
+        private SerializedProperty spDetailMode, spDetailTex, spDetailTexScale, spDetailTexOffset, spDetailTexSpeed;
+        private SerializedProperty spDetailIntensity, spDetailThreshold, spDetailColor;
+        // Phase 3: 渐变纹理
+        private SerializedProperty spEnableGradientTex, spGradientTex, spGradientOffset, spGradientScale;
+        // Phase 3: 混合模式
+        private SerializedProperty spBlendType;
 
         private bool gsInitialized, shaderChannelsNeedUpdate;
 
@@ -81,6 +90,8 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             spShadowMirrorOffset = serializedObject.FindProperty("shadowMirrorOffset");
             spShadowMirrorShowSource = serializedObject.FindProperty("shadowMirrorShowSource");
             spShadowMirrorTintMix = serializedObject.FindProperty("shadowMirrorTintMix");
+            spShadowColorFilter = serializedObject.FindProperty("shadowColorFilter");
+            spShadowColorGlow = serializedObject.FindProperty("shadowColorGlow");
 
             spMaterialSettings = serializedObject.FindProperty("materialMode");
             spMaterial = serializedObject.FindProperty("m_Material");
@@ -166,6 +177,23 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             spTargetSoftness = serializedObject.FindProperty("m_TargetSoftness");
             // Phase 2: 图案区域
             spPatternArea = serializedObject.FindProperty("m_PatternArea");
+
+            // Phase 3: 细节纹理
+            spDetailMode = serializedObject.FindProperty("m_DetailMode");
+            spDetailTex = serializedObject.FindProperty("m_DetailTex");
+            spDetailTexScale = serializedObject.FindProperty("m_DetailTexScale");
+            spDetailTexOffset = serializedObject.FindProperty("m_DetailTexOffset");
+            spDetailTexSpeed = serializedObject.FindProperty("m_DetailTexSpeed");
+            spDetailIntensity = serializedObject.FindProperty("m_DetailIntensity");
+            spDetailThreshold = serializedObject.FindProperty("m_DetailThreshold");
+            spDetailColor = serializedObject.FindProperty("m_DetailColor");
+            // Phase 3: 渐变纹理
+            spEnableGradientTex = serializedObject.FindProperty("m_EnableGradientTex");
+            spGradientTex = serializedObject.FindProperty("m_GradientTex");
+            spGradientOffset = serializedObject.FindProperty("m_GradientOffset");
+            spGradientScale = serializedObject.FindProperty("m_GradientScale");
+            // Phase 3: 混合模式
+            spBlendType = serializedObject.FindProperty("m_BlendType");
         }
 
         public override void OnInspectorGUI()
@@ -254,6 +282,16 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             EditorGUILayout.BeginVertical("Box");
             {
                 EditorGUILayout.PropertyField(spGradient);
+                // Phase 3: 渐变纹理子选项
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(spEnableGradientTex, new GUIContent("渐变纹理"));
+                if (spEnableGradientTex.boolValue)
+                {
+                    EditorGUILayout.PropertyField(spGradientTex, new GUIContent("纹理"));
+                }
+                EditorGUILayout.PropertyField(spGradientOffset, new GUIContent("偏移"));
+                EditorGUILayout.PropertyField(spGradientScale, new GUIContent("缩放"));
+                EditorGUI.indentLevel--;
             }
             EditorGUILayout.EndVertical();
 
@@ -295,6 +333,40 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                     EditorGUILayout.PropertyField(spTargetSoftness, new GUIContent("目标柔和度"));
                     EditorGUI.indentLevel--;
                 }
+            }
+            EditorGUILayout.EndVertical();
+
+            // ==================== 细节纹理（DETAIL FILTER） ====================
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spDetailMode, new GUIContent("细节滤镜"));
+                if (spDetailMode.enumValueIndex != (int)ImageEx.DetailFilter.None)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(spDetailTex, new GUIContent("纹理"));
+                    EditorGUILayout.PropertyField(spDetailTexScale, new GUIContent("缩放"));
+                    EditorGUILayout.PropertyField(spDetailTexOffset, new GUIContent("偏移"));
+                    EditorGUILayout.PropertyField(spDetailTexSpeed, new GUIContent("速度"));
+                    EditorGUILayout.PropertyField(spDetailIntensity, new GUIContent("强度"));
+                    EditorGUILayout.PropertyField(spDetailThreshold, new GUIContent("阈值"));
+
+                    // 细节颜色（HDR）
+                    EditorGUI.BeginChangeCheck();
+                    EditorGUI.showMixedValue = spDetailColor.hasMultipleDifferentValues;
+                    Color newDetailColor = EditorGUILayout.ColorField(new GUIContent("颜色"), spDetailColor.colorValue, true, true, true);
+                    EditorGUI.showMixedValue = false;
+                    if (EditorGUI.EndChangeCheck()) spDetailColor.colorValue = newDetailColor;
+                    EditorGUI.indentLevel--;
+                }
+            }
+            EditorGUILayout.EndVertical();
+
+            // ==================== 混合模式（BLEND TYPE） ====================
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spBlendType, new GUIContent("混合模式"));
             }
             EditorGUILayout.EndVertical();
 
@@ -464,6 +536,9 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                         if (spShadowMirrorTintMix != null)
                             EditorGUILayout.PropertyField(spShadowMirrorTintMix, new GUIContent("镜像混合"));
                     }
+
+                    EditorGUILayout.PropertyField(spShadowColorFilter, new GUIContent("阴影颜色滤镜"));
+                    EditorGUILayout.PropertyField(spShadowColorGlow, new GUIContent("阴影发光"));
 
                     EditorGUI.indentLevel--;
                 }

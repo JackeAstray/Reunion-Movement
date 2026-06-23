@@ -259,6 +259,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 1
   falloffDistance: 0
@@ -365,6 +367,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &840306
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -513,6 +528,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -619,6 +636,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &40630829
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -842,6 +872,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -948,6 +980,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &104643847
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1096,6 +1141,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -1202,6 +1249,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &228356462
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1350,6 +1410,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -1456,6 +1518,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &307112962
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1614,6 +1689,275 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 310147040}
   m_CullTransparentMesh: 1
+--- !u!1 &319118927
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 319118928}
+  - component: {fileID: 319118930}
+  - component: {fileID: 319118929}
+  m_Layer: 0
+  m_Name: "\u9634\u5F71\u6A21\u5F0F Shadow 3"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &319118928
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 319118927}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1961290207}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &319118929
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 319118927}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4041ee2aabac59f4589e76bac1cb0e81, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: f168bd78da5483647b8e123f79a1fca0, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+  appendShadow: 1
+  shadowOffsetLocal: {x: 3, y: -3}
+  shadowColor: {r: 1, g: 0.11957219, b: 0, a: 0.7058824}
+  shadowBlurIntensity: 8
+  samplingWidth: 1
+  samplingScale: 1
+  shadowScale: 1
+  allowOutOfBoundsShadow: 1
+  shadowMode: 2
+  drawShape: 0
+  imageType: 0
+  materialMode: 0
+  blurType: 0
+  blurIntensity: 1
+  transitionMode: 0
+  transitionTexture: {fileID: 0}
+  transitionTexScale: {x: 1, y: 1}
+  transitionTexOffset: {x: 0, y: 0}
+  transitionTexRotation: 0
+  transitionKeepAspectRatio: 0
+  transitionRate: 0
+  transitionColor: {r: 1, g: 1, b: 1, a: 1}
+  transitionWidth: 0.1
+  transitionSoftness: 0.1
+  transitionReverse: 0
+  transitionSpeed: {x: 0, y: 0}
+  transitionPatternReverse: 0
+  transitionAutoPlaySpeed: 0
+  transitionColorFilter: 0
+  transitionColorGlow: 0
+  transitionGradient: {fileID: 0}
+  transitionGradientValue:
+    serializedVersion: 2
+    key0: {r: 1, g: 1, b: 1, a: 1}
+    key1: {r: 1, g: 1, b: 1, a: 1}
+    key2: {r: 0, g: 0, b: 0, a: 0}
+    key3: {r: 0, g: 0, b: 0, a: 0}
+    key4: {r: 0, g: 0, b: 0, a: 0}
+    key5: {r: 0, g: 0, b: 0, a: 0}
+    key6: {r: 0, g: 0, b: 0, a: 0}
+    key7: {r: 0, g: 0, b: 0, a: 0}
+    ctime0: 0
+    ctime1: 65535
+    ctime2: 0
+    ctime3: 0
+    ctime4: 0
+    ctime5: 0
+    ctime6: 0
+    ctime7: 0
+    atime0: 0
+    atime1: 65535
+    atime2: 0
+    atime3: 0
+    atime4: 0
+    atime5: 0
+    atime6: 0
+    atime7: 0
+    m_Mode: 0
+    m_ColorSpace: -1
+    m_NumColorKeys: 2
+    m_NumAlphaKeys: 2
+  transitionRange: {x: 0, y: 0}
+  transitionClamp: 1
+  transitionTexClampPadding: 1
+  transitionUseUv0: 1
+  strokeWidth: 0
+  outlineWidth: 0
+  outlineColor: {r: 1, g: 0.2699381, b: 0, a: 1}
+  shadowMirrorDirection: 0
+  shadowMirrorScale: 1
+  shadowMirrorOffset: {x: 0, y: 0}
+  shadowMirrorShowSource: 0
+  shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  customTime: 0
+  enableDashedOutline: 0
+  falloffDistance: 0
+  constrainRotation: 0
+  shapeRotation: 0
+  flipHorizontal: 0
+  flipVertical: 0
+  alphaThreshold: 0
+  triangle:
+    cornerRadius: {x: 0, y: 0, z: 0}
+    uniformCornerRadius: 0
+  rectangle:
+    cornerRadius: {x: 0, y: 0, z: 0, w: 0}
+    uniformCornerRadius: 0
+  circle:
+    radius: 65.8
+    fitRadius: 0
+  pentagon:
+    cornerRadius: {x: 0, y: 0, z: 0, w: 0}
+    uniformCornerRadius: 0
+    tipRadius: 0.001
+    tipSize: 1
+  hexagon:
+    cornerRadius: {x: 1, y: 1, z: 1, w: 1}
+    uniformCornerRadius: 0
+    tipSize: {x: 1, y: 1}
+    uniformTipSize: 0
+    tipRadius: {x: 1, y: 1}
+    uniformTipRadius: 0
+  chamferBox:
+    chamferBoxSize: {x: 1, y: 1}
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
+  parallelogram:
+    parallelogramValue: 0
+  nStarPolygon:
+    sideCount: 3
+    inset: 2
+    cornerRadius: 0
+    offset: {x: 0, y: 0}
+  blobbyCross:
+    blobbyCrossTime: 0
+  squircle:
+    squircleTime: 0
+  nTriangleRounded:
+    nTriangleRoundedTime: 0
+    nTriangleRoundedNumber: 0
+  gradientEffect:
+    enabled: 0
+    gradientType: 0
+    gradient:
+      serializedVersion: 2
+      key0: {r: 1, g: 1, b: 1, a: 1}
+      key1: {r: 1, g: 1, b: 1, a: 1}
+      key2: {r: 0, g: 0, b: 0, a: 0}
+      key3: {r: 0, g: 0, b: 0, a: 0}
+      key4: {r: 0, g: 0, b: 0, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 65535
+      ctime2: 0
+      ctime3: 0
+      ctime4: 0
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: -1
+      m_NumColorKeys: 2
+      m_NumAlphaKeys: 2
+    cornerGradientColors:
+    - {r: 0, g: 0, b: 0, a: 0}
+    - {r: 0, g: 0, b: 0, a: 0}
+    - {r: 0, g: 0, b: 0, a: 0}
+    - {r: 0, g: 0, b: 0, a: 0}
+    rotation: 0
+  m_ToneFilter: 0
+  m_ToneIntensity: 1
+  m_ColorFilterMode: 0
+  m_ColorValue: {r: 1, g: 1, b: 1, a: 1}
+  m_ColorIntensity: 1
+  m_ColorGlow: 0
+  m_EdgeMode: 0
+  m_EdgeWidth: 0.5
+  m_EdgeColorFilterMode: 4
+  m_EdgeColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EdgeColorGlow: 0
+  m_EdgeShinyRate: 0.5
+  m_EdgeShinyWidth: 0.5
+  m_EdgeShinyAutoPlaySpeed: 1
+  m_SamplingMode: 0
+  m_SamplingIntensity: 0.5
+  m_TargetMode: 0
+  m_TargetColor: {r: 1, g: 1, b: 1, a: 1}
+  m_TargetRange: 0.1
+  m_TargetSoftness: 0.5
+  m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
+--- !u!222 &319118930
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 319118927}
+  m_CullTransparentMesh: 0
 --- !u!1 &389057310
 GameObject:
   m_ObjectHideFlags: 0
@@ -1754,6 +2098,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -1860,6 +2206,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &389057313
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2008,6 +2367,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -2114,6 +2475,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &391404686
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2262,6 +2636,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 0
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -2368,6 +2744,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &410396152
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2516,6 +2905,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -2622,6 +3013,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &425652647
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2890,6 +3294,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 0
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -2996,6 +3402,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &442191081
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3246,6 +3665,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -3352,6 +3773,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &479420044
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3500,6 +3934,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 1
   shadowMirrorTintMix: 0
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -3606,6 +4042,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &493681089
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3754,6 +4203,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -3860,6 +4311,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &515931150
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4008,6 +4472,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -4114,6 +4580,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &582972145
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4205,7 +4684,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1479144323}
   m_Direction: 2
   m_Value: 1
-  m_Size: 0.25409836
+  m_Size: 0.22738387
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -4388,6 +4867,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -4494,6 +4975,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &604812177
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4642,6 +5136,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -4748,6 +5244,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &632584476
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4896,6 +5405,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 1
   falloffDistance: 0.5
@@ -5002,6 +5513,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &635677603
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -5150,6 +5674,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -5256,6 +5782,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &659240149
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -5404,6 +5943,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -5510,6 +6051,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &680362035
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -5785,6 +6339,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -5891,6 +6447,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &687910526
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -6075,6 +6644,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -6181,6 +6752,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &720133379
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -6329,6 +6913,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -6435,6 +7021,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &781452804
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -6583,6 +7182,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -6689,6 +7290,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &816039884
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -6837,6 +7451,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -6943,6 +7559,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &819086914
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7181,6 +7810,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 0
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -7287,6 +7918,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &963315569
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7435,6 +8079,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -7541,6 +8187,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &966567570
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7548,6 +8207,275 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 966567567}
+  m_CullTransparentMesh: 0
+--- !u!1 &989659897
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 989659898}
+  - component: {fileID: 989659900}
+  - component: {fileID: 989659899}
+  m_Layer: 0
+  m_Name: "\u7EC6\u8282\u6EE4\u955C"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &989659898
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 989659897}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1961290207}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &989659899
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 989659897}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4041ee2aabac59f4589e76bac1cb0e81, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: f168bd78da5483647b8e123f79a1fca0, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 1
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  shadowScale: 1
+  allowOutOfBoundsShadow: 1
+  shadowMode: 1
+  drawShape: 0
+  imageType: 0
+  materialMode: 0
+  blurType: 0
+  blurIntensity: 1
+  transitionMode: 0
+  transitionTexture: {fileID: 0}
+  transitionTexScale: {x: 1, y: 1}
+  transitionTexOffset: {x: 0, y: 0}
+  transitionTexRotation: 0
+  transitionKeepAspectRatio: 0
+  transitionRate: 0
+  transitionColor: {r: 1, g: 1, b: 1, a: 1}
+  transitionWidth: 0.1
+  transitionSoftness: 0.1
+  transitionReverse: 0
+  transitionSpeed: {x: 0, y: 0}
+  transitionPatternReverse: 0
+  transitionAutoPlaySpeed: 0
+  transitionColorFilter: 0
+  transitionColorGlow: 0
+  transitionGradient: {fileID: 0}
+  transitionGradientValue:
+    serializedVersion: 2
+    key0: {r: 1, g: 1, b: 1, a: 1}
+    key1: {r: 1, g: 1, b: 1, a: 1}
+    key2: {r: 0, g: 0, b: 0, a: 0}
+    key3: {r: 0, g: 0, b: 0, a: 0}
+    key4: {r: 0, g: 0, b: 0, a: 0}
+    key5: {r: 0, g: 0, b: 0, a: 0}
+    key6: {r: 0, g: 0, b: 0, a: 0}
+    key7: {r: 0, g: 0, b: 0, a: 0}
+    ctime0: 0
+    ctime1: 65535
+    ctime2: 0
+    ctime3: 0
+    ctime4: 0
+    ctime5: 0
+    ctime6: 0
+    ctime7: 0
+    atime0: 0
+    atime1: 65535
+    atime2: 0
+    atime3: 0
+    atime4: 0
+    atime5: 0
+    atime6: 0
+    atime7: 0
+    m_Mode: 0
+    m_ColorSpace: -1
+    m_NumColorKeys: 2
+    m_NumAlphaKeys: 2
+  transitionRange: {x: 0, y: 0}
+  transitionClamp: 1
+  transitionTexClampPadding: 1
+  transitionUseUv0: 1
+  strokeWidth: 0
+  outlineWidth: 0
+  outlineColor: {r: 1, g: 1, b: 1, a: 1}
+  shadowMirrorDirection: 0
+  shadowMirrorScale: 1
+  shadowMirrorOffset: {x: 0, y: 0}
+  shadowMirrorShowSource: 0
+  shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  customTime: 0
+  enableDashedOutline: 0
+  falloffDistance: 0
+  constrainRotation: 0
+  shapeRotation: 0
+  flipHorizontal: 0
+  flipVertical: 0
+  alphaThreshold: 0
+  triangle:
+    cornerRadius: {x: 0, y: 0, z: 0}
+    uniformCornerRadius: 0
+  rectangle:
+    cornerRadius: {x: 0, y: 0, z: 0, w: 0}
+    uniformCornerRadius: 0
+  circle:
+    radius: 65
+    fitRadius: 0
+  pentagon:
+    cornerRadius: {x: 0, y: 0, z: 0, w: 0}
+    uniformCornerRadius: 0
+    tipRadius: 0.001
+    tipSize: 1
+  hexagon:
+    cornerRadius: {x: 1, y: 1, z: 1, w: 1}
+    uniformCornerRadius: 0
+    tipSize: {x: 1, y: 1}
+    uniformTipSize: 0
+    tipRadius: {x: 1, y: 1}
+    uniformTipRadius: 0
+  chamferBox:
+    chamferBoxSize: {x: 1, y: 1}
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
+  parallelogram:
+    parallelogramValue: 0
+  nStarPolygon:
+    sideCount: 3
+    inset: 2
+    cornerRadius: 0
+    offset: {x: 0, y: 0}
+  blobbyCross:
+    blobbyCrossTime: 0
+  squircle:
+    squircleTime: 0
+  nTriangleRounded:
+    nTriangleRoundedTime: 0
+    nTriangleRoundedNumber: 0
+  gradientEffect:
+    enabled: 0
+    gradientType: 1
+    gradient:
+      serializedVersion: 2
+      key0: {r: 1, g: 1, b: 1, a: 1}
+      key1: {r: 1, g: 1, b: 1, a: 1}
+      key2: {r: 0, g: 0, b: 0, a: 0}
+      key3: {r: 0, g: 0, b: 0, a: 0}
+      key4: {r: 0, g: 0, b: 0, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 65535
+      ctime2: 0
+      ctime3: 0
+      ctime4: 0
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: -1
+      m_NumColorKeys: 2
+      m_NumAlphaKeys: 2
+    cornerGradientColors:
+    - {r: 1, g: 0, b: 0, a: 1}
+    - {r: 0, g: 0, b: 0, a: 1}
+    - {r: 0, g: 0, b: 0, a: 1}
+    - {r: 0, g: 0.37633944, b: 1, a: 1}
+    rotation: 0
+  m_ToneFilter: 0
+  m_ToneIntensity: 1
+  m_ColorFilterMode: 0
+  m_ColorValue: {r: 1, g: 0, b: 0, a: 1}
+  m_ColorIntensity: 0.5
+  m_ColorGlow: 0
+  m_EdgeMode: 0
+  m_EdgeWidth: 0.5
+  m_EdgeColorFilterMode: 4
+  m_EdgeColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EdgeColorGlow: 0
+  m_EdgeShinyRate: 0.5
+  m_EdgeShinyWidth: 0.5
+  m_EdgeShinyAutoPlaySpeed: 1
+  m_SamplingMode: 0
+  m_SamplingIntensity: 0.5
+  m_TargetMode: 0
+  m_TargetColor: {r: 0, g: 0.6638222, b: 1, a: 1}
+  m_TargetRange: 0.1
+  m_TargetSoftness: 0
+  m_PatternArea: 0
+  m_DetailMode: 1
+  m_DetailTex: {fileID: 10300, guid: 0000000000000000f000000000000000, type: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 0.5}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
+--- !u!222 &989659900
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 989659897}
   m_CullTransparentMesh: 0
 --- !u!1 &1010331436
 GameObject:
@@ -7764,6 +8692,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -7870,6 +8800,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1065028793
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7877,6 +8820,275 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1065028790}
+  m_CullTransparentMesh: 0
+--- !u!1 &1082522232
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1082522233}
+  - component: {fileID: 1082522235}
+  - component: {fileID: 1082522234}
+  m_Layer: 0
+  m_Name: "\u6E10\u53D8"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1082522233
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1082522232}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1961290207}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1082522234
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1082522232}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4041ee2aabac59f4589e76bac1cb0e81, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: f168bd78da5483647b8e123f79a1fca0, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 1
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  shadowScale: 1
+  allowOutOfBoundsShadow: 1
+  shadowMode: 1
+  drawShape: 0
+  imageType: 0
+  materialMode: 0
+  blurType: 0
+  blurIntensity: 1
+  transitionMode: 0
+  transitionTexture: {fileID: 2800000, guid: 404a1ccdba91a714ca37086faa3837e6, type: 3}
+  transitionTexScale: {x: 1, y: 1}
+  transitionTexOffset: {x: 0, y: 0}
+  transitionTexRotation: 0
+  transitionKeepAspectRatio: 0
+  transitionRate: 0
+  transitionColor: {r: 0, g: 0, b: 0, a: 0.5019608}
+  transitionWidth: 0.8
+  transitionSoftness: 0.18
+  transitionReverse: 0
+  transitionSpeed: {x: 0, y: 0}
+  transitionPatternReverse: 0
+  transitionAutoPlaySpeed: 1
+  transitionColorFilter: 1
+  transitionColorGlow: 0
+  transitionGradient: {fileID: 0}
+  transitionGradientValue:
+    serializedVersion: 2
+    key0: {r: 1, g: 1, b: 1, a: 1}
+    key1: {r: 1, g: 1, b: 1, a: 1}
+    key2: {r: 0, g: 0, b: 0, a: 0}
+    key3: {r: 0, g: 0, b: 0, a: 0}
+    key4: {r: 0, g: 0, b: 0, a: 0}
+    key5: {r: 0, g: 0, b: 0, a: 0}
+    key6: {r: 0, g: 0, b: 0, a: 0}
+    key7: {r: 0, g: 0, b: 0, a: 0}
+    ctime0: 0
+    ctime1: 65535
+    ctime2: 0
+    ctime3: 0
+    ctime4: 0
+    ctime5: 0
+    ctime6: 0
+    ctime7: 0
+    atime0: 0
+    atime1: 65535
+    atime2: 0
+    atime3: 0
+    atime4: 0
+    atime5: 0
+    atime6: 0
+    atime7: 0
+    m_Mode: 0
+    m_ColorSpace: -1
+    m_NumColorKeys: 2
+    m_NumAlphaKeys: 2
+  transitionRange: {x: 0.5451128, y: 1}
+  transitionClamp: 1
+  transitionTexClampPadding: 1
+  transitionUseUv0: 1
+  strokeWidth: 0
+  outlineWidth: 0
+  outlineColor: {r: 1, g: 1, b: 1, a: 1}
+  shadowMirrorDirection: 0
+  shadowMirrorScale: 1
+  shadowMirrorOffset: {x: 0, y: 0}
+  shadowMirrorShowSource: 0
+  shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  customTime: 0
+  enableDashedOutline: 0
+  falloffDistance: 0
+  constrainRotation: 0
+  shapeRotation: 0
+  flipHorizontal: 0
+  flipVertical: 0
+  alphaThreshold: 0
+  triangle:
+    cornerRadius: {x: 0, y: 0, z: 0}
+    uniformCornerRadius: 0
+  rectangle:
+    cornerRadius: {x: 0, y: 0, z: 0, w: 0}
+    uniformCornerRadius: 0
+  circle:
+    radius: 65
+    fitRadius: 0
+  pentagon:
+    cornerRadius: {x: 0, y: 0, z: 0, w: 0}
+    uniformCornerRadius: 0
+    tipRadius: 0.001
+    tipSize: 1
+  hexagon:
+    cornerRadius: {x: 1, y: 1, z: 1, w: 1}
+    uniformCornerRadius: 0
+    tipSize: {x: 1, y: 1}
+    uniformTipSize: 0
+    tipRadius: {x: 1, y: 1}
+    uniformTipRadius: 0
+  chamferBox:
+    chamferBoxSize: {x: 1, y: 1}
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
+  parallelogram:
+    parallelogramValue: 0
+  nStarPolygon:
+    sideCount: 3
+    inset: 2
+    cornerRadius: 0
+    offset: {x: 0, y: 0}
+  blobbyCross:
+    blobbyCrossTime: 0
+  squircle:
+    squircleTime: 0
+  nTriangleRounded:
+    nTriangleRoundedTime: 0
+    nTriangleRoundedNumber: 0
+  gradientEffect:
+    enabled: 1
+    gradientType: 0
+    gradient:
+      serializedVersion: 2
+      key0: {r: 1, g: 0.5865263, b: 0, a: 1}
+      key1: {r: 1, g: 0, b: 0.27952003, a: 1}
+      key2: {r: 0, g: 0, b: 0, a: 0}
+      key3: {r: 0, g: 0, b: 0, a: 0}
+      key4: {r: 0, g: 0, b: 0, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 65535
+      ctime2: 0
+      ctime3: 0
+      ctime4: 0
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: 0
+      m_NumColorKeys: 2
+      m_NumAlphaKeys: 2
+    cornerGradientColors:
+    - {r: 1, g: 0, b: 0, a: 1}
+    - {r: 0.87480843, g: 1, b: 0, a: 1}
+    - {r: 0, g: 1, b: 0.11830664, a: 1}
+    - {r: 0, g: 0.37633944, b: 1, a: 1}
+    rotation: 0
+  m_ToneFilter: 0
+  m_ToneIntensity: 1
+  m_ColorFilterMode: 0
+  m_ColorValue: {r: 1, g: 1, b: 1, a: 1}
+  m_ColorIntensity: 1
+  m_ColorGlow: 0
+  m_EdgeMode: 0
+  m_EdgeWidth: 0.5
+  m_EdgeColorFilterMode: 4
+  m_EdgeColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EdgeColorGlow: 0
+  m_EdgeShinyRate: 0.5
+  m_EdgeShinyWidth: 0.5
+  m_EdgeShinyAutoPlaySpeed: 1
+  m_SamplingMode: 0
+  m_SamplingIntensity: 0.5
+  m_TargetMode: 0
+  m_TargetColor: {r: 1, g: 1, b: 1, a: 1}
+  m_TargetRange: 0.1
+  m_TargetSoftness: 0.5
+  m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 1
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 0.1
+  m_BlendType: 0
+--- !u!222 &1082522235
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1082522232}
   m_CullTransparentMesh: 0
 --- !u!1 &1138596008
 GameObject:
@@ -7890,7 +9102,7 @@ GameObject:
   - component: {fileID: 1138596011}
   - component: {fileID: 1138596010}
   m_Layer: 0
-  m_Name: "\u9634\u5F71\u6A21\u5F0F"
+  m_Name: "\u9634\u5F71\u6A21\u5F0F Shadow"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -8018,6 +9230,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -8124,6 +9338,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1138596011
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -8409,6 +9636,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -8515,6 +9744,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1226673022
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -8663,6 +9905,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -8769,6 +10013,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1243792512
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -8963,6 +10220,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -9069,6 +10328,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1263647970
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -9217,6 +10489,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -9323,6 +10597,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1283611869
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -9330,6 +10617,275 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1283611866}
+  m_CullTransparentMesh: 0
+--- !u!1 &1297731415
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1297731416}
+  - component: {fileID: 1297731418}
+  - component: {fileID: 1297731417}
+  m_Layer: 0
+  m_Name: "\u9634\u5F71\u6A21\u5F0F Outline 8"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1297731416
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1297731415}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1961290207}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1297731417
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1297731415}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4041ee2aabac59f4589e76bac1cb0e81, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: f168bd78da5483647b8e123f79a1fca0, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+  appendShadow: 1
+  shadowOffsetLocal: {x: 3, y: -3}
+  shadowColor: {r: 1, g: 0.11957219, b: 0, a: 0.7058824}
+  shadowBlurIntensity: 8
+  samplingWidth: 1
+  samplingScale: 1
+  shadowScale: 1
+  allowOutOfBoundsShadow: 1
+  shadowMode: 8
+  drawShape: 0
+  imageType: 0
+  materialMode: 0
+  blurType: 0
+  blurIntensity: 1
+  transitionMode: 0
+  transitionTexture: {fileID: 0}
+  transitionTexScale: {x: 1, y: 1}
+  transitionTexOffset: {x: 0, y: 0}
+  transitionTexRotation: 0
+  transitionKeepAspectRatio: 0
+  transitionRate: 0
+  transitionColor: {r: 1, g: 1, b: 1, a: 1}
+  transitionWidth: 0.1
+  transitionSoftness: 0.1
+  transitionReverse: 0
+  transitionSpeed: {x: 0, y: 0}
+  transitionPatternReverse: 0
+  transitionAutoPlaySpeed: 0
+  transitionColorFilter: 0
+  transitionColorGlow: 0
+  transitionGradient: {fileID: 0}
+  transitionGradientValue:
+    serializedVersion: 2
+    key0: {r: 1, g: 1, b: 1, a: 1}
+    key1: {r: 1, g: 1, b: 1, a: 1}
+    key2: {r: 0, g: 0, b: 0, a: 0}
+    key3: {r: 0, g: 0, b: 0, a: 0}
+    key4: {r: 0, g: 0, b: 0, a: 0}
+    key5: {r: 0, g: 0, b: 0, a: 0}
+    key6: {r: 0, g: 0, b: 0, a: 0}
+    key7: {r: 0, g: 0, b: 0, a: 0}
+    ctime0: 0
+    ctime1: 65535
+    ctime2: 0
+    ctime3: 0
+    ctime4: 0
+    ctime5: 0
+    ctime6: 0
+    ctime7: 0
+    atime0: 0
+    atime1: 65535
+    atime2: 0
+    atime3: 0
+    atime4: 0
+    atime5: 0
+    atime6: 0
+    atime7: 0
+    m_Mode: 0
+    m_ColorSpace: -1
+    m_NumColorKeys: 2
+    m_NumAlphaKeys: 2
+  transitionRange: {x: 0, y: 0}
+  transitionClamp: 1
+  transitionTexClampPadding: 1
+  transitionUseUv0: 1
+  strokeWidth: 0
+  outlineWidth: 0
+  outlineColor: {r: 1, g: 0.2699381, b: 0, a: 1}
+  shadowMirrorDirection: 0
+  shadowMirrorScale: 1
+  shadowMirrorOffset: {x: 0, y: 0}
+  shadowMirrorShowSource: 0
+  shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  customTime: 0
+  enableDashedOutline: 0
+  falloffDistance: 0
+  constrainRotation: 0
+  shapeRotation: 0
+  flipHorizontal: 0
+  flipVertical: 0
+  alphaThreshold: 0
+  triangle:
+    cornerRadius: {x: 0, y: 0, z: 0}
+    uniformCornerRadius: 0
+  rectangle:
+    cornerRadius: {x: 0, y: 0, z: 0, w: 0}
+    uniformCornerRadius: 0
+  circle:
+    radius: 65.8
+    fitRadius: 0
+  pentagon:
+    cornerRadius: {x: 0, y: 0, z: 0, w: 0}
+    uniformCornerRadius: 0
+    tipRadius: 0.001
+    tipSize: 1
+  hexagon:
+    cornerRadius: {x: 1, y: 1, z: 1, w: 1}
+    uniformCornerRadius: 0
+    tipSize: {x: 1, y: 1}
+    uniformTipSize: 0
+    tipRadius: {x: 1, y: 1}
+    uniformTipRadius: 0
+  chamferBox:
+    chamferBoxSize: {x: 1, y: 1}
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
+  parallelogram:
+    parallelogramValue: 0
+  nStarPolygon:
+    sideCount: 3
+    inset: 2
+    cornerRadius: 0
+    offset: {x: 0, y: 0}
+  blobbyCross:
+    blobbyCrossTime: 0
+  squircle:
+    squircleTime: 0
+  nTriangleRounded:
+    nTriangleRoundedTime: 0
+    nTriangleRoundedNumber: 0
+  gradientEffect:
+    enabled: 0
+    gradientType: 0
+    gradient:
+      serializedVersion: 2
+      key0: {r: 1, g: 1, b: 1, a: 1}
+      key1: {r: 1, g: 1, b: 1, a: 1}
+      key2: {r: 0, g: 0, b: 0, a: 0}
+      key3: {r: 0, g: 0, b: 0, a: 0}
+      key4: {r: 0, g: 0, b: 0, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 65535
+      ctime2: 0
+      ctime3: 0
+      ctime4: 0
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: -1
+      m_NumColorKeys: 2
+      m_NumAlphaKeys: 2
+    cornerGradientColors:
+    - {r: 0, g: 0, b: 0, a: 0}
+    - {r: 0, g: 0, b: 0, a: 0}
+    - {r: 0, g: 0, b: 0, a: 0}
+    - {r: 0, g: 0, b: 0, a: 0}
+    rotation: 0
+  m_ToneFilter: 0
+  m_ToneIntensity: 1
+  m_ColorFilterMode: 0
+  m_ColorValue: {r: 1, g: 1, b: 1, a: 1}
+  m_ColorIntensity: 1
+  m_ColorGlow: 0
+  m_EdgeMode: 0
+  m_EdgeWidth: 0.5
+  m_EdgeColorFilterMode: 4
+  m_EdgeColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EdgeColorGlow: 0
+  m_EdgeShinyRate: 0.5
+  m_EdgeShinyWidth: 0.5
+  m_EdgeShinyAutoPlaySpeed: 1
+  m_SamplingMode: 0
+  m_SamplingIntensity: 0.5
+  m_TargetMode: 0
+  m_TargetColor: {r: 1, g: 1, b: 1, a: 1}
+  m_TargetRange: 0.1
+  m_TargetSoftness: 0.5
+  m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
+--- !u!222 &1297731418
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1297731415}
   m_CullTransparentMesh: 0
 --- !u!1 &1309871980
 GameObject:
@@ -9471,6 +11027,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -9577,6 +11135,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1309871983
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -9725,6 +11296,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -9831,6 +11404,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1344072095
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -9838,6 +11424,275 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1344072092}
+  m_CullTransparentMesh: 0
+--- !u!1 &1347212174
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1347212175}
+  - component: {fileID: 1347212177}
+  - component: {fileID: 1347212176}
+  m_Layer: 0
+  m_Name: "\u8FC7\u5EA6\u6A21\u5F0F Pattern"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1347212175
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1347212174}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1961290207}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1347212176
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1347212174}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4041ee2aabac59f4589e76bac1cb0e81, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: f168bd78da5483647b8e123f79a1fca0, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 1
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  shadowScale: 1
+  allowOutOfBoundsShadow: 1
+  shadowMode: 1
+  drawShape: 0
+  imageType: 0
+  materialMode: 0
+  blurType: 0
+  blurIntensity: 1
+  transitionMode: 8
+  transitionTexture: {fileID: 2800000, guid: 3051424f692804e4bad276ec208adcda, type: 3}
+  transitionTexScale: {x: 1, y: 1}
+  transitionTexOffset: {x: 0, y: 0}
+  transitionTexRotation: -55
+  transitionKeepAspectRatio: 0
+  transitionRate: 0
+  transitionColor: {r: 0, g: 0, b: 0, a: 0.7490196}
+  transitionWidth: 0.8
+  transitionSoftness: 0.18
+  transitionReverse: 0
+  transitionSpeed: {x: 0, y: 0}
+  transitionPatternReverse: 1
+  transitionAutoPlaySpeed: 1
+  transitionColorFilter: 1
+  transitionColorGlow: 0
+  transitionGradient: {fileID: 0}
+  transitionGradientValue:
+    serializedVersion: 2
+    key0: {r: 1, g: 1, b: 1, a: 1}
+    key1: {r: 1, g: 1, b: 1, a: 1}
+    key2: {r: 0, g: 0, b: 0, a: 0}
+    key3: {r: 0, g: 0, b: 0, a: 0}
+    key4: {r: 0, g: 0, b: 0, a: 0}
+    key5: {r: 0, g: 0, b: 0, a: 0}
+    key6: {r: 0, g: 0, b: 0, a: 0}
+    key7: {r: 0, g: 0, b: 0, a: 0}
+    ctime0: 0
+    ctime1: 65535
+    ctime2: 0
+    ctime3: 0
+    ctime4: 0
+    ctime5: 0
+    ctime6: 0
+    ctime7: 0
+    atime0: 0
+    atime1: 65535
+    atime2: 0
+    atime3: 0
+    atime4: 0
+    atime5: 0
+    atime6: 0
+    atime7: 0
+    m_Mode: 0
+    m_ColorSpace: -1
+    m_NumColorKeys: 2
+    m_NumAlphaKeys: 2
+  transitionRange: {x: 0.5451128, y: 1}
+  transitionClamp: 1
+  transitionTexClampPadding: 1
+  transitionUseUv0: 1
+  strokeWidth: 0
+  outlineWidth: 0
+  outlineColor: {r: 1, g: 1, b: 1, a: 1}
+  shadowMirrorDirection: 0
+  shadowMirrorScale: 1
+  shadowMirrorOffset: {x: 0, y: 0}
+  shadowMirrorShowSource: 0
+  shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  customTime: 0
+  enableDashedOutline: 0
+  falloffDistance: 0
+  constrainRotation: 0
+  shapeRotation: 0
+  flipHorizontal: 0
+  flipVertical: 0
+  alphaThreshold: 0
+  triangle:
+    cornerRadius: {x: 0, y: 0, z: 0}
+    uniformCornerRadius: 0
+  rectangle:
+    cornerRadius: {x: 0, y: 0, z: 0, w: 0}
+    uniformCornerRadius: 0
+  circle:
+    radius: 65
+    fitRadius: 0
+  pentagon:
+    cornerRadius: {x: 0, y: 0, z: 0, w: 0}
+    uniformCornerRadius: 0
+    tipRadius: 0.001
+    tipSize: 1
+  hexagon:
+    cornerRadius: {x: 1, y: 1, z: 1, w: 1}
+    uniformCornerRadius: 0
+    tipSize: {x: 1, y: 1}
+    uniformTipSize: 0
+    tipRadius: {x: 1, y: 1}
+    uniformTipRadius: 0
+  chamferBox:
+    chamferBoxSize: {x: 1, y: 1}
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
+  parallelogram:
+    parallelogramValue: 0
+  nStarPolygon:
+    sideCount: 3
+    inset: 2
+    cornerRadius: 0
+    offset: {x: 0, y: 0}
+  blobbyCross:
+    blobbyCrossTime: 0
+  squircle:
+    squircleTime: 0
+  nTriangleRounded:
+    nTriangleRoundedTime: 0
+    nTriangleRoundedNumber: 0
+  gradientEffect:
+    enabled: 0
+    gradientType: 1
+    gradient:
+      serializedVersion: 2
+      key0: {r: 1, g: 1, b: 1, a: 1}
+      key1: {r: 1, g: 1, b: 1, a: 1}
+      key2: {r: 0, g: 0, b: 0, a: 0}
+      key3: {r: 0, g: 0, b: 0, a: 0}
+      key4: {r: 0, g: 0, b: 0, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 65535
+      ctime2: 0
+      ctime3: 0
+      ctime4: 0
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: -1
+      m_NumColorKeys: 2
+      m_NumAlphaKeys: 2
+    cornerGradientColors:
+    - {r: 1, g: 0, b: 0, a: 1}
+    - {r: 0, g: 0, b: 0, a: 1}
+    - {r: 0, g: 0, b: 0, a: 1}
+    - {r: 0, g: 0.37633944, b: 1, a: 1}
+    rotation: 0
+  m_ToneFilter: 0
+  m_ToneIntensity: 1
+  m_ColorFilterMode: 0
+  m_ColorValue: {r: 1, g: 1, b: 1, a: 1}
+  m_ColorIntensity: 1
+  m_ColorGlow: 0
+  m_EdgeMode: 0
+  m_EdgeWidth: 0.5
+  m_EdgeColorFilterMode: 4
+  m_EdgeColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EdgeColorGlow: 0
+  m_EdgeShinyRate: 0.5
+  m_EdgeShinyWidth: 0.5
+  m_EdgeShinyAutoPlaySpeed: 1
+  m_SamplingMode: 0
+  m_SamplingIntensity: 0.5
+  m_TargetMode: 0
+  m_TargetColor: {r: 1, g: 1, b: 1, a: 1}
+  m_TargetRange: 0.1
+  m_TargetSoftness: 0.5
+  m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
+--- !u!222 &1347212177
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1347212174}
   m_CullTransparentMesh: 0
 --- !u!1 &1351046503
 GameObject:
@@ -10024,6 +11879,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -10130,6 +11987,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1363223799
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -10278,6 +12148,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -10384,6 +12256,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1370966741
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -10836,6 +12721,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -10942,6 +12829,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1451069955
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -11090,6 +12990,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -11196,6 +13098,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1451664777
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -11344,6 +13259,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -11450,6 +13367,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1469053283
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -11673,6 +13603,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -11779,6 +13711,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1525572499
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -11927,6 +13872,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -12033,6 +13980,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1544569385
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -12181,6 +14141,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -12287,6 +14249,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1548677175
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -12435,6 +14410,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -12541,6 +14518,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1567395379
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -12764,6 +14754,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -12870,6 +14862,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1661877637
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -13018,6 +15023,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -13124,6 +15131,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1681060974
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -13272,6 +15292,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 0
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -13378,6 +15400,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1751935781
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -13526,6 +15561,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -13632,6 +15669,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1792333532
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -13780,6 +15830,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -13886,6 +15938,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1795617802
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -14109,6 +16174,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -14215,6 +16282,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1809466479
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -14438,6 +16518,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -14544,6 +16626,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1864547435
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -14800,6 +16895,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -14906,6 +17003,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1941607839
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -15129,6 +17239,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -15235,6 +17347,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &1959774831
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -15274,12 +17399,15 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 816039882}
+  - {fileID: 1082522233}
+  - {fileID: 2062355372}
   - {fileID: 582972143}
   - {fileID: 425652645}
   - {fileID: 40630827}
   - {fileID: 1469053281}
   - {fileID: 2020801946}
   - {fileID: 1065028791}
+  - {fileID: 989659898}
   - {fileID: 2053571691}
   - {fileID: 1959774829}
   - {fileID: 687910524}
@@ -15292,7 +17420,10 @@ RectTransform:
   - {fileID: 1661877635}
   - {fileID: 1363223797}
   - {fileID: 2097635558}
+  - {fileID: 1347212175}
   - {fileID: 1138596009}
+  - {fileID: 319118928}
+  - {fileID: 1297731416}
   - {fileID: 1792333530}
   - {fileID: 1809466477}
   - {fileID: 2101935646}
@@ -15526,6 +17657,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -15632,6 +17765,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &2020801948
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -15780,6 +17926,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -15886,6 +18034,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &2053571693
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -15893,6 +18054,275 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2053571690}
+  m_CullTransparentMesh: 0
+--- !u!1 &2062355371
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2062355372}
+  - component: {fileID: 2062355374}
+  - component: {fileID: 2062355373}
+  m_Layer: 0
+  m_Name: "\u6E10\u53D8"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &2062355372
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2062355371}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1961290207}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &2062355373
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2062355371}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4041ee2aabac59f4589e76bac1cb0e81, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: f168bd78da5483647b8e123f79a1fca0, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 1
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+  appendShadow: 0
+  shadowOffsetLocal: {x: 8, y: -8}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+  shadowBlurIntensity: 1
+  samplingWidth: 1
+  samplingScale: 1
+  shadowScale: 1
+  allowOutOfBoundsShadow: 1
+  shadowMode: 1
+  drawShape: 0
+  imageType: 0
+  materialMode: 0
+  blurType: 0
+  blurIntensity: 1
+  transitionMode: 0
+  transitionTexture: {fileID: 2800000, guid: 404a1ccdba91a714ca37086faa3837e6, type: 3}
+  transitionTexScale: {x: 1, y: 1}
+  transitionTexOffset: {x: 0, y: 0}
+  transitionTexRotation: 0
+  transitionKeepAspectRatio: 0
+  transitionRate: 0
+  transitionColor: {r: 0, g: 0, b: 0, a: 0.5019608}
+  transitionWidth: 0.8
+  transitionSoftness: 0.18
+  transitionReverse: 0
+  transitionSpeed: {x: 0, y: 0}
+  transitionPatternReverse: 0
+  transitionAutoPlaySpeed: 1
+  transitionColorFilter: 1
+  transitionColorGlow: 0
+  transitionGradient: {fileID: 0}
+  transitionGradientValue:
+    serializedVersion: 2
+    key0: {r: 1, g: 1, b: 1, a: 1}
+    key1: {r: 1, g: 1, b: 1, a: 1}
+    key2: {r: 0, g: 0, b: 0, a: 0}
+    key3: {r: 0, g: 0, b: 0, a: 0}
+    key4: {r: 0, g: 0, b: 0, a: 0}
+    key5: {r: 0, g: 0, b: 0, a: 0}
+    key6: {r: 0, g: 0, b: 0, a: 0}
+    key7: {r: 0, g: 0, b: 0, a: 0}
+    ctime0: 0
+    ctime1: 65535
+    ctime2: 0
+    ctime3: 0
+    ctime4: 0
+    ctime5: 0
+    ctime6: 0
+    ctime7: 0
+    atime0: 0
+    atime1: 65535
+    atime2: 0
+    atime3: 0
+    atime4: 0
+    atime5: 0
+    atime6: 0
+    atime7: 0
+    m_Mode: 0
+    m_ColorSpace: -1
+    m_NumColorKeys: 2
+    m_NumAlphaKeys: 2
+  transitionRange: {x: 0.5451128, y: 1}
+  transitionClamp: 1
+  transitionTexClampPadding: 1
+  transitionUseUv0: 1
+  strokeWidth: 0
+  outlineWidth: 0
+  outlineColor: {r: 1, g: 1, b: 1, a: 1}
+  shadowMirrorDirection: 0
+  shadowMirrorScale: 1
+  shadowMirrorOffset: {x: 0, y: 0}
+  shadowMirrorShowSource: 0
+  shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
+  customTime: 0
+  enableDashedOutline: 0
+  falloffDistance: 0
+  constrainRotation: 0
+  shapeRotation: 0
+  flipHorizontal: 0
+  flipVertical: 0
+  alphaThreshold: 0
+  triangle:
+    cornerRadius: {x: 0, y: 0, z: 0}
+    uniformCornerRadius: 0
+  rectangle:
+    cornerRadius: {x: 0, y: 0, z: 0, w: 0}
+    uniformCornerRadius: 0
+  circle:
+    radius: 65
+    fitRadius: 0
+  pentagon:
+    cornerRadius: {x: 0, y: 0, z: 0, w: 0}
+    uniformCornerRadius: 0
+    tipRadius: 0.001
+    tipSize: 1
+  hexagon:
+    cornerRadius: {x: 1, y: 1, z: 1, w: 1}
+    uniformCornerRadius: 0
+    tipSize: {x: 1, y: 1}
+    uniformTipSize: 0
+    tipRadius: {x: 1, y: 1}
+    uniformTipRadius: 0
+  chamferBox:
+    chamferBoxSize: {x: 1, y: 1}
+    chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
+  parallelogram:
+    parallelogramValue: 0
+  nStarPolygon:
+    sideCount: 3
+    inset: 2
+    cornerRadius: 0
+    offset: {x: 0, y: 0}
+  blobbyCross:
+    blobbyCrossTime: 0
+  squircle:
+    squircleTime: 0
+  nTriangleRounded:
+    nTriangleRoundedTime: 0
+    nTriangleRoundedNumber: 0
+  gradientEffect:
+    enabled: 1
+    gradientType: 0
+    gradient:
+      serializedVersion: 2
+      key0: {r: 1, g: 1, b: 1, a: 1}
+      key1: {r: 1, g: 1, b: 1, a: 1}
+      key2: {r: 0, g: 0, b: 0, a: 0}
+      key3: {r: 0, g: 0, b: 0, a: 0}
+      key4: {r: 0, g: 0, b: 0, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 65535
+      ctime2: 0
+      ctime3: 0
+      ctime4: 0
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: 0
+      m_NumColorKeys: 2
+      m_NumAlphaKeys: 2
+    cornerGradientColors:
+    - {r: 1, g: 0, b: 0, a: 1}
+    - {r: 0.87480843, g: 1, b: 0, a: 1}
+    - {r: 0, g: 1, b: 0.11830664, a: 1}
+    - {r: 0, g: 0.37633944, b: 1, a: 1}
+    rotation: 0
+  m_ToneFilter: 0
+  m_ToneIntensity: 1
+  m_ColorFilterMode: 0
+  m_ColorValue: {r: 1, g: 1, b: 1, a: 1}
+  m_ColorIntensity: 1
+  m_ColorGlow: 0
+  m_EdgeMode: 0
+  m_EdgeWidth: 0.5
+  m_EdgeColorFilterMode: 4
+  m_EdgeColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EdgeColorGlow: 0
+  m_EdgeShinyRate: 0.5
+  m_EdgeShinyWidth: 0.5
+  m_EdgeShinyAutoPlaySpeed: 1
+  m_SamplingMode: 0
+  m_SamplingIntensity: 0.5
+  m_TargetMode: 0
+  m_TargetColor: {r: 1, g: 1, b: 1, a: 1}
+  m_TargetRange: 0.1
+  m_TargetSoftness: 0.5
+  m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 1
+  m_GradientTex: {fileID: 2800000, guid: 9c8e4aee137ddae4c8de51ec514314bd, type: 3}
+  m_GradientOffset: 0
+  m_GradientScale: 2
+  m_BlendType: 0
+--- !u!222 &2062355374
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2062355371}
   m_CullTransparentMesh: 0
 --- !u!1 &2097635557
 GameObject:
@@ -16034,6 +18464,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -16140,6 +18572,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &2097635560
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -16288,6 +18733,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -16394,6 +18841,19 @@ MonoBehaviour:
   m_TargetRange: 0.1
   m_TargetSoftness: 0.5
   m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!222 &2101935648
 CanvasRenderer:
   m_ObjectHideFlags: 0
