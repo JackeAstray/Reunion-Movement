@@ -55,7 +55,9 @@ namespace ReunionMovement.UI.ImageExtensions
         public enum ShadowMode
         {
             Shadow = 1,
-            Mirror = 3
+            Shadow3 = 2,
+            Mirror = 3,
+            Outline8 = 8
         }
 
         public enum ShadowDirection
@@ -131,6 +133,26 @@ namespace ReunionMovement.UI.ImageExtensions
             Edge = 2
         }
 
+        public enum DetailFilter
+        {
+            None = 0,
+            Masking = 1,
+            Multiply = 2,
+            Additive = 3,
+            Subtractive = 6,
+            Replace = 4,
+            MultiplyAdditive = 5
+        }
+
+        public enum BlendType
+        {
+            AlphaBlend,
+            Multiply,
+            Additive,
+            SoftAdditive,
+            MultiplyAdditive
+        }
+
         #region 常量
         public const string shaderName = "ReunionMovement/UI/ImageEx";
         #endregion
@@ -176,6 +198,8 @@ namespace ReunionMovement.UI.ImageExtensions
         [SerializeField] private Vector2 shadowMirrorOffset = Vector2.zero;
         [SerializeField] private bool shadowMirrorShowSource = false;
         [SerializeField][Range(0f, 1f)] private float shadowMirrorTintMix = 0.5f;
+        [SerializeField] private ColorMode shadowColorFilter = ColorMode.Replace;
+        [SerializeField] private bool shadowColorGlow = false;
         [SerializeField] private float customTime;
         [SerializeField] private int enableDashedOutline;
 
@@ -233,6 +257,25 @@ namespace ReunionMovement.UI.ImageExtensions
 
         // -------------------- 图案区域（PATTERN AREA） --------------------
         [SerializeField] private PatternArea m_PatternArea = PatternArea.All;
+
+        // -------------------- 细节纹理（DETAIL FILTER） --------------------
+        [SerializeField] private DetailFilter m_DetailMode = DetailFilter.None;
+        [SerializeField] private Texture m_DetailTex;
+        [SerializeField] private Vector2 m_DetailTexScale = Vector2.one;
+        [SerializeField] private Vector2 m_DetailTexOffset = Vector2.zero;
+        [SerializeField] private Vector2 m_DetailTexSpeed = Vector2.zero;
+        [SerializeField][Range(0, 1)] private float m_DetailIntensity = 1f;
+        [SerializeField] private Vector2 m_DetailThreshold = new Vector2(0, 1);
+        [SerializeField][ColorUsage(true, true)] private Color m_DetailColor = Color.white;
+
+        // -------------------- 渐变纹理（GRADIENT TEXTURE） --------------------
+        [SerializeField] private bool m_EnableGradientTex = false;
+        [SerializeField] private Texture m_GradientTex;
+        [SerializeField][Range(-1, 1)] private float m_GradientOffset = 0f;
+        [SerializeField][Range(0.1f, 5)] private float m_GradientScale = 1f;
+
+        // -------------------- 混合模式（BLEND TYPE） --------------------
+        [SerializeField] private BlendType m_BlendType = BlendType.AlphaBlend;
         #endregion
 
         #region Material PropertyIds
@@ -276,6 +319,8 @@ namespace ReunionMovement.UI.ImageExtensions
         private static readonly int shadowMirrorOffset_Sp = Shader.PropertyToID("_ShadowMirrorOffset");
         private static readonly int shadowMirrorShowSource_Sp = Shader.PropertyToID("_ShadowMirrorShowSource");
         private static readonly int shadowMirrorTintMix_Sp = Shader.PropertyToID("_ShadowMirrorTintMix");
+        private static readonly int shadowColorFilter_Sp = Shader.PropertyToID("_ShadowColorFilter");
+        private static readonly int shadowColorGlow_Sp = Shader.PropertyToID("_ShadowColorGlow");
 
         private static readonly int outlineWidth_Sp = Shader.PropertyToID("_OutlineWidth");
         private static readonly int outlineColor_Sp = Shader.PropertyToID("_OutlineColor");
@@ -316,6 +361,23 @@ namespace ReunionMovement.UI.ImageExtensions
 
         // 图案区域
         private static readonly int patternArea_Sp = Shader.PropertyToID("_PatternArea");
+
+        // 细节纹理
+        private static readonly int detailTex_Sp = Shader.PropertyToID("_DetailTex");
+        private static readonly int detailTex_ST_Sp = Shader.PropertyToID("_DetailTex_ST");
+        private static readonly int detailTexSpeed_Sp = Shader.PropertyToID("_DetailTex_Speed");
+        private static readonly int detailIntensity_Sp = Shader.PropertyToID("_DetailIntensity");
+        private static readonly int detailThreshold_Sp = Shader.PropertyToID("_DetailThreshold");
+        private static readonly int detailColor_Sp = Shader.PropertyToID("_DetailColor");
+
+        // 渐变纹理
+        private static readonly int gradientTex_Sp = Shader.PropertyToID("_GradientTex");
+        private static readonly int gradientOffset_Sp = Shader.PropertyToID("_GradientOffset");
+        private static readonly int gradientScale_Sp = Shader.PropertyToID("_GradientScale");
+
+        // 混合模式
+        private static readonly int srcBlend_Sp = Shader.PropertyToID("_SrcBlend");
+        private static readonly int dstBlend_Sp = Shader.PropertyToID("_DstBlend");
 
         #endregion
 
@@ -490,6 +552,32 @@ namespace ReunionMovement.UI.ImageExtensions
             set
             {
                 shadowMirrorTintMix = Mathf.Clamp01(value);
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 阴影颜色滤镜模式
+        /// </summary>
+        public ColorMode ShadowColorFilter
+        {
+            get => shadowColorFilter;
+            set
+            {
+                shadowColorFilter = value;
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 阴影颜色发光
+        /// </summary>
+        public bool ShadowColorGlow
+        {
+            get => shadowColorGlow;
+            set
+            {
+                shadowColorGlow = value;
                 SetMaterialDirty();
             }
         }
@@ -931,6 +1019,51 @@ namespace ReunionMovement.UI.ImageExtensions
         }
 
         /// <summary>
+        /// HSV 色相偏移 (-0.5~0.5)，对应 ColorValue.r（HsvModifier 模式）
+        /// </summary>
+        public float ColorHueShift
+        {
+            get => m_ColorValue.r;
+            set { var c = m_ColorValue; c.r = Mathf.Clamp(value, -0.5f, 0.5f); ColorValue = c; }
+        }
+
+        /// <summary>
+        /// HSV 饱和度偏移 (-1~1)，对应 ColorValue.g（HsvModifier 模式）
+        /// </summary>
+        public float ColorSaturationShift
+        {
+            get => m_ColorValue.g;
+            set { var c = m_ColorValue; c.g = Mathf.Clamp(value, -1f, 1f); ColorValue = c; }
+        }
+
+        /// <summary>
+        /// HSV 明度偏移 (-1~1)，对应 ColorValue.b（HsvModifier 模式）
+        /// </summary>
+        public float ColorValueShift
+        {
+            get => m_ColorValue.b;
+            set { var c = m_ColorValue; c.b = Mathf.Clamp(value, -1f, 1f); ColorValue = c; }
+        }
+
+        /// <summary>
+        /// 对比度偏移 (-1~1)，对应 ColorValue.r（Contrast 模式）
+        /// </summary>
+        public float ColorContrastShift
+        {
+            get => m_ColorValue.r;
+            set { var c = m_ColorValue; c.r = Mathf.Clamp(value, -1f, 1f); ColorValue = c; }
+        }
+
+        /// <summary>
+        /// 亮度偏移 (-1~1)，对应 ColorValue.g（Contrast 模式）
+        /// </summary>
+        public float ColorBrightnessShift
+        {
+            get => m_ColorValue.g;
+            set { var c = m_ColorValue; c.g = Mathf.Clamp(value, -1f, 1f); ColorValue = c; }
+        }
+
+        /// <summary>
         /// 颜色滤镜强度 0~1
         /// </summary>
         public float ColorIntensity
@@ -1156,6 +1289,101 @@ namespace ReunionMovement.UI.ImageExtensions
         }
 
         /// <summary>
+        /// 细节滤镜模式：None / Masking / Multiply / Additive / Subtractive / Replace / MultiplyAdditive
+        /// </summary>
+        public DetailFilter Detail
+        {
+            get => m_DetailMode;
+            set
+            {
+                m_DetailMode = value;
+                SetMaterialDirty();
+            }
+        }
+
+        public Texture DetailTex
+        {
+            get => m_DetailTex;
+            set { m_DetailTex = value; SetMaterialDirty(); }
+        }
+
+        public Vector2 DetailTexScale
+        {
+            get => m_DetailTexScale;
+            set { m_DetailTexScale = value; SetMaterialDirty(); }
+        }
+
+        public Vector2 DetailTexOffset
+        {
+            get => m_DetailTexOffset;
+            set { m_DetailTexOffset = value; SetMaterialDirty(); }
+        }
+
+        public Vector2 DetailTexSpeed
+        {
+            get => m_DetailTexSpeed;
+            set { m_DetailTexSpeed = value; SetMaterialDirty(); }
+        }
+
+        public float DetailIntensity
+        {
+            get => m_DetailIntensity;
+            set { m_DetailIntensity = Mathf.Clamp01(value); SetMaterialDirty(); }
+        }
+
+        public Vector2 DetailThreshold
+        {
+            get => m_DetailThreshold;
+            set { m_DetailThreshold = value; SetMaterialDirty(); }
+        }
+
+        public Color DetailColor
+        {
+            get => m_DetailColor;
+            set { m_DetailColor = value; SetMaterialDirty(); }
+        }
+
+        /// <summary>
+        /// 渐变纹理模式
+        /// </summary>
+        public bool EnableGradientTex
+        {
+            get => m_EnableGradientTex;
+            set { m_EnableGradientTex = value; SetMaterialDirty(); }
+        }
+
+        public Texture GradientTex
+        {
+            get => m_GradientTex;
+            set { m_GradientTex = value; SetMaterialDirty(); }
+        }
+
+        public float GradientOffset
+        {
+            get => m_GradientOffset;
+            set { m_GradientOffset = Mathf.Clamp(value, -1f, 1f); SetMaterialDirty(); }
+        }
+
+        public float GradientScale
+        {
+            get => m_GradientScale;
+            set { m_GradientScale = Mathf.Clamp(value, 0.1f, 5f); SetMaterialDirty(); }
+        }
+
+        /// <summary>
+        /// 混合模式：AlphaBlend / Multiply / Additive / SoftAdditive / MultiplyAdditive
+        /// </summary>
+        public BlendType Blend
+        {
+            get => m_BlendType;
+            set
+            {
+                m_BlendType = value;
+                SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
         /// 模糊类型
         /// </summary>
         public BlurType Blur
@@ -1283,6 +1511,39 @@ namespace ReunionMovement.UI.ImageExtensions
                 transitionColor = value;
                 SetMaterialDirty();
             }
+        }
+
+        /// <summary>
+        /// 过渡 HSV 色相偏移 (-0.5~0.5)，对应 TransitionColor.r（HsvModifier 模式）
+        /// </summary>
+        public float TransitionColorHueShift
+        {
+            get => transitionColor.r;
+            set { var c = transitionColor; c.r = Mathf.Clamp(value, -0.5f, 0.5f); TransitionColor = c; }
+        }
+
+        public float TransitionColorSaturationShift
+        {
+            get => transitionColor.g;
+            set { var c = transitionColor; c.g = Mathf.Clamp(value, -1f, 1f); TransitionColor = c; }
+        }
+
+        public float TransitionColorValueShift
+        {
+            get => transitionColor.b;
+            set { var c = transitionColor; c.b = Mathf.Clamp(value, -1f, 1f); TransitionColor = c; }
+        }
+
+        public float TransitionColorContrastShift
+        {
+            get => transitionColor.r;
+            set { var c = transitionColor; c.r = Mathf.Clamp(value, -1f, 1f); TransitionColor = c; }
+        }
+
+        public float TransitionColorBrightnessShift
+        {
+            get => transitionColor.g;
+            set { var c = transitionColor; c.g = Mathf.Clamp(value, -1f, 1f); TransitionColor = c; }
         }
 
         /// <summary>
@@ -1701,6 +1962,21 @@ namespace ReunionMovement.UI.ImageExtensions
             TargetSoftness = m_TargetSoftness;
             TransitionPatternArea = m_PatternArea;
 
+            // Phase 3
+            Detail = m_DetailMode;
+            DetailTex = m_DetailTex;
+            DetailTexScale = m_DetailTexScale;
+            DetailTexOffset = m_DetailTexOffset;
+            DetailTexSpeed = m_DetailTexSpeed;
+            DetailIntensity = m_DetailIntensity;
+            DetailThreshold = m_DetailThreshold;
+            DetailColor = m_DetailColor;
+            EnableGradientTex = m_EnableGradientTex;
+            GradientTex = m_GradientTex;
+            GradientOffset = m_GradientOffset;
+            GradientScale = m_GradientScale;
+            Blend = m_BlendType;
+
             ShadowScale = shadowScale;
 
             base.OnValidate();
@@ -1891,14 +2167,63 @@ namespace ReunionMovement.UI.ImageExtensions
             {
                 case Type.Simple:
                 case Type.Sliced:
-                    // 使用可追加阴影四边形的重载方法。编辑器中的过渡设置中启用了阴影支持。
-                    // 如果图像被翻转，阴影偏移也应随之翻转，以保证阴影仍在正确的一侧。
                     Vector2 effectiveShadowOffset = shadowOffsetLocal;
                     if (flipHorizontal) effectiveShadowOffset.x = -effectiveShadowOffset.x;
                     if (flipVertical) effectiveShadowOffset.y = -effectiveShadowOffset.y;
 
+                    // 先绘制主图（无阴影）
                     ImageHelper.GenerateSimpleSprite(vh, preserveAspect, canvas, rectTransform, ActiveSprite,
-                        color, falloffDistance, appendShadow, effectiveShadowOffset, shadowScale);
+                        color, falloffDistance, false, Vector2.zero);
+
+                    // 根据阴影模式追加阴影四边形
+                    if (appendShadow)
+                    {
+                        float dist = effectiveShadowOffset.magnitude;
+                        if (dist < 0.01f) dist = 8f; // 最小偏移
+
+                        switch (shadowMode)
+                        {
+                            case ShadowMode.Shadow:
+                                // 单层投影
+                                ImageHelper.AddShadowQuad(vh, preserveAspect, canvas, rectTransform,
+                                    ActiveSprite, color, effectiveShadowOffset, shadowScale);
+                                break;
+
+                            case ShadowMode.Shadow3:
+                                // 3层迭代投影，偏移递增、alpha 递减
+                                for (int i = 0; i < 3; i++)
+                                {
+                                    float iterFade = Mathf.Pow(0.75f, i); // 1.0, 0.75, 0.5625
+                                    Vector2 iterOffset = effectiveShadowOffset * (i + 1);
+                                    ImageHelper.AddShadowQuad(vh, preserveAspect, canvas, rectTransform,
+                                        ActiveSprite, color, iterOffset, shadowScale, iterFade);
+                                }
+                                break;
+
+                            case ShadowMode.Mirror:
+                                // 镜像阴影：使用单层但依赖 shader 镜像逻辑
+                                ImageHelper.AddShadowQuad(vh, preserveAspect, canvas, rectTransform,
+                                    ActiveSprite, color, effectiveShadowOffset, shadowScale);
+                                break;
+
+                            case ShadowMode.Outline8:
+                                // 8方向轮廓阴影
+                                Vector2[] dirs = new Vector2[]
+                                {
+                                    new Vector2(1, 0), new Vector2(0.707f, 0.707f), new Vector2(0, 1),
+                                    new Vector2(-0.707f, 0.707f), new Vector2(-1, 0),
+                                    new Vector2(-0.707f, -0.707f), new Vector2(0, -1),
+                                    new Vector2(0.707f, -0.707f)
+                                };
+                                for (int i = 0; i < 8; i++)
+                                {
+                                    Vector2 outlineOffset = dirs[i] * dist;
+                                    ImageHelper.AddShadowQuad(vh, preserveAspect, canvas, rectTransform,
+                                        ActiveSprite, color, outlineOffset, shadowScale, 1f);
+                                }
+                                break;
+                        }
+                    }
                     break;
                 case Type.Filled:
                     ImageHelper.GenerateFilledSprite(vh, preserveAspect, canvas, rectTransform, ActiveSprite,
@@ -2001,6 +2326,8 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.SetVector(shadowMirrorOffset_Sp, shadowMirrorOffset);
             mat.SetFloat(shadowMirrorShowSource_Sp, shadowMirrorShowSource ? 1f : 0f);
             mat.SetFloat(shadowMirrorTintMix_Sp, shadowMirrorTintMix);
+            mat.SetInt(shadowColorFilter_Sp, (int)shadowColorFilter);
+            mat.SetInt(shadowColorGlow_Sp, shadowColorGlow ? 1 : 0);
 
             switch (transitionMode)
             {
@@ -2260,6 +2587,43 @@ namespace ReunionMovement.UI.ImageExtensions
             // -------------------- 图案区域（PATTERN AREA） --------------------
             mat.SetInt(patternArea_Sp, (int)m_PatternArea);
 
+            // -------------------- 渐变纹理（GRADIENT TEXTURE） --------------------
+            mat.SetFloat(gradientOffset_Sp, m_GradientOffset);
+            mat.SetFloat(gradientScale_Sp, m_GradientScale);
+            if (m_EnableGradientTex && m_GradientTex != null)
+            {
+                mat.SetTexture(gradientTex_Sp, m_GradientTex);
+                mat.EnableKeyword("GRADIENT_TEXTURE");
+            }
+            else
+            {
+                mat.SetTexture(gradientTex_Sp, null);
+            }
+
+            // -------------------- 细节纹理（DETAIL FILTER） --------------------
+            mat.SetTexture(detailTex_Sp, m_DetailTex);
+            mat.SetVector(detailTex_ST_Sp, new Vector4(m_DetailTexScale.x, m_DetailTexScale.y, m_DetailTexOffset.x, m_DetailTexOffset.y));
+            mat.SetVector(detailTexSpeed_Sp, m_DetailTexSpeed);
+            mat.SetFloat(detailIntensity_Sp, m_DetailIntensity);
+            mat.SetVector(detailThreshold_Sp, m_DetailThreshold);
+            mat.SetColor(detailColor_Sp, m_DetailColor);
+            switch (m_DetailMode)
+            {
+                case DetailFilter.Masking: mat.EnableKeyword("DETAIL_MASKING"); break;
+                case DetailFilter.Multiply: mat.EnableKeyword("DETAIL_MULTIPLY"); break;
+                case DetailFilter.Additive: mat.EnableKeyword("DETAIL_ADDITIVE"); break;
+                case DetailFilter.Subtractive: mat.EnableKeyword("DETAIL_SUBTRACTIVE"); break;
+                case DetailFilter.Replace: mat.EnableKeyword("DETAIL_REPLACE"); break;
+                case DetailFilter.MultiplyAdditive: mat.EnableKeyword("DETAIL_MULTIPLY_ADDITIVE"); break;
+            }
+
+            // -------------------- 混合模式（BLEND TYPE） --------------------
+            {
+                var (src, dst) = ConvertBlendType(m_BlendType);
+                mat.SetInt(srcBlend_Sp, (int)src);
+                mat.SetInt(dstBlend_Sp, (int)dst);
+            }
+
             return mat;
         }
 
@@ -2327,6 +2691,15 @@ namespace ReunionMovement.UI.ImageExtensions
 
             mat.DisableKeyword("TARGET_HUE");
             mat.DisableKeyword("TARGET_LUMINANCE");
+
+            mat.DisableKeyword("GRADIENT_TEXTURE");
+
+            mat.DisableKeyword("DETAIL_MASKING");
+            mat.DisableKeyword("DETAIL_MULTIPLY");
+            mat.DisableKeyword("DETAIL_ADDITIVE");
+            mat.DisableKeyword("DETAIL_SUBTRACTIVE");
+            mat.DisableKeyword("DETAIL_REPLACE");
+            mat.DisableKeyword("DETAIL_MULTIPLY_ADDITIVE");
         }
 
         /// <summary>
@@ -2380,6 +2753,8 @@ namespace ReunionMovement.UI.ImageExtensions
             shadowMirrorOffset = mat.GetVector(shadowMirrorOffset_Sp);
             shadowMirrorShowSource = mat.GetFloat(shadowMirrorShowSource_Sp) > 0.5f;
             shadowMirrorTintMix = mat.GetFloat(shadowMirrorTintMix_Sp);
+            shadowColorFilter = (ColorMode)mat.GetInt(shadowColorFilter_Sp);
+            shadowColorGlow = mat.GetInt(shadowColorGlow_Sp) == 1;
 
             flipHorizontal = mat.GetInt(flipHorizontal_Sp) == 1;
             flipVertical = mat.GetInt(flipVertical_Sp) == 1;
@@ -2438,6 +2813,29 @@ namespace ReunionMovement.UI.ImageExtensions
 
             // 图案区域
             m_PatternArea = (PatternArea)mat.GetInt(patternArea_Sp);
+
+            // 细节纹理
+            m_DetailTex = mat.GetTexture(detailTex_Sp);
+            m_DetailIntensity = mat.GetFloat(detailIntensity_Sp);
+            m_DetailThreshold = mat.GetVector(detailThreshold_Sp);
+            m_DetailColor = mat.GetColor(detailColor_Sp);
+
+            // 渐变纹理
+            m_GradientOffset = mat.GetFloat(gradientOffset_Sp);
+            m_GradientScale = mat.GetFloat(gradientScale_Sp);
+        }
+
+        private static (UnityEngine.Rendering.BlendMode, UnityEngine.Rendering.BlendMode) ConvertBlendType(BlendType type)
+        {
+            return type switch
+            {
+                BlendType.AlphaBlend => (UnityEngine.Rendering.BlendMode.SrcAlpha, UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha),
+                BlendType.Multiply => (UnityEngine.Rendering.BlendMode.DstColor, UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha),
+                BlendType.Additive => (UnityEngine.Rendering.BlendMode.One, UnityEngine.Rendering.BlendMode.One),
+                BlendType.SoftAdditive => (UnityEngine.Rendering.BlendMode.OneMinusDstColor, UnityEngine.Rendering.BlendMode.One),
+                BlendType.MultiplyAdditive => (UnityEngine.Rendering.BlendMode.DstColor, UnityEngine.Rendering.BlendMode.One),
+                _ => (UnityEngine.Rendering.BlendMode.SrcAlpha, UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha)
+            };
         }
 
 #if UNITY_EDITOR

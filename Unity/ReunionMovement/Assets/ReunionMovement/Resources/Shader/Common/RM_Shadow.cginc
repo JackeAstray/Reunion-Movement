@@ -29,6 +29,8 @@ uniform float _ShadowMirrorScale;
 uniform float2 _ShadowMirrorOffset;
 uniform float _ShadowMirrorShowSource;
 uniform float _ShadowMirrorTintMix;
+uniform int _ShadowColorFilter;
+uniform int _ShadowColorGlow;
 
 // 渲染阴影/镜像（统一入口）
 // shapeData: x=shapeUv.x, y=shapeUv.y, z=size.x, w=size.y
@@ -109,6 +111,12 @@ half4 RM_RenderShadow(
     #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
         shadowOut = RM_ApplyTransitionFilter(shadowOut, transAlpha, transitionFilterUv, 0);
     #endif
+
+    // 应用阴影颜色滤镜
+    if (_ShadowColorFilter > 0)
+    {
+        shadowOut = RM_ApplyColorFilter(_ShadowColorFilter, shadowOut, _ShadowColor, 1, _ShadowColorGlow);
+    }
 
     return shadowOut;
 }

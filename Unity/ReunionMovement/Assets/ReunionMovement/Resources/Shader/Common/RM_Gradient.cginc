@@ -31,6 +31,17 @@
     uniform half _GradientAlphaLength;
     uniform half _GradientRotation;
 
+    // Phase 3: 渐变偏移/缩放/纹理
+    uniform half _GradientOffset;
+    uniform half _GradientScale;
+#endif
+
+#if GRADIENT_TEXTURE
+    uniform sampler2D _GradientTex;
+    uniform float4 _GradientTex_ST;
+#endif
+
+#if GRADIENT_LINEAR || GRADIENT_RADIAL
     static half4 _rmGradColors[8];
     static half4 _rmGradAlphas[8];
 
@@ -86,15 +97,29 @@ void RM_ApplyGradientColor(inout half4 color, float2 effectsUv)
 
     #if GRADIENT_LINEAR
         half gradientRotation = radians(_GradientRotation);
-        half t = cos(gradientRotation) * (effectsUv.x -0.5) + 
-                 sin(gradientRotation) * (effectsUv.y -0.5) +0.5;
-        half4 grad = SampleGradient(t);
+        half t = cos(gradientRotation) * (effectsUv.x - 0.5) + 
+                 sin(gradientRotation) * (effectsUv.y - 0.5) + 0.5;
+        // Phase 3: 应用偏移和缩放
+        t = (t - 0.5) * _GradientScale + 0.5 + _GradientOffset;
+        t = saturate(t);
+
+        #if GRADIENT_TEXTURE
+            half4 grad = tex2D(_GradientTex, float2(t, 0.5));
+        #else
+            half4 grad = SampleGradient(t);
+        #endif
         color *= grad;
     #endif
 
     #if GRADIENT_RADIAL
-        half fac = saturate(length(effectsUv - float2(.5, .5)) *2);
-        half4 grad = SampleGradient(clamp(fac,0,1));
+        half fac = saturate(length(effectsUv - float2(.5, .5)) * 2 * _GradientScale + _GradientOffset);
+        fac = saturate(fac);
+
+        #if GRADIENT_TEXTURE
+            half4 grad = tex2D(_GradientTex, float2(fac, 0.5));
+        #else
+            half4 grad = SampleGradient(fac);
+        #endif
         color *= grad;
     #endif
 
