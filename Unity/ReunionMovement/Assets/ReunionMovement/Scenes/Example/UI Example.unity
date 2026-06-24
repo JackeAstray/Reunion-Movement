@@ -7399,15 +7399,15 @@ MonoBehaviour:
   transitionTexRotation: 0
   transitionKeepAspectRatio: 1
   transitionRate: 0
-  transitionColor: {r: 0, g: 32, b: 0, a: 1}
-  transitionWidth: 0.25
+  transitionColor: {r: 0, g: 2.9960787, b: 0, a: 1}
+  transitionWidth: 0
   transitionSoftness: 0.5
-  transitionReverse: 0
+  transitionReverse: 1
   transitionSpeed: {x: 0, y: 0}
   transitionPatternReverse: 0
   transitionAutoPlaySpeed: 1
   transitionColorFilter: 4
-  transitionColorGlow: 1
+  transitionColorGlow: 0
   transitionGradient: {fileID: 0}
   transitionGradientValue:
     serializedVersion: 2
