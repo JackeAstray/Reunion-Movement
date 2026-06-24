@@ -218,8 +218,8 @@ namespace ReunionMovement.EditorTools
 
             for (int i = 0; i < sheets.Count; i++)
             {
-                GenerateScript(sheets[i]);
-                GenerateScriptList(sheets[i], i);
+                _ = GenerateScript(sheets[i]);
+                _ = GenerateScriptList(sheets[i], i);
             }
 
             return sheets;
@@ -229,7 +229,7 @@ namespace ReunionMovement.EditorTools
         /// 生成脚本
         /// </summary>
         /// <param name="sheet"></param>
-        static async void GenerateScript(SheetData sheet)
+        static async Task GenerateScript(SheetData sheet)
         {
             string scriptTemplate = @"//此脚本为工具生成，请勿手动创建 {_CREATE_TIME_} <ExcelTo>
 using System;
@@ -328,7 +328,7 @@ namespace ReunionMovement
                 // 解析实体为实例
                 fromEntityAssignments.AppendLine($"{space}{fieldDatas[i].fieldName.PadRight(maxFieldNameLength)} = entity.{fieldDatas[i].fieldName},");
 
-                int value = i + 1;
+                int value = i;
                 toString_1 += fieldDatas[i].fieldName + "={" + value + "}";
                 if (i < fieldDatas.Count - 1)
                 {
@@ -358,7 +358,7 @@ namespace ReunionMovement
         /// </summary>
         /// <param name="sheet"></param>
         /// <param name="order"></param>
-        static async void GenerateScriptList(SheetData sheet, int order)
+        static async Task GenerateScriptList(SheetData sheet, int order)
         {
             string ScriptTemplate = @"//此脚本为工具生成，请勿手动创建 {_CREATE_TIME_} <ExcelTo>
 using System;
@@ -638,7 +638,7 @@ namespace ReunionMovement
             //获取Excel文件的绝对路径
             string output = jsonOutPutPath + Path.GetFileName(path);
             output = output.Replace(".xlsx", ".json");
-            excel.ConvertToJson(output);
+            _ = excel.ConvertToJson(output);
 
             //刷新本地资源
             AssetDatabase.Refresh();

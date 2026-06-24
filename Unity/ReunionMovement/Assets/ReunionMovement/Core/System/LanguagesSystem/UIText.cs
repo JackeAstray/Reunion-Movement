@@ -52,6 +52,9 @@ namespace ReunionMovement.Core.Languages
 
         private void OnDestroy()
         {
+            // 取消订阅静态事件，防止悬空引用
+            StartGame.OnGameInitComplete -= OnGameInitFinished;
+
             if (LanguagesSystem.Instance != null)
             {
                 LanguagesSystem.Instance.RemoveObserver(this);

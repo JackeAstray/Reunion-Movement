@@ -20,13 +20,13 @@ namespace ReunionMovement.Core.UI
         public ImageEx logo1;
         public ImageEx logo2;
 
-        public void Start()
-        {
-            OnInit();
-        }
+        private bool _initialized = false;
 
         public override void OnInit()
         {
+            if (_initialized) return;
+            _initialized = true;
+
             base.OnInit();
 
             logo1.DOFade(1, 0.45f).OnComplete(() =>
@@ -61,7 +61,9 @@ namespace ReunionMovement.Core.UI
 
         public void OnDestroy()
         {
-
+            // 清理 DOTween 动画，防止对象销毁后访问
+            logo1?.DOKill();
+            logo2?.DOKill();
         }
 
         //打开窗口

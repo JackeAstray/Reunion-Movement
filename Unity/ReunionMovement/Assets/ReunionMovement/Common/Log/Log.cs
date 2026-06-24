@@ -30,7 +30,7 @@ namespace ReunionMovement.Common
         }
 
         /// <summary>
-        /// 输出调试日志（泛型版本，避免值类型装箱）
+        /// 输出调试日志（泛型版本，便于调用方直接传入任意类型）
         /// </summary>
         public static void Debug<T>(T message)
         {
@@ -52,7 +52,7 @@ namespace ReunionMovement.Common
         }
 
         /// <summary>
-        /// 输出信息日志（泛型版本，避免值类型装箱）
+        /// 输出信息日志（泛型版本，便于调用方直接传入任意类型）
         /// </summary>
         public static void Info<T>(T message)
         {
@@ -74,7 +74,7 @@ namespace ReunionMovement.Common
         }
 
         /// <summary>
-        /// 输出警告日志（泛型版本，避免值类型装箱）
+        /// 输出警告日志（泛型版本，便于调用方直接传入任意类型）
         /// </summary>
         public static void Warning<T>(T message)
         {
@@ -96,7 +96,7 @@ namespace ReunionMovement.Common
         }
 
         /// <summary>
-        /// 输出错误日志（泛型版本，避免值类型装箱）
+        /// 输出错误日志（泛型版本，便于调用方直接传入任意类型）
         /// </summary>
         public static void Error<T>(T message)
         {

@@ -35,10 +35,22 @@ namespace ReunionMovement.Core.Sound
         public GameObject sfxRoot { get; private set; }
         // 音效根节点
         private AudioSource source;
+        // 音乐 AudioSource 公共访问器（避免外部使用反射）
+        public AudioSource MusicAudioSource
+        {
+            get
+            {
+                EnsureAudioSource();
+                return source;
+            }
+        }
         // 淡入淡出时间
         public float fadeDuration = 3.0f;
         // 目标音量
         public float targetVolume = 1.0f;
+
+        // 启动时预热的音频索引列表（在 Inspector 中配置）
+        public List<int> preloadAudioIndices = new List<int>();
 
         string poolPath = "Prefabs/Sound/SoundItem";
         int currentMusicIndex;
@@ -92,12 +104,14 @@ namespace ReunionMovement.Core.Sound
         {
             initProgress = 0;
 
+            ApplyLowLatencyAudioSettings();
+
             CreateAudioRoot();
 
             soundConfigContainer = ResourcesSystem.Instance.Load<SoundConfigContainer>("ScriptableObjects/SoundConfigContainer");
             if (soundConfigContainer == null || soundConfigContainer.configs == null)
             {
-                Log.Error("SoundConfigContainer或其configs为空, 语言系统初始化失败!");
+                Log.Error("SoundConfigContainer或其configs为空, 声音系统初始化失败!");
             }
             else
             {
@@ -112,11 +126,34 @@ namespace ReunionMovement.Core.Sound
 
             CreatePools();
 
+            // 预热音频（后台加载，不阻塞初始化完成）
+            _ = WarmupAudioClipsAsync();
+
             initProgress = 100;
             isInited = true;
             Log.Debug("SoundSystem 初始化完成");
 
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 预热指定的音频剪辑到缓存，消除首次播放延迟
+        /// </summary>
+        private async Task WarmupAudioClipsAsync()
+        {
+            if (preloadAudioIndices == null || preloadAudioIndices.Count == 0) return;
+
+            Log.Debug($"[SoundSystem] 开始预热 {preloadAudioIndices.Count} 个音频...");
+            int loaded = 0;
+            foreach (int index in preloadAudioIndices)
+            {
+                if (soundConfigDict != null && soundConfigDict.TryGetValue(index, out SoundConfig config))
+                {
+                    await GetAudioClipAsync(config.Path, config.Name);
+                    loaded++;
+                }
+            }
+            Log.Debug($"[SoundSystem] 音频预热完成: {loaded}/{preloadAudioIndices.Count}");
         }
 
         public void Update(float logicTime, float realTime)
@@ -232,16 +269,32 @@ namespace ReunionMovement.Core.Sound
         }
 
         /// <summary>
-        /// 音乐切换-带渐入渐出效果
+        /// 音乐切换-带渐入渐出效果（优化版：新曲加载与淡出并行，减少等待时间）
         /// </summary>
         /// <param name="index"></param>
         public async Task PlaySwitch(int index)
         {
-            // 渐出音频
-            await FadeOut();
-            //播放音乐
-            await PlayMusic(index, 0);
-            // 渐入音频
+            if (soundConfigDict == null || !soundConfigDict.TryGetValue(index, out SoundConfig soundConfig))
+                return;
+
+            // 启动淡出（不等待），同时并行加载新曲目
+            var fadeOutTask = FadeOut();
+            AudioClip newClip = await GetAudioClipAsync(soundConfig.Path, soundConfig.Name);
+
+            // 等待淡出完成
+            await fadeOutTask;
+
+            // 切换曲目并淡入
+            EnsureAudioSource();
+            if (source != null && newClip != null)
+            {
+                source.clip = newClip;
+                source.volume = 0f;
+                source.loop = true;
+                source.mute = GameOption.currentOption.musicMuted;
+                source.Play();
+                currentMusicIndex = index;
+            }
             await FadeIn();
         }
 
@@ -325,6 +378,104 @@ namespace ReunionMovement.Core.Sound
         #endregion
 
         /// <summary>
+        /// 应用自适应音频设置：
+        /// - 有线耳机/扬声器：使用较小 DSP buffer 以降低延迟
+        /// - 蓝牙耳机：使用较大 DSP buffer，因为蓝牙 A2DP 自带 150-300ms 延迟，
+        ///   过小的 buffer 反而导致音频欠载（卡顿/爆音），无法降低实际延迟
+        /// </summary>
+        private void ApplyLowLatencyAudioSettings()
+        {
+            try
+            {
+                var config = AudioSettings.GetConfiguration();
+
+                // 判断是否使用蓝牙音频输出
+                bool isBluetooth = IsBluetoothAudioActive();
+
+#if UNITY_ANDROID || UNITY_IOS
+                if (isBluetooth)
+                {
+                    // 蓝牙模式：使用较大缓冲确保音频流稳定
+                    // 蓝牙瓶颈在传输层，DSP buffer 大小不影响实际听到的延迟
+                    config.dspBufferSize = 1024;
+                    Log.Debug("[AudioSettings] 检测到蓝牙音频，使用最佳性能模式 (Buffer: 1024)");
+                }
+                else
+                {
+                    // 有线/扬声器模式：使用适中缓冲
+                    // 256 对很多安卓设备过于激进，512 在有线模式下延迟可接受
+                    config.dspBufferSize = 512;
+                    Log.Debug("[AudioSettings] 有线/扬声器模式 (Buffer: 512)");
+                }
+#else
+                config.dspBufferSize = 512; // 桌面端平衡延迟与性能
+#endif
+                config.speakerMode = AudioSpeakerMode.Stereo;
+                config.sampleRate = 0;
+                config.numVirtualVoices = 32;
+                config.numRealVoices = 16;
+
+                if (AudioSettings.Reset(config))
+                {
+                    Log.Debug($"[AudioSettings] 音频配置已应用 DSP Buffer: {config.dspBufferSize} samples, Bluetooth: {isBluetooth}");
+                }
+                else
+                {
+                    Log.Debug("[AudioSettings] 音频配置重置失败，使用系统默认");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Log.Warning($"[AudioSettings] 音频配置异常: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 检测当前是否使用蓝牙音频输出（A2DP 或 SCO）
+        /// </summary>
+        private bool IsBluetoothAudioActive()
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            try
+            {
+                using (var audioManager = new AndroidJavaClass("android.media.AudioManager"))
+                using (var context = new AndroidJavaClass("com.unity3d.player.UnityPlayer")
+                    .GetStatic<AndroidJavaObject>("currentActivity"))
+                {
+                    var service = context.Call<AndroidJavaObject>("getSystemService", "audio");
+                    if (service == null) return false;
+
+                    bool isBluetoothA2dpOn = service.Call<bool>("isBluetoothA2dpOn");
+                    bool isBluetoothScoOn = service.Call<bool>("isBluetoothScoOn");
+                    return isBluetoothA2dpOn || isBluetoothScoOn;
+                }
+            }
+            catch
+            {
+                // 检测失败时保守估计，使用较大 buffer
+                return true;
+            }
+#elif UNITY_IOS && !UNITY_EDITOR
+            // iOS 上无法直接检测蓝牙，但可以用 AudioSession 的端口类型推断
+            // 保守策略：iOS 蓝牙音频延迟通常更高，使用较大 buffer
+            try
+            {
+                // 检查当前音频输出类型（通过 AudioSettings 间接判断）
+                var config = AudioSettings.GetConfiguration();
+                // iOS 有线耳机通常使用 44100 采样率，蓝牙设备可能不同
+                // 由于无法 100% 准确检测，移动端默认使用较大 buffer
+                return true; // 保守策略
+            }
+            catch
+            {
+                return true;
+            }
+#else
+            return false;
+#endif
+        }
+
+        /// <summary>
         /// 创建音频根节点
         /// </summary>
         public void CreateAudioRoot()
@@ -351,14 +502,17 @@ namespace ReunionMovement.Core.Sound
             pool.parent = sfxRoot.transform;
             pool.prefab = ResourcesSystem.Instance.Load<GameObject>(poolPath);
 
+            if (pool.prefab == null)
+            {
+                Log.Error($"SoundSystem 对象池 prefab 加载失败，路径: {poolPath}");
+                return;
+            }
+
             startupPools.Add(pool);
 
-            if (startupPools != null && startupPools.Count > 0)
+            for (int i = 0; i < startupPools.Count; i++)
             {
-                for (int i = 0; i < startupPools.Count; i++)
-                {
-                    CreatePool(startupPools[i].prefab, startupPools[i].size, startupPools[i].parent);
-                }
+                CreatePool(startupPools[i].prefab, startupPools[i].size, startupPools[i].parent);
             }
         }
 

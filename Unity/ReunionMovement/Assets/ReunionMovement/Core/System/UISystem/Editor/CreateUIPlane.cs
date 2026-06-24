@@ -60,7 +60,7 @@ namespace ReunionMovement.Common.Util.EditorTools
             if (GUILayout.Button("第二步 创建脚本"))
             {
                 //按下按钮后执行的方法
-                CreateSpript();
+                _ = CreateSpript();
             }
 
             if (GUILayout.Button("第三步 绑定脚本"))
@@ -204,7 +204,7 @@ namespace ReunionMovement.Common.Util.EditorTools
         /// <summary>
         /// 创建脚本
         /// </summary>
-        public async void CreateSpript()
+        public async Task CreateSpript()
         {
             scriptName = className + "UIPlane";
             await GenerateScript(scriptName);

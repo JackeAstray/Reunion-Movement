@@ -31,85 +31,102 @@ namespace ReunionMovement.Core.UI
         public override void OnInit()
         {
             base.OnInit();
+
+            // 验证关键组件是否已赋值
+            if (titleStr == null) Log.Error("PopupUIPlane: titleStr 未赋值!");
+            if (containerStr == null) Log.Error("PopupUIPlane: containerStr 未赋值!");
+            if (cancelStr == null) Log.Error("PopupUIPlane: cancelStr 未赋值!");
+            if (confirmStr == null) Log.Error("PopupUIPlane: confirmStr 未赋值!");
+            if (closeBtn == null) Log.Error("PopupUIPlane: closeBtn 未赋值!");
+            if (cancelBtn == null) Log.Error("PopupUIPlane: cancelBtn 未赋值!");
+            if (confirmBtn == null) Log.Error("PopupUIPlane: confirmBtn 未赋值!");
         }
 
         public override void OnOpen(params object[] args)
         {
             base.OnOpen(args);
 
-            confirmBtn.gameObject.SetActive(false);
-            cancelBtn.gameObject.SetActive(false);
+            if (confirmBtn != null) confirmBtn.gameObject.SetActive(false);
+            if (cancelBtn != null) cancelBtn.gameObject.SetActive(false);
 
             switch (args.Length)
             {
                 case 1:
-                    containerStr.text = args[0] as string;
+                    if (containerStr != null) containerStr.text = args[0] as string;
                     break;
                 case 2:
-                    titleStr.text = args[0] as string;
-                    containerStr.text = args[1] as string;
+                    if (titleStr != null) titleStr.text = args[0] as string;
+                    if (containerStr != null) containerStr.text = args[1] as string;
                     break;
                 case 3:
-                    titleStr.text = args[0] as string;
-                    containerStr.text = args[1] as string;
-                    confirmStr.text = args[2] as string;
-                    confirmBtn.gameObject.SetActive(true);
+                    if (titleStr != null) titleStr.text = args[0] as string;
+                    if (containerStr != null) containerStr.text = args[1] as string;
+                    if (confirmStr != null) confirmStr.text = args[2] as string;
+                    if (confirmBtn != null) confirmBtn.gameObject.SetActive(true);
                     break;
                 case 4:
-                    titleStr.text = args[0] as string;
-                    containerStr.text = args[1] as string;
-                    confirmStr.text = args[2] as string;
-                    cancelStr.text = args[3] as string;
-                    confirmBtn.gameObject.SetActive(true);
-                    cancelBtn.gameObject.SetActive(true);
+                    if (titleStr != null) titleStr.text = args[0] as string;
+                    if (containerStr != null) containerStr.text = args[1] as string;
+                    if (confirmStr != null) confirmStr.text = args[2] as string;
+                    if (cancelStr != null) cancelStr.text = args[3] as string;
+                    if (confirmBtn != null) confirmBtn.gameObject.SetActive(true);
+                    if (cancelBtn != null) cancelBtn.gameObject.SetActive(true);
                     break;
                 case 5:
-                    titleStr.text = args[0] as string;
-                    containerStr.text = args[1] as string;
-                    confirmStr.text = args[2] as string;
-                    cancelStr.text = args[3] as string;
+                    if (titleStr != null) titleStr.text = args[0] as string;
+                    if (containerStr != null) containerStr.text = args[1] as string;
+                    if (confirmStr != null) confirmStr.text = args[2] as string;
+                    if (cancelStr != null) cancelStr.text = args[3] as string;
                     confirmAction = args[4] as Action;
-                    confirmBtn.gameObject.SetActive(true);
-                    cancelBtn.gameObject.SetActive(true);
+                    if (confirmBtn != null) confirmBtn.gameObject.SetActive(true);
+                    if (cancelBtn != null) cancelBtn.gameObject.SetActive(true);
                     break;
                 case 6:
-                    titleStr.text = args[0] as string;
-                    containerStr.text = args[1] as string;
-                    confirmStr.text = args[2] as string;
-                    cancelStr.text = args[3] as string;
+                    if (titleStr != null) titleStr.text = args[0] as string;
+                    if (containerStr != null) containerStr.text = args[1] as string;
+                    if (confirmStr != null) confirmStr.text = args[2] as string;
+                    if (cancelStr != null) cancelStr.text = args[3] as string;
                     confirmAction = args[4] as Action;
                     cancelAction = args[5] as Action;
-                    confirmBtn.gameObject.SetActive(true);
-                    cancelBtn.gameObject.SetActive(true);
+                    if (confirmBtn != null) confirmBtn.gameObject.SetActive(true);
+                    if (cancelBtn != null) cancelBtn.gameObject.SetActive(true);
                     break;
                 default:
                     Log.Error("参数错误");
                     break;
             }
 
-            cancelBtn.onClick.RemoveAllListeners();
-            confirmBtn.onClick.RemoveAllListeners();
-            closeBtn.onClick.RemoveAllListeners();
-
-            cancelBtn.onClick.AddListener(() =>
+            if (cancelBtn != null)
             {
-                cancelAction?.Invoke();
-                closeWindow = "PopupUIPlane";
-                CloseWindow();
-            });
+                cancelBtn.onClick.RemoveAllListeners();
+                cancelBtn.onClick.AddListener(() =>
+                {
+                    cancelAction?.Invoke();
+                    closeWindow = "PopupUIPlane";
+                    CloseWindow();
+                });
+            }
 
-            confirmBtn.onClick.AddListener(() =>
+            if (confirmBtn != null)
             {
-                confirmAction?.Invoke();
-                closeWindow = "PopupUIPlane";
-                CloseWindow();
-            });
+                confirmBtn.onClick.RemoveAllListeners();
+                confirmBtn.onClick.AddListener(() =>
+                {
+                    confirmAction?.Invoke();
+                    closeWindow = "PopupUIPlane";
+                    CloseWindow();
+                });
+            }
 
-            closeBtn.onClick.AddListener(() =>
+            if (closeBtn != null)
             {
-                closeWindow = "PopupUIPlane";
-                CloseWindow();
-            });
+                closeBtn.onClick.RemoveAllListeners();
+                closeBtn.onClick.AddListener(() =>
+                {
+                    closeWindow = "PopupUIPlane";
+                    CloseWindow();
+                });
+            }
         }
 
         public override void OnSet(params object[] args)
@@ -119,12 +136,19 @@ namespace ReunionMovement.Core.UI
 
         public override void OnClose()
         {
+            // 清理按钮监听器，防止多次开关窗口时累积
+            if (cancelBtn != null) cancelBtn.onClick.RemoveAllListeners();
+            if (confirmBtn != null) confirmBtn.onClick.RemoveAllListeners();
+            if (closeBtn != null) closeBtn.onClick.RemoveAllListeners();
+
             base.OnClose();
         }
 
         public void OnDestroy()
         {
-
+            // 清理事件引用，防止内存泄漏
+            cancelAction = null;
+            confirmAction = null;
         }
 
         //打开窗口

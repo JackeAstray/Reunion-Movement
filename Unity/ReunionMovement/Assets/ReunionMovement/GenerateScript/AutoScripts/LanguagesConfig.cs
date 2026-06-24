@@ -21,7 +21,7 @@ namespace ReunionMovement
         public override string ToString()
         {
             return string.Format(
-                "[Id={1},Number={2},ZH_CN={3},EN_US={4},RU_RU={5},JA_JP={6}]",
+                "[Id={0},Number={1},ZH_CN={2},EN_US={3},RU_RU={4},JA_JP={5}]",
                 this.Id,
                 this.Number,
                 this.ZH_CN,

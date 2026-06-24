@@ -81,15 +81,9 @@ namespace ReunionMovement.Core.Resources
 
             if (isCache)
             {
-                if (!resourceTable.ContainsKey(assetPath))
-                {
-                    resourceTable[assetPath] = assets;
-                    resourceRefCount[assetPath] = 1;
-                }
-                else
-                {
-                    IncrementRefCount(assetPath);
-                }
+                // TryGetValue 已在上方判定为 false，此处直接添加
+                resourceTable[assetPath] = assets;
+                resourceRefCount[assetPath] = 1;
             }
             return assets;
         }
@@ -167,15 +161,18 @@ namespace ReunionMovement.Core.Resources
 
         /// <summary>
         /// 实例化资源
+        /// 注意：直接使用 Unity Resources.Load，不经过缓存层，
+        /// 避免源资源的引用计数泄漏（实例化出的 GameObject 销毁时无人递减计数）
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="path"></param>
         /// <returns></returns>
         public T InstantiateAsset<T>(string path) where T : Object
         {
-            var obj = Load<T>(path);
+            var obj = UnityEngine.Resources.Load<T>(path);
             if (obj == null)
             {
+                Log.Error($"资源没有找到,路径为:{path}");
                 return null;
             }
             var go = GameObject.Instantiate(obj);

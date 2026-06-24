@@ -42,9 +42,12 @@ namespace ReunionMovement.Core.EventMessage
         public void Clear()
         {
             Log.Debug("EventMessageSystem 清除数据");
+            // 先清理每个 DelegateEvent 内部的监听器，再清空字典
+            foreach (var kvp in eventTypeListeners)
+            {
+                kvp.Value.Clear();
+            }
             eventTypeListeners.Clear();
-            // 清理所有注册的事件监听器
-            // 这里可以添加清理逻辑
             isInited = false;
         }
 

@@ -355,19 +355,30 @@ namespace ReunionMovement.UI.ButtonClick
         /// </summary>
         private async void StartProgressBarCoroutine(CancellationToken token)
         {
-            if (progressBar == null) return;
-            progressBar.gameObject.SetActive(true);
-            progressBar.fillAmount = 0f;
-            float t = 0f;
-            while (t < longPressDuration)
+            try
             {
-                if (token.IsCancellationRequested) break;
-                t += Time.unscaledDeltaTime;
-                progressBar.fillAmount = Mathf.Clamp01(t / longPressDuration);
-                await Task.Yield();
+                if (progressBar == null) return;
+                progressBar.gameObject.SetActive(true);
+                progressBar.fillAmount = 0f;
+                float t = 0f;
+                while (t < longPressDuration)
+                {
+                    if (token.IsCancellationRequested) break;
+                    t += Time.unscaledDeltaTime;
+                    progressBar.fillAmount = Mathf.Clamp01(t / longPressDuration);
+                    await Task.Yield();
+                }
+                if (!token.IsCancellationRequested)
+                    progressBar.fillAmount = 1f;
             }
-            if (!token.IsCancellationRequested)
-                progressBar.fillAmount = 1f;
+            catch (TaskCanceledException)
+            {
+                Log.Debug("[LongClickButton] 进度条协程被取消。");
+            }
+            catch (System.Exception ex)
+            {
+                Log.Error($"[LongClickButton] 进度条协程异常: {ex.Message}");
+            }
         }
 
         /// <summary>

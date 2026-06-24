@@ -76,7 +76,10 @@ namespace ReunionMovement.Core.UI
 
         public void OnDestroy()
         {
-
+            // 清理事件监听器，防止内存泄漏
+            if (clear != null) clear.onClick.RemoveAllListeners();
+            if (close != null) close.onClick.RemoveAllListeners();
+            if (input != null) input.onEndEdit.RemoveAllListeners();
         }
 
         //打开窗口
@@ -112,7 +115,11 @@ namespace ReunionMovement.Core.UI
 
             GameObject @object = Instantiate(itemGo, Vector3.zero, Quaternion.identity);
             @object.transform.SetParent(root.transform);
-            @object.GetComponent<TerminalItem>().SetText(str);
+            var terminalItem = @object.GetComponent<TerminalItem>();
+            if (terminalItem != null)
+            {
+                terminalItem.SetText(str);
+            }
 
             LayoutRebuilder.ForceRebuildLayoutImmediate(root.GetComponent<RectTransform>());
         }

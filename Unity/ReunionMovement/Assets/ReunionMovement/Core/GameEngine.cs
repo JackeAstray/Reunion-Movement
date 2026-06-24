@@ -59,6 +59,9 @@ namespace ReunionMovement.Core
         // 累积时间 (每300ms)
         private float accumTime300ms;
 
+        // 初始化失败事件（供 UI 层展示错误提示）
+        public static event Action<string> OnEngineInitFailed;
+
         /// <summary>
         /// 启动入口
         /// </summary>
@@ -72,7 +75,17 @@ namespace ReunionMovement.Core
             appEngine.gameModules = modules;
             appEngine.gameEntry = entry;
 
-            _ = appEngine.InitAsync();
+            _ = appEngine.InitAsync().ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                {
+                    appEngine.isInited = false;
+                    string errorMsg = t.Exception?.InnerException?.Message ?? t.Exception?.Message ?? "未知错误";
+                    Log.Error($"[GameEngine] 引擎初始化失败: {errorMsg}");
+                    // 通知外部系统（如 UI）展示错误提示
+                    OnEngineInitFailed?.Invoke(errorMsg);
+                }
+            });
 
             return appEngine;
         }
@@ -189,6 +202,7 @@ namespace ReunionMovement.Core
         /// </summary>
         public void ClearModuleData()
         {
+            if (gameModules == null) return;
             foreach (ICustommSystem initModule in gameModules)
             {
                 initModule.Clear();

@@ -90,17 +90,19 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 得到字符串长度，一个汉字长度为2
+        /// 得到字符串长度，一个汉字长度为2（使用 UTF8 编码判断，避免 ASCII 误判 '?'）
         /// </summary>
         /// <param name="inputString"></param>
         /// <returns></returns>
         public static int StringLength(this string inputString)
         {
             int tempLen = 0;
-            byte[] s = Encoding.ASCII.GetBytes(inputString);
+            byte[] s = Encoding.UTF8.GetBytes(inputString);
             foreach (byte b in s)
             {
-                tempLen += (b == 63) ? 2 : 1;
+                // UTF8 中，多字节字符的首字节 >= 0xC0，后续字节在 0x80-0xBF 范围
+                // 简化处理：非 ASCII 单字节（>= 0x80）计为 2 个宽度单位
+                tempLen += (b >= 0x80) ? 2 : 1;
             }
             return tempLen;
         }
@@ -143,6 +145,11 @@ namespace ReunionMovement.Common.Util
             else
             {
                 stringArray = fullString.Split(separator, StringSplitOptions.None);
+            }
+            if (subStringIndex < 0 || subStringIndex >= stringArray.Length)
+            {
+                Log.Error($"StringSplit: 索引 {subStringIndex} 超出范围 (数组长度: {stringArray.Length})");
+                return string.Empty;
             }
             string subString = stringArray[subStringIndex];
             return subString;

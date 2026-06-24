@@ -261,8 +261,9 @@ namespace ReunionMovement
                         if (node != null && node.treeData == child)
                             return node;
                     }
+                    continue; // 已匹配当前层级名称，跳过递归搜索子节点
                 }
-                // 递归查找
+                // 递归查找更深层级
                 foreach (var go in children)
                 {
                     var node = go.GetComponent<TreeViewNode>();

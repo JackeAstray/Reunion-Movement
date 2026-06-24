@@ -53,7 +53,11 @@ namespace ReunionMovement.Core.Sound
             source.loop = loop;
             source.mute = mute;
             source.pitch = pitch;
-            source.Play();
+
+            // 使用 PlayScheduled 替代 Play，消除 Unity 音频线程调度抖动
+            // 调度到当前 DSP 时间 + 20ms，确保音频线程有足够时间处理
+            double scheduleTime = AudioSettings.dspTime + 0.02;
+            source.PlayScheduled(scheduleTime);
 
             // 停止任何可能正在运行的旧的回收协程
             if (recycleCoroutine != null)
@@ -64,9 +68,10 @@ namespace ReunionMovement.Core.Sound
             // 如果不是循环播放，则在播放结束后自动回收
             if (!loop)
             {
-                // 考虑音高对播放时长的影响
-                float duration = Mathf.Abs(pitch) > 0f ? audioClip.length / Mathf.Abs(pitch) : audioClip.length;
-                recycleCoroutine = StartCoroutine(RecycleAfterPlaying(duration));
+                // 考虑音高和调度偏移对播放时长的影响
+                float clipDuration = Mathf.Abs(pitch) > 0f ? audioClip.length / Mathf.Abs(pitch) : audioClip.length;
+                float scheduledOffset = 0.02f; // 与 PlayScheduled 的偏移保持一致
+                recycleCoroutine = StartCoroutine(RecycleAfterPlaying(scheduledOffset + clipDuration));
             }
         }
 

@@ -30,17 +30,31 @@ namespace ReunionMovement.Core.Sound
         /// 播放指定ID的音效
         /// </summary>
         /// <param name="id"></param>
-        public void PlaySfxById(int id)
+        public async void PlaySfxById(int id)
         {
-            _ = SoundSystem.Instance.PlaySfx(id, emitter, loop, volume, pitch);
+            try
+            {
+                await SoundSystem.Instance.PlaySfx(id, emitter, loop, volume, pitch);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[PlaySfx] PlaySfxById 异常: {ex}");
+            }
         }
 
         /// <summary>
         /// 播放音效剪辑
         /// </summary>
-        public void PlaySfxClip()
+        public async void PlaySfxClip()
         {
-            _ = SoundSystem.Instance.PlaySfx(sfxIndex, emitter, loop, volume, pitch);
+            try
+            {
+                await SoundSystem.Instance.PlaySfx(sfxIndex, emitter, loop, volume, pitch);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[PlaySfx] PlaySfxClip 异常: {ex}");
+            }
         }
 
         /// <summary>
