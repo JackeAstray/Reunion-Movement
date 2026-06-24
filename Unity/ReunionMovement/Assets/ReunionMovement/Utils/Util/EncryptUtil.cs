@@ -30,6 +30,7 @@ namespace ReunionMovement.Common.Util
         /// 缓存的字节数组队列，用于重用字节数组以减少内存分配
         /// </summary>
         private static Queue<byte[]> cachedBytesQueue = new Queue<byte[]>();
+        private const int MaxCachedBytesQueueSize = 16;
 
         /// <summary>
         /// 获取缓存的字节数组，如果没有缓存则创建新的字节数组
@@ -55,12 +56,13 @@ namespace ReunionMovement.Common.Util
             return bytes;
         }
         /// <summary>
-        /// 释放缓存的字节数组
+        /// 释放缓存的字节数组（队列上限 16，防止无限增长）
         /// </summary>
         /// <param name="bytes"></param>
         private static void ReleaseCachedBytes(byte[] bytes)
         {
             if (bytes == null) return;
+            if (cachedBytesQueue.Count >= MaxCachedBytesQueueSize) return;
             cachedBytesQueue.Enqueue(bytes);
         }
 
@@ -169,29 +171,21 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// Base64是一種使用64基的位置計數法。它使用2的最大次方來代表僅可列印的ASCII 字元。
-        /// 這使它可用來作為電子郵件的傳輸編碼。在Base64中的變數使用字元A-Z、a-z和0-9 ，
-        /// 這樣共有62個字元，用來作為開始的64個數字，最後兩個用來作為數字的符號在不同的
-        /// 系統中而不同。
-        /// Base64加密
+        /// Base64加密（已废弃，请使用 Base64Encode）
         /// </summary>
-        /// <param name="str"></param>
-        /// <returns></returns>
+        [System.Obsolete("与 Base64Encode 功能完全相同，请使用 Base64Encode")]
         public static string Base64Encrypt(string str)
         {
-            byte[] encbuff = System.Text.Encoding.UTF8.GetBytes(str);
-            return Convert.ToBase64String(encbuff);
+            return Base64Encode(str);
         }
 
         /// <summary>
-        /// Base64解密
+        /// Base64解密（已废弃，请使用 Base64Decode）
         /// </summary>
-        /// <param name="str"></param>
-        /// <returns></returns>
+        [System.Obsolete("与 Base64Decode 功能完全相同，请使用 Base64Decode")]
         public static string Base64Decrypt(string str)
         {
-            byte[] decbuff = Convert.FromBase64String(str);
-            return System.Text.Encoding.UTF8.GetString(decbuff);
+            return Base64Decode(str);
         }
         #endregion
 

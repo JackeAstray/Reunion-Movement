@@ -12,8 +12,8 @@ namespace ReunionMovement.Core.UI
 {
     public class TerminalUIPlane : UIController
     {
-        string openWindow;
-        string closeWindow;
+        string openWindow = "TerminalUIPlane";
+        string closeWindow = "TerminalUIPlane";
 
         string command;
         public Button clear;    //清除

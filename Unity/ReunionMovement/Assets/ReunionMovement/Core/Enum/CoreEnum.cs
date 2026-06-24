@@ -82,7 +82,7 @@ public enum MessageTipType
 {
     // 提示
     Tip,
-    WaringTip,
+    WarningTip,
     ErrorTip,
     // 弹框
     PopFrame,

@@ -13,7 +13,7 @@ namespace ReunionMovement.Core.UI
 {
     public class PopupUIPlane : UIController
     {
-        string openWindow;
+        string openWindow = "PopupUIPlane";
         string closeWindow;
 
         public TextMeshProUGUI titleStr;

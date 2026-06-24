@@ -82,6 +82,16 @@ namespace ReunionMovement.Common.Util
             }
         }
 
+        private void OnDestroy()
+        {
+            // 清理静态引用，防止场景卸载后保留已销毁对象的引用
+            if (backgroundCam != null)
+            {
+                Destroy(backgroundCam.gameObject);
+                backgroundCam = null;
+            }
+        }
+
         private void Update()
         {
             if (Screen.width != lastWidth || Screen.height != lastHeight)

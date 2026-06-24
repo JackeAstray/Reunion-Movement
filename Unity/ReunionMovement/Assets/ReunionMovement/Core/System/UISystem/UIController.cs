@@ -183,12 +183,12 @@ namespace ReunionMovement.Core.UI
             var canvasGroup = gameObject.GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
             canvasGroup.alpha = 0;
             gameObject.SetActive(true);
-            float t = 0;
-            while (t < duration)
+            float elapsed = 0;
+            while (elapsed < duration)
             {
-                canvasGroup.alpha = t / duration;
-                t += Time.deltaTime;
-                await Task.Delay(16);
+                elapsed += Time.deltaTime;
+                canvasGroup.alpha = Mathf.Clamp01(elapsed / duration);
+                await Task.Yield(); // Task.Yield 零分配，替代 Task.Delay(16)
             }
             canvasGroup.alpha = 1;
         }
@@ -201,12 +201,12 @@ namespace ReunionMovement.Core.UI
         public virtual async Task FadeOut(float duration = 0.2f)
         {
             var canvasGroup = gameObject.GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
-            float t = 0;
-            while (t < duration)
+            float elapsed = 0;
+            while (elapsed < duration)
             {
-                canvasGroup.alpha = 1 - t / duration;
-                t += Time.deltaTime;
-                await Task.Delay(16);
+                elapsed += Time.deltaTime;
+                canvasGroup.alpha = Mathf.Clamp01(1f - elapsed / duration);
+                await Task.Yield();
             }
             canvasGroup.alpha = 0;
             gameObject.SetActive(false);

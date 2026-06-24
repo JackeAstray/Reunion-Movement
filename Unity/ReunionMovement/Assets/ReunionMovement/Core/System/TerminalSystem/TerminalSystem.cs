@@ -202,7 +202,33 @@ namespace ReunionMovement.Core.Terminal
                         }
                     }
                     break;
+                case 6:
+                    {
+                        string windowName = args[0].String;
+                        string str1 = args[1].String;
+                        string str2 = args[2].String;
+                        string str3 = args[3].String;
+                        string str4 = args[4].String;
+                        string str5 = args[5].String;
+                        if (!string.IsNullOrEmpty(windowName))
+                        {
+                            if (!UISystem.Instance.IsOpen(windowName))
+                            {
+                                UISystem.Instance.OpenWindow(windowName, str1, str2, str3, str4, str5);
+                            }
+                            else
+                            {
+                                Log.Error("窗口已打开!");
+                            }
+                        }
+                        else
+                        {
+                            Log.Error("窗口名称不能为空.");
+                        }
+                    }
+                    break;
                 default:
+                    Log.Error($"OpenWindow 不支持 {args.Length} 个参数");
                     break;
             }
 

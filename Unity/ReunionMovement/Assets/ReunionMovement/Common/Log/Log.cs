@@ -8,16 +8,6 @@ namespace ReunionMovement.Common
     public static class Log
     {
         /// <summary>
-        /// 检查日志是否启用
-        /// </summary>
-        /// <param name="levelSwitch">级别开关</param>
-        /// <returns>是否启用日志输出</returns>
-        private static bool IsLogEnabled(bool levelSwitch)
-        {
-            return Config.Enable_LOG && levelSwitch;
-        }
-
-        /// <summary>
         /// 输出调试日志（仅在调试级别开启时输出）
         /// </summary>
         /// <param name="message">要输出的消息</param>
