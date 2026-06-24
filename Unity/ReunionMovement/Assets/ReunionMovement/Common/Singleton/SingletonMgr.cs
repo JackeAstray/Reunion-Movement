@@ -18,7 +18,7 @@ namespace ReunionMovement.Common
                 }
                 return instance;
             }
-            set
+            protected set
             {
                 if (instance == null)
                 {

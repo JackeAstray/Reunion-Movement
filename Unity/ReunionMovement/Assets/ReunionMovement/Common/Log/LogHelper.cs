@@ -36,7 +36,8 @@ namespace ReunionMovement.Common
                     break;
 
                 default:
-                    throw new System.Exception($"未知日志等级: {level}");
+                    Debug.LogError($"<color=#FF0040>[未知日志等级] {level}: {message}</color>");
+                    break;
             }
         }
     }

@@ -41,20 +41,19 @@ namespace ReunionMovement.Core.EventMessage
         /// </summary>
         public void Handle(EventData data)
         {
-            // 使用 ToArray() 防止在执行过程中有监听者被添加或移除导致集合被修改引发异常
+            // 使用索引遍历代替 ToArray()，避免每次事件分发分配新数组
             if (listeners.Count > 0)
             {
-                var currentListeners = listeners.ToArray();
-                foreach (var listener in currentListeners)
+                for (int i = listeners.Count - 1; i >= 0; i--)
                 {
-                    listener?.Invoke(data);
+                    listeners[i]?.Invoke(data);
                 }
             }
 
             if (onceListeners.Count > 0)
             {
+                // 拷贝一次性监听器列表（仅在有一致性监听器时分配）
                 var currentOnceListeners = onceListeners.ToArray();
-                // 提前清除，防止在执行过程中新添加的一次性监听器被误清
                 onceListeners.Clear();
                 foreach (var listener in currentOnceListeners)
                 {

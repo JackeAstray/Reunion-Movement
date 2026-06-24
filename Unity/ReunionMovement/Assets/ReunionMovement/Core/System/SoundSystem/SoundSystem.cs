@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -100,6 +101,9 @@ namespace ReunionMovement.Core.Sound
             }
         }
 
+        // 预热取消令牌（Clear 时取消正在进行的预热任务）
+        private CancellationTokenSource warmupCts;
+
         public Task Init()
         {
             initProgress = 0;
@@ -127,7 +131,8 @@ namespace ReunionMovement.Core.Sound
             CreatePools();
 
             // 预热音频（后台加载，不阻塞初始化完成）
-            _ = WarmupAudioClipsAsync();
+            warmupCts = new CancellationTokenSource();
+            _ = WarmupAudioClipsAsync(warmupCts.Token);
 
             initProgress = 100;
             isInited = true;
@@ -139,7 +144,7 @@ namespace ReunionMovement.Core.Sound
         /// <summary>
         /// 预热指定的音频剪辑到缓存，消除首次播放延迟
         /// </summary>
-        private async Task WarmupAudioClipsAsync()
+        private async Task WarmupAudioClipsAsync(CancellationToken ct)
         {
             if (preloadAudioIndices == null || preloadAudioIndices.Count == 0) return;
 
@@ -147,6 +152,7 @@ namespace ReunionMovement.Core.Sound
             int loaded = 0;
             foreach (int index in preloadAudioIndices)
             {
+                if (ct.IsCancellationRequested) break;
                 if (soundConfigDict != null && soundConfigDict.TryGetValue(index, out SoundConfig config))
                 {
                     await GetAudioClipAsync(config.Path, config.Name);
@@ -186,6 +192,9 @@ namespace ReunionMovement.Core.Sound
         {
             Log.Debug("SoundSystem 清除数据");
             isInited = false;
+            // 取消正在进行的预热任务
+            warmupCts?.Cancel();
+            warmupCts = null;
             startupPools.Clear();
             foreach (var pool in pooledObjects.Values)
             {
@@ -193,6 +202,8 @@ namespace ReunionMovement.Core.Sound
             }
             pooledObjects.Clear();
             sfxObjects.Clear();
+            audioClipCache?.Clear();
+            soundConfigDict?.Clear();
         }
 
         /// <summary>

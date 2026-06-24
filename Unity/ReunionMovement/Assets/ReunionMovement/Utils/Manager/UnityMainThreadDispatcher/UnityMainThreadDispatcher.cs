@@ -45,7 +45,17 @@ namespace ReunionMovement.Common.Util.Manager
             if (Instance == null)
             {
                 GameObject obj = new GameObject("MainThreadDispatcher");
-                Instance = obj.AddComponent<UnityMainThreadDispatcher>();
+                var dispatcher = obj.AddComponent<UnityMainThreadDispatcher>();
+                // 使用 Awake 中的赋值路径，避免绕过 SingletonMgr 的 setter 逻辑
+                if (Instance == null)
+                {
+                    Instance = dispatcher;
+                }
+                else
+                {
+                    // 并发情况：已有其他线程创建了实例，销毁多余对象
+                    Destroy(obj);
+                }
             }
         }
 

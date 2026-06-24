@@ -61,6 +61,12 @@ namespace ReunionMovement.Core.UI
             Log.Debug("UISystem 清除数据");
             isInited = false;
             uiStateCache.Clear();
+            uiControllerTypeCache.Clear();
+            // 清空静态事件，避免订阅者引用残留阻止 GC 回收
+            onInitEvent = null;
+            onOpenEvent = null;
+            onSetEvent = null;
+            onCloseEvent = null;
         }
 
         /// <summary>
@@ -231,7 +237,10 @@ namespace ReunionMovement.Core.UI
             {
                 // 只加载，不打开
                 uiState = LoadWindow(uiName, false);
-                uiStateCache[uiName] = uiState;
+                if (uiState != null)
+                {
+                    uiStateCache[uiName] = uiState;
+                }
             }
 
             uiState?.DoCallback(callback, args);
@@ -701,9 +710,16 @@ namespace ReunionMovement.Core.UI
         /// <param name="uiTemplateName"></param>
         /// <returns></returns>
 
+        // 类型缓存：避免每次打开 UI 都执行字符串拼接 + 反射
+        private static readonly Dictionary<string, Type> uiControllerTypeCache = new Dictionary<string, Type>();
+
         public virtual UIController CreateUIController(GameObject uiObj, string uiTemplateName)
         {
-            Type type = System.Type.GetType("ReunionMovement.Core.UI." + uiTemplateName + ", Assembly-CSharp");
+            if (!uiControllerTypeCache.TryGetValue(uiTemplateName, out Type type))
+            {
+                type = System.Type.GetType("ReunionMovement.Core.UI." + uiTemplateName + ", Assembly-CSharp");
+                uiControllerTypeCache[uiTemplateName] = type;
+            }
             if (type == null)
             {
                 Log.Error($"CreateUIController: 未能找到UI脚本组件 ReunionMovement.Core.UI.{uiTemplateName}！");
@@ -813,10 +829,15 @@ namespace ReunionMovement.Core.UI
         /// <param name="groupName"></param>
         public void CloseGroup(string groupName)
         {
+            var keysToClose = new List<string>();
             foreach (var kv in uiStateCache)
             {
                 if (kv.Value.uiWindow != null && kv.Value.uiWindow.WindowAsset.groupName == groupName)
-                    CloseWindow(kv.Key);
+                    keysToClose.Add(kv.Key);
+            }
+            foreach (var key in keysToClose)
+            {
+                CloseWindow(key);
             }
         }
 
