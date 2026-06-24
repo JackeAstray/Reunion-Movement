@@ -41,11 +41,11 @@ namespace ReunionMovement.Common.Util
         {
             lock (syncRoot)
             {
-                for (int i = 0; i < channelDict.Count; i++)
+                for (int i = channelDict.Count - 1; i >= 0; i--)
                 {
                     if (channelDict[i].ChannelName == channelName)
                     {
-                        channelDictRemove.Add(channelDict[i]);
+                        channelDict.RemoveAt(i);
                         return;
                     }
                 }
@@ -58,11 +58,11 @@ namespace ReunionMovement.Common.Util
             if (channel == null) return;
             lock (syncRoot)
             {
-                for (int i = 0; i < channelDict.Count; i++)
+                for (int i = channelDict.Count - 1; i >= 0; i--)
                 {
                     if (channelDict[i] == channel)
                     {
-                        channelDictRemove.Add(channelDict[i]);
+                        channelDict.RemoveAt(i);
                         return;
                     }
                 }

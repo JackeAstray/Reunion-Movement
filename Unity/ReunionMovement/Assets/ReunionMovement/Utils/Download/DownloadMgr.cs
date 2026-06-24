@@ -60,10 +60,11 @@ namespace ReunionMovement.Common.Util.Download
             Log.Debug("DownloadManagerModule 清除数据");
         }
 
-        // Use protected so Unity will still call it, and to avoid exposing destruction publicly
-        protected void OnDestroy()
+        private void OnDestroy()
         {
-            // reuse ClearData to ensure textures are destroyed and cache cleared
+            // 仅在自身是当前活跃单例时才清理数据，避免重复实例被销毁时误清
+            if (Instance != this) return;
+
             ClearData();
 
             // clear mappings

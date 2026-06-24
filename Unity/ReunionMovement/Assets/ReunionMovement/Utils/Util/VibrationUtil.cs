@@ -29,8 +29,9 @@ namespace ReunionMovement.Common.Util
         private static int sdkVersion = -1;
         private static bool iOSHapticsInitialized = false;
 
-        private VibrationUtil()
+        protected override void Awake()
         {
+            base.Awake();
             if (IsIOS()) iOSInitializeHaptics();
         }
 

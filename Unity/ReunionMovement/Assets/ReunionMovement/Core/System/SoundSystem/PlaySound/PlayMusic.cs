@@ -32,9 +32,17 @@ namespace ReunionMovement.Core.Sound
 
         private CancellationTokenSource playbackMonitorCts;
 
-        private async void Start()
+        private void Start()
         {
             if (playOnAwake)
+            {
+                _ = InitializeOnStartAsync();
+            }
+        }
+
+        private async Task InitializeOnStartAsync()
+        {
+            try
             {
                 // 优先使用playlist，如果为空则使用单独的musicIndex
                 if (playlist != null && playlist.Count > 0)
@@ -46,6 +54,10 @@ namespace ReunionMovement.Core.Sound
                 {
                     await PlayMusicClip();
                 }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[PlayMusic] Start 初始化异常: {ex}");
             }
         }
 
@@ -111,25 +123,32 @@ namespace ReunionMovement.Core.Sound
         /// </summary>
         public async void PlayNext()
         {
-            if (playlist == null || playlist.Count == 0) return;
-            CancelPlaybackMonitor();
-
-            playlistPosition++;
-            if (playlistPosition >= playlist.Count)
+            try
             {
-                if (loopPlaylist)
-                {
-                    playlistPosition = 0;
-                }
-                else
-                {
-                    // 到达末尾且不循环，则停在最后一首
-                    playlistPosition = playlist.Count - 1;
-                    return;
-                }
-            }
+                if (playlist == null || playlist.Count == 0) return;
+                CancelPlaybackMonitor();
 
-            await PlayPlaylistAt(playlistPosition);
+                playlistPosition++;
+                if (playlistPosition >= playlist.Count)
+                {
+                    if (loopPlaylist)
+                    {
+                        playlistPosition = 0;
+                    }
+                    else
+                    {
+                        // 到达末尾且不循环，则停在最后一首
+                        playlistPosition = playlist.Count - 1;
+                        return;
+                    }
+                }
+
+                await PlayPlaylistAt(playlistPosition);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[PlayMusic] PlayNext 异常: {ex}");
+            }
         }
 
         /// <summary>
@@ -137,24 +156,31 @@ namespace ReunionMovement.Core.Sound
         /// </summary>
         public async void PlayPrevious()
         {
-            if (playlist == null || playlist.Count == 0) return;
-            CancelPlaybackMonitor();
-
-            playlistPosition--;
-            if (playlistPosition < 0)
+            try
             {
-                if (loopPlaylist)
-                {
-                    playlistPosition = playlist.Count - 1;
-                }
-                else
-                {
-                    playlistPosition = 0;
-                    return;
-                }
-            }
+                if (playlist == null || playlist.Count == 0) return;
+                CancelPlaybackMonitor();
 
-            await PlayPlaylistAt(playlistPosition);
+                playlistPosition--;
+                if (playlistPosition < 0)
+                {
+                    if (loopPlaylist)
+                    {
+                        playlistPosition = playlist.Count - 1;
+                    }
+                    else
+                    {
+                        playlistPosition = 0;
+                        return;
+                    }
+                }
+
+                await PlayPlaylistAt(playlistPosition);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[PlayMusic] PlayPrevious 异常: {ex}");
+            }
         }
 
         /// <summary>
@@ -171,27 +197,34 @@ namespace ReunionMovement.Core.Sound
         /// </summary>
         public async void ResumeMusic()
         {
-            // 如果已经有clip，则直接恢复播放并启动监视器
-            var audio = GetAudioSource();
-            if (audio != null && audio.clip != null)
+            try
             {
-                SoundSystem.Instance.PlayMusic();
-                StartPlaybackMonitorIfNeeded();
-                return;
-            }
+                // 如果已经有clip，则直接恢复播放并启动监视器
+                var audio = GetAudioSource();
+                if (audio != null && audio.clip != null)
+                {
+                    SoundSystem.Instance.PlayMusic();
+                    StartPlaybackMonitorIfNeeded();
+                    return;
+                }
 
-            // 否则尝试根据playlist或单曲索引加载并播放
-            CancelPlaybackMonitor();
+                // 否则尝试根据playlist或单曲索引加载并播放
+                CancelPlaybackMonitor();
 
-            if (playlist != null && playlist.Count > 0)
-            {
-                // 确保playlistPosition在有效范围内
-                playlistPosition = Mathf.Clamp(playlistPosition, 0, playlist.Count - 1);
-                await PlayPlaylistAt(playlistPosition);
+                if (playlist != null && playlist.Count > 0)
+                {
+                    // 确保playlistPosition在有效范围内
+                    playlistPosition = Mathf.Clamp(playlistPosition, 0, playlist.Count - 1);
+                    await PlayPlaylistAt(playlistPosition);
+                }
+                else
+                {
+                    await PlayMusicClip();
+                }
             }
-            else
+            catch (System.Exception ex)
             {
-                await PlayMusicClip();
+                Debug.LogError($"[PlayMusic] ResumeMusic 异常: {ex}");
             }
         }
 
@@ -210,7 +243,7 @@ namespace ReunionMovement.Core.Sound
         public void ToggleMute()
         {
             GameOption.currentOption.musicMuted = !GameOption.currentOption.musicMuted;
-            // 立即应用到当前AudioSource（通过反射访问私有字段）
+            // 立即应用到当前AudioSource
             var audio = GetAudioSource();
             if (audio != null) audio.mute = GameOption.currentOption.musicMuted;
         }
@@ -241,18 +274,12 @@ namespace ReunionMovement.Core.Sound
         }
 
         /// <summary>
-        /// 使用反射获取SoundSystem的私有AudioSource
+        /// 获取 SoundSystem 的音乐 AudioSource（通过公共属性）
         /// </summary>
         /// <returns></returns>
         private AudioSource GetAudioSource()
         {
-            var ssType = SoundSystem.Instance.GetType();
-            var field = ssType.GetField("source", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (field != null)
-            {
-                return field.GetValue(SoundSystem.Instance) as AudioSource;
-            }
-            return null;
+            return SoundSystem.Instance.MusicAudioSource;
         }
 
         /// <summary>

@@ -1,6 +1,5 @@
 ﻿using ReunionMovement.Common;
 using System;
-using System.Reflection;
 using UnityEngine;
 using ReunionMovement.Core.Sound;
 
@@ -54,11 +53,12 @@ namespace ReunionMovement.Core
         private static bool isLoaded = false;
 
         /// <summary>
-        /// 加载游戏选项从 PlayerPrefs（仅首次加载，后续从内存读取）
+        /// 加载游戏选项从 PlayerPrefs（默认仅首次加载，后续从内存读取）
         /// </summary>
-        public static void LoadOptions()
+        /// <param name="forceReload">强制重新从 PlayerPrefs 读取（例如恢复默认后重新加载）</param>
+        public static void LoadOptions(bool forceReload = false)
         {
-            if (isLoaded) return;
+            if (isLoaded && !forceReload) return;
             isLoaded = true;
 
             currentOption.version = PlayerPrefs.GetString("version", currentOption.version);
@@ -128,6 +128,11 @@ namespace ReunionMovement.Core
         {
             try
             {
+#if UNITY_WEBGL
+                // WebGL 平台：分辨率由浏览器控制，Screen.SetResolution/QualitySettings.vSyncCount 不可用
+                // 目标帧率在 WebGL 上由浏览器 requestAnimationFrame 控制
+                Application.targetFrameRate = currentOption.framerate;
+#else
                 // 分辨率与全屏
                 Screen.SetResolution(currentOption.resolutionWidth, currentOption.resolutionHeight, currentOption.fullscreen);
 
@@ -136,6 +141,7 @@ namespace ReunionMovement.Core
 
                 // 目标帧率
                 Application.targetFrameRate = currentOption.framerate;
+#endif
 
                 // 图形质量
                 int qualityIndex = Mathf.Clamp(currentOption.graphicsQuality, 0, QualitySettings.names.Length - 1);
@@ -154,17 +160,8 @@ namespace ReunionMovement.Core
                     // 将淡入淡出时间同步
                     try { ss.fadeDuration = currentOption.musicFadeTime; } catch { }
 
-                    // 通过反射获取私有 AudioSource 并立即应用静音/音量/loop 等
-                    var field = ss.GetType().GetField("source", BindingFlags.NonPublic | BindingFlags.Instance);
-                    if (field != null)
-                    {
-                        var audio = field.GetValue(ss) as AudioSource;
-                        if (audio != null)
-                        {
-                            audio.mute = currentOption.musicMuted;
-                            audio.volume = currentOption.musicVolume;
-                        }
-                    }
+                    // 使用公共方法设置音乐属性（替代反射）
+                    ss.SetMusicProperties(currentOption.musicVolume, currentOption.musicMuted);
                 }
 
                 // 其它可扩展的应用（亮度等）：尝试设置全局 shader 属性 以便 shader 使用

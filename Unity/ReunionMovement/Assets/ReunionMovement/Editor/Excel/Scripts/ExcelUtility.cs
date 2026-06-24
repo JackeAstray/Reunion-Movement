@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace ReunionMovement.EditorTools
 {
@@ -46,29 +47,33 @@ namespace ReunionMovement.EditorTools
 
             //拷贝一份文件
             int indexOfDot = path.LastIndexOf('.');
-            string tempExcel = string.Concat(path.Substring(0, indexOfDot), "_temp_", path.Substring(indexOfDot, path.Length - indexOfDot));
+            string tempExcel = string.Concat(path.Substring(0, indexOfDot), "_temp_", DateTime.Now.Ticks.ToString(), path.Substring(indexOfDot, path.Length - indexOfDot));
             File.Copy(path, tempExcel);
 
-            //读取拷贝的文件
+            //读取拷贝的文件（try-finally 确保临时文件一定被清理）
             Stream stream = null;
+            IExcelDataReader reader = null;
             try
             {
                 stream = File.OpenRead(tempExcel);
+                reader = ExcelReaderFactory.CreateOpenXmlReader(stream);
+                mResultSet = reader.AsDataSet();
             }
-            catch
+            catch (Exception ex)
             {
-                File.Delete(tempExcel);
-                string msg = string.Format("由于共享冲突，无法打开“{0}”。也许您应该先关闭Excel应用程序！", path);
+                string msg = string.Format("由于共享冲突，无法打开\u201C{0}\u201D。也许您应该先关闭Excel应用程序！错误: {1}", path, ex.Message);
                 Log.Error(msg);
                 return;
             }
-
-            IExcelDataReader reader = ExcelReaderFactory.CreateOpenXmlReader(stream);
-            mResultSet = reader.AsDataSet();
-
-            reader.Dispose();
-            stream.Close();
-            File.Delete(tempExcel);
+            finally
+            {
+                reader?.Dispose();
+                stream?.Close();
+                if (File.Exists(tempExcel))
+                {
+                    File.Delete(tempExcel);
+                }
+            }
         }
 
         /// <summary>
@@ -76,6 +81,9 @@ namespace ReunionMovement.EditorTools
         /// </summary>
         public List<T> ConvertToList<T>()
         {
+            // 构造函数可能因校验失败而提前返回，此时 mResultSet 为 null
+            if (mResultSet == null) return null;
+
             List<T> list = new List<T>();
             Type type = typeof(T);
 
@@ -83,13 +91,23 @@ namespace ReunionMovement.EditorTools
             DataTable mSheet = mResultSet.Tables[0];
             if (mSheet.Rows.Count < 1) return null;
 
+            // 预缓存 PropertyInfo，避免每行每列重复反射
+            var propertyCache = new Dictionary<string, PropertyInfo>(mSheet.Columns.Count);
+            foreach (DataColumn column in mSheet.Columns)
+            {
+                var prop = type.GetProperty(column.ColumnName);
+                if (prop != null && prop.CanWrite)
+                {
+                    propertyCache[column.ColumnName] = prop;
+                }
+            }
+
             foreach (DataRow row in mSheet.Rows)
             {
                 T item = Activator.CreateInstance<T>();
                 foreach (DataColumn column in mSheet.Columns)
                 {
-                    PropertyInfo property = type.GetProperty(column.ColumnName);
-                    if (property != null && property.CanWrite)
+                    if (propertyCache.TryGetValue(column.ColumnName, out PropertyInfo property))
                     {
                         property.SetValue(item, Convert.ChangeType(row[column], property.PropertyType));
                     }
@@ -104,7 +122,7 @@ namespace ReunionMovement.EditorTools
         /// 转换为Json
         /// </summary>
         /// <param name="JsonPath">Json文件路径</param>
-        public async void ConvertToJson(string JsonPath)
+        public async Task ConvertToJson(string JsonPath)
         {
             var json = GetJson();
             //写入文件
@@ -216,6 +234,13 @@ namespace ReunionMovement.EditorTools
                 //
                 for (int j = skipColCount; j < mSheet.Columns.Count; j++)
                 {
+                    // 防止字段行/类型行比数据行列数少导致越界
+                    if (j >= fieldNameRowDatas.Count || j >= fieldTypeRowDatas.Count)
+                    {
+                        Log.Error(string.Format("表格数据列索引越界：[{0},{1}]，字段名行有{2}列，类型行有{3}列", i, j, fieldNameRowDatas.Count, fieldTypeRowDatas.Count));
+                        continue;
+                    }
+
                     string field = fieldNameRowDatas[j].ToString();
                     //跳过空字段
                     if (string.IsNullOrEmpty(field))
@@ -261,19 +286,19 @@ namespace ReunionMovement.EditorTools
                             var value = rowdata.ToString();
                             if (value != "[]" && !value.Contains("\"")) //不是空数组,且没有""
                             {
+                                var sb = new StringBuilder(value);
                                 if (value.StartsWith("\"["))
                                 {
-                                    value = value.Replace("\"[", "[\"");
-                                    value = value.Replace("]\"", "\"]");
+                                    sb.Replace("\"[", "[\"");
+                                    sb.Replace("]\"", "\"]");
                                 }
                                 else
                                 {
-                                    value = value.Replace("[", "[\"");
-                                    value = value.Replace("]", "\"]");
+                                    sb.Replace("[", "[\"");
+                                    sb.Replace("]", "\"]");
                                 }
-
-                                value = value.Replace(",", "\",\"");
-                                row[field] = value;
+                                sb.Replace(",", "\",\"");
+                                row[field] = sb.ToString();
                             }
                             else
                             {
@@ -284,9 +309,10 @@ namespace ReunionMovement.EditorTools
                         else if (fieldType.Contains("["))
                         {
                             var value = rowdata.ToString();
-                            value = value.Replace("\"[", "[");
-                            value = value.Replace("]\"", "]");
-                            row[field] = value;
+                            var sb = new StringBuilder(value);
+                            sb.Replace("\"[", "[");
+                            sb.Replace("]\"", "]");
+                            row[field] = sb.ToString();
                         }
 
                         else if (fieldType == "int" || fieldType == "float" || fieldType == "double")

@@ -75,6 +75,12 @@ namespace ReunionMovement.Core.Terminal
         {
             Log.Debug("TerminalSystem 清除数据");
             isInited = false;
+            // 销毁 TerminalRequest GameObject，避免重新 Init 时创建重复对象
+            if (terminalRequest != null)
+            {
+                UnityEngine.Object.Destroy(terminalRequest.gameObject);
+                terminalRequest = null;
+            }
         }
 
         #region 打开指定UI
@@ -210,7 +216,7 @@ namespace ReunionMovement.Core.Terminal
         {
             if (args.Length >= 2)
             {
-                string str = "使用测试命令： " + "值1:" + args[0].String + " | " + "值2:" + args[0].String;
+                string str = "使用测试命令： " + "值1:" + args[0].String + " | " + "值2:" + args[1].String;
 
                 Log.Debug(str);
 
