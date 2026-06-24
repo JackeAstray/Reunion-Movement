@@ -8,8 +8,8 @@ namespace ReunionMovement
     public static class Config
     {
         // 本地路径
-        public static string JsonPath = "AutoDatabase/";
-        public static string UIPath = "Prefabs/UIs/";
+        public const string JsonPath = "AutoDatabase/";
+        public const string UIPath = "Prefabs/UIs/";
 
         // 日志等级（Debug/Info 在 Release 构建中默认关闭以减少开销）
         public static bool Enable_LOG = true;

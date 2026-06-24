@@ -175,14 +175,16 @@ namespace ReunionMovement.Common.Util
         public void StartThread()
         {
 #if UNITY_WEBGL
-            Log.Error("WebGL不支持.Net多线程");
-#endif
+            Log.Error("WebGL不支持.Net多线程，跳过线程启动");
+            return;
+#else
             if (netRun == null)
             {
                 isRunning = true;
                 netRun = new Thread(new ThreadStart(ThreadOnUpdate)) { IsBackground = true };
                 netRun.Start();
             }
+#endif
         }
 
         /// <summary>

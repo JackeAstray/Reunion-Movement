@@ -43,15 +43,18 @@ namespace ReunionMovement.Core.Scene
         public bool openLoad;
         #endregion
 
-        public async Task Init()
+        public Task Init()
         {
             initProgress = 0;
 
-            await OnInit();
+            currentSceneName = SceneManager.GetActiveScene().name;
+            startProgressWaitingTime = 0.5f;
+            endProgressWaitingTime = 0.5f;
 
             initProgress = 100;
             isInited = true;
             Log.Debug("SceneSystem 初始化完成");
+            return Task.CompletedTask;
         }
 
         public void Update(float logicTime, float realTime)
@@ -64,17 +67,11 @@ namespace ReunionMovement.Core.Scene
             Log.Debug("SceneSystem 清除数据");
 
             isInited = false;
+            isLoading = false;
             getProgress = null;
             beforeSceneLoadingCompletionCallback = null;
             sceneLoadingCompletionCallback = null;
-        }
-
-        private Task OnInit()
-        {
-            currentSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-            startProgressWaitingTime = 0.5f;
-            endProgressWaitingTime = 0.5f;
-            return Task.CompletedTask;
+            targetSceneName = null;
         }
 
         #region Load
@@ -104,23 +101,11 @@ namespace ReunionMovement.Core.Scene
         /// <summary>
         /// 加载场景
         /// </summary>
-        /// <param name="strLevelName">要加载的场景名称</param>
-        /// <param name="openLoad">是否开启load场景</param>
-        /// <param name="bslcc">场景加载完成前回调</param>
-        /// <param name="slcc">场景加载完成回调</param>
-        public async Task LoadScene(string strLevelName, bool openLoad = false, UnityAction bslcc = null, UnityAction slcc = null)
-        {
-            await LoadSceneAsync(strLevelName, openLoad, bslcc, slcc);
-        }
-
-        /// <summary>
-        /// 加载场景
-        /// </summary>
         /// <param name="levelName">要加载的场景名称</param>
         /// <param name="openLoad">是否开启load场景</param>
-        /// <param name="slcc">场景加载完成回调</param>
         /// <param name="bslcc">场景加载完成前回调</param>
-        private async Task LoadSceneAsync(string levelName, bool openLoad, UnityAction bslcc, UnityAction slcc)
+        /// <param name="slcc">场景加载完成回调</param>
+        public async Task LoadScene(string levelName, bool openLoad = false, UnityAction bslcc = null, UnityAction slcc = null)
         {
             // 正在加载其他场景：拒绝新请求并记录警告
             if (isLoading)
@@ -159,14 +144,17 @@ namespace ReunionMovement.Core.Scene
         /// <summary>
         /// 加载过渡场景
         /// </summary>
-        /// <param name="loadSceneName"></param>
-        /// <param name="onSecenLoaded"></param>
-        /// <param name="loadSceneMode"></param>
-        /// <returns></returns>
         private async Task OnLoadingSceneAsync(string loadSceneName, LoadSceneMode loadSceneMode)
         {
             var async = SceneManager.LoadSceneAsync(loadSceneName, loadSceneMode);
-            if (async == null) return;
+            if (async == null)
+            {
+                Log.Warning($"过渡场景 {loadSceneName} 加载失败，跳过过渡场景");
+                // 即便失败也要触发回调，避免回调泄漏
+                ExecuteBslcc();
+                CallbackProgress(0);
+                return;
+            }
 
             while (!async.isDone)
             {
@@ -191,6 +179,8 @@ namespace ReunionMovement.Core.Scene
             if (async == null)
             {
                 Log.Error($"加载场景失败：{nameof(AsyncOperation)} 为 null");
+                isLoading = false;
+                targetSceneName = null;
                 return;
             }
 
@@ -263,34 +253,17 @@ namespace ReunionMovement.Core.Scene
         }
 
         /// <summary>
-        /// 回调用于返回进度
+        /// 回调用于返回进度（零分配，单次 try-catch 保护）
         /// </summary>
-        /// <param name="progress"></param>
         public void CallbackProgress(float progress)
         {
-            // 增强：保护性调用所有订阅者，单个订阅者异常不会中断流程
-            Log.Debug("加载场景进度：" + progress);
             try
             {
-                var handlers = getProgress;
-                if (handlers == null) return;
-
-                // 逐个调用订阅者，捕获并记录每个订阅者的异常，避免抛出到调用方（特别是在 WebGL 下激活场景可能销毁订阅者）
-                foreach (var del in handlers.GetInvocationList())
-                {
-                    try
-                    {
-                        ((Action<float>)del).Invoke(progress);
-                    }
-                    catch (Exception exInner)
-                    {
-                        Log.Error($"getProgress 回调异常（忽略）：{exInner}");
-                    }
-                }
+                getProgress?.Invoke(progress);
             }
             catch (Exception ex)
             {
-                Log.Error($"CallbackProgress 异常：{ex}");
+                Log.Error($"getProgress 回调异常（忽略）：{ex}");
             }
         }
 

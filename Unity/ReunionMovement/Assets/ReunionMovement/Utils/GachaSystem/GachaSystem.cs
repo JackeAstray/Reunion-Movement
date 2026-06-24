@@ -38,14 +38,10 @@ namespace ReunionMovement.Common.Util
         private int last5StarPullCount = 0; // 记录第几抽抽到5星
         private bool isLastPullUp = false; // 记录最近一次抽卡是否为UP
 
-        // ===== 概率参数 =====[1](@ref)
-        [SerializeField]
+        // ===== 概率参数 =====
         private const float BASE_5STAR_RATE = 0.006f;    // 0.6%
-        [SerializeField]
         private const float BASE_4STAR_RATE = 0.051f;    // 5.1%
-        [SerializeField]
         private const int HARD_PITY_5STAR = 90;          // 硬保底
-        [SerializeField]
         private const int SOFT_PITY_START = 73;          // 概率递增起点
 
         // ===== 核心抽卡逻辑 =====
