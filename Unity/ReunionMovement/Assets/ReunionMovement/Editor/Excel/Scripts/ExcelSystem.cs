@@ -97,6 +97,12 @@ namespace ReunionMovement.EditorTools
         {
             List<string> xlsxFiles = GetAllConfigFiles(toDirSO);
 
+            if (xlsxFiles == null || xlsxFiles.Count == 0)
+            {
+                Log.Warning("没有找到可处理的表格文件。");
+                return;
+            }
+
             foreach (var path in xlsxFiles)
             {
                 ExcelToScripts(path);

@@ -24,6 +24,7 @@ namespace ReunionMovement.Common.Util
             RightBottom
         }
 
+        [SerializeField]
         private float idleTime = 2f;
         private float elapsed;
         private int frames;

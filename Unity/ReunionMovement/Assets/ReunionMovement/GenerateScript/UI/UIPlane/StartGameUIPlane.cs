@@ -14,8 +14,8 @@ namespace ReunionMovement.Core.UI
 {
     public class StartGameUIPlane : UIController
     {
-        string openWindow;
-        string closeWindow;
+        string openWindow = "StartGameUIPlane";
+        string closeWindow = "StartGameUIPlane";
 
         public ImageEx logo1;
         public ImageEx logo2;

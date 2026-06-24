@@ -277,10 +277,10 @@ namespace ReunionMovement.Common.Util.Download
             if (!idf.DidHeadReq && idf.TryMultipartDownload)
             {
                 var treq = ((UWRExecutor)idf).HeadRequest();
-                n++;
 
                 if (treq != null)
                 {
+                    n++;
                     treq.completed += (obj) =>
                     {
                         var rv = idf.Download();
@@ -302,6 +302,12 @@ namespace ReunionMovement.Common.Util.Download
                             }
                         }
                     };
+                }
+                else
+                {
+                    // HeadRequest 返回 null，视为该 URI 不可分块，继续处理下一个
+                    Log.Warning($"HeadRequest for {idf.Uri} returned null，跳过该 URI");
+                    _ = DispatchCompletion(idf);
                 }
 
                 return ReturnFalseAsync();
@@ -510,6 +516,8 @@ namespace ReunionMovement.Common.Util.Download
             executors = Array.Empty<IDownloadExecutor>();
             executorsOld = Array.Empty<IDownloadExecutor>();
             Uris = Array.Empty<string>();
+            n = 0;
+            initialCount = 0;
         }
     }
 }

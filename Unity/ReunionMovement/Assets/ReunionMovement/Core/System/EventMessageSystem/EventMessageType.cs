@@ -24,7 +24,7 @@ namespace ReunionMovement.Core.EventMessage
         // 提示
         Tip,
         // 警告提示
-        WaringTip,
+        WarningTip,
         // 错误提示
         ErrorTip,
         // 通知

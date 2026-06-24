@@ -85,6 +85,7 @@ namespace ReunionMovement.Common.Util
 
         public static string Uid(string uid)
         {
+            if (string.IsNullOrEmpty(uid)) return uid ?? string.Empty;
             int position = uid.LastIndexOf('_');
             return uid.Remove(0, position + 1);
         }
@@ -98,11 +99,13 @@ namespace ReunionMovement.Common.Util
         {
             int tempLen = 0;
             byte[] s = Encoding.UTF8.GetBytes(inputString);
-            foreach (byte b in s)
+            int i = 0;
+            while (i < s.Length)
             {
-                // UTF8 中，多字节字符的首字节 >= 0xC0，后续字节在 0x80-0xBF 范围
-                // 简化处理：非 ASCII 单字节（>= 0x80）计为 2 个宽度单位
-                tempLen += (b >= 0x80) ? 2 : 1;
+                // 跳过 UTF-8 后续字节 (10xxxxxx)，只计首字节
+                if ((s[i] & 0xC0) == 0x80) { i++; continue; }
+                tempLen += (s[i] >= 0x80) ? 2 : 1;
+                i++;
             }
             return tempLen;
         }
@@ -320,8 +323,13 @@ namespace ReunionMovement.Common.Util
                 return str;
             }
 
-            str = char.ToLower(str[0]) + str.Substring(1);
-            return Regex.Replace(str, "[a-z][A-Z]", m => char.ToLower(m.Value[0]) + "_" + char.ToLower(m.Value[1]));
+            // 连续大写字母后跟小写字母：XMLParser → xml_parser
+            str = Regex.Replace(str, "([A-Z]+)([A-Z][a-z])", m =>
+                m.Groups[1].Value.ToLower() + "_" + m.Groups[2].Value.ToLower());
+            // 小写/数字后跟大写：myVar → my_var
+            str = Regex.Replace(str, "([a-z\\d])([A-Z])", m =>
+                m.Groups[1].Value + "_" + m.Groups[2].Value.ToLower());
+            return char.ToLower(str[0]) + str.Substring(1);
         }
 
         /// <summary>

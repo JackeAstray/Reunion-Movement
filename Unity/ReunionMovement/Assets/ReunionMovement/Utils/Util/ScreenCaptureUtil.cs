@@ -78,6 +78,17 @@ namespace ReunionMovement.Common.Util
                 Texture2D tex = null;
                 try
                 {
+                    // 边界保护：防止 rect 超出屏幕范围导致 ReadPixels 异常
+                    rect.x = Mathf.Max(0, rect.x);
+                    rect.y = Mathf.Max(0, rect.y);
+                    rect.width = Mathf.Min(rect.width, Screen.width - rect.x);
+                    rect.height = Mathf.Min(rect.height, Screen.height - rect.y);
+                    if (rect.width <= 0 || rect.height <= 0)
+                    {
+                        Log.Error($"[ScreenCaptureUtil] 截图区域无效: {rect}");
+                        return null;
+                    }
+
                     tex = new Texture2D((int)rect.width, (int)rect.height, TextureFormat.RGB24, false);
                     tex.ReadPixels(rect, 0, 0);
                     tex.Apply();

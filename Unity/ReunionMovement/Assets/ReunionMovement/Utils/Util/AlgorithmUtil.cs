@@ -411,7 +411,7 @@ namespace ReunionMovement.Common.Util
         {
             if (array == null)
             {
-                Log.Error("Distinct: 输入数组不能为空");
+                Log.Error("Shuffle: 输入数组不能为空");
                 return;
             }
 
@@ -429,13 +429,13 @@ namespace ReunionMovement.Common.Util
         {
             if (array == null)
             {
-                Log.Error("Distinct: 输入数组不能为空");
+                Log.Error("Shuffle: 输入数组不能为空");
                 return;
             }
 
             if (startIndex < 0 || count < 0 || startIndex + count > array.Count)
             {
-                Log.Error($"Disrupt: 输入参数错误，startIndex: {startIndex}, count: {count}, array.Count: {array.Count}");
+                Log.Error($"Shuffle: 输入参数错误，startIndex: {startIndex}, count: {count}, array.Count: {array.Count}");
                 return;
             }
 
