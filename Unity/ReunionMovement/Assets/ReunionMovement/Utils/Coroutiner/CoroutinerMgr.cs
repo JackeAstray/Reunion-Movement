@@ -137,9 +137,16 @@ namespace ReunionMovement.Common.Util.Coroutiner
 
         /// <summary>
         /// 停止所有协程
+        /// 注意：base.StopAllCoroutines() 会停止此 MonoBehaviour 上的所有 Unity 协程，
+        /// 包括非 CoroutinerMgr 管理的协程。同时清空内部任务队列。
         /// </summary>
         public void StopAllRoutine()
         {
+            lock (taskLock)
+            {
+                coroutineTasks.Clear();
+            }
+            tasksToProcess.Clear();
             base.StopAllCoroutines();
         }
 

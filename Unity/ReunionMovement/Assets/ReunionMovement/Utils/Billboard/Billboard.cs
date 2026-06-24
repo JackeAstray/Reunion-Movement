@@ -20,6 +20,7 @@ namespace ReunionMovement.Common.Util
         public Transform targetTF;
         public BillboardType billboardType = BillboardType.Mode1;
         Quaternion originalRotation;
+        private float lastErrorLogTime = -999f;
 
         void Start()
         {
@@ -44,7 +45,12 @@ namespace ReunionMovement.Common.Util
 
             if (targetTF == null)
             {
-                Log.Error("目标不存在，请查找原因！");
+                // 每 5 秒最多记录一次，避免每帧刷屏
+                if (Time.time - lastErrorLogTime > 5f)
+                {
+                    lastErrorLogTime = Time.time;
+                    Log.Error("Billboard 目标不存在，请查找原因！");
+                }
                 return;
             }
 

@@ -10,7 +10,7 @@ namespace ReunionMovement.Common.Util.Download
         /// <summary>
         /// 初始块大小
         /// </summary>
-        public int IntitialChunkSize = 200000;
+        public int InitialChunkSize = 200000;
 
         /// <summary>
         /// 已完成分块下载

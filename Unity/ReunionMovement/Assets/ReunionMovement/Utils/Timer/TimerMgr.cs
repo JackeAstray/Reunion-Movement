@@ -98,8 +98,8 @@ namespace ReunionMovement.Common.Util.Timer
 
         public void OnDestroy()
         {
-            // 清理所有计时器
-            ClearAll();
+            // 取消所有计时器（触发 OnCancelled 回调，让订阅者清理引用）
+            CancelAllTimers();
         }
     }
 }

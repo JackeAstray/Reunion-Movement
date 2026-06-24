@@ -122,7 +122,15 @@ namespace ReunionMovement.Core.Scene
         /// <param name="bslcc">场景加载完成前回调</param>
         private async Task LoadSceneAsync(string levelName, bool openLoad, UnityAction bslcc, UnityAction slcc)
         {
-            if (isLoading || currentSceneName == levelName)
+            // 正在加载其他场景：拒绝新请求并记录警告
+            if (isLoading)
+            {
+                Log.Warning($"场景加载被拒绝：当前正在加载 {targetSceneName}，无法同时加载 {levelName}");
+                return;
+            }
+
+            // 目标场景已加载：直接回调
+            if (currentSceneName == levelName)
             {
                 bslcc?.Invoke();
                 slcc?.Invoke();

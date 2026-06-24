@@ -204,18 +204,24 @@ namespace ReunionMovement.Common.Util
             var scene = SceneManager.GetActiveScene();
             var roots = scene.GetRootGameObjects();
 
+            // 缓存自身引用，防止父对象先被销毁导致 this.gameObject 为 null
+            var self = gameObject;
+
             // 先销毁其它根对象
             for (int i = 0; i < roots.Length; i++)
             {
                 var go = roots[i];
-                if (go != this.gameObject)
+                if (go != self)
                 {
                     Destroy(go);
                 }
             }
 
             // 最后销毁自身（避免循环中被销毁导致异常）
-            Destroy(gameObject);
+            if (self != null)
+            {
+                Destroy(self);
+            }
 
             Debug.LogWarning("DeadlineMgr: 当前日期不在允许范围内或检测到篡改，已删除当前场景的所有对象。");
         }

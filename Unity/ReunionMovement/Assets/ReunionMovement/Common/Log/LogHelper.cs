@@ -12,45 +12,31 @@ namespace ReunionMovement.Common
         /// <param name="message">日志内容。</param>
         public void Log(LogLevel level, object message)
         {
+            // 使用字符串拼接而非 string.Format，避免 message 中含 { 或 } 时抛出 FormatException
             switch (level)
             {
                 case LogLevel.Debug:
-                    {
-                        string msg = string.Format("<color=#80FF00>[调试] {0}</color>", message);
-                        Debug.Log(msg);
-                        break;
-                    }
+                    Debug.Log("<color=#80FF00>[调试] " + message + "</color>");
+                    break;
 
                 case LogLevel.Info:
-                    {
-                        string msg = string.Format("<color=#00FF00>[信息] {0}</color>", message);
-                        Debug.Log(msg);
-                        break;
-                    }
+                    Debug.Log("<color=#00FF00>[信息] " + message + "</color>");
+                    break;
 
                 case LogLevel.Warning:
-                    {
-                        string msg = string.Format("<color=#FFCC00>[警告] {0}</color>", message);
-                        Debug.LogWarning(msg);
-                        break;
-                    }
+                    Debug.LogWarning("<color=#FFCC00>[警告] " + message + "</color>");
+                    break;
 
                 case LogLevel.Error:
-                    {
-                        string msg = string.Format("<color=#FF0040>[错误] {0}</color>", message);
-                        Debug.LogError(msg);
-                        break;
-                    }
+                    Debug.LogError("<color=#FF0040>[错误] " + message + "</color>");
+                    break;
 
                 case LogLevel.Fatal:
-                    {
-                        string msg = string.Format("<color=#FF0000>[致命] {0}</color>", message);
-                        Debug.LogError(msg);
-                        break;
-                    }
+                    Debug.LogError("<color=#FF0000>[致命] " + message + "</color>");
+                    break;
 
                 default:
-                    throw new System.Exception($"未知日志等级: {message}");
+                    throw new System.Exception($"未知日志等级: {level}");
             }
         }
     }

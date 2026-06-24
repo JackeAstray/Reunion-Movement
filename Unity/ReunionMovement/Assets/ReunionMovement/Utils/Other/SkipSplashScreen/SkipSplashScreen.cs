@@ -7,17 +7,8 @@ public class SkipSplashScreen
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSplashScreen)]
     private static void Run()
     {
-        if (Application.platform == RuntimePlatform.WebGLPlayer)
-        {
-            SplashScreen.Stop(SplashScreen.StopBehavior.StopImmediate);
-        }
-        else
-        {
-            System.Threading.Tasks.Task.Run(() =>
-            {
-                SplashScreen.Stop(SplashScreen.StopBehavior.StopImmediate);
-            });
-        }
+        // SplashScreen.Stop 必须在主线程调用，BeforeSplashScreen 回调保证在主线程执行
+        SplashScreen.Stop(SplashScreen.StopBehavior.StopImmediate);
     }
 }
 #endif

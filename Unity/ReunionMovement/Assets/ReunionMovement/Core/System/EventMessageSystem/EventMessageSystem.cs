@@ -134,10 +134,14 @@ namespace ReunionMovement.Core.EventMessage
         }
 
         /// <summary>
-        /// 清除所有事件监听器
+        /// 清除所有事件监听器（与 Clear() 一致，先清理 DelegateEvent 内部再清字典）
         /// </summary>
         public void ClearAllEventListeners()
         {
+            foreach (var kvp in eventTypeListeners)
+            {
+                kvp.Value.Clear();
+            }
             eventTypeListeners.Clear();
             Log.Debug("清除所有事件监听器");
         }

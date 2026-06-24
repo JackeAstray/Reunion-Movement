@@ -280,6 +280,9 @@ namespace ReunionMovement.Common.Util.HttpService
 
         public void Update()
         {
+            // 快速路径：无请求时跳过
+            if (httpRequests.Count == 0) return;
+
             // 防御性拷贝，避免在进度回调中修改请求队列导致 foreach 抛出 InvalidOperationException
             foreach (var httpRequest in httpRequests.Keys.ToList())
             {
