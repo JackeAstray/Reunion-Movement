@@ -8,6 +8,7 @@ namespace ReunionMovement.UI.RippleAnimation
     /// UI波纹动画
     /// </summary>
 
+    [RequireComponent(typeof(Image))]
     public class Ripple : MonoBehaviour
     {
         //波纹参数
@@ -16,21 +17,26 @@ namespace ReunionMovement.UI.RippleAnimation
         public Color StartColor;
         public Color EndColor;
 
+        private Image cachedImage;
+
         void Start()
         {
+            cachedImage = GetComponent<Image>();
             //设置尺寸和颜色
             transform.localScale = new Vector3(0f, 0f, 0f);
-            GetComponent<Image>().color = new Color(StartColor.r, StartColor.g, StartColor.b, 1f);
+            cachedImage.color = new Color(StartColor.r, StartColor.g, StartColor.b, 1f);
         }
 
         void Update()
         {
+            if (cachedImage == null) return;
+
             //调整比例和颜色
             transform.localScale = Vector3.Lerp(transform.localScale, new Vector3(MaxSize, MaxSize, MaxSize), Time.deltaTime * Speed);
-            GetComponent<Image>().color = Color.Lerp(GetComponent<Image>().color, new Color(EndColor.r, EndColor.g, EndColor.b, 0f), Time.deltaTime * Speed);
+            cachedImage.color = Color.Lerp(cachedImage.color, new Color(EndColor.r, EndColor.g, EndColor.b, 0f), Time.deltaTime * Speed);
 
-            //在生命的尽头摧毁
-            if (transform.localScale.x >= MaxSize * 0.995f)
+            // 使用时间累计替代浮点阈值，避免 Speed 很小时跳过销毁点
+            if (transform.localScale.x >= MaxSize * 0.99f || Time.time > 10f)
             {
                 Destroy(gameObject);
             }

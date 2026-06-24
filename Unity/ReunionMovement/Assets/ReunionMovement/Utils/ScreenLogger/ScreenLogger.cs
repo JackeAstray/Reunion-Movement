@@ -95,7 +95,9 @@ namespace ReunionMovement
         {
             if (!showInEditor && Application.isEditor) return;
 
-            while (queue.Count > ((Screen.height - 2 * margin) * height - 2 * padding) / styleText.lineHeight)
+            // 防止 lineHeight 为 0 导致除零异常（字体未加载时可能为 0）
+            float lineH = styleText.lineHeight > 0 ? styleText.lineHeight : fontSize;
+            while (queue.Count > ((Screen.height - 2 * margin) * height - 2 * padding) / lineH)
             {
                 queue.Dequeue();
             }

@@ -179,6 +179,11 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         private GachaItem SelectRandomItem(List<GachaItem> pool)
         {
+            if (pool == null || pool.Count == 0)
+            {
+                Log.Error("卡池为空！请在 Inspector 中配置卡池列表");
+                return null;
+            }
             return pool[Random.Range(0, pool.Count)];
         }
 

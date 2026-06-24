@@ -60,7 +60,7 @@ namespace ReunionMovement.Core.Languages
 
         }
 
-        public new void Clear()
+        public override void Clear()
         {
             Log.Debug("LanguagesSystem 清除数据");
             // 清除基类维护的观察者列表

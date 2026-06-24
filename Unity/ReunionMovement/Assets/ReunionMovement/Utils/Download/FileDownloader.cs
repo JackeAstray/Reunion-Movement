@@ -256,6 +256,13 @@ namespace ReunionMovement.Common.Util.Download
                 return ReturnFalseAsync();
             }
 
+            // executors 数组可能因异步回调与 pendingUris 不同步，做越界保护
+            if (executors == null || executors.Length == 0)
+            {
+                Log.Error("Dispatch: executors 数组为空，无法调度下载");
+                return ReturnFalseAsync();
+            }
+
             string uri = pendingUris[0];
             IDownloadExecutor idf = executors[0];
             pendingUris = pendingUris.Skip(1).ToArray();

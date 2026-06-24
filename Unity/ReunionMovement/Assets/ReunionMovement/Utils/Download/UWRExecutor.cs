@@ -152,7 +152,7 @@ namespace ReunionMovement.Common.Util.Download
                     return;
                 }
 
-                chunkSize = IntitialChunkSize;
+                chunkSize = InitialChunkSize;
                 MultipartDownload = expectedSize > chunkSize;
             };
             return hreq;

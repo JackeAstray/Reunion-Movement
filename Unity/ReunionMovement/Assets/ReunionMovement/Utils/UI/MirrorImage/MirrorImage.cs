@@ -80,7 +80,9 @@ namespace ReunionMovement.UI.ImageExtensions
                     GenerateTiledSprite(toFill);
                     break;
                 case Type.Filled:
-                    break;
+                    // Filled 类型回退到基类默认实现，避免无顶点生成
+                    base.OnPopulateMesh(toFill);
+                    return;
             }
         }
 

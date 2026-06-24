@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using UnityEngine;
 using System.Runtime.InteropServices;
 
@@ -313,14 +314,37 @@ namespace ReunionMovement.Common.Util
         {
             if (sdkVersion == -1)
             {
-                int apiLevel = int.Parse(SystemInfo.operatingSystem.Substring(SystemInfo.operatingSystem.IndexOf("-") + 1, 3));
-                sdkVersion = apiLevel;
-                return apiLevel;
+                // 使用 AndroidJavaClass 可靠地获取 SDK 版本，替代不可靠的字符串解析
+                try
+                {
+                    using (var versionClass = new AndroidJavaClass("android.os.Build$VERSION"))
+                    {
+                        sdkVersion = versionClass.GetStatic<int>("SDK_INT");
+                    }
+                }
+                catch
+                {
+                    // 回退到字符串解析（兼容非 Android 平台或权限受限场景）
+                    string osString = SystemInfo.operatingSystem;
+                    int dashIndex = osString.LastIndexOf('-');
+                    if (dashIndex >= 0)
+                    {
+                        string apiStr = osString.Substring(dashIndex + 1);
+                        // 提取连续数字部分（兼容 "API-29"、"API-32" 等格式）
+                        string numStr = new string(apiStr.TakeWhile(char.IsDigit).ToArray());
+                        if (int.TryParse(numStr, out int apiLevel))
+                        {
+                            sdkVersion = apiLevel;
+                        }
+                    }
+                    if (sdkVersion == -1)
+                    {
+                        sdkVersion = 26; // 保守默认值（Android 8.0 起支持 VibrationEffect）
+                        Log.Warning("无法解析 Android SDK 版本，默认使用 API 26");
+                    }
+                }
             }
-            else
-            {
-                return sdkVersion;
-            }
+            return sdkVersion;
         }
         // Android End ---------------------------------------------------------------------------------------------------------
 

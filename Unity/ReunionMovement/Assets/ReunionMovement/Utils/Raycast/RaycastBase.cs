@@ -83,6 +83,7 @@ namespace ReunionMovement.Common.Util
         /// <param name="layerNames"></param>
         public void SetLayerNames(params string[] layerNames)
         {
+            if (layerNames == null) return;
             layerMask = 0;
             foreach (var name in layerNames)
             {

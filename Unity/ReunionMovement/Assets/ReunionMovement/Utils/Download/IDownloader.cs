@@ -142,7 +142,7 @@ namespace ReunionMovement.Common.Util.Download
                     idf.Timeout = Timeout;
                     idf.RequestHeaders = requestHeaders;
                     idf.TryMultipartDownload = tryMultipartDownload;
-                    idf.IntitialChunkSize = MultipartChunkSize;
+                    idf.InitialChunkSize = MultipartChunkSize;
                     newExecutors.Add(idf);
                     PendingURIS?.Add(str);
 

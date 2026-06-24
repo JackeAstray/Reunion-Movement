@@ -303,16 +303,20 @@ namespace ReunionMovement.Common.Util.StateMachine
 
         /// <summary>
         /// 状态机的序列化方法
+        /// 注意：Action 委托无法通过 JSON 正确序列化/反序列化，
+        /// OnStart/OnUpdate/OnStop 回调将在反序列化后丢失。
+        /// 此方法仅适用于保存状态结构（标签、超时等），不保存行为。
         /// </summary>
         /// <returns></returns>
         public string Serialize()
         {
-            // 序列化当前状态、历史状态等信息
+            // 序列化当前状态、历史状态等信息（不含 Action 委托）
             return JsonConvert.SerializeObject(this);
         }
 
         /// <summary>
         /// 状态机的反序列化方法
+        /// 警告：Action 委托无法反序列化，需要重新注册 OnStart/OnUpdate/OnStop 回调。
         /// </summary>
         /// <param name="json"></param>
         public StateMachine<TLabel> Deserialize(string json)

@@ -749,12 +749,18 @@ namespace ReunionMovement.Core.UI
         public void CloseAllExcept(params string[] exceptNames)
         {
             HashSet<string> exceptSet = new HashSet<string>(exceptNames);
+            // 防御性拷贝：CloseWindow 会修改 uiStateCache，先收集键再遍历
+            var keysToClose = new List<string>();
             foreach (var kv in uiStateCache)
             {
                 if (IsOpen(kv.Key) && !exceptSet.Contains(kv.Key))
                 {
-                    CloseWindow(kv.Key);
+                    keysToClose.Add(kv.Key);
                 }
+            }
+            foreach (var key in keysToClose)
+            {
+                CloseWindow(key);
             }
         }
 
