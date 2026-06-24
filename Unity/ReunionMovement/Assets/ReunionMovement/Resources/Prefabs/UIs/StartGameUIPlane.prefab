@@ -56,8 +56,8 @@ MonoBehaviour:
   stringArgument: StartGameUIPlane
   panelType: 1
   panelSize: 0
-  IsHidenWhenLeaveScene: 1
-  GroupName: 
+  isHidenWhenLeaveScene: 1
+  groupName: 
 --- !u!223 &4071205600759676170
 Canvas:
   m_ObjectHideFlags: 0
@@ -76,7 +76,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
-  m_AdditionalShaderChannelsFlag: 3
+  m_AdditionalShaderChannelsFlag: -1
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
   m_SortingOrder: 0
@@ -133,7 +133,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f1e0d4f546568284ab9c5870f3d05ba8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  UIName: StartGameUIPlane
+  uiName: 
   logo1: {fileID: 7459673473029799550}
   logo2: {fileID: 2558929930728280574}
 --- !u!1 &4230379670954612983
@@ -196,7 +196,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0, b: 0, a: 1}
+  m_Color: {r: 0, g: 0, b: 0, a: 0}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -352,6 +352,7 @@ MonoBehaviour:
   shadowBlurIntensity: 1
   samplingWidth: 1
   samplingScale: 1
+  shadowScale: 1
   allowOutOfBoundsShadow: 1
   shadowMode: 1
   drawShape: 0
@@ -359,7 +360,7 @@ MonoBehaviour:
   materialMode: 0
   blurType: 0
   blurIntensity: 0
-  transitionMode: 3
+  transitionMode: 1
   transitionTexture: {fileID: 2800000, guid: 9cd54f7c9ad00984a86d3f631eb9683c, type: 3}
   transitionTexScale: {x: 1, y: 1}
   transitionTexOffset: {x: 0, y: 0}
@@ -418,6 +419,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -503,6 +506,40 @@ MonoBehaviour:
     - {r: 0.07058824, g: 1, b: 0, a: 1}
     - {r: 1, g: 0, b: 0, a: 1}
     rotation: 0
+  m_ToneFilter: 0
+  m_ToneIntensity: 1
+  m_ColorFilterMode: 0
+  m_ColorValue: {r: 1, g: 1, b: 1, a: 1}
+  m_ColorIntensity: 1
+  m_ColorGlow: 0
+  m_EdgeMode: 0
+  m_EdgeWidth: 0.5
+  m_EdgeColorFilterMode: 4
+  m_EdgeColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EdgeColorGlow: 0
+  m_EdgeShinyRate: 0.5
+  m_EdgeShinyWidth: 0.5
+  m_EdgeShinyAutoPlaySpeed: 1
+  m_SamplingMode: 0
+  m_SamplingIntensity: 0.5
+  m_TargetMode: 0
+  m_TargetColor: {r: 1, g: 1, b: 1, a: 1}
+  m_TargetRange: 0.1
+  m_TargetSoftness: 0.5
+  m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!1 &7709086334223477336
 GameObject:
   m_ObjectHideFlags: 0
@@ -584,6 +621,7 @@ MonoBehaviour:
   shadowBlurIntensity: 1
   samplingWidth: 1
   samplingScale: 1
+  shadowScale: 1
   allowOutOfBoundsShadow: 1
   shadowMode: 1
   drawShape: 0
@@ -650,6 +688,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0
@@ -735,3 +775,37 @@ MonoBehaviour:
     - {r: 0.009242773, g: 1, b: 0, a: 1}
     - {r: 1, g: 0, b: 0, a: 1}
     rotation: 0
+  m_ToneFilter: 0
+  m_ToneIntensity: 1
+  m_ColorFilterMode: 0
+  m_ColorValue: {r: 1, g: 1, b: 1, a: 1}
+  m_ColorIntensity: 1
+  m_ColorGlow: 0
+  m_EdgeMode: 0
+  m_EdgeWidth: 0.5
+  m_EdgeColorFilterMode: 4
+  m_EdgeColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EdgeColorGlow: 0
+  m_EdgeShinyRate: 0.5
+  m_EdgeShinyWidth: 0.5
+  m_EdgeShinyAutoPlaySpeed: 1
+  m_SamplingMode: 0
+  m_SamplingIntensity: 0.5
+  m_TargetMode: 0
+  m_TargetColor: {r: 1, g: 1, b: 1, a: 1}
+  m_TargetRange: 0.1
+  m_TargetSoftness: 0.5
+  m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0

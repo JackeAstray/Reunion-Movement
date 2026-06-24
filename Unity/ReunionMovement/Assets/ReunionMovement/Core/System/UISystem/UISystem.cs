@@ -155,13 +155,13 @@ namespace ReunionMovement.Core.UI
             }
 
             GameObject uiObj = ResourcesSystem.Instance.InstantiateAsset<GameObject>(Config.UIPath + name);
+            Log.Debug($"[UISystem] LoadWindow({name}) Instantiate → {(uiObj ? uiObj.name : "NULL")}, activeSelf={uiObj?.activeSelf}");
             if (uiObj == null)
             {
                 return null;
             }
 
             InitUIAsset(uiObj);
-            uiObj.SetActive(false);
             uiObj.name = name;
             uiObj.transform.localRotation = Quaternion.identity;
             uiObj.transform.localScale = Vector3.one;
@@ -173,6 +173,7 @@ namespace ReunionMovement.Core.UI
                 UnityEngine.Object.Destroy(uiObj);
                 return null;
             }
+            Log.Debug($"[UISystem] LoadWindow({name}) uiController={uiController.GetType().Name}");
 
             var uiLoadState = new UILoadState(name)
             {
@@ -186,6 +187,7 @@ namespace ReunionMovement.Core.UI
             uiStateCache.Add(name, uiLoadState);
 
             InitWindow(uiLoadState, uiLoadState.uiWindow, uiLoadState.openWhenFinish, uiLoadState.openArgs);
+            Log.Debug($"[UISystem] LoadWindow({name}) 完成, activeSelf={uiController.gameObject.activeSelf}");
 
             return uiLoadState;
         }
@@ -193,28 +195,26 @@ namespace ReunionMovement.Core.UI
         /// <summary>
         /// 初始化UI
         /// </summary>
-        /// <param name="uiState"></param>
-        /// <param name="uiBase"></param>
-        /// <param name="open"></param>
-        /// <param name="args"></param>
         private void InitWindow(UILoadState uiState, UIController uiBase, bool open, params object[] args)
         {
-            float startTime = Time.realtimeSinceStartup;
-            uiBase.OnInit();
-            float elapsed = Time.realtimeSinceStartup - startTime;
+            // 先关闭防止初始化过程中的闪烁，open=true 时 OnOpen 会重新激活
+            uiBase.gameObject.SetActive(false);
 
-            Log.Debug($"OnInit UI {uiBase.gameObject.name}, cost {elapsed}");
+            uiBase.OnInit();
+
+            Log.Debug($"OnInit UI {uiBase.gameObject.name}");
 
             onInitEvent?.Invoke(uiBase);
 
             if (open)
             {
                 OnOpen(uiState, args);
-            }
-
-            if (!open)
-            {
-                uiBase.gameObject.SetActive(false);
+                // 防御：OnOpen 可能因 BeforeOpen 被子类覆盖而延迟激活，此处兜底
+                if (!uiBase.gameObject.activeSelf)
+                {
+                    Log.Warning($"UI {uiBase.gameObject.name} OnOpen 后仍未激活，强制激活");
+                    uiBase.gameObject.SetActive(true);
+                }
             }
 
             uiState.OnUIWindowLoadedCallbacks(uiState);
@@ -262,16 +262,20 @@ namespace ReunionMovement.Core.UI
 
             UIController uiBase = uiState.uiWindow;
 
+            Log.Debug($"[UISystem] OnOpen({uiBase.gameObject.name}) activeSelf before={uiBase.gameObject.activeSelf}");
+
             if (uiBase.gameObject.activeSelf)
             {
                 uiBase.OnClose();
                 onCloseEvent?.Invoke(uiBase);
             }
 
+            // 在 BeforeOpen 之前激活，确保 UI 可见（不论子类 BeforeOpen 行为如何）
+            uiBase.gameObject.SetActive(true);
+            Log.Debug($"[UISystem] OnOpen({uiBase.gameObject.name}) SetActive(true) → activeSelf={uiBase.gameObject.activeSelf}");
+
             uiBase.BeforeOpen(args, () =>
             {
-                uiBase.gameObject.SetActive(true);
-
                 LogElapsedTime(() =>
                 {
                     uiBase.OnOpen(args);
@@ -294,6 +298,7 @@ namespace ReunionMovement.Core.UI
             if (!uiStateCache.TryGetValue(uiName, out uiState))
             {
                 uiState = LoadWindow(uiName, true, args);
+                Log.Debug($"[UISystem] OpenWindow({uiName}) LoadWindow → {(uiState != null ? "OK" : "NULL")}");
                 return uiState;
             }
 
@@ -352,14 +357,16 @@ namespace ReunionMovement.Core.UI
 
             if (uiBase.gameObject.activeSelf)
             {
+                // 在 BeforeOpen 之前激活，确保 UI 可见
+                uiBase.gameObject.SetActive(true);
+
                 uiBase.BeforeOpen(args, () =>
                 {
-                    uiBase.gameObject.SetActive(true);
                     float setStartTime = Time.realtimeSinceStartup;
                     uiBase.OnSet(args);
                     float setElapsed = Time.realtimeSinceStartup - setStartTime;
 
-                    Log.Debug(string.Format("OnOpen UI {0}, cost {1}", uiBase.gameObject.name, setElapsed));
+                    Log.Debug(string.Format("OnSet UI {0}, cost {1}", uiBase.gameObject.name, setElapsed));
 
                     onSetEvent?.Invoke(uiBase);
                 });

@@ -5,16 +5,16 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 0
+  - enabled: 1
     path: Assets/ReunionMovement/Scenes/StartGame.unity
     guid: 425ca4eccf6a82d43b41cd0506b796c9
-  - enabled: 0
+  - enabled: 1
     path: Assets/ReunionMovement/Scenes/LoadingScene.unity
     guid: 08fe7c994783ca1448f66c1c75f7bbef
-  - enabled: 0
+  - enabled: 1
     path: Assets/ReunionMovement/Scenes/Temp.unity
     guid: a7037d7e56ed7914f97040f7038914d8
-  - enabled: 1
+  - enabled: 0
     path: Assets/ReunionMovement/Scenes/Example/UI Example.unity
     guid: e426d5e3f46fb194b92152e152ab0020
   - enabled: 0

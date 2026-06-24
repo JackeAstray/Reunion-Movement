@@ -67,7 +67,7 @@ namespace ReunionMovement.Core
         /// 游戏启动
         /// </summary>
         /// <returns></returns>
-        public override Task OnGameStartAsync()
+        public override async Task OnGameStartAsync()
         {
             Log.Debug("游戏启动");
 
@@ -81,20 +81,20 @@ namespace ReunionMovement.Core
             //GameOption.currentOption.musicMuted = false;
             //GameOption.SaveOptions();
 
-            UISystem.Instance.OpenWindow("StartGameUIPlane");
-
             // 播放声音
             //SoundSystem.Instance.PlayMusic(100001);
             //SoundSystem.Instance.PlaySfx(300001);
 
+            // 先打开 UI，再注册为场景切换时不隐藏
+            UISystem.Instance.OpenWindow("StartGameUIPlane");
+            SceneSystem.Instance.ExcludeWindowFromSceneHide("StartGameUIPlane");
+
             // 加载场景
-            //await SceneSystem.Instance.LoadScene("Temp", true);
+            await SceneSystem.Instance.LoadScene("Temp", true);
 
             // 对于在场景大量散落的组件，使用静态标志位和事件通知，避免遗漏
             IsGameInitFinished = true;
             OnGameInitComplete?.Invoke();
-
-            return Task.CompletedTask;
         }
     }
 }

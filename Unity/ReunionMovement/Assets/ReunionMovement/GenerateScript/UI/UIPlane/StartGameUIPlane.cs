@@ -22,6 +22,11 @@ namespace ReunionMovement.Core.UI
 
         private bool _initialized = false;
 
+        // public void Start()
+        // {
+        //     OnInit();
+        // }
+
         public override void OnInit()
         {
             if (_initialized) return;

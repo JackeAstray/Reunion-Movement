@@ -2,6 +2,7 @@
 using ReunionMovement.Common.Util.Coroutiner;
 using ReunionMovement.Core.Base;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
@@ -34,6 +35,8 @@ namespace ReunionMovement.Core.Scene
         private string previousSceneName = null;                          // 上一个场景名
         private bool isLoading = false;                                   // 是否正在加载中
         private const string loadSceneName = "LoadingScene";              // 加载场景名字
+        // 场景切换时不隐藏的窗口名称集合（由 LoadScene 调用方在切换前注册）
+        private readonly HashSet<string> excludeFromSceneHide = new HashSet<string>();
 
         public event Action<float> getProgress;                           // 事件 用于处理进度条
 
@@ -134,11 +137,24 @@ namespace ReunionMovement.Core.Scene
 
             HideUIWindowsOnSceneChange();
 
-            if (openLoad)
+            try
             {
-                await OnLoadingSceneAsync(loadSceneName, LoadSceneMode.Single);
+                if (openLoad)
+                {
+                    await OnLoadingSceneAsync(loadSceneName, LoadSceneMode.Single);
+                }
+                await OnLoadTargetSceneAsync(targetSceneName, LoadSceneMode.Single);
             }
-            await OnLoadTargetSceneAsync(targetSceneName, LoadSceneMode.Single);
+            catch (Exception ex)
+            {
+                Log.Error($"场景加载异常：{ex}");
+                // 确保异常情况下回调也被触发、状态被重置
+                ExecuteBslcc();
+                ExecuteSlcc();
+                isLoading = false;
+                targetSceneName = null;
+                currentSceneName = previousSceneName;
+            }
         }
 
         /// <summary>
@@ -169,9 +185,6 @@ namespace ReunionMovement.Core.Scene
         /// <summary>
         /// 加载目标场景
         /// </summary>
-        /// <param name="levelName"></param>
-        /// <param name="loadSceneMode"></param>
-        /// <returns></returns>
         private async Task OnLoadTargetSceneAsync(string levelName, LoadSceneMode loadSceneMode)
         {
             AsyncOperation async = SceneManager.LoadSceneAsync(levelName, loadSceneMode);
@@ -179,12 +192,18 @@ namespace ReunionMovement.Core.Scene
             if (async == null)
             {
                 Log.Error($"加载场景失败：{nameof(AsyncOperation)} 为 null");
+                // 触发并清空所有回调，避免泄漏
+                ExecuteBslcc();
+                ExecuteSlcc();
                 isLoading = false;
                 targetSceneName = null;
+                currentSceneName = previousSceneName;
                 return;
             }
 
-            if (Application.platform != RuntimePlatform.WebGLPlayer)
+            // WebGL 不支持 allowSceneActivation，缓存判断避免重复调用
+            bool canControlActivation = Application.platform != RuntimePlatform.WebGLPlayer;
+            if (canControlActivation)
             {
                 async.allowSceneActivation = false;
             }
@@ -192,10 +211,16 @@ namespace ReunionMovement.Core.Scene
             CallbackProgress(0.15f);
             await Task.Delay((int)(startProgressWaitingTime * 1000));
 
-            //加载进度
+            // 加载进度 —— 节流：每 5 帧回调一次，减少 ~80% 事件触发
+            int frameSkip = 5;
+            int frameCounter = 0;
             while (async.progress < 0.9f)
             {
-                CallbackProgress(async.progress);
+                if (++frameCounter >= frameSkip)
+                {
+                    CallbackProgress(async.progress);
+                    frameCounter = 0;
+                }
                 await Task.Yield();
             }
 
@@ -203,7 +228,7 @@ namespace ReunionMovement.Core.Scene
 
             CallbackProgress(1f);
 
-            if (Application.platform != RuntimePlatform.WebGLPlayer)
+            if (canControlActivation)
             {
                 async.allowSceneActivation = true;
             }
@@ -221,6 +246,8 @@ namespace ReunionMovement.Core.Scene
             OnTargetSceneLoaded();
 
             Log.Debug("目标场景加载完成！");
+
+            ClearExcludeSet();
 
             ExecuteSlcc();
         }
@@ -268,21 +295,36 @@ namespace ReunionMovement.Core.Scene
         }
 
         /// <summary>
-        /// 在场景切换时隐藏UI窗口
+        /// <summary>
+        /// 在场景切换时隐藏UI窗口（跳过 excludeFromSceneHide 中注册的窗口）
         /// </summary>
         private void HideUIWindowsOnSceneChange()
         {
-            // 获取所有激活的UIWindowAsset  
             var windows = UnityEngine.Object.FindObjectsByType<UIWindowAsset>(FindObjectsSortMode.None);
 
             foreach (var window in windows)
             {
-                if (window.isHidenWhenLeaveScene)
-                {
-                    // 这里可以是隐藏、关闭或销毁窗口的逻辑  
-                    window.gameObject.SetActive(false);
-                }
+                if (!window.isHidenWhenLeaveScene) continue;
+                if (excludeFromSceneHide.Contains(window.name)) continue;
+
+                window.gameObject.SetActive(false);
             }
+        }
+
+        /// <summary>
+        /// 注册在本次场景切换中不隐藏的窗口（场景加载完成后自动清空）
+        /// </summary>
+        public void ExcludeWindowFromSceneHide(string windowName)
+        {
+            excludeFromSceneHide.Add(windowName);
+        }
+
+        /// <summary>
+        /// 清空排除列表（由场景加载完成后自动调用）
+        /// </summary>
+        private void ClearExcludeSet()
+        {
+            excludeFromSceneHide.Clear();
         }
         #endregion
     }
