@@ -33,7 +33,7 @@ namespace ReunionMovement
 
         public int fontSize = 20;
 
-        [Range(0f, 01f)]
+        [Range(0f, 1f)]
         public float backgroundOpacity = 0.5f;
         public Color backgroundColor = Color.black;
 
@@ -96,7 +96,7 @@ namespace ReunionMovement
             if (!showInEditor && Application.isEditor) return;
 
             // 防止 lineHeight 为 0 导致除零异常（字体未加载时可能为 0）
-            float lineH = styleText.lineHeight > 0 ? styleText.lineHeight : fontSize;
+            float lineH = styleText.lineHeight > 0 ? styleText.lineHeight : Mathf.Max(fontSize, 1);
             while (queue.Count > ((Screen.height - 2 * margin) * height - 2 * padding) / lineH)
             {
                 queue.Dequeue();

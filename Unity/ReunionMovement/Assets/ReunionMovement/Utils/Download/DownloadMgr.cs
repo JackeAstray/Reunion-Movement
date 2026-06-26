@@ -14,6 +14,7 @@ namespace ReunionMovement.Common.Util.Download
     {
         private readonly Dictionary<string, Texture2D> imageCache = new Dictionary<string, Texture2D>();
         private readonly LinkedList<string> imageCacheOrder = new LinkedList<string>(); // LRU 访问顺序
+        private readonly object imageCacheLock = new object();
         private const int MaxImageCacheSize = 50;
         private readonly Dictionary<string, string> mimeTypeToExtension = new Dictionary<string, string>
         {
@@ -48,15 +49,18 @@ namespace ReunionMovement.Common.Util.Download
         /// </summary>
         public void ClearData()
         {
-            foreach (var tex in imageCache.Values)
+            lock (imageCacheLock)
             {
-                if (tex != null)
+                foreach (var tex in imageCache.Values)
                 {
-                    UnityEngine.Object.Destroy(tex);
+                    if (tex != null)
+                    {
+                        UnityEngine.Object.Destroy(tex);
+                    }
                 }
+                imageCache.Clear();
+                imageCacheOrder.Clear();
             }
-            imageCache.Clear();
-            imageCacheOrder.Clear();
             Log.Debug("DownloadManagerModule 清除数据");
         }
 
@@ -80,10 +84,21 @@ namespace ReunionMovement.Common.Util.Download
         /// <param name="suffix"></param>
         public void DownloadImage_Http(string url, Action<float> onProgress, Action<Texture2D> onComplete)
         {
-            // 1. 内存查找（命中时提升 LRU 顺序）
-            if (imageCache.TryGetValue(url, out Texture2D cachedTexture) && cachedTexture != null)
+            // 1. 内存查找（命中时提升 LRU 顺序）—— 加锁防止竞态条件
+            Texture2D cachedTexture = null;
+            lock (imageCacheLock)
             {
-                TouchCacheEntry(url);
+                if (imageCache.TryGetValue(url, out cachedTexture) && cachedTexture != null)
+                {
+                    TouchCacheEntry(url);
+                }
+                else
+                {
+                    cachedTexture = null;
+                }
+            }
+            if (cachedTexture != null)
+            {
                 onComplete?.Invoke(cachedTexture);
                 return;
             }
@@ -105,11 +120,14 @@ namespace ReunionMovement.Common.Util.Download
                 {
                     if (response.texture != null)
                     {
-                        if (imageCache.TryGetValue(url, out Texture2D oldTex) && oldTex != null)
+                        lock (imageCacheLock)
                         {
-                            UnityEngine.Object.Destroy(response.texture);
-                            onComplete?.Invoke(oldTex);
-                            return;
+                            if (imageCache.TryGetValue(url, out Texture2D oldTex) && oldTex != null)
+                            {
+                                UnityEngine.Object.Destroy(response.texture);
+                                onComplete?.Invoke(oldTex);
+                                return;
+                            }
                         }
                         AddToImageCache(url, response.texture);
 
@@ -284,26 +302,29 @@ namespace ReunionMovement.Common.Util.Download
         {
             if (tex == null) return;
 
-            // 淘汰最旧的条目直到低于上限
-            while (imageCache.Count >= MaxImageCacheSize && imageCacheOrder.First != null)
+            lock (imageCacheLock)
             {
-                var oldest = imageCacheOrder.First.Value;
-                imageCacheOrder.RemoveFirst();
-                if (imageCache.TryGetValue(oldest, out var oldTex) && oldTex != null && oldTex != tex)
+                // 淘汰最旧的条目直到低于上限
+                while (imageCache.Count >= MaxImageCacheSize && imageCacheOrder.First != null)
                 {
-                    UnityEngine.Object.Destroy(oldTex);
+                    var oldest = imageCacheOrder.First.Value;
+                    imageCacheOrder.RemoveFirst();
+                    if (imageCache.TryGetValue(oldest, out var oldTex) && oldTex != null && oldTex != tex)
+                    {
+                        UnityEngine.Object.Destroy(oldTex);
+                    }
+                    imageCache.Remove(oldest);
                 }
-                imageCache.Remove(oldest);
-            }
 
-            imageCache[url] = tex;
-            // 移到链表尾部（最新）
-            imageCacheOrder.Remove(url);
-            imageCacheOrder.AddLast(url);
+                imageCache[url] = tex;
+                // 移到链表尾部（最新）
+                imageCacheOrder.Remove(url);
+                imageCacheOrder.AddLast(url);
+            }
         }
 
         /// <summary>
-        /// 更新缓存条目访问顺序
+        /// 更新缓存条目访问顺序（需在锁内调用）
         /// </summary>
         private void TouchCacheEntry(string url)
         {

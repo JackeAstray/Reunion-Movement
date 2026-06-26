@@ -163,8 +163,14 @@ namespace ReunionMovement.Common.Util.StateMachine
         /// <param name="onStop"></param>
         public void AddParallelState(TLabel label, Action onStart = null, Action onUpdate = null, Action onStop = null, float timeout = float.MaxValue, int priority = 0)
         {
-            parallelStates.Add(new State(label, onStart, onUpdate, onStop, timeout, priority));
-            parallelStates = parallelStates.OrderByDescending(s => s.priority).ToList(); // 按优先级排序
+            var newState = new State(label, onStart, onUpdate, onStop, timeout, priority);
+            // 按优先级降序线性插入（避免 OrderByDescending + ToList 产生的 GC 分配）
+            int insertIndex = 0;
+            for (; insertIndex < parallelStates.Count; insertIndex++)
+            {
+                if (priority > parallelStates[insertIndex].priority) break;
+            }
+            parallelStates.Insert(insertIndex, newState);
         }
 
         /// <summary>
@@ -241,6 +247,8 @@ namespace ReunionMovement.Common.Util.StateMachine
         /// <returns></returns>
         private bool IsTransitionConditionsMet(TLabel newState)
         {
+            if (currentState == null)
+                return true;
             // 若未注册条件，默认允许转换；若注册了条件，则按条件判断
             if (transitionConditions.TryGetValue((currentState.label, newState), out var condition))
             {

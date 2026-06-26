@@ -16,7 +16,7 @@ namespace ReunionMovement.Core.Resources
     /// <summary>
     /// 资源系统
     /// </summary>
-    public class ResourcesSystem : ICustommSystem
+    public class ResourcesSystem : ICustomSystem
     {
         #region 单例与初始化
         private static readonly Lazy<ResourcesSystem> instance = new(() => new ResourcesSystem());

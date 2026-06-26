@@ -83,6 +83,8 @@ namespace ReunionMovement.Common.Util
             float currentRate = pity5Star >= SOFT_PITY_START ?
                 BASE_5STAR_RATE + 0.06f * (pity5Star - SOFT_PITY_START) :
                 BASE_5STAR_RATE;
+            // 上限保护，防止概率溢出
+            currentRate = Mathf.Min(currentRate, 1.0f);
 
             return Random.value <= currentRate;
         }

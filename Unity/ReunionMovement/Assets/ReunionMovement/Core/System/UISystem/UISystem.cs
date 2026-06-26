@@ -13,7 +13,7 @@ namespace ReunionMovement.Core.UI
     /// <summary>
     /// UI系统
     /// </summary>
-    public class UISystem : ICustommSystem
+    public class UISystem : ICustomSystem
     {
         #region 单例与初始化
         private static readonly Lazy<UISystem> instance = new(() => new UISystem());

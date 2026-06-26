@@ -93,9 +93,12 @@ namespace ReunionMovement.Common
                 singletonObject.name = typeof(T).ToString() + " (Singleton)";
             }
 
-            isInitialized = true;
-
-            OnInstanceCreated?.Invoke(foundInstance);
+            // 仅当尚未初始化时才设置标志并触发事件（避免与 Awake→setter 路径重复触发）
+            if (!isInitialized)
+            {
+                isInitialized = true;
+                OnInstanceCreated?.Invoke(foundInstance);
+            }
 
             return foundInstance;
         }

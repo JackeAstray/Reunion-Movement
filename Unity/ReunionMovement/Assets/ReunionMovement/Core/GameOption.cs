@@ -158,7 +158,8 @@ namespace ReunionMovement.Core
                 if (ss != null)
                 {
                     // 将淡入淡出时间同步
-                    try { ss.fadeDuration = currentOption.musicFadeTime; } catch { }
+                    try { ss.fadeDuration = currentOption.musicFadeTime; }
+                    catch (Exception ex) { Log.Warning($"同步淡入淡出时间失败: {ex.Message}"); }
 
                     // 使用公共方法设置音乐属性（替代反射）
                     ss.SetMusicProperties(currentOption.musicVolume, currentOption.musicMuted);

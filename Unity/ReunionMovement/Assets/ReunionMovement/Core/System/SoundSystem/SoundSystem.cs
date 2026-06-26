@@ -18,7 +18,7 @@ namespace ReunionMovement.Core.Sound
     /// <summary>
     /// 声音系统
     /// </summary>
-    public class SoundSystem : ICustommSystem
+    public class SoundSystem : ICustomSystem
     {
         #region 单例与初始化
         private static readonly Lazy<SoundSystem> instance = new(() => new SoundSystem());
@@ -164,27 +164,27 @@ namespace ReunionMovement.Core.Sound
 
         public void Update(float logicTime, float realTime)
         {
+            // 快速路径：无淡入淡出时直接返回，避免每帧无效检查
+            if (fadeState == FadeState.None) return;
+
             // 淡入淡出状态机驱动
-            if (fadeState != FadeState.None)
+            fadeTimer += logicTime;
+            float t = fadeDuration > 0 ? Mathf.Clamp01(fadeTimer / fadeDuration) : 1f;
+            if (source != null)
             {
-                fadeTimer += logicTime;
-                float t = fadeDuration > 0 ? Mathf.Clamp01(fadeTimer / fadeDuration) : 1f;
-                if (source != null)
+                source.volume = Mathf.Lerp(fadeStartVolume, fadeTargetVolume, t);
+            }
+            if (t >= 1f)
+            {
+                if (fadeState == FadeState.FadingOut && source != null)
                 {
-                    source.volume = Mathf.Lerp(fadeStartVolume, fadeTargetVolume, t);
+                    source.volume = 0f;
+                    source.Stop();
                 }
-                if (t >= 1f)
-                {
-                    if (fadeState == FadeState.FadingOut && source != null)
-                    {
-                        source.volume = 0f;
-                        source.Stop();
-                    }
-                    var tcs = fadeTcs;
-                    fadeState = FadeState.None;
-                    fadeTcs = null;
-                    tcs?.TrySetResult(true);
-                }
+                var tcs = fadeTcs;
+                fadeState = FadeState.None;
+                fadeTcs = null;
+                tcs?.TrySetResult(true);
             }
         }
 

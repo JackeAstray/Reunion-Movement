@@ -14,7 +14,7 @@ namespace ReunionMovement.Core.Scene
     /// <summary>
     /// 场景系统
     /// </summary>
-    public class SceneSystem : ICustommSystem
+    public class SceneSystem : ICustomSystem
     {
         #region 单例与初始化
         private static readonly Lazy<SceneSystem> instance = new(() => new SceneSystem());
@@ -295,7 +295,6 @@ namespace ReunionMovement.Core.Scene
         }
 
         /// <summary>
-        /// <summary>
         /// 在场景切换时隐藏UI窗口（跳过 excludeFromSceneHide 中注册的窗口）
         /// </summary>
         private void HideUIWindowsOnSceneChange()
@@ -304,7 +303,7 @@ namespace ReunionMovement.Core.Scene
 
             foreach (var window in windows)
             {
-                if (!window.isHidenWhenLeaveScene) continue;
+                if (!window.isHiddenWhenLeaveScene) continue;
                 if (excludeFromSceneHide.Contains(window.name)) continue;
 
                 window.gameObject.SetActive(false);

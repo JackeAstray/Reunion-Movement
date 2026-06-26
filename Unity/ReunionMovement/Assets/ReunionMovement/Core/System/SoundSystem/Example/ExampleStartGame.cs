@@ -16,7 +16,7 @@ namespace ReunionMovement.Example
 {
     public class ExampleStartGame : GameEntry
     {
-        protected override IList<ICustommSystem> CreateModules()
+        protected override IList<ICustomSystem> CreateModules()
         {
             var modules = base.CreateModules();
 

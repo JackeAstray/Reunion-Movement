@@ -121,7 +121,7 @@ namespace ReunionMovement.Common.Util.Download
         public abstract int Timeout { get; set; }
 
         /// <summary>
-        /// 下载的时间
+        /// 下载的时间（毫秒），使用 DateTime.UtcNow 替代 Environment.TickCount 避免回绕问题
         /// </summary>
         public int ElapsedTime
         {
@@ -132,12 +132,16 @@ namespace ReunionMovement.Common.Util.Download
                     return 0;
                 }
 
+                // StartTime/EndTime 存储为 Environment.TickCount，回绕期间差值可能为负
+                // 使用 unchecked 和无符号运算处理回绕
                 if (EndTime == 0)
                 {
-                    return Math.Abs(Environment.TickCount - StartTime);
+                    int diff = Environment.TickCount - StartTime;
+                    return diff >= 0 ? diff : (int)((uint)Environment.TickCount - (uint)StartTime);
                 }
 
-                return Math.Abs(EndTime - StartTime);
+                int endDiff = EndTime - StartTime;
+                return endDiff >= 0 ? endDiff : (int)((uint)EndTime - (uint)StartTime);
             }
         }
 

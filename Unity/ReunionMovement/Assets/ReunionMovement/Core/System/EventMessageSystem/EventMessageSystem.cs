@@ -12,7 +12,7 @@ namespace ReunionMovement.Core.EventMessage
     /// <summary>
     /// 事件消息系统
     /// </summary>
-    public class EventMessageSystem : ICustommSystem
+    public class EventMessageSystem : ICustomSystem
     {
         #region 单例与初始化
         private static readonly Lazy<EventMessageSystem> instance = new(() => new EventMessageSystem());
@@ -123,8 +123,10 @@ namespace ReunionMovement.Core.EventMessage
         /// <param name="type"></param>
         public void ClearEventTypeListeners(EventMessageType type)
         {
-            if (eventTypeListeners.Remove(type))
+            if (eventTypeListeners.TryGetValue(type, out var delegateEvent))
             {
+                delegateEvent.Clear();
+                eventTypeListeners.Remove(type);
                 Log.Debug($"清除事件类型 {type} 的所有监听器");
             }
             else

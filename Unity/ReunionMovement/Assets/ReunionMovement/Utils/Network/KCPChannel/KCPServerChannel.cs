@@ -58,7 +58,7 @@ namespace ReunionMovement.Common.Util
 
         public string Host { get { return server.IPAddress; } }
 
-        protected KcpConfig config = new KcpConfig(
+        protected static readonly KcpConfig DefaultConfig = new KcpConfig(
             // 强制使用 NoDelay 并设置最小间隔。
             // 这样 UpdateSeveralTimes() 不需要等待很长时间，
             // 测试运行得更快。
@@ -96,7 +96,7 @@ namespace ReunionMovement.Common.Util
                 OnReceiveDataHandler,
                 (connectionId) => onDisconnected?.Invoke(connectionId),
                 OnErrorHandler,
-                config
+                DefaultConfig
             );
         }
 
@@ -149,6 +149,11 @@ namespace ReunionMovement.Common.Util
         {
             server.Stop();
             Log.Info("KCP 服务已停止");
+            // 清理事件处理器，避免 GC 无法回收订阅者
+            onConnected = null;
+            onDisconnected = null;
+            onDataReceived = null;
+            onError = null;
         }
         void OnErrorHandler(int connectionId, ErrorCode error, string reason)
         {

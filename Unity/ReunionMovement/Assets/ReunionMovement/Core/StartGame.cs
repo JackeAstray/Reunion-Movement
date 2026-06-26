@@ -26,7 +26,7 @@ namespace ReunionMovement.Core
         public static bool IsGameInitFinished { get; private set; }
         public static event Action OnGameInitComplete;
 
-        protected override IList<ICustommSystem> CreateModules()
+        protected override IList<ICustomSystem> CreateModules()
         {
             var modules = base.CreateModules();
 

@@ -8,7 +8,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using static UnityEngine.GraphicsBuffer;
 
 namespace ReunionMovement.Core.UI
 {
@@ -64,7 +63,7 @@ namespace ReunionMovement.Core.UI
             base.OnClose();
         }
 
-        public void OnDestroy()
+        private void OnDestroy()
         {
             // 清理 DOTween 动画，防止对象销毁后访问
             logo1?.DOKill();

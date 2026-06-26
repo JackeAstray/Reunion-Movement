@@ -14,15 +14,15 @@ namespace ReunionMovement.Core
         /// <summary>
         /// 游戏模块列表
         /// </summary>
-        private IList<ICustommSystem> modules;
+        private IList<ICustomSystem> modules;
 
         /// <summary>
         /// 创建一个模块，里面有一些新类
         /// </summary>
         /// <returns></returns>
-        protected virtual IList<ICustommSystem> CreateModules()
+        protected virtual IList<ICustomSystem> CreateModules()
         {
-            return new List<ICustommSystem> { };
+            return new List<ICustomSystem> { };
         }
 
         protected override void Awake()

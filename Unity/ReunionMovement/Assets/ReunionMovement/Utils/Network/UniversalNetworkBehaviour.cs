@@ -147,13 +147,13 @@ namespace ReunionMovement.Common.Util
             reconnectAttempts = 0;
 
             // 客户端关闭
-            try { tcpClient?.Close(); } catch { }
-            try { kcpClient?.Close(); } catch { }
-            try { swtClient?.Disconnect(); } catch { }
+            try { tcpClient?.Close(); } catch (System.Exception ex) { Log.Warning($"TCP客户端关闭异常: {ex.Message}"); }
+            try { kcpClient?.Close(); } catch (System.Exception ex) { Log.Warning($"KCP客户端关闭异常: {ex.Message}"); }
+            try { swtClient?.Disconnect(); } catch (System.Exception ex) { Log.Warning($"WS客户端断开异常: {ex.Message}"); }
             // 服务端关闭
-            try { tcpServer?.Close(); } catch { }
-            try { kcpServer?.Close(); } catch { }
-            try { swtServer?.Stop(); } catch { }
+            try { tcpServer?.Close(); } catch (System.Exception ex) { Log.Warning($"TCP服务端关闭异常: {ex.Message}"); }
+            try { kcpServer?.Close(); } catch (System.Exception ex) { Log.Warning($"KCP服务端关闭异常: {ex.Message}"); }
+            try { swtServer?.Stop(); } catch (System.Exception ex) { Log.Warning($"WS服务端停止异常: {ex.Message}"); }
             clientIds.Clear();
         }
 
@@ -227,7 +227,7 @@ namespace ReunionMovement.Common.Util
                     kcpClient.OnError += (err) =>
                     {
                         ClientError?.Invoke(err);
-                        try { onClientError?.Invoke(err); } catch { }
+                        try { onClientError?.Invoke(err); } catch (System.Exception ex) { Log.Warning($"onClientError 回调异常: {ex.Message}"); }
                     };
                     kcpClient.Connect(host, port);
                     NetworkMgr.Instance?.AddChannel(kcpClient);
@@ -262,7 +262,7 @@ namespace ReunionMovement.Common.Util
                                 Array.Copy(seg.Array, seg.Offset, arr, 0, seg.Count);
                                 OnClientDataReceived(arr);
                                 ClientDataReceived?.Invoke(arr);
-                                try { onClientDataReceived?.Invoke(Encoding.UTF8.GetString(arr)); } catch { }
+                                try { onClientDataReceived?.Invoke(Encoding.UTF8.GetString(arr)); } catch (System.Exception ex) { Log.Warning($"onClientDataReceived 回调异常: {ex.Message}"); }
                             }
                             catch (Exception ex)
                             {
@@ -273,7 +273,7 @@ namespace ReunionMovement.Common.Util
                         {
                             Log.Warning("WebSocket 客户端错误：" + ex);
                             ClientError?.Invoke(ex.ToString());
-                            try { onClientError?.Invoke(ex.ToString()); } catch { }
+                            try { onClientError?.Invoke(ex.ToString()); } catch (System.Exception ex2) { Log.Warning($"onClientError 回调异常: {ex2.Message}"); }
                         };
 
                         UriBuilder builder = new UriBuilder(host)
@@ -446,7 +446,7 @@ namespace ReunionMovement.Common.Util
                         var msg = "TCP 服务中止";
                         Log.Warning(msg);
                         ServerError?.Invoke(-1, msg);
-                        try { onServerError?.Invoke(msg); } catch { }
+                        try { onServerError?.Invoke(msg); } catch (System.Exception ex) { Log.Warning($"onServerError 回调异常: {ex.Message}"); }
                     };
                     tcpServer.Start();
                     ServerStarted?.Invoke();
@@ -474,7 +474,7 @@ namespace ReunionMovement.Common.Util
                     {
                         Log.Warning($"KCP 服务错误 id={id} 异常={err}");
                         ServerError?.Invoke(id, err);
-                        try { onServerError?.Invoke(err); } catch { }
+                        try { onServerError?.Invoke(err); } catch (System.Exception ex) { Log.Warning($"onServerError 回调异常: {ex.Message}"); }
                     };
                     kcpServer.Start();
                     ServerStarted?.Invoke();
@@ -517,7 +517,7 @@ namespace ReunionMovement.Common.Util
                             Log.Warning($"WebSocket 服务错误 id={id} 异常={ex}");
                             var msg = ex?.ToString() ?? "WebSocket 服务错误";
                             ServerError?.Invoke(id, msg);
-                            try { onServerError?.Invoke(msg); } catch { }
+                            try { onServerError?.Invoke(msg); } catch (System.Exception ex2) { Log.Warning($"onServerError 回调异常: {ex2.Message}"); }
                         };
 
                         swtServer.Start((ushort)port);
@@ -617,7 +617,7 @@ namespace ReunionMovement.Common.Util
             var s = Encoding.UTF8.GetString(data);
             Log.Info($"服务器收到来自 {clientId} 的消息 ({transport})：{s}");
             ServerDataReceived?.Invoke(clientId, data);
-            try { onServerDataReceived?.Invoke(s); } catch { }
+            try { onServerDataReceived?.Invoke(s); } catch (System.Exception ex) { Log.Warning($"onServerDataReceived 回调异常: {ex.Message}"); }
             // 默认回显
             SendToClientBytes(clientId, data);
         }
