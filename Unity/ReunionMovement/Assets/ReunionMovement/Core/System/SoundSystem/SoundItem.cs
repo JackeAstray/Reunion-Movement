@@ -76,6 +76,18 @@ namespace ReunionMovement.Core.Sound
         }
 
         /// <summary>
+        /// 更新音量与静音状态（供 SetSfxProperties 批量调用）
+        /// </summary>
+        public void SetProperties(float volume, bool muted)
+        {
+            if (source != null)
+            {
+                source.volume = volume;
+                source.mute = muted;
+            }
+        }
+
+        /// <summary>
         /// 协程：在音频播放完成后回收对象
         /// </summary>
         /// <returns></returns>

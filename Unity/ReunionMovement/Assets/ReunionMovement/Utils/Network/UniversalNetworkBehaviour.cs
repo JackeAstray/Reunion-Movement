@@ -186,7 +186,7 @@ namespace ReunionMovement.Common.Util
                     {
                         OnClientDataReceived(data);
                         ClientDataReceived?.Invoke(data);
-                        try { onClientDataReceived?.Invoke(Encoding.UTF8.GetString(data)); } catch { }
+                        try { onClientDataReceived?.Invoke(Encoding.UTF8.GetString(data)); } catch (System.Exception ex) { Log.Warning($"onClientDataReceived(TCP) 回调异常: {ex.Message}"); }
                     };
                     tcpClient.OnDisconnected += () =>
                     {
@@ -214,7 +214,7 @@ namespace ReunionMovement.Common.Util
                     {
                         OnClientDataReceived(data);
                         ClientDataReceived?.Invoke(data);
-                        try { onClientDataReceived?.Invoke(Encoding.UTF8.GetString(data)); } catch { }
+                        try { onClientDataReceived?.Invoke(Encoding.UTF8.GetString(data)); } catch (System.Exception ex) { Log.Warning($"onClientDataReceived(KCP) 回调异常: {ex.Message}"); }
                     };
                     kcpClient.OnDisconnected += () =>
                     {

@@ -58,8 +58,10 @@ namespace ReunionMovement.Core.Sound
         private SoundConfigContainer soundConfigContainer;
         // 将声音配置列表转换为字典以加快查找速度
         private Dictionary<int, SoundConfig> soundConfigDict;
-        // 缓存已加载的AudioClip
+        // 缓存已加载的AudioClip（LRU 限制防止内存无限增长）
         private Dictionary<string, AudioClip> audioClipCache;
+        private const int MaxAudioClipCacheSize = 64;
+        private readonly Queue<string> audioClipCacheOrder = new Queue<string>();
 
         // 启动时预设对象池
         public List<StartupPool> startupPools = new List<StartupPool>();
@@ -203,6 +205,7 @@ namespace ReunionMovement.Core.Sound
             pooledObjects.Clear();
             sfxObjects.Clear();
             audioClipCache?.Clear();
+            audioClipCacheOrder?.Clear();
             soundConfigDict?.Clear();
         }
 
@@ -220,19 +223,32 @@ namespace ReunionMovement.Core.Sound
         }
 
         /// <summary>
-        /// 设置音效属性
+        /// 设置音效属性（批量更新所有活跃音效）
         /// </summary>
         public void SetSfxProperties(float volume, bool muted)
         {
-            // 当前音效通过 SoundItem 逐个设置，此方法用于批量更新
-            // 可通过遍历活跃音效对象实现
+            if (sfxObjects.Count == 0) return;
+            // 防御性拷贝，避免遍历时集合被修改
+            var snapshot = new List<GameObject>(sfxObjects.Keys);
+            foreach (var obj in snapshot)
+            {
+                if (obj != null)
+                {
+                    var item = obj.GetComponent<SoundItem>();
+                    if (item != null)
+                    {
+                        item.SetProperties(volume, muted);
+                    }
+                }
+            }
         }
 
         /// <summary>
         /// 播放音乐
         /// </summary>
-        /// <param name="name"></param>
-        public async Task PlayMusic(int index, float volume = -1)
+        /// <param name="index">音乐配置索引</param>
+        /// <param name="volume">音量（null 表示使用默认音量）</param>
+        public async Task PlayMusic(int index, float? volume = null)
         {
             if (soundConfigDict != null && soundConfigDict.TryGetValue(index, out SoundConfig soundConfig))
             {
@@ -244,7 +260,7 @@ namespace ReunionMovement.Core.Sound
                     if (source == null) return;
 
                     source.clip = audioClip;
-                    source.volume = volume == -1 ? GameOption.currentOption.musicVolume : volume;
+                    source.volume = volume ?? GameOption.currentOption.musicVolume;
                     source.loop = true;
                     source.mute = GameOption.currentOption.musicMuted;
                     source.Play();
@@ -348,14 +364,14 @@ namespace ReunionMovement.Core.Sound
         /// <param name="index">声音配置索引</param>
         /// <param name="emitter">声音发射器</param>
         /// <param name="loop">是否循环</param>
-        public async Task PlaySfx(int index, Transform emitter = null, bool loop = false, float volume = -1f, float pitch = 1f)
+        public async Task PlaySfx(int index, Transform emitter = null, bool loop = false, float? volume = null, float pitch = 1f)
         {
             try
             {
                 if (soundConfigDict != null && soundConfigDict.TryGetValue(index, out SoundConfig soundConfig))
                 {
                     AudioClip clip = await GetAudioClipAsync(soundConfig.Path, soundConfig.Name);
-                    if (clip != null && startupPools.Count > 0)
+                    if (clip != null && startupPools.Count > 0 && startupPools[0].prefab != null)
                     {
                         GameObject obj = startupPools[0].prefab;
                         GameObject go = Spawn(obj);
@@ -367,7 +383,7 @@ namespace ReunionMovement.Core.Sound
                                 go.transform.localPosition = Vector3.zero;
                             }
                             SoundItem soundObj = go.GetComponent<SoundItem>();
-                            float effectiveVolume = volume == -1f ? GameOption.currentOption.sfxVolume : volume;
+                            float effectiveVolume = volume ?? GameOption.currentOption.sfxVolume;
                             soundObj.Processing(clip, emitter, loop, effectiveVolume, GameOption.currentOption.sfxMuted, pitch);
                         }
                     }
@@ -491,6 +507,9 @@ namespace ReunionMovement.Core.Sound
         /// </summary>
         public void CreateAudioRoot()
         {
+            // 防止重复创建
+            if (musicRoot != null) return;
+
             musicRoot = new GameObject("MusicRoot");
             musicRoot.transform.position = Vector3.zero;
 
@@ -901,7 +920,14 @@ namespace ReunionMovement.Core.Sound
             clip = await ResourcesSystem.Instance.LoadAsync<AudioClip>(fullPath);
             if (clip != null)
             {
+                // LRU 驱逐：缓存满时移除最旧的条目
+                if (audioClipCache.Count >= MaxAudioClipCacheSize && audioClipCacheOrder.Count > 0)
+                {
+                    string oldest = audioClipCacheOrder.Dequeue();
+                    audioClipCache.Remove(oldest);
+                }
                 audioClipCache[fullPath] = clip;
+                audioClipCacheOrder.Enqueue(fullPath);
             }
             else
             {

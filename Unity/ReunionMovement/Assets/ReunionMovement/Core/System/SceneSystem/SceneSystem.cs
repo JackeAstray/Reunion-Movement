@@ -221,7 +221,7 @@ namespace ReunionMovement.Core.Scene
                     CallbackProgress(async.progress);
                     frameCounter = 0;
                 }
-                await Task.Yield();
+                await Task.Delay(16);
             }
 
             await Task.Delay((int)(endProgressWaitingTime * 1000));
@@ -235,7 +235,7 @@ namespace ReunionMovement.Core.Scene
 
             while (!async.isDone)
             {
-                await Task.Yield();
+                await Task.Delay(16);
             }
 
             if (!openLoad)

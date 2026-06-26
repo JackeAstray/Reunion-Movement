@@ -754,7 +754,7 @@ namespace ReunionMovement.Common.Util
         {
             if (pullStartIndicatorInstance != null)
             {
-                try { Destroy(pullStartIndicatorInstance.gameObject); } catch { }
+                try { Destroy(pullStartIndicatorInstance.gameObject); } catch (System.Exception ex) { Debug.LogWarning($"LoopScrollRect 销毁起始指示器异常: {ex.Message}"); }
                 pullStartIndicatorInstance = null;
                 pullStartIndicatorComp = null;
             }
@@ -767,7 +767,7 @@ namespace ReunionMovement.Common.Util
         {
             if (pullEndIndicatorInstance != null)
             {
-                try { Destroy(pullEndIndicatorInstance.gameObject); } catch { }
+                try { Destroy(pullEndIndicatorInstance.gameObject); } catch (System.Exception ex) { Debug.LogWarning($"LoopScrollRect 销毁末端指示器异常: {ex.Message}"); }
                 pullEndIndicatorInstance = null;
                 pullEndIndicatorComp = null;
             }
@@ -900,7 +900,7 @@ namespace ReunionMovement.Common.Util
                 {
                     StopCoroutine(scrollCoroutine);
                 }
-                catch { }
+                catch (System.Exception ex) { Debug.LogWarning($"LoopScrollRect 停止协程异常: {ex.Message}"); }
                 scrollCoroutine = null;
             }
         }

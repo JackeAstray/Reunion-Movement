@@ -46,7 +46,7 @@ namespace ReunionMovement.Core.EventMessage
             {
                 for (int i = listeners.Count - 1; i >= 0; i--)
                 {
-                    listeners[i]?.Invoke(data);
+                    listeners[i].Invoke(data);
                 }
             }
 
@@ -57,7 +57,7 @@ namespace ReunionMovement.Core.EventMessage
                 onceListeners.Clear();
                 foreach (var listener in currentOnceListeners)
                 {
-                    listener?.Invoke(data);
+                    listener.Invoke(data);
                 }
             }
         }

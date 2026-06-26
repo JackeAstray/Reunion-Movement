@@ -215,7 +215,8 @@ namespace Telepathy
             {
                 TcpClient client = kvp.Value.client;
                 // 如果尚未关闭，则尝试关闭流。可能已由断开连接关闭，因此使用 try/catch
-                try { client.GetStream().Close(); } catch { }
+                try { client.GetStream().Close(); }
+                catch (System.Exception) { /* 流已关闭或不可用，忽略 */ }
                 client.Close();
             }
 

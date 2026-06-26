@@ -28,6 +28,15 @@ namespace ReunionMovement.Core.Languages
         public Multilingual multilingual = Multilingual.ZH_CN;
         private LanguagesContainer languagesContainer;
         private Dictionary<int, LanguagesConfig> languagesDict;
+        // 多语言枚举 → 文本字段选择器（避免 switch-case，支持扩展新语言）
+        private static readonly Dictionary<Multilingual, Func<LanguagesConfig, string>> languageSelectors =
+            new Dictionary<Multilingual, Func<LanguagesConfig, string>>
+            {
+                { Multilingual.ZH_CN, c => c.ZH_CN },
+                { Multilingual.EN_US, c => c.EN_US },
+                { Multilingual.RU_RU, c => c.RU_RU },
+                { Multilingual.JA_JP, c => c.JA_JP },
+            };
 
         public Task Init()
         {
@@ -103,21 +112,13 @@ namespace ReunionMovement.Core.Languages
             {
                 if (languagesDict.TryGetValue(number, out var language))
                 {
-                    // 根据当前多语言设置返回对应的文本
-                    switch (multilingual)
+                    // 使用字典映射代替 switch-case，便于扩展新语言
+                    if (languageSelectors.TryGetValue(multilingual, out var selector))
                     {
-                        case Multilingual.ZH_CN:
-                            return language.ZH_CN;
-                        case Multilingual.EN_US:
-                            return language.EN_US;
-                        case Multilingual.RU_RU:
-                            return language.RU_RU;
-                        case Multilingual.JA_JP:
-                            return language.JA_JP;
-                        default:
-                            // 默认返回中文
-                            return language.ZH_CN;
+                        return selector(language);
                     }
+                    // 默认返回中文
+                    return language.ZH_CN;
                 }
                 else
                 {

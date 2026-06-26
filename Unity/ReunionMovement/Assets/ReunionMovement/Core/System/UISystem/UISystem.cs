@@ -161,8 +161,8 @@ namespace ReunionMovement.Core.UI
                 return null;
             }
 
-            InitUIAsset(uiObj);
             uiObj.name = name;
+            InitUIAsset(uiObj);
             uiObj.transform.localRotation = Quaternion.identity;
             uiObj.transform.localScale = Vector3.one;
 
@@ -293,7 +293,7 @@ namespace ReunionMovement.Core.UI
         /// <returns></returns>
         public UILoadState OpenWindow(string uiName, params object[] args)
         {
-            //TOD需要先创建脚本对象，再根据脚本中的值进行加载资源
+            //TODO: 需要先创建脚本对象，再根据脚本中的值进行加载资源
             UILoadState uiState;
             if (!uiStateCache.TryGetValue(uiName, out uiState))
             {
@@ -724,7 +724,13 @@ namespace ReunionMovement.Core.UI
         {
             if (!uiControllerTypeCache.TryGetValue(uiTemplateName, out Type type))
             {
-                type = System.Type.GetType("ReunionMovement.Core.UI." + uiTemplateName + ", Assembly-CSharp");
+                // 在所有已加载程序集中查找类型（兼容多程序集项目）
+                string fullName = "ReunionMovement.Core.UI." + uiTemplateName;
+                foreach (var asm in System.AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    type = asm.GetType(fullName);
+                    if (type != null) break;
+                }
                 uiControllerTypeCache[uiTemplateName] = type;
             }
             if (type == null)
@@ -890,7 +896,7 @@ namespace ReunionMovement.Core.UI
             uiWindow = null;
             uiType = uiControllerType;
 
-            isLoading = true;
+            isLoading = false;
             openWhenFinish = false;
             openArgs = null;
 
