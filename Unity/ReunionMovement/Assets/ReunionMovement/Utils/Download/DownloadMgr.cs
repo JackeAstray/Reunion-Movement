@@ -259,7 +259,7 @@ namespace ReunionMovement.Common.Util.Download
                 texture = new Texture2D(2, 2);
                 texture.LoadImage(imageBytes);
                 // 设置一个名称以帮助调试和跟踪
-                try { texture.name = Path.GetFileName(filePath); } catch { }
+                try { texture.name = Path.GetFileName(filePath); } catch (System.Exception) { /* 设置名称失败不影响加载流程 */ }
                 return true;
             }
             catch (Exception ex)

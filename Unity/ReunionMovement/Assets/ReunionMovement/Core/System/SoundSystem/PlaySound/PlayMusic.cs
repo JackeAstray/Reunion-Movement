@@ -1,3 +1,4 @@
+using ReunionMovement.Common;
 using ReunionMovement.Core;
 using ReunionMovement.Core.Sound;
 using System.Collections.Generic;
@@ -340,7 +341,7 @@ namespace ReunionMovement.Core.Sound
                     playbackMonitorCts.Cancel();
                     playbackMonitorCts.Dispose();
                 }
-                catch { }
+                catch (System.Exception ex) { Log.Warning($"PlayMusic 取消监控令牌异常: {ex.Message}"); }
                 playbackMonitorCts = null;
             }
         }

@@ -163,6 +163,7 @@ namespace ReunionMovement.Core
 
                     // 使用公共方法设置音乐属性（替代反射）
                     ss.SetMusicProperties(currentOption.musicVolume, currentOption.musicMuted);
+                    ss.SetSfxProperties(currentOption.sfxVolume, currentOption.sfxMuted);
                 }
 
                 // 其它可扩展的应用（亮度等）：尝试设置全局 shader 属性 以便 shader 使用
@@ -184,26 +185,14 @@ namespace ReunionMovement.Core
         /// <exception cref="NotSupportedException"></exception>
         public static T GetOption<T>(string key, T defaultValue)
         {
-            if (typeof(T) == typeof(bool))
+            return defaultValue switch
             {
-                return (T)(object)(PlayerPrefs.GetInt(key, (bool)(object)defaultValue ? 1 : 0) == 1);
-            }
-            else if (typeof(T) == typeof(int))
-            {
-                return (T)(object)PlayerPrefs.GetInt(key, (int)(object)defaultValue);
-            }
-            else if (typeof(T) == typeof(float))
-            {
-                return (T)(object)PlayerPrefs.GetFloat(key, (float)(object)defaultValue);
-            }
-            else if (typeof(T) == typeof(string))
-            {
-                return (T)(object)PlayerPrefs.GetString(key, (string)(object)defaultValue);
-            }
-            else
-            {
-                throw new NotSupportedException($"不支持的类型: {typeof(T)}");
-            }
+                bool b => (T)(object)(PlayerPrefs.GetInt(key, b ? 1 : 0) == 1),
+                int i => (T)(object)PlayerPrefs.GetInt(key, i),
+                float f => (T)(object)PlayerPrefs.GetFloat(key, f),
+                string s => (T)(object)PlayerPrefs.GetString(key, s),
+                _ => throw new NotSupportedException($"不支持的类型: {typeof(T)}")
+            };
         }
 
         /// <summary>
@@ -215,25 +204,13 @@ namespace ReunionMovement.Core
         /// <exception cref="NotSupportedException"></exception>
         public static void SetOption<T>(string key, T value)
         {
-            if (typeof(T) == typeof(bool))
+            switch (value)
             {
-                PlayerPrefs.SetInt(key, (bool)(object)value ? 1 : 0);
-            }
-            else if (typeof(T) == typeof(int))
-            {
-                PlayerPrefs.SetInt(key, (int)(object)value);
-            }
-            else if (typeof(T) == typeof(float))
-            {
-                PlayerPrefs.SetFloat(key, (float)(object)value);
-            }
-            else if (typeof(T) == typeof(string))
-            {
-                PlayerPrefs.SetString(key, (string)(object)value);
-            }
-            else
-            {
-                throw new NotSupportedException($"不支持的类型: {typeof(T)}");
+                case bool b: PlayerPrefs.SetInt(key, b ? 1 : 0); break;
+                case int i: PlayerPrefs.SetInt(key, i); break;
+                case float f: PlayerPrefs.SetFloat(key, f); break;
+                case string s: PlayerPrefs.SetString(key, s); break;
+                default: throw new NotSupportedException($"不支持的类型: {typeof(T)}");
             }
         }
 

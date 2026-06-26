@@ -58,10 +58,15 @@ namespace ReunionMovement.Common
             {
                 Debug.LogWarning($"[SingletonMgr] 检测到重复的 {typeof(T).Name} 单例，已销毁: {gameObject.name}");
                 Destroy(this.gameObject);
+                return;
             }
-            else
+
+            // 直接设置静态字段，跳過 setter 中的重复检查
+            if (!isInitialized)
             {
-                Instance = this as T;
+                instance = this as T;
+                isInitialized = true;
+                OnInstanceCreated?.Invoke(instance);
             }
         }
 

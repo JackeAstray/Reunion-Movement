@@ -170,12 +170,12 @@ namespace ReunionMovement.Core
 
             if (accumTime1s >= 1.0f)
             {
-                accumTime1s = 0f;
+                accumTime1s -= 1.0f;
                 UpdatePer1sEvent?.Invoke();
             }
             if (accumTime300ms >= 0.3f)
             {
-                accumTime300ms = 0f;
+                accumTime300ms -= 0.3f;
                 UpdatePer300msEvent?.Invoke();
             }
 
