@@ -17,7 +17,7 @@ namespace ReunionMovement.Core
         /// <summary>
         /// 所有自定义游戏逻辑模块
         /// </summary>
-        public IList<ICustommSystem> gameModules { get; private set; }
+        public IList<ICustomSystem> gameModules { get; private set; }
 
         /// <summary>
         /// 进入
@@ -69,23 +69,13 @@ namespace ReunionMovement.Core
         /// <param name="entry"></param>
         /// <param name="modules"></param>
         /// <returns></returns>
-        public static GameEngine StartEngine(GameObject gameObjectToAttach, IGameEntry entry, IList<ICustommSystem> modules)
+        public static GameEngine StartEngine(GameObject gameObjectToAttach, IGameEntry entry, IList<ICustomSystem> modules)
         {
             GameEngine appEngine = gameObjectToAttach.AddComponent<GameEngine>();
             appEngine.gameModules = modules;
             appEngine.gameEntry = entry;
 
-            _ = appEngine.InitAsync().ContinueWith(t =>
-            {
-                if (t.IsFaulted)
-                {
-                    appEngine.isInited = false;
-                    string errorMsg = t.Exception?.InnerException?.Message ?? t.Exception?.Message ?? "未知错误";
-                    Log.Error($"[GameEngine] 引擎初始化失败: {errorMsg}");
-                    // 通知外部系统（如 UI）展示错误提示
-                    OnEngineInitFailed?.Invoke(errorMsg);
-                }
-            });
+            _ = InitWithErrorHandlingAsync(appEngine);
 
             return appEngine;
         }
@@ -98,6 +88,25 @@ namespace ReunionMovement.Core
         void Start()
         {
             isAppPlaying = true;
+        }
+
+        /// <summary>
+        /// 带错误处理的初始化包装（确保错误回调在主线程执行）
+        /// </summary>
+        private static async Task InitWithErrorHandlingAsync(GameEngine appEngine)
+        {
+            try
+            {
+                await appEngine.InitAsync();
+            }
+            catch (Exception ex)
+            {
+                appEngine.isInited = false;
+                string errorMsg = ex.InnerException?.Message ?? ex.Message;
+                Log.Error($"[GameEngine] 引擎初始化失败: {errorMsg}");
+                // 通知外部系统（如 UI）展示错误提示（已在主线程，因为 async/await 会回到 Unity 主线程）
+                OnEngineInitFailed?.Invoke(errorMsg);
+            }
         }
 
         /// <summary>
@@ -131,9 +140,9 @@ namespace ReunionMovement.Core
         /// <summary>
         /// 执行初始化模块（异步）
         /// </summary>
-        private async Task OnInitModulesAsync(IList<ICustommSystem> modules)
+        private async Task OnInitModulesAsync(IList<ICustomSystem> modules)
         {
-            foreach (ICustommSystem initModule in modules)
+            foreach (ICustomSystem initModule in modules)
             {
 #if UNITY_EDITOR
                 var startMem = GC.GetTotalMemory(false);
@@ -161,12 +170,12 @@ namespace ReunionMovement.Core
 
             if (accumTime1s >= 1.0f)
             {
-                accumTime1s -= 1.0f;
+                accumTime1s = 0f;
                 UpdatePer1sEvent?.Invoke();
             }
             if (accumTime300ms >= 0.3f)
             {
-                accumTime300ms -= 0.3f;
+                accumTime300ms = 0f;
                 UpdatePer300msEvent?.Invoke();
             }
 
@@ -203,10 +212,18 @@ namespace ReunionMovement.Core
         public void ClearModuleData()
         {
             if (gameModules == null) return;
-            foreach (ICustommSystem initModule in gameModules)
+            foreach (ICustomSystem initModule in gameModules)
             {
                 initModule.Clear();
             }
+        }
+
+        /// <summary>
+        /// 销毁时清理模块资源
+        /// </summary>
+        private void OnDestroy()
+        {
+            ClearModuleData();
         }
     }
 }

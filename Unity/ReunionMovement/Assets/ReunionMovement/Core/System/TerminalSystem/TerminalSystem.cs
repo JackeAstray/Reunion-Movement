@@ -8,7 +8,7 @@ using UnityEngine.InputSystem;
 
 namespace ReunionMovement.Core.Terminal
 {
-    public class TerminalSystem : ICustommSystem
+    public class TerminalSystem : ICustomSystem
     {
         #region 单例与初始化
         private static readonly Lazy<TerminalSystem> instance = new(() => new TerminalSystem());

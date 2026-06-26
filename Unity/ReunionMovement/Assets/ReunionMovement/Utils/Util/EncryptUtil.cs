@@ -49,7 +49,11 @@ namespace ReunionMovement.Common.Util
 
             if (bytes.Length < length)
             {
-                // Put the smaller buffer aside (do not re-enqueue it) and return a new proper-sized buffer.
+                // 将小缓冲区归还队列（如果队列未满），然后分配合适大小的新缓冲区
+                if (cachedBytesQueue.Count < MaxCachedBytesQueueSize)
+                {
+                    cachedBytesQueue.Enqueue(bytes);
+                }
                 return new byte[length];
             }
 

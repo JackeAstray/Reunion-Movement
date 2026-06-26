@@ -59,7 +59,7 @@ namespace ReunionMovement.Common.Util
 
         public string Host { get; private set; }
 
-        protected KcpConfig config = new KcpConfig(
+        protected static readonly KcpConfig DefaultConfig = new KcpConfig(
             // force NoDelay and minimum interval.
             // this way UpdateSeveralTimes() doesn't need to wait very long and
             // tests run a lot faster.
@@ -95,7 +95,7 @@ namespace ReunionMovement.Common.Util
                 OnReceiveDataHandler,
                 OnDisconnectHandler,
                 OnErrorHandler,
-                config
+                DefaultConfig
             );
         }
 
@@ -142,13 +142,15 @@ namespace ReunionMovement.Common.Util
         public void Close()
         {
             client.Disconnect();
+            // 清理事件处理器，避免 GC 无法回收订阅者
+            onConnected = null;
+            onDisconnected = null;
+            onDataReceived = null;
+            onError = null;
         }
         void OnDisconnectHandler()
         {
             onDisconnected?.Invoke();
-            onConnected = null;
-            onDisconnected = null;
-            onDataReceived = null;
         }
         void OnConnectHandler()
         {

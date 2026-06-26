@@ -74,7 +74,7 @@ namespace ReunionMovement.Core.UI
             base.OnClose();
         }
 
-        public void OnDestroy()
+        private void OnDestroy()
         {
             // 清理事件监听器，防止内存泄漏
             if (clear != null) clear.onClick.RemoveAllListeners();

@@ -56,10 +56,11 @@ namespace ReunionMovement.Common.Util
         /// <param name="observer"></param>
         public void Remove(ObserverBase observer)
         {
-            if (observers.Contains(observer))
+            if (observer != null)
             {
-                observers.Remove(observer);
+                observer.subject = null;
             }
+            observers.Remove(observer);
         }
 
         /// <summary>

@@ -13,7 +13,7 @@ namespace ReunionMovement.Core.Languages
     /// <summary>
     /// 语言系统
     /// </summary>
-    public class LanguagesSystem : SubjectBase, ICustommSystem
+    public class LanguagesSystem : SubjectBase, ICustomSystem
     {
         #region 单例与初始化
         private static readonly Lazy<LanguagesSystem> instance = new(() => new LanguagesSystem());

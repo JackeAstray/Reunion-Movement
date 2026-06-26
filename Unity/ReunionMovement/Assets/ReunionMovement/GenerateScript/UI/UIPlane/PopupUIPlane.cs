@@ -14,7 +14,7 @@ namespace ReunionMovement.Core.UI
     public class PopupUIPlane : UIController
     {
         string openWindow = "PopupUIPlane";
-        string closeWindow;
+        string closeWindow = "PopupUIPlane";
 
         public TextMeshProUGUI titleStr;
         public TextMeshProUGUI containerStr;
@@ -144,7 +144,7 @@ namespace ReunionMovement.Core.UI
             base.OnClose();
         }
 
-        public void OnDestroy()
+        private void OnDestroy()
         {
             // 清理事件引用，防止内存泄漏
             cancelAction = null;

@@ -7,7 +7,7 @@ namespace ReunionMovement.Core.Base
     /// <summary>
     /// 自定义模块
     /// </summary>
-    public interface ICustommSystem
+    public interface ICustomSystem
     {
         /// <summary>
         /// 初始化进度

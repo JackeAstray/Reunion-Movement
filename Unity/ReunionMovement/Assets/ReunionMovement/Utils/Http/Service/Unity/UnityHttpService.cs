@@ -93,7 +93,7 @@ namespace ReunionMovement.Common.Util.HttpService
                     url = unityWebRequest.url,
                     bytes = unityWebRequest.downloadHandler?.data,
                     text = unityWebRequest.downloadHandler?.text,
-                    isSuccessful = unityWebRequest.result != UnityWebRequest.Result.ConnectionError && unityWebRequest.result != UnityWebRequest.Result.ProtocolError,
+                    isSuccessful = unityWebRequest.result == UnityWebRequest.Result.Success,
                     isHttpError = unityWebRequest.result == UnityWebRequest.Result.ProtocolError,
                     isNetworkError = unityWebRequest.result == UnityWebRequest.Result.ConnectionError,
                     error = unityWebRequest.error,

@@ -165,7 +165,7 @@ namespace ReunionMovement.Common.Util.HttpService
         /// <returns></returns>
         public IHttpRequest SetRedirectLimit(int redirectLimit)
         {
-            UnityWebRequest.redirectLimit = redirectLimit;
+            unityWebRequest.redirectLimit = redirectLimit;
             return this;
         }
 

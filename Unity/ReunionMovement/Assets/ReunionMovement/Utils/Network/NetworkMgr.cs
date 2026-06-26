@@ -5,8 +5,9 @@ namespace ReunionMovement.Common.Util
 {
     public sealed class NetworkMgr : SingletonMgr<NetworkMgr>
     {
-        List<INetworkChannel> channelDict = new List<INetworkChannel>();
+        List<INetworkChannel> channelList = new List<INetworkChannel>();
         List<INetworkChannel> channelDictRemove = new List<INetworkChannel>();
+        private List<INetworkChannel> tickSnapshot;  // TickUpdate 复用的快照列表（零分配）
         private Thread netRun;
         private volatile bool isRunning = false;
         private readonly object syncRoot = new object();
@@ -17,7 +18,7 @@ namespace ReunionMovement.Common.Util
             {
                 lock (syncRoot)
                 {
-                    return channelDict.Count;
+                    return channelList.Count;
                 }
             }
         }
@@ -33,7 +34,7 @@ namespace ReunionMovement.Common.Util
             if (channel == null) return;
             lock (syncRoot)
             {
-                channelDict.Add(channel);
+                channelList.Add(channel);
             }
         }
 
@@ -41,11 +42,11 @@ namespace ReunionMovement.Common.Util
         {
             lock (syncRoot)
             {
-                for (int i = channelDict.Count - 1; i >= 0; i--)
+                for (int i = channelList.Count - 1; i >= 0; i--)
                 {
-                    if (channelDict[i].ChannelName == channelName)
+                    if (channelList[i].ChannelName == channelName)
                     {
-                        channelDict.RemoveAt(i);
+                        channelList.RemoveAt(i);
                         return;
                     }
                 }
@@ -58,11 +59,11 @@ namespace ReunionMovement.Common.Util
             if (channel == null) return;
             lock (syncRoot)
             {
-                for (int i = channelDict.Count - 1; i >= 0; i--)
+                for (int i = channelList.Count - 1; i >= 0; i--)
                 {
-                    if (channelDict[i] == channel)
+                    if (channelList[i] == channel)
                     {
-                        channelDict.RemoveAt(i);
+                        channelList.RemoveAt(i);
                         return;
                     }
                 }
@@ -75,11 +76,12 @@ namespace ReunionMovement.Common.Util
             INetworkChannel toClose = null;
             lock (syncRoot)
             {
-                for (int i = 0; i < channelDict.Count; i++)
+                for (int i = 0; i < channelList.Count; i++)
                 {
-                    if (channelDict[i].ChannelName == channelName)
+                    if (channelList[i].ChannelName == channelName)
                     {
-                        toClose = channelDict[i];
+                        toClose = channelList[i];
+                        channelList.RemoveAt(i);
                         break;
                     }
                 }
@@ -87,10 +89,9 @@ namespace ReunionMovement.Common.Util
 
             if (toClose != null)
             {
-                try { toClose.Close(); } catch { }
+                toClose.Close();
                 return true;
             }
-
             return false;
         }
 
@@ -100,11 +101,12 @@ namespace ReunionMovement.Common.Util
             INetworkChannel toClose = null;
             lock (syncRoot)
             {
-                for (int i = 0; i < channelDict.Count; i++)
+                for (int i = 0; i < channelList.Count; i++)
                 {
-                    if (channelDict[i] == channel)
+                    if (channelList[i] == channel)
                     {
-                        toClose = channelDict[i];
+                        toClose = channelList[i];
+                        channelList.RemoveAt(i);
                         break;
                     }
                 }
@@ -112,10 +114,9 @@ namespace ReunionMovement.Common.Util
 
             if (toClose != null)
             {
-                try { toClose.Close(); } catch { }
+                toClose.Close();
                 return true;
             }
-
             return false;
         }
 
@@ -123,11 +124,11 @@ namespace ReunionMovement.Common.Util
         {
             lock (syncRoot)
             {
-                for (int i = 0; i < channelDict.Count; i++)
+                for (int i = 0; i < channelList.Count; i++)
                 {
-                    if (channelDict[i].ChannelName == channelName)
+                    if (channelList[i].ChannelName == channelName)
                     {
-                        return channelDict[i];
+                        return channelList[i];
                     }
                 }
             }
@@ -139,9 +140,9 @@ namespace ReunionMovement.Common.Util
         {
             lock (syncRoot)
             {
-                for (int i = 0; i < channelDict.Count; i++)
+                for (int i = 0; i < channelList.Count; i++)
                 {
-                    if (channelDict[i].ChannelName == channelName)
+                    if (channelList[i].ChannelName == channelName)
                     {
                         return true;
                     }
@@ -156,7 +157,7 @@ namespace ReunionMovement.Common.Util
             lock (syncRoot)
             {
                 // return a shallow copy to avoid exposing internal collection
-                return new List<INetworkChannel>(channelDict);
+                return new List<INetworkChannel>(channelList);
             }
         }
 
@@ -164,7 +165,7 @@ namespace ReunionMovement.Common.Util
         {
             lock (syncRoot)
             {
-                channelDict.Clear();
+                channelList.Clear();
                 channelDictRemove.Clear();
             }
         }
@@ -219,35 +220,32 @@ namespace ReunionMovement.Common.Util
 
         private void TickUpdate()
         {
-            // perform removals and prepare tick list under lock, but execute ticks outside lock
-            List<INetworkChannel> removals = null;
-            List<INetworkChannel> tickList = null;
-
+            // 零分配方案：直接处理待删除列表，锁定内拷贝引用到复用列表再解锁 tick
             lock (syncRoot)
             {
-                if (channelDictRemove.Count > 0)
+                // 直接在锁内处理待删除（Remove 是 O(n)，但 channelDictRemove 通常很小）
+                for (int i = channelDictRemove.Count - 1; i >= 0; i--)
                 {
-                    removals = new List<INetworkChannel>(channelDictRemove);
-                    for (int i = 0; i < removals.Count; i++)
-                    {
-                        channelDict.Remove(removals[i]);
-                    }
-                    channelDictRemove.Clear();
+                    channelList.Remove(channelDictRemove[i]);
                 }
+                channelDictRemove.Clear();
 
-                if (channelDict.Count > 0)
+                // 复用 tick 快照列表（仅在扩容时分配）
+                if (channelList.Count > 0)
                 {
-                    tickList = new List<INetworkChannel>(channelDict);
+                    if (tickSnapshot == null) tickSnapshot = new List<INetworkChannel>(channelList.Count);
+                    tickSnapshot.Clear();
+                    tickSnapshot.AddRange(channelList);
                 }
             }
 
-            if (tickList != null)
+            if (tickSnapshot != null && tickSnapshot.Count > 0)
             {
-                for (int i = 0; i < tickList.Count; i++)
+                for (int i = 0; i < tickSnapshot.Count; i++)
                 {
                     try
                     {
-                        tickList[i].TickRefresh();
+                        tickSnapshot[i].TickRefresh();
                     }
                     catch (System.Exception ex)
                     {
@@ -279,13 +277,14 @@ namespace ReunionMovement.Common.Util
             List<INetworkChannel> toClose;
             lock (syncRoot)
             {
-                toClose = new List<INetworkChannel>(channelDict);
-                channelDict.Clear();
+                toClose = new List<INetworkChannel>(channelList);
+                channelList.Clear();
             }
 
             for (int i = 0; i < toClose.Count; i++)
             {
-                try { toClose[i].Close(); } catch { }
+                try { toClose[i].Close(); }
+                catch (System.Exception ex) { Log.Warning($"NetworkMgr.OnTermination 关闭 channel 失败: {ex.Message}"); }
             }
         }
 
