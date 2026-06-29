@@ -7,6 +7,7 @@ using ReunionMovement.Core.Scene;
 using ReunionMovement.Core.Sound;
 using ReunionMovement.Core.Terminal;
 using ReunionMovement.Core.UI;
+using ReunionMovement.Core.UIInput;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -41,6 +42,8 @@ namespace ReunionMovement.Core
             modules.Add(SoundSystem.Instance);
 
             modules.Add(UISystem.Instance);
+
+            modules.Add(UIInputSystem.Instance);
 
             modules.Add(TerminalSystem.Instance);
 

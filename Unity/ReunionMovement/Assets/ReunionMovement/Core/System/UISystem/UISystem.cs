@@ -98,7 +98,15 @@ namespace ReunionMovement.Core.UI
             GameObject.DontDestroyOnLoad(uiRoot);
 
             EventSystem = new GameObject("EventSystem").AddComponent<EventSystem>();
-            EventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
+            var inputModule = EventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
+
+            // 通过 ResourcesSystem 加载 InputSystem_Actions 资产（需放在 Resources 文件夹下）
+            var inputActions = ResourcesSystem.Instance.Load<UnityEngine.InputSystem.InputActionAsset>("InputSystem_Actions");
+            if (inputActions != null)
+            {
+                inputModule.actionsAsset = inputActions;
+            }
+
             GameObject.DontDestroyOnLoad(EventSystem);
 
             initProgress = 50;
