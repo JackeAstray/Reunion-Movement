@@ -16,6 +16,12 @@ namespace ReunionMovement.Core.UI
         // 界面优先级，数值越大优先级越高
         public int priority { get; set; } = 0;
 
+        /// <summary>
+        /// 键盘/手柄导航时，该窗口打开后默认选中的 GameObject（如第一个按钮）
+        /// 在 Inspector 中拖入目标对象即可；若未设置，UIInputSystem 会自动查找第一个可交互的 Selectable
+        /// </summary>
+        public GameObject firstSelected;
+
         #region 每个界面都有一个Canvas
         private Canvas canvas;
         public Canvas Canvas => canvas ??= GetComponent<Canvas>();

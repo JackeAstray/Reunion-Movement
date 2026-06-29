@@ -46,6 +46,25 @@ namespace ReunionMovement.Core
             //淡入淡出时间
             public float musicFadeTime = 2f;
             #endregion
+
+            #region UI 输入
+            // 键盘导航 —— 上
+            public string uiNavUp = "w";
+            // 键盘导航 —— 下
+            public string uiNavDown = "s";
+            // 键盘导航 —— 左
+            public string uiNavLeft = "a";
+            // 键盘导航 —— 右
+            public string uiNavRight = "d";
+            // 键盘提交/确认
+            public string uiSubmit = "enter";
+            // 键盘取消/返回
+            public string uiCancel = "escape";
+            // 切换到 UI 控制模式
+            public string uiToggleToUI = "tab";
+            // 退出 UI 控制模式
+            public string uiToggleToGameplay = "escape";
+            #endregion
         }
 
         public static Option currentOption = new Option();
@@ -87,6 +106,16 @@ namespace ReunionMovement.Core
             currentOption.sfxMuted = PlayerPrefs.GetInt("sfxMuted", currentOption.sfxMuted ? 1 : 0) == 1;
             currentOption.sfxVolume = PlayerPrefs.GetFloat("sfxVolume", currentOption.sfxVolume);
 
+            // UI 输入按键绑定
+            currentOption.uiNavUp = PlayerPrefs.GetString("uiNavUp", currentOption.uiNavUp);
+            currentOption.uiNavDown = PlayerPrefs.GetString("uiNavDown", currentOption.uiNavDown);
+            currentOption.uiNavLeft = PlayerPrefs.GetString("uiNavLeft", currentOption.uiNavLeft);
+            currentOption.uiNavRight = PlayerPrefs.GetString("uiNavRight", currentOption.uiNavRight);
+            currentOption.uiSubmit = PlayerPrefs.GetString("uiSubmit", currentOption.uiSubmit);
+            currentOption.uiCancel = PlayerPrefs.GetString("uiCancel", currentOption.uiCancel);
+            currentOption.uiToggleToUI = PlayerPrefs.GetString("uiToggleToUI", currentOption.uiToggleToUI);
+            currentOption.uiToggleToGameplay = PlayerPrefs.GetString("uiToggleToGameplay", currentOption.uiToggleToGameplay);
+
             // 读取完毕后立即应用到游戏（分辨率、音量、质量等）
             ApplyOptions();
         }
@@ -117,6 +146,16 @@ namespace ReunionMovement.Core
             PlayerPrefs.SetFloat("musicFadeTime", currentOption.musicFadeTime);
             PlayerPrefs.SetInt("sfxMuted", currentOption.sfxMuted ? 1 : 0);
             PlayerPrefs.SetFloat("sfxVolume", currentOption.sfxVolume);
+
+            // UI 输入按键绑定
+            PlayerPrefs.SetString("uiNavUp", currentOption.uiNavUp);
+            PlayerPrefs.SetString("uiNavDown", currentOption.uiNavDown);
+            PlayerPrefs.SetString("uiNavLeft", currentOption.uiNavLeft);
+            PlayerPrefs.SetString("uiNavRight", currentOption.uiNavRight);
+            PlayerPrefs.SetString("uiSubmit", currentOption.uiSubmit);
+            PlayerPrefs.SetString("uiCancel", currentOption.uiCancel);
+            PlayerPrefs.SetString("uiToggleToUI", currentOption.uiToggleToUI);
+            PlayerPrefs.SetString("uiToggleToGameplay", currentOption.uiToggleToGameplay);
 
             PlayerPrefs.Save();
         }
