@@ -1,6 +1,7 @@
+using Cysharp.Threading.Tasks;
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
@@ -112,7 +113,8 @@ namespace ReunionMovement.Common.Util
         bool isActionInProgressStart = false;
         bool isActionInProgressEnd = false;
 
-        // 用于平滑滚动的协程引用（跳转时可选）
+        // 用于平滑滚动的取消令牌（跳转时可选，UniTask 零 GC）
+        CancellationTokenSource scrollCts = null;
         Coroutine scrollCoroutine = null;
 
         // 当启用循环时使用的 cycle 倍数（固定为 3, 中间为初始显示区）
@@ -860,7 +862,7 @@ namespace ReunionMovement.Common.Util
             {
                 // 平滑滚动
                 StopScrollCoroutineIfAny();
-                scrollCoroutine = StartCoroutine(SmoothScrollTo(targetPos, targetFirst, duration));
+                SmoothScrollToAsync(targetPos, targetFirst, duration).Forget();
             }
         }
 
@@ -894,26 +896,19 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         void StopScrollCoroutineIfAny()
         {
-            if (scrollCoroutine != null)
-            {
-                try
-                {
-                    StopCoroutine(scrollCoroutine);
-                }
-                catch (System.Exception ex) { Debug.LogWarning($"LoopScrollRect 停止协程异常: {ex.Message}"); }
-                scrollCoroutine = null;
-            }
+            scrollCts?.Cancel();
+            scrollCts?.Dispose();
+            scrollCts = null;
+            scrollCoroutine = null;
         }
 
         /// <summary>
-        /// 平滑滚动协程。
+        /// 平滑滚动（UniTask 零 GC，替代协程）
         /// </summary>
-        /// <param name="targetAnchoredPos"></param>
-        /// <param name="finalFirstIndex"></param>
-        /// <param name="duration"></param>
-        /// <returns></returns>
-        IEnumerator SmoothScrollTo(Vector2 targetAnchoredPos, int finalFirstIndex, float duration)
+        private async UniTaskVoid SmoothScrollToAsync(Vector2 targetAnchoredPos, int finalFirstIndex, float duration)
         {
+            scrollCts = new CancellationTokenSource();
+            var ct = scrollCts.Token;
             Vector2 start = content.anchoredPosition;
             float elapsed = 0f;
 
@@ -923,15 +918,16 @@ namespace ReunionMovement.Common.Util
                 scrollRect.velocity = Vector2.zero;
             }
 
-            while (elapsed < duration)
+            while (elapsed < duration && !ct.IsCancellationRequested)
             {
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / duration);
-                // 平滑插值（可替换为其他 easing）
                 float eased = Mathf.SmoothStep(0f, 1f, t);
                 content.anchoredPosition = Vector2.Lerp(start, targetAnchoredPos, eased);
-                yield return null;
+                await UniTask.Yield(PlayerLoopTiming.Update);
             }
+
+            if (ct.IsCancellationRequested) return;
 
             // 最终确定位置
             // 在程序化设置位置时忽略 OnScroll 回调

@@ -1,3 +1,5 @@
+using Cysharp.Threading.Tasks;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -136,9 +138,9 @@ namespace ReunionMovement.Common.Util
         #endregion
 
         #region 动画过渡
-        private Coroutine targetPosCoroutine;
-        private Coroutine cameraViewCoroutine;
-        private Coroutine cameraZoomCoroutine;
+        private CancellationTokenSource targetPosCts;
+        private CancellationTokenSource cameraViewCts;
+        private CancellationTokenSource cameraZoomCts;
         #endregion
 
         void Start()
@@ -610,8 +612,8 @@ namespace ReunionMovement.Common.Util
         /// <param name="duration">过渡时间（秒），≤0 则瞬间设置</param>
         public void SetTargetPos(Vector3 pos, float duration = 0.5f)
         {
-            if (targetPosCoroutine != null)
-                StopCoroutine(targetPosCoroutine);
+            targetPosCts?.Cancel();
+            targetPosCts?.Dispose();
 
             if (duration <= 0f)
             {
@@ -619,7 +621,8 @@ namespace ReunionMovement.Common.Util
             }
             else
             {
-                targetPosCoroutine = StartCoroutine(AnimateTargetPos(pos, duration));
+                targetPosCts = new CancellationTokenSource();
+                AnimateTargetPosAsync(pos, duration, targetPosCts.Token).Forget();
             }
         }
 
@@ -631,8 +634,8 @@ namespace ReunionMovement.Common.Util
         /// <param name="duration">过渡时间（秒），≤0 则瞬间设置</param>
         public void SetCameraView(float x, float y, float duration = 0.5f)
         {
-            if (cameraViewCoroutine != null)
-                StopCoroutine(cameraViewCoroutine);
+            cameraViewCts?.Cancel();
+            cameraViewCts?.Dispose();
 
             if (duration <= 0f)
             {
@@ -645,7 +648,8 @@ namespace ReunionMovement.Common.Util
             }
             else
             {
-                cameraViewCoroutine = StartCoroutine(AnimateCameraView(x, y, duration));
+                cameraViewCts = new CancellationTokenSource();
+                AnimateCameraViewAsync(x, y, duration, cameraViewCts.Token).Forget();
             }
         }
 
@@ -656,8 +660,8 @@ namespace ReunionMovement.Common.Util
         /// <param name="duration">过渡时间（秒），≤0 则瞬间设置</param>
         public void SetCameraZoom(float value, float duration = 0.5f)
         {
-            if (cameraZoomCoroutine != null)
-                StopCoroutine(cameraZoomCoroutine);
+            cameraZoomCts?.Cancel();
+            cameraZoomCts?.Dispose();
 
             float clampedValue = Mathf.Clamp(value, GetEffectiveMinDistance(), maxDistance);
 
@@ -669,41 +673,43 @@ namespace ReunionMovement.Common.Util
             }
             else
             {
-                cameraZoomCoroutine = StartCoroutine(AnimateCameraZoom(clampedValue, duration));
+                cameraZoomCts = new CancellationTokenSource();
+                AnimateCameraZoomAsync(clampedValue, duration, cameraZoomCts.Token).Forget();
             }
         }
         #endregion
 
 
-        #region 动画协程
+        #region 动画（UniTask 零 GC）
         /// <summary>
         /// 平滑移动目标位置
         /// </summary>
-        private System.Collections.IEnumerator AnimateTargetPos(Vector3 targetWorldPos, float duration)
+        private async UniTaskVoid AnimateTargetPosAsync(Vector3 targetWorldPos, float duration, CancellationToken ct)
         {
             Vector3 startPos = targetPos.position;
             float elapsed = 0f;
-            while (elapsed < duration)
+            while (elapsed < duration && !ct.IsCancellationRequested)
             {
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / duration);
                 targetPos.position = Vector3.Lerp(startPos, targetWorldPos, t);
-                yield return null;
+                await UniTask.Yield(PlayerLoopTiming.Update);
             }
-            targetPos.position = targetWorldPos;
+            if (!ct.IsCancellationRequested)
+                targetPos.position = targetWorldPos;
         }
 
         /// <summary>
         /// 平滑旋转摄像机视角
         /// </summary>
-        private System.Collections.IEnumerator AnimateCameraView(float targetX, float targetY, float duration)
+        private async UniTaskVoid AnimateCameraViewAsync(float targetX, float targetY, float duration, CancellationToken ct)
         {
             float startX = rotX;
             float startY = rotY;
             targetX = ClampAngle(targetX, minRotX, maxRotX);
             targetY = Mathf.Clamp(targetY, minRotY, maxRotY);
             float elapsed = 0f;
-            while (elapsed < duration)
+            while (elapsed < duration && !ct.IsCancellationRequested)
             {
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / duration);
@@ -713,8 +719,9 @@ namespace ReunionMovement.Common.Util
                 destRot = addRot * Quaternion.Euler(rotY, 0f, 0f);
                 csmoCamera.transform.rotation = destRot;
                 UpdatePosition();
-                yield return null;
+                await UniTask.Yield(PlayerLoopTiming.Update);
             }
+            if (ct.IsCancellationRequested) return;
             rotX = targetX;
             rotY = targetY;
             Quaternion finalRot = Quaternion.Euler(0f, rotX, 0f) * Quaternion.Euler(rotY, 0f, 0f);
@@ -726,19 +733,20 @@ namespace ReunionMovement.Common.Util
         /// <summary>
         /// 平滑缩放摄像机距离
         /// </summary>
-        private System.Collections.IEnumerator AnimateCameraZoom(float targetDistance, float duration)
+        private async UniTaskVoid AnimateCameraZoomAsync(float targetDistance, float duration, CancellationToken ct)
         {
             float clampedTargetDistance = Mathf.Clamp(targetDistance, GetEffectiveMinDistance(), maxDistance);
             float startDistance = distance;
             float elapsed = 0f;
-            while (elapsed < duration)
+            while (elapsed < duration && !ct.IsCancellationRequested)
             {
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / duration);
                 distance = Mathf.Lerp(startDistance, clampedTargetDistance, t);
                 forwardZoomDistance = 0f;
-                yield return null;
+                await UniTask.Yield(PlayerLoopTiming.Update);
             }
+            if (ct.IsCancellationRequested) return;
             distance = clampedTargetDistance;
             forwardZoomDistance = 0f;
             UpdatePosition();

@@ -119,6 +119,53 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &112306614
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 112306615}
+  - component: {fileID: 112306616}
+  m_Layer: 0
+  m_Name: Billboard 1
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &112306615
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 112306614}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -5, y: 0, z: 0}
+  m_LocalScale: {x: 0.2, y: 0.2, z: 0.2}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 795545423}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &112306616
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 112306614}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 983cbd9ad38b8db42abbfaa7f061328d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReunionMovement.Common.Util.Billboard
+  targetTF: {fileID: 203538528}
+  billboardType: 0
 --- !u!1 &152258564
 GameObject:
   m_ObjectHideFlags: 0
@@ -315,6 +362,53 @@ MonoBehaviour:
   m_PointerBehavior: 0
   m_CursorLockBehavior: 0
   m_ScrollDeltaPerTick: 6
+--- !u!1 &451043090
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 451043092}
+  - component: {fileID: 451043091}
+  m_Layer: 0
+  m_Name: Billboard 3
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &451043091
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 451043090}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 983cbd9ad38b8db42abbfaa7f061328d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReunionMovement.Common.Util.Billboard
+  targetTF: {fileID: 203538528}
+  billboardType: 2
+--- !u!4 &451043092
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 451043090}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 5, y: 0, z: 0}
+  m_LocalScale: {x: 0.2, y: 0.2, z: 0.2}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 678285695}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &666653945
 GameObject:
   m_ObjectHideFlags: 0
@@ -427,7 +521,6 @@ GameObject:
   m_Component:
   - component: {fileID: 678285695}
   - component: {fileID: 678285694}
-  - component: {fileID: 678285693}
   m_Layer: 0
   m_Name: Billboard 3
   m_TagString: Untagged
@@ -435,20 +528,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &678285693
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 678285692}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 983cbd9ad38b8db42abbfaa7f061328d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ReunionMovement.Common.Util.Billboard
-  targetTF: {fileID: 203538528}
-  billboardType: 2
 --- !u!212 &678285694
 SpriteRenderer:
   serializedVersion: 2
@@ -516,13 +595,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 678285692}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 5, y: 0, z: 0}
-  m_LocalScale: {x: 0.2, y: 0.2, z: 0.2}
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_Father: {fileID: 451043092}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!1 &775959542
 GameObject:
   m_ObjectHideFlags: 0
@@ -645,7 +724,6 @@ GameObject:
   m_Component:
   - component: {fileID: 795545423}
   - component: {fileID: 795545422}
-  - component: {fileID: 795545421}
   m_Layer: 0
   m_Name: Billboard 1
   m_TagString: Untagged
@@ -653,20 +731,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &795545421
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 795545420}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 983cbd9ad38b8db42abbfaa7f061328d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ReunionMovement.Common.Util.Billboard
-  targetTF: {fileID: 203538528}
-  billboardType: 0
 --- !u!212 &795545422
 SpriteRenderer:
   serializedVersion: 2
@@ -734,12 +798,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 795545420}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -5, y: 0, z: 0}
-  m_LocalScale: {x: 0.2, y: 0.2, z: 0.2}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 112306615}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1067616649
 GameObject:
@@ -851,6 +915,53 @@ Transform:
   m_LocalScale: {x: 3, y: 3, z: 3}
   m_ConstrainProportionsScale: 0
   m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1572946138
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1572946140}
+  - component: {fileID: 1572946139}
+  m_Layer: 0
+  m_Name: Billboard 2
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1572946139
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1572946138}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 983cbd9ad38b8db42abbfaa7f061328d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReunionMovement.Common.Util.Billboard
+  targetTF: {fileID: 203538528}
+  billboardType: 1
+--- !u!4 &1572946140
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1572946138}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 0.2, y: 0.2, z: 0.2}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1785300616}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1666012823
@@ -1128,6 +1239,8 @@ MonoBehaviour:
   shadowMirrorOffset: {x: 0, y: 0}
   shadowMirrorShowSource: 0
   shadowMirrorTintMix: 0.5
+  shadowColorFilter: 4
+  shadowColorGlow: 0
   customTime: 0
   enableDashedOutline: 0
   falloffDistance: 0.5
@@ -1213,6 +1326,40 @@ MonoBehaviour:
     - {r: 0, g: 0, b: 0, a: 0}
     - {r: 0, g: 0, b: 0, a: 0}
     rotation: 0
+  m_ToneFilter: 0
+  m_ToneIntensity: 1
+  m_ColorFilterMode: 0
+  m_ColorValue: {r: 1, g: 1, b: 1, a: 1}
+  m_ColorIntensity: 1
+  m_ColorGlow: 0
+  m_EdgeMode: 0
+  m_EdgeWidth: 0.5
+  m_EdgeColorFilterMode: 4
+  m_EdgeColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EdgeColorGlow: 0
+  m_EdgeShinyRate: 0.5
+  m_EdgeShinyWidth: 0.5
+  m_EdgeShinyAutoPlaySpeed: 1
+  m_SamplingMode: 0
+  m_SamplingIntensity: 0.5
+  m_TargetMode: 0
+  m_TargetColor: {r: 1, g: 1, b: 1, a: 1}
+  m_TargetRange: 0.1
+  m_TargetSoftness: 0.5
+  m_PatternArea: 0
+  m_DetailMode: 0
+  m_DetailTex: {fileID: 0}
+  m_DetailTexScale: {x: 1, y: 1}
+  m_DetailTexOffset: {x: 0, y: 0}
+  m_DetailTexSpeed: {x: 0, y: 0}
+  m_DetailIntensity: 1
+  m_DetailThreshold: {x: 0, y: 1}
+  m_DetailColor: {r: 1, g: 1, b: 1, a: 1}
+  m_EnableGradientTex: 0
+  m_GradientTex: {fileID: 0}
+  m_GradientOffset: 0
+  m_GradientScale: 1
+  m_BlendType: 0
 --- !u!1 &1785300613
 GameObject:
   m_ObjectHideFlags: 0
@@ -1223,7 +1370,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1785300616}
   - component: {fileID: 1785300615}
-  - component: {fileID: 1785300614}
   m_Layer: 0
   m_Name: Billboard 2
   m_TagString: Untagged
@@ -1231,20 +1377,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1785300614
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1785300613}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 983cbd9ad38b8db42abbfaa7f061328d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ReunionMovement.Common.Util.Billboard
-  targetTF: {fileID: 203538528}
-  billboardType: 1
 --- !u!212 &1785300615
 SpriteRenderer:
   serializedVersion: 2
@@ -1312,13 +1444,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1785300613}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.2, y: 0.2, z: 0.2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_Father: {fileID: 1572946140}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!1001 &4943771725376118805
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1391,6 +1523,6 @@ SceneRoots:
   - {fileID: 1067616653}
   - {fileID: 775959546}
   - {fileID: 666653949}
-  - {fileID: 795545423}
-  - {fileID: 1785300616}
-  - {fileID: 678285695}
+  - {fileID: 112306615}
+  - {fileID: 1572946140}
+  - {fileID: 451043092}

@@ -1,6 +1,8 @@
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using UnityEngine;
 using Mirror.SimpleWeb;
 using UnityEngine.Events;
@@ -82,8 +84,8 @@ namespace ReunionMovement.Common.Util
 
         // 内部状态
         int reconnectAttempts = 0;
-        Coroutine reconnectCoroutine;
-        Coroutine heartbeatCoroutine;
+        CancellationTokenSource reconnectCts;
+        CancellationTokenSource heartbeatCts;
 
         void Start()
         {
@@ -139,11 +141,13 @@ namespace ReunionMovement.Common.Util
         {
             Log.Info("停止所有网络连接...");
 
-            // stop coroutines
-            if (reconnectCoroutine != null) StopCoroutine(reconnectCoroutine);
-            reconnectCoroutine = null;
-            if (heartbeatCoroutine != null) StopCoroutine(heartbeatCoroutine);
-            heartbeatCoroutine = null;
+            // 停止 UniTask 异步任务
+            reconnectCts?.Cancel();
+            reconnectCts?.Dispose();
+            reconnectCts = null;
+            heartbeatCts?.Cancel();
+            heartbeatCts?.Dispose();
+            heartbeatCts = null;
             reconnectAttempts = 0;
 
             // 客户端关闭
@@ -163,9 +167,13 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         public void StartClient()
         {
-            // ensure previous coroutines cleared
-            if (reconnectCoroutine != null) { StopCoroutine(reconnectCoroutine); reconnectCoroutine = null; }
-            if (heartbeatCoroutine != null) { StopCoroutine(heartbeatCoroutine); heartbeatCoroutine = null; }
+            // 清除上一次的异步任务
+            reconnectCts?.Cancel();
+            reconnectCts?.Dispose();
+            reconnectCts = null;
+            heartbeatCts?.Cancel();
+            heartbeatCts?.Dispose();
+            heartbeatCts = null;
             reconnectAttempts = 0;
 
             switch (transport)
@@ -179,8 +187,11 @@ namespace ReunionMovement.Common.Util
                         ClientConnected?.Invoke();
                         onClientConnected?.Invoke();
                         // start heartbeat if enabled
-                        if (enableHeartbeat && heartbeatCoroutine == null)
-                            heartbeatCoroutine = StartCoroutine(HeartbeatRoutine());
+                        if (enableHeartbeat && heartbeatCts == null)
+                        {
+                            heartbeatCts = new CancellationTokenSource();
+                            HeartbeatRoutineAsync(heartbeatCts.Token).Forget();
+                        }
                     };
                     tcpClient.OnDataReceived += (data) =>
                     {
@@ -193,8 +204,11 @@ namespace ReunionMovement.Common.Util
                         Log.Info("TCP 客户端已断开连接");
                         ClientDisconnected?.Invoke();
                         onClientDisconnected?.Invoke();
-                        if (reconnectCoroutine == null && autoReconnect)
-                            reconnectCoroutine = StartCoroutine(ReconnectRoutine());
+                        if (reconnectCts == null && autoReconnect)
+                        {
+                            reconnectCts = new CancellationTokenSource();
+                            ReconnectRoutineAsync(reconnectCts.Token).Forget();
+                        }
                     };
                     tcpClient.Connect(host, port);
                     NetworkMgr.Instance?.AddChannel(tcpClient);
@@ -207,8 +221,11 @@ namespace ReunionMovement.Common.Util
                         reconnectAttempts = 0;
                         ClientConnected?.Invoke();
                         onClientConnected?.Invoke();
-                        if (enableHeartbeat && heartbeatCoroutine == null)
-                            heartbeatCoroutine = StartCoroutine(HeartbeatRoutine());
+                        if (enableHeartbeat && heartbeatCts == null)
+                        {
+                            heartbeatCts = new CancellationTokenSource();
+                            HeartbeatRoutineAsync(heartbeatCts.Token).Forget();
+                        }
                     };
                     kcpClient.OnDataReceived += (data) =>
                     {
@@ -221,8 +238,11 @@ namespace ReunionMovement.Common.Util
                         Log.Info("KCP 客户端已断开连接");
                         ClientDisconnected?.Invoke();
                         onClientDisconnected?.Invoke();
-                        if (reconnectCoroutine == null && autoReconnect)
-                            reconnectCoroutine = StartCoroutine(ReconnectRoutine());
+                        if (reconnectCts == null && autoReconnect)
+                        {
+                            reconnectCts = new CancellationTokenSource();
+                            ReconnectRoutineAsync(reconnectCts.Token).Forget();
+                        }
                     };
                     kcpClient.OnError += (err) =>
                     {
@@ -243,16 +263,22 @@ namespace ReunionMovement.Common.Util
                             reconnectAttempts = 0;
                             ClientConnected?.Invoke();
                             onClientConnected?.Invoke();
-                            if (enableHeartbeat && heartbeatCoroutine == null)
-                                heartbeatCoroutine = StartCoroutine(HeartbeatRoutine());
+                            if (enableHeartbeat && heartbeatCts == null)
+                            {
+                                heartbeatCts = new CancellationTokenSource();
+                                HeartbeatRoutineAsync(heartbeatCts.Token).Forget();
+                            }
                         };
                         swtClient.onDisconnect += () =>
                         {
                             Log.Info("WebSocket 客户端已断开连接");
                             ClientDisconnected?.Invoke();
                             onClientDisconnected?.Invoke();
-                            if (reconnectCoroutine == null && autoReconnect)
-                                reconnectCoroutine = StartCoroutine(ReconnectRoutine());
+                            if (reconnectCts == null && autoReconnect)
+                            {
+                                reconnectCts = new CancellationTokenSource();
+                                ReconnectRoutineAsync(reconnectCts.Token).Forget();
+                            }
                         };
                         swtClient.onData += (seg) =>
                         {
@@ -293,10 +319,10 @@ namespace ReunionMovement.Common.Util
             }
         }
 
-        System.Collections.IEnumerator ReconnectRoutine()
+        private async UniTaskVoid ReconnectRoutineAsync(CancellationToken ct)
         {
             reconnectAttempts = 0;
-            while (autoReconnect && (maxReconnectAttempts < 0 || reconnectAttempts < maxReconnectAttempts))
+            while (autoReconnect && (maxReconnectAttempts < 0 || reconnectAttempts < maxReconnectAttempts) && !ct.IsCancellationRequested)
             {
                 reconnectAttempts++;
                 Log.Info($"尝试第 {reconnectAttempts} 次重连...");
@@ -309,32 +335,30 @@ namespace ReunionMovement.Common.Util
                     Log.Warning("重连尝试异常：" + ex);
                 }
 
-                // wait for reconnectInterval seconds while giving chance for connection events to reset attempts
+                // 等待 reconnectInterval 秒，同时检查连接状态
                 float waited = 0f;
-                while (waited < reconnectInterval)
+                while (waited < reconnectInterval && !ct.IsCancellationRequested)
                 {
-                    // if connected, finish
                     bool connected = false;
                     if (transport == Transport.TCP && tcpClient != null) connected = tcpClient.IsConnect;
                     if (transport == Transport.KCP && kcpClient != null) connected = kcpClient.IsConnect;
                     if (transport == Transport.WebSocket && swtClient != null) connected = (swtClient.ConnectionState == ClientState.Connected);
                     if (connected)
                     {
-                        reconnectCoroutine = null;
-                        yield break;
+                        reconnectCts = null;
+                        return;
                     }
                     waited += Time.deltaTime;
-                    yield return null;
+                    await UniTask.Yield(PlayerLoopTiming.Update);
                 }
             }
 
-            // ended attempts
-            reconnectCoroutine = null;
+            reconnectCts = null;
         }
 
-        System.Collections.IEnumerator HeartbeatRoutine()
+        private async UniTaskVoid HeartbeatRoutineAsync(CancellationToken ct)
         {
-            while (enableHeartbeat)
+            while (enableHeartbeat && !ct.IsCancellationRequested)
             {
                 bool connected = false;
                 if (transport == Transport.TCP && tcpClient != null) connected = tcpClient.IsConnect;
@@ -354,14 +378,11 @@ namespace ReunionMovement.Common.Util
                     }
                 }
 
-                float waited = 0f;
-                while (waited < heartbeatInterval)
-                {
-                    waited += Time.deltaTime;
-                    yield return null;
-                }
+                // 使用 UniTask.Delay 替代忙等循环（零 GC）
+                bool canceled = await UniTask.Delay(TimeSpan.FromSeconds(heartbeatInterval), ignoreTimeScale: false, PlayerLoopTiming.Update, ct).SuppressCancellationThrow();
+                if (canceled) break;
             }
-            heartbeatCoroutine = null;
+            heartbeatCts = null;
         }
 
         /// <summary>

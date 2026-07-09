@@ -26,7 +26,11 @@ namespace ReunionMovement.Common.Util.Download
         /// </summary>
         public static UniTask<UnityWebRequest.Result>.Awaiter GetAwaiter(this UnityWebRequestAsyncOperation reqOp)
         {
-            return reqOp.ToUniTask().GetAwaiter();
+            return UniTask.Create(async () =>
+            {
+                var uwr = await reqOp.ToUniTask();
+                return uwr.result;
+            }).GetAwaiter();
         }
     }
 }

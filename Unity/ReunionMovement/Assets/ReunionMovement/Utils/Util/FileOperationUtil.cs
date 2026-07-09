@@ -204,7 +204,7 @@ namespace ReunionMovement.Common.Util
         /// <param name="jsonStr"></param>
         /// <param name="fileName"></param>
         /// <returns></returns>
-        public static async Task<bool> SaveJson(string jsonStr, string fileName)
+        public static async UniTask<bool> SaveJson(string jsonStr, string fileName)
         {
             var filePath = Path.Combine(Application.persistentDataPath, "Json");
             try

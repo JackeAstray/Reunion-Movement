@@ -213,28 +213,29 @@ namespace ReunionMovement.Common.Util
             {
                 StopAllCoroutines();
                 if (fullscreen2windowed)
-                    StartCoroutine(SetResolutionAfterResize(r));
+                    SetResolutionAfterResizeAsync(r).Forget();
             }
         }
 
         /// <summary>
-        /// 分辨率切换后修正（Mac专用）
+        /// 分辨率切换后修正（Mac专用，UniTask 零 GC）
         /// </summary>
-        private IEnumerator SetResolutionAfterResize(Vector2 r)
+        private async UniTaskVoid SetResolutionAfterResizeAsync(Vector2 r)
         {
             int maxTime = 5;
             float startTime = Time.time;
             int lastW = Screen.width, lastH = Screen.height;
-            yield return null; yield return null;
+            await UniTask.Yield(PlayerLoopTiming.Update);
+            await UniTask.Yield(PlayerLoopTiming.Update);
 
             while (Time.time - startTime < maxTime)
             {
                 if (lastW != Screen.width || lastH != Screen.height)
                 {
                     Screen.SetResolution((int)r.x, (int)r.y, Screen.fullScreen);
-                    yield break;
+                    return;
                 }
-                yield return null;
+                await UniTask.Yield(PlayerLoopTiming.Update);
             }
         }
 

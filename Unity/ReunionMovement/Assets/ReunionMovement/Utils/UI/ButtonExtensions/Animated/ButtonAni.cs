@@ -1,4 +1,7 @@
+using Cysharp.Threading.Tasks;
+using System;
 using System.Collections;
+using System.Threading;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -44,7 +47,7 @@ namespace ReunionMovement.UI.ButtonAnimated
         private Image targetImage;
         private TextMeshProUGUI tmpText;
         private Coroutine animCoroutine;
-        private Coroutine submitCoroutine;
+        private CancellationTokenSource submitCts;
 
         // 新增：是否启用输入系统（总开关）与键盘/手柄开关
         [SerializeField]
@@ -376,12 +379,10 @@ namespace ReunionMovement.UI.ButtonAnimated
 
                 // 不要停止 animCoroutine（会导致 Pressed 动画立即中止）。
                 // 使用单独的 submitCoroutine 来等待 transitionDuration 后切回 Normal。
-                if (submitCoroutine != null)
-                {
-                    StopCoroutine(submitCoroutine);
-                    submitCoroutine = null;
-                }
-                submitCoroutine = StartCoroutine(SubmitAnimationCoroutine());
+                submitCts?.Cancel();
+                submitCts?.Dispose();
+                submitCts = new CancellationTokenSource();
+                SubmitAnimationAsync(submitCts.Token).Forget();
             }
             else
             {
@@ -390,13 +391,14 @@ namespace ReunionMovement.UI.ButtonAnimated
         }
 
         /// <summary>
-        /// 提交动画协程
+        /// 提交动画（UniTask 零 GC，替代协程）
         /// </summary>
-        /// <returns></returns>
-        private IEnumerator SubmitAnimationCoroutine()
+        private async UniTaskVoid SubmitAnimationAsync(CancellationToken ct)
         {
-            // 等待完整的 transitionDuration（使用实时时间以防 timeScale 被改变）
-            yield return new WaitForSecondsRealtime(transitionDuration > 0 ? transitionDuration : 0.05f);
+            // 等待完整的 transitionDuration（忽略 timeScale）
+            float waitTime = transitionDuration > 0 ? transitionDuration : 0.05f;
+            bool canceled = await UniTask.Delay(TimeSpan.FromSeconds(waitTime), ignoreTimeScale: true, delayTiming: PlayerLoopTiming.Update, cancellationToken: ct).SuppressCancellationThrow();
+            if (canceled) return;
 
             if (interactable)
             {
@@ -406,8 +408,6 @@ namespace ReunionMovement.UI.ButtonAnimated
             {
                 ApplyState(ButtonAniState.Disabled, true);
             }
-
-            submitCoroutine = null;
         }
 
         protected override void OnDisable()
@@ -415,11 +415,9 @@ namespace ReunionMovement.UI.ButtonAnimated
             base.OnDisable();
 
             // 停止未完成的提交协程，避免失活时协程继续执行
-            if (submitCoroutine != null)
-            {
-                StopCoroutine(submitCoroutine);
-                submitCoroutine = null;
-            }
+            submitCts?.Cancel();
+            submitCts?.Dispose();
+            submitCts = null;
 
             // 清理按键/手柄状态
             submitPressed = false;
