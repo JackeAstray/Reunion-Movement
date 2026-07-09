@@ -1,4 +1,4 @@
-﻿// 服务器和客户端使用的公共代码
+﻿﻿// 服务器和客户端使用的公共代码
 namespace Telepathy
 {
     public abstract class Common

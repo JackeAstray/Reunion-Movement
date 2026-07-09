@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using AOT;
 
@@ -36,15 +36,15 @@ namespace Mirror.SimpleWeb
         static void ErrorCallback(int index) => instances[index].onErr();
 
         /// <summary>
-        /// key for instances sent between c# and js
+        /// C# 与 JS 之间传递实例的索引键
         /// </summary>
         int index;
 
         /// <summary>
-        /// Queue for messages sent by high level while still connecting, they will be sent after onOpen is called.
+        /// 连接过程中由上层发送的消息队列，在 onOpen 调用后统一发送。
         /// <para>
-        ///     This is a workaround for anything that calls Send immediately after Connect.
-        ///     Without this the JS websocket will give errors.
+        ///     这是为了处理 Connect 后立即调用 Send 的情况。
+        ///     若无此队列，JS WebSocket 将报错。
         /// </para>
         /// </summary>
         Queue<byte[]> ConnectingSendQueue;
@@ -68,7 +68,7 @@ namespace Mirror.SimpleWeb
         public override void Disconnect()
         {
             state = ClientState.Disconnecting;
-            // disconnect should cause closeCallback and OnDisconnect to be called
+            // disconnect 应触发 closeCallback 和 OnDisconnect
             SimpleWebJSLib.Disconnect(index);
         }
 
@@ -110,7 +110,7 @@ namespace Mirror.SimpleWeb
 
         void onClose()
         {
-            // this code should be last in this class
+            // 此代码应为本类中最后执行的逻辑
 
             receiveQueue.Enqueue(new Message(EventType.Disconnected));
             state = ClientState.NotConnected;

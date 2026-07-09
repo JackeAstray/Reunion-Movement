@@ -1,4 +1,4 @@
-// 用于避免分配的对象池。最初来自 libuv2k。
+﻿// 用于避免分配的对象池。最初来自 libuv2k。
 using System;
 using System.Collections.Generic;
 

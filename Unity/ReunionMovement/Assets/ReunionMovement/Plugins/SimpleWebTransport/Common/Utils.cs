@@ -1,4 +1,4 @@
-using System.Threading;
+ï»¿using System.Threading;
 
 namespace Mirror.SimpleWeb
 {
@@ -6,7 +6,7 @@ namespace Mirror.SimpleWeb
     {
         public static void CheckForInterupt()
         {
-            // Ë¯ÃßÒÔ´¥·¢ ThreadInterruptedException ¼ì²é
+            // ç¡çœ ä»¥è§¦å‘ ThreadInterruptedException æ£€æŸ¥
             Thread.Sleep(1);
         }
     }

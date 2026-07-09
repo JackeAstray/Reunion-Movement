@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -33,7 +33,7 @@ namespace Mirror.SimpleWeb
             if (config.enabled)
             {
                 certificate = new X509Certificate2(config.certPath, config.certPassword);
-                Log.Info($"[SWT-ServerSslHelper]: ÒÑ¼ÓÔØ SSL Ö¤Êé {0}£¬µ½ÆÚÊ±¼ä {1}", certificate.Subject, certificate.GetExpirationDateString());
+                Log.Info($"[SWT-ServerSslHelper]: å·²åŠ è½½ SSL è¯ä¹¦ {0}ï¼Œåˆ°æœŸæ—¶é—´ {1}", certificate.Subject, certificate.GetExpirationDateString());
             }
         }
 
@@ -49,7 +49,7 @@ namespace Mirror.SimpleWeb
                 }
                 catch (Exception e)
                 {
-                    Log.Error("[SWT-ServerSslHelper]: ´´½¨ SSLStream Ê§°Ü: {0}", e.Message);
+                    Log.Error("[SWT-ServerSslHelper]: åˆ›å»º SSLStream å¤±è´¥: {0}", e.Message);
                     return false;
                 }
             }
@@ -68,7 +68,7 @@ namespace Mirror.SimpleWeb
             return sslStream;
         }
 
-        // ×ÜÊÇ½ÓÊÜ¿Í»§¶Ë
+        // æ€»æ˜¯æ¥å—å®¢æˆ·ç«¯
         bool acceptClient(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors) => true;
     }
 }

@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Concurrent;
 using UnityEngine;
 
@@ -13,8 +13,8 @@ namespace Mirror.SimpleWeb
     }
 
     /// <summary>
-    /// ÓÃÓÚ¿ØÖÆ WebSocket µÄ¿Í»§¶Ë
-    /// <para>WebSocketClientWebGl ºÍ WebSocketClientStandAlone µÄ»ùÀà</para>
+    /// ç”¨äºæ§åˆ¶ WebSocket çš„å®¢æˆ·ç«¯
+    /// <para>WebSocketClientWebGl å’Œ WebSocketClientStandAlone çš„åŸºç±»</para>
     /// </summary>
     public abstract class SimpleWebClient
     {
@@ -54,7 +54,7 @@ namespace Mirror.SimpleWeb
         }
 
         /// <summary>
-        /// ´¦ÀíËùÓĞĞÂµÄÏûÏ¢
+        /// å¤„ç†æ‰€æœ‰æ–°çš„æ¶ˆæ¯
         /// </summary>
         public void ProcessMessageQueue()
         {
@@ -62,18 +62,18 @@ namespace Mirror.SimpleWeb
         }
 
         /// <summary>
-        /// ½öÔÚÖ¸¶¨µÄ <paramref name="behaviour"/> ÆôÓÃÊ±´¦ÀíÏûÏ¢¶ÓÁĞÖĞµÄÏûÏ¢
+        /// ä»…åœ¨æŒ‡å®šçš„ <paramref name="behaviour"/> å¯ç”¨æ—¶å¤„ç†æ¶ˆæ¯é˜Ÿåˆ—ä¸­çš„æ¶ˆæ¯
         /// </summary>
-        /// <param name="behaviour">ÓÃÓÚ¼ì²éÆôÓÃ×´Ì¬µÄ MonoBehaviour£¨Îª null ÔòºöÂÔ¼ì²é£©</param>
+        /// <param name="behaviour">ç”¨äºæ£€æŸ¥å¯ç”¨çŠ¶æ€çš„ MonoBehaviourï¼ˆä¸º null åˆ™å¿½ç•¥æ£€æŸ¥ï¼‰</param>
         public void ProcessMessageQueue(MonoBehaviour behaviour)
         {
             int processedCount = 0;
             bool skipEnabled = behaviour == null;
-            // Ã¿´ÎÑ­»·¶¼¼ì²é enabled£¬ÒÔ·À behaviour ÔÚÊÕµ½Êı¾İºó±»½ûÓÃ
+            // æ¯æ¬¡å¾ªç¯éƒ½æ£€æŸ¥ enabledï¼Œä»¥é˜² behaviour åœ¨æ”¶åˆ°æ•°æ®åè¢«ç¦ç”¨
             while (
                 (skipEnabled || behaviour.enabled) &&
                 processedCount < maxMessagesPerTick &&
-                // ´Ó¶ÓÁĞÖĞµ¯³öÒ»Ìõ
+                // ä»é˜Ÿåˆ—ä¸­å¼¹å‡ºä¸€æ¡
                 receiveQueue.TryDequeue(out Message next)
                 )
             {
@@ -97,7 +97,7 @@ namespace Mirror.SimpleWeb
                 }
             }
             if (receiveQueue.Count > 0)
-                Log.Warn("[SWT-SimpleWebClient]: ProcessMessageQueue Ê£Óà {0} ÌõÏûÏ¢¡£", receiveQueue.Count);
+                Log.Warn("[SWT-SimpleWebClient]: ProcessMessageQueue å‰©ä½™ {0} æ¡æ¶ˆæ¯ã€‚", receiveQueue.Count);
         }
     }
 }
