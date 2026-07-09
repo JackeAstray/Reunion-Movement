@@ -1,4 +1,4 @@
-// 重要
+﻿// 重要
 // 强制所有线程函数为静态。
 // => Common.Send/ReceiveLoop 非常危险，因为很容易不小心在不同线程之间共享 Common 的状态。
 // => header buffer、payload 等曾在将线程函数从静态改为非静态后被意外共享。

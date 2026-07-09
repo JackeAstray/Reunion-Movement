@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 #if UNITY_WEBGL
 using System.Runtime.InteropServices;
 #endif

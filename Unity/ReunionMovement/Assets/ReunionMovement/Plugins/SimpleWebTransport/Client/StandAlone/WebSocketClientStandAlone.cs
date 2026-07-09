@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -26,11 +26,11 @@ namespace Mirror.SimpleWeb
         {
             state = ClientState.Connecting;
 
-            // ÔÚÆô¶¯Ïß³ÌÖ®Ç°´´½¨Á¬½Ó£¬ÕâÑùÔÚÁ¬½Ó½¨Á¢Ç°·¢ËÍ¶ÓÁĞ¾ÍÒÑ¾­´æÔÚ
+            // åœ¨å¯åŠ¨çº¿ç¨‹ä¹‹å‰åˆ›å»ºè¿æ¥ï¼Œè¿™æ ·åœ¨è¿æ¥å»ºç«‹å‰å‘é€é˜Ÿåˆ—å°±å·²ç»å­˜åœ¨
             TcpClient client = new TcpClient();
             tcpConfig.ApplyTo(client);
 
-            // ÔÚ´Ë´´½¨ Connection ¶ÔÏó£¬ÒÔ±ãÔÚÁ¬½ÓÊ§°ÜÊ±ÕıÈ·Í¨¹ı Dispose ¶Ï¿ªÁ¬½Ó
+            // åœ¨æ­¤åˆ›å»º Connection å¯¹è±¡ï¼Œä»¥ä¾¿åœ¨è¿æ¥å¤±è´¥æ—¶æ­£ç¡®é€šè¿‡ Dispose æ–­å¼€è¿æ¥
             conn = new Connection(client, AfterConnectionDisposed);
 
             Thread receiveThread = new Thread(() => ConnectAndReceiveLoop(serverAddress));
@@ -42,7 +42,7 @@ namespace Mirror.SimpleWeb
         {
             try
             {
-                // Á¬½ÓÔÚÉÏÃæ´´½¨
+                // è¿æ¥åœ¨ä¸Šé¢åˆ›å»º
                 TcpClient client = conn.client;
                 conn.receiveThread = Thread.CurrentThread;
 
@@ -60,7 +60,7 @@ namespace Mirror.SimpleWeb
                 bool success = sslHelper.TryCreateStream(conn, serverAddress);
                 if (!success)
                 {
-                    Log.Warn("[SWT-WebSocketClientStandAlone]: ÎŞ·¨Ê¹ÓÃ {0} ´´½¨Á÷", serverAddress);
+                    Log.Warn("[SWT-WebSocketClientStandAlone]: æ— æ³•ä½¿ç”¨ {0} åˆ›å»ºæµ", serverAddress);
                     conn.Dispose();
                     return;
                 }
@@ -68,12 +68,12 @@ namespace Mirror.SimpleWeb
                 success = handshake.TryHandshake(conn, serverAddress);
                 if (!success)
                 {
-                    Log.Warn("[SWT-WebSocketClientStandAlone]: Óë {0} ÎÕÊÖÊ§°Ü", serverAddress);
+                    Log.Warn("[SWT-WebSocketClientStandAlone]: ä¸ {0} æ¡æ‰‹å¤±è´¥", serverAddress);
                     conn.Dispose();
                     return;
                 }
 
-                Log.Info("[SWT-WebSocketClientStandAlone]: Óë {0} ÎÕÊÖ³É¹¦", serverAddress);
+                Log.Info("[SWT-WebSocketClientStandAlone]: ä¸ {0} æ¡æ‰‹æˆåŠŸ", serverAddress);
 
                 state = ClientState.Connected;
 
@@ -101,11 +101,11 @@ namespace Mirror.SimpleWeb
                 ReceiveLoop.Loop(config);
             }
             catch (ThreadInterruptedException e) { Log.InfoException(e); }
-            catch (ThreadAbortException) { Log.Error("[SWT-WebSocketClientStandAlone]: Ïß³Ì±»ÖĞÖ¹"); }
+            catch (ThreadAbortException) { Log.Error("[SWT-WebSocketClientStandAlone]: çº¿ç¨‹è¢«ä¸­æ­¢"); }
             catch (Exception e) { Log.Exception(e); }
             finally
             {
-                // ÔÚ´Ë¹Ø±ÕÁ¬½Ó£¬ÒÔ·ÀÁ¬½ÓÊ§°Ü
+                // åœ¨æ­¤å…³é—­è¿æ¥ï¼Œä»¥é˜²è¿æ¥å¤±è´¥
                 conn?.Dispose();
             }
         }
@@ -113,14 +113,14 @@ namespace Mirror.SimpleWeb
         void AfterConnectionDisposed(Connection conn)
         {
             state = ClientState.NotConnected;
-            // È·±£¶Ï¿ªÊÂ¼şÖ»±»µ÷ÓÃÒ»´Î
+            // ç¡®ä¿æ–­å¼€äº‹ä»¶åªè¢«è°ƒç”¨ä¸€æ¬¡
             receiveQueue.Enqueue(new Message(EventType.Disconnected));
         }
 
         public override void Disconnect()
         {
             state = ClientState.Disconnecting;
-            Log.Verbose("[SWT-WebSocketClientStandAlone]: µ÷ÓÃ¶Ï¿ªÁ¬½Ó");
+            Log.Verbose("[SWT-WebSocketClientStandAlone]: è°ƒç”¨æ–­å¼€è¿æ¥");
 
             if (conn == null)
                 state = ClientState.NotConnected;
