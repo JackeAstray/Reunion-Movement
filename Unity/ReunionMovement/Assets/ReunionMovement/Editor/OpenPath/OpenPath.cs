@@ -80,7 +80,7 @@ namespace ReunionMovement.EditorTools
                     Process.Start("open", folder);
                     break;
                 default:
-                    Log.Error(string.Format("不支持在“｛0｝”平台上打开文件夹。", Application.platform));
+                    Log.Error(string.Format($"不支持在\"{0}\"平台上打开文件夹。", Application.platform));
                     break;
             }
         }

@@ -1,4 +1,5 @@
-using System.Collections;
+using Cysharp.Threading.Tasks;
+using System.Threading;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -10,8 +11,11 @@ namespace ReunionMovement.Core.Sound
     [RequireComponent(typeof(AudioSource))]
     public class SoundItem : MonoBehaviour
     {
+        // PlayScheduled 调度偏移（秒），确保音频线程有足够时间处理
+        private const float ScheduledOffset = 0.02f;
+
         private AudioSource source;
-        private Coroutine recycleCoroutine;
+        private CancellationTokenSource recycleCts;
 
         private void Awake()
         {
@@ -56,22 +60,21 @@ namespace ReunionMovement.Core.Sound
 
             // 使用 PlayScheduled 替代 Play，消除 Unity 音频线程调度抖动
             // 调度到当前 DSP 时间 + 20ms，确保音频线程有足够时间处理
-            double scheduleTime = AudioSettings.dspTime + 0.02;
+            double scheduleTime = AudioSettings.dspTime + ScheduledOffset;
             source.PlayScheduled(scheduleTime);
 
-            // 停止任何可能正在运行的旧的回收协程
-            if (recycleCoroutine != null)
-            {
-                StopCoroutine(recycleCoroutine);
-            }
+            // 取消旧的回收任务
+            recycleCts?.Cancel();
+            recycleCts?.Dispose();
 
             // 如果不是循环播放，则在播放结束后自动回收
             if (!loop)
             {
                 // 考虑音高和调度偏移对播放时长的影响
                 float clipDuration = Mathf.Abs(pitch) > 0f ? audioClip.length / Mathf.Abs(pitch) : audioClip.length;
-                float scheduledOffset = 0.02f; // 与 PlayScheduled 的偏移保持一致
-                recycleCoroutine = StartCoroutine(RecycleAfterPlaying(scheduledOffset + clipDuration));
+                float scheduledOffset = ScheduledOffset;
+                recycleCts = new CancellationTokenSource();
+                RecycleAfterPlayingAsync(scheduledOffset + clipDuration, recycleCts.Token).Forget();
             }
         }
 
@@ -88,29 +91,26 @@ namespace ReunionMovement.Core.Sound
         }
 
         /// <summary>
-        /// 协程：在音频播放完成后回收对象
+        /// 异步等待音频播放完成后回收对象（UniTask 零 GC）
         /// </summary>
-        /// <returns></returns>
-        private IEnumerator RecycleAfterPlaying(float duration)
+        private async UniTaskVoid RecycleAfterPlayingAsync(float duration, CancellationToken ct)
         {
-            // 等待音频播放完成
-            yield return new WaitForSeconds(duration);
+            // 等待音频播放完成（UniTask.Delay 零 GC，替代 WaitForSeconds）
+            bool canceled = await UniTask.Delay(System.TimeSpan.FromSeconds(duration), ignoreTimeScale: false, PlayerLoopTiming.Update, ct).SuppressCancellationThrow();
+            if (canceled) return;
             // 回收对象
             SoundSystem.Instance.Recycle(gameObject);
-            recycleCoroutine = null;
         }
 
         /// <summary>
-        /// 在对象被禁用时停止协程
+        /// 在对象被禁用时取消回收任务
         /// </summary>
         private void OnDisable()
         {
-            // 如果对象在播放完成前被禁用（例如，被回收），停止协程以防万一
-            if (recycleCoroutine != null)
-            {
-                StopCoroutine(recycleCoroutine);
-                recycleCoroutine = null;
-            }
+            // 如果对象在播放完成前被禁用（例如，被回收），取消回收任务
+            recycleCts?.Cancel();
+            recycleCts?.Dispose();
+            recycleCts = null;
         }
     }
 }

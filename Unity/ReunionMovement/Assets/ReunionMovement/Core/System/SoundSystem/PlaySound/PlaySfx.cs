@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using ReunionMovement.Core.Sound;
 using UnityEngine;
 
@@ -22,7 +23,7 @@ namespace ReunionMovement.Core.Sound
         {
             if (playOnAwake)
             {
-                PlaySfxClip();
+                PlaySfxClip().Forget();
             }
         }
 
@@ -30,7 +31,7 @@ namespace ReunionMovement.Core.Sound
         /// 播放指定ID的音效
         /// </summary>
         /// <param name="id"></param>
-        public async void PlaySfxById(int id)
+        public async UniTaskVoid PlaySfxById(int id)
         {
             try
             {
@@ -45,7 +46,7 @@ namespace ReunionMovement.Core.Sound
         /// <summary>
         /// 播放音效剪辑
         /// </summary>
-        public async void PlaySfxClip()
+        public async UniTaskVoid PlaySfxClip()
         {
             try
             {

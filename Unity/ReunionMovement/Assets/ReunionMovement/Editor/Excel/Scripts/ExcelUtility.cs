@@ -2,13 +2,13 @@
 using Newtonsoft.Json;
 using ReunionMovement.Common;
 using ReunionMovement.Common.Util;
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace ReunionMovement.EditorTools
@@ -122,7 +122,7 @@ namespace ReunionMovement.EditorTools
         /// 转换为Json
         /// </summary>
         /// <param name="JsonPath">Json文件路径</param>
-        public async Task ConvertToJson(string JsonPath)
+        public async UniTask ConvertToJson(string JsonPath)
         {
             var json = GetJson();
             //写入文件

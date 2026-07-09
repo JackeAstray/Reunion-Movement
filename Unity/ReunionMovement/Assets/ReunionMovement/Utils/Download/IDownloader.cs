@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace ReunionMovement.Common.Util.Download
 {
@@ -53,10 +53,10 @@ namespace ReunionMovement.Common.Util.Download
         public event Action<string> OnDownloadSuccess;
         public event Action<string> OnDownloadChunkedSucces;
 
-        public abstract Task<bool> Download();
-        public abstract Task<bool> Download(string uri);
-        public abstract Task<bool> Cancel(string uri);
-        public abstract Task<bool> Cancel();
+        public abstract UniTask<bool> Download();
+        public abstract UniTask<bool> Download(string uri);
+        public abstract UniTask<bool> Cancel(string uri);
+        public abstract UniTask<bool> Cancel();
         public abstract void Reset();
 
         public float Progress

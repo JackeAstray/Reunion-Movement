@@ -1,9 +1,9 @@
 using ReunionMovement.Common;
 using ReunionMovement.Core;
 using ReunionMovement.Core.Sound;
+using Cysharp.Threading.Tasks;
 using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace ReunionMovement.Core.Sound
@@ -37,11 +37,11 @@ namespace ReunionMovement.Core.Sound
         {
             if (playOnAwake)
             {
-                _ = InitializeOnStartAsync();
+                InitializeOnStartAsync().Forget();
             }
         }
 
-        private async Task InitializeOnStartAsync()
+        private async UniTaskVoid InitializeOnStartAsync()
         {
             try
             {
@@ -66,7 +66,7 @@ namespace ReunionMovement.Core.Sound
         /// 播放音乐剪辑（兼容旧单曲字段）
         /// </summary>
         /// <returns></returns>
-        public async Task PlayMusicClip()
+        public async UniTask PlayMusicClip()
         {
             // 如果存在播放列表并且有内容，播放列表当前位置的曲目
             if (playlist != null && playlist.Count > 0)
@@ -96,7 +96,7 @@ namespace ReunionMovement.Core.Sound
         /// <summary>
         /// 播放播放列表中指定位置的曲目
         /// </summary>
-        public async Task PlayPlaylistAt(int pos)
+        public async UniTask PlayPlaylistAt(int pos)
         {
             if (playlist == null || playlist.Count == 0) return;
 
@@ -122,7 +122,7 @@ namespace ReunionMovement.Core.Sound
         /// <summary>
         /// 播放下一曲
         /// </summary>
-        public async void PlayNext()
+        public async UniTaskVoid PlayNext()
         {
             try
             {
@@ -155,7 +155,7 @@ namespace ReunionMovement.Core.Sound
         /// <summary>
         /// 播放上一曲
         /// </summary>
-        public async void PlayPrevious()
+        public async UniTaskVoid PlayPrevious()
         {
             try
             {
@@ -196,7 +196,7 @@ namespace ReunionMovement.Core.Sound
         /// <summary>
         /// 恢复音乐
         /// </summary>
-        public async void ResumeMusic()
+        public async UniTaskVoid ResumeMusic()
         {
             try
             {
@@ -297,29 +297,18 @@ namespace ReunionMovement.Core.Sound
             playbackMonitorCts = new CancellationTokenSource();
             var token = playbackMonitorCts.Token;
 
-            // 启动异步任务监视播放结束（在主线程执行，频率由Task.Yield驱动）
-            _ = MonitorPlaybackAsync(audio, token);
+            // 启动 UniTask 监视播放结束（零 GC，事件驱动）
+            MonitorPlaybackAsync(audio, token).Forget();
         }
 
-        private async Task MonitorPlaybackAsync(AudioSource audio, CancellationToken token)
+        private async UniTaskVoid MonitorPlaybackAsync(AudioSource audio, CancellationToken token)
         {
             // 等待直到播放开始
-            await Task.Yield();
+            await UniTask.Yield(PlayerLoopTiming.Update);
 
-            while (!token.IsCancellationRequested)
-            {
-                if (audio == null || audio.clip == null) break;
-
-                // 如果正在播放则等待
-                if (audio.isPlaying)
-                {
-                    await Task.Yield();
-                    continue;
-                }
-
-                // 如果没有在播放且音量不为0，可能是刚停止或已完成
-                break;
-            }
+            // 等待直到播放停止（零 GC，事件驱动，不忙等）
+            await UniTask.WaitUntil(() => audio == null || audio.clip == null || !audio.isPlaying,
+                PlayerLoopTiming.Update, token);
 
             if (token.IsCancellationRequested) return;
 
@@ -327,8 +316,8 @@ namespace ReunionMovement.Core.Sound
             if (autoPlayNext)
             {
                 // 延迟一帧以确保SoundSystem内部状态更新
-                await Task.Yield();
-                PlayNext();
+                await UniTask.Yield(PlayerLoopTiming.Update);
+                PlayNext().Forget();
             }
         }
 

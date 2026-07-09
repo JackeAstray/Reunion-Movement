@@ -8,8 +8,8 @@ using ReunionMovement.Core.Scene;
 using ReunionMovement.Core.Sound;
 using ReunionMovement.Core.Terminal;
 using ReunionMovement.Core.UI;
+using Cysharp.Threading.Tasks;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace ReunionMovement.Example
@@ -41,21 +41,21 @@ namespace ReunionMovement.Example
         /// 在初始化模块之前，协同程序
         /// </summary>
         /// <returns></returns>
-        public override Task OnBeforeInitAsync()
+        public override UniTask OnBeforeInitAsync()
         {
             Log.Debug("初始化前执行");
             GameOption.LoadOptions();
-            return Task.CompletedTask;
+            return UniTask.CompletedTask;
         }
 
         /// <summary>
         /// 游戏启动
         /// </summary>
         /// <returns></returns>
-        public override Task OnGameStartAsync()
+        public override UniTask OnGameStartAsync()
         {
             Log.Debug("游戏启动");
-            return Task.CompletedTask;
+            return UniTask.CompletedTask;
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.Collections;
+﻿using Cysharp.Threading.Tasks;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -52,7 +52,7 @@ namespace ReunionMovement.Common.Util
         private void Start()
         {
             SetAspectRatio(aspectRatio);
-            StartCoroutine(InitRoutine());
+            InitRoutineAsync().Forget();
         }
 
         /// <summary>
@@ -78,9 +78,9 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 初始化协程
+        /// 异步初始化分辨率（UniTask 零 GC）
         /// </summary>
-        private IEnumerator InitRoutine()
+        private async UniTaskVoid InitRoutineAsync()
         {
             if (Application.platform == RuntimePlatform.OSXPlayer)
             {
@@ -92,10 +92,11 @@ namespace ReunionMovement.Common.Util
                 {
                     var r = Screen.currentResolution;
                     Screen.fullScreen = false;
-                    yield return null; yield return null;
+                    await UniTask.Yield(PlayerLoopTiming.Update);
+                    await UniTask.Yield(PlayerLoopTiming.Update);
                     displayResolution = Screen.currentResolution;
                     Screen.SetResolution(r.width, r.height, true);
-                    yield return null;
+                    await UniTask.Yield(PlayerLoopTiming.Update);
                 }
                 else
                 {

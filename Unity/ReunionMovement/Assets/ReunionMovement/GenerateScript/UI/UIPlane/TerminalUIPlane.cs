@@ -22,6 +22,8 @@ namespace ReunionMovement.Core.UI
 
         public GameObject root;
         public GameObject itemGo;
+        // 终端条目的最大数量，防止无限增长导致内存泄漏
+        private const int MaxTerminalItems = 100;
 
         public override void OnInit()
         {
@@ -111,6 +113,12 @@ namespace ReunionMovement.Core.UI
             if (itemGo == null)
             {
                 return;
+            }
+
+            // 限制最大条目数，超过上限时删除最旧的条目
+            if (root.transform.childCount >= MaxTerminalItems)
+            {
+                Destroy(root.transform.GetChild(0).gameObject);
             }
 
             GameObject @object = Instantiate(itemGo, Vector3.zero, Quaternion.identity);

@@ -1,9 +1,9 @@
 ﻿using ReunionMovement.Common;
 using ReunionMovement.Common.Util.Coroutiner;
 using ReunionMovement.Core.Base;
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
 using UnityEngine;
@@ -46,7 +46,7 @@ namespace ReunionMovement.Core.Scene
         public bool openLoad;
         #endregion
 
-        public Task Init()
+        public UniTask Init()
         {
             initProgress = 0;
 
@@ -57,7 +57,7 @@ namespace ReunionMovement.Core.Scene
             initProgress = 100;
             isInited = true;
             Log.Debug("SceneSystem 初始化完成");
-            return Task.CompletedTask;
+            return UniTask.CompletedTask;
         }
 
         public void Update(float logicTime, float realTime)
@@ -81,7 +81,7 @@ namespace ReunionMovement.Core.Scene
         /// <summary>
         /// 返回上一场景
         /// </summary>
-        public async Task LoadPreScene()
+        public async UniTask LoadPreScene()
         {
             if (!string.IsNullOrEmpty(previousSceneName))
             {
@@ -92,7 +92,7 @@ namespace ReunionMovement.Core.Scene
         /// <summary>
         /// 返回上一场景
         /// </summary>
-        public async Task LoadPreScene_OpenLoad(UnityAction bslcc = null, UnityAction slcc = null)
+        public async UniTask LoadPreScene_OpenLoad(UnityAction bslcc = null, UnityAction slcc = null)
         {
             if (string.IsNullOrEmpty(previousSceneName))
             {
@@ -108,7 +108,7 @@ namespace ReunionMovement.Core.Scene
         /// <param name="openLoad">是否开启load场景</param>
         /// <param name="bslcc">场景加载完成前回调</param>
         /// <param name="slcc">场景加载完成回调</param>
-        public async Task LoadScene(string levelName, bool openLoad = false, UnityAction bslcc = null, UnityAction slcc = null)
+        public async UniTask LoadScene(string levelName, bool openLoad = false, UnityAction bslcc = null, UnityAction slcc = null)
         {
             // 正在加载其他场景：拒绝新请求并记录警告
             if (isLoading)
@@ -160,7 +160,7 @@ namespace ReunionMovement.Core.Scene
         /// <summary>
         /// 加载过渡场景
         /// </summary>
-        private async Task OnLoadingSceneAsync(string loadSceneName, LoadSceneMode loadSceneMode)
+        private async UniTask OnLoadingSceneAsync(string loadSceneName, LoadSceneMode loadSceneMode)
         {
             var async = SceneManager.LoadSceneAsync(loadSceneName, loadSceneMode);
             if (async == null)
@@ -174,7 +174,7 @@ namespace ReunionMovement.Core.Scene
 
             while (!async.isDone)
             {
-                await Task.Yield();
+                await UniTask.Yield(PlayerLoopTiming.Update);
             }
 
             Log.Debug("Loading场景加载完成！");
@@ -185,7 +185,7 @@ namespace ReunionMovement.Core.Scene
         /// <summary>
         /// 加载目标场景
         /// </summary>
-        private async Task OnLoadTargetSceneAsync(string levelName, LoadSceneMode loadSceneMode)
+        private async UniTask OnLoadTargetSceneAsync(string levelName, LoadSceneMode loadSceneMode)
         {
             AsyncOperation async = SceneManager.LoadSceneAsync(levelName, loadSceneMode);
 
@@ -209,7 +209,7 @@ namespace ReunionMovement.Core.Scene
             }
 
             CallbackProgress(0.15f);
-            await Task.Delay((int)(startProgressWaitingTime * 1000));
+            await UniTask.Delay((int)(startProgressWaitingTime * 1000));
 
             // 加载进度 —— 节流：每 5 帧回调一次，减少 ~80% 事件触发
             int frameSkip = 5;
@@ -221,10 +221,10 @@ namespace ReunionMovement.Core.Scene
                     CallbackProgress(async.progress);
                     frameCounter = 0;
                 }
-                await Task.Delay(16);
+                await UniTask.Delay(16);
             }
 
-            await Task.Delay((int)(endProgressWaitingTime * 1000));
+            await UniTask.Delay((int)(endProgressWaitingTime * 1000));
 
             CallbackProgress(1f);
 
@@ -235,7 +235,7 @@ namespace ReunionMovement.Core.Scene
 
             while (!async.isDone)
             {
-                await Task.Delay(16);
+                await UniTask.Delay(16);
             }
 
             if (!openLoad)

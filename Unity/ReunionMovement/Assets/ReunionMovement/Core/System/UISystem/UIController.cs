@@ -1,8 +1,8 @@
 using ReunionMovement.Common.Util;
 using ReunionMovement.Common;
+using Cysharp.Threading.Tasks;
 using System;
 using UnityEngine;
-using System.Threading.Tasks;
 
 namespace ReunionMovement.Core.UI
 {
@@ -184,9 +184,13 @@ namespace ReunionMovement.Core.UI
         /// </summary>
         /// <param name="duration"></param>
         /// <returns></returns>
-        public virtual async Task FadeIn(float duration = 0.2f)
+        public virtual async UniTask FadeIn(float duration = 0.2f)
         {
-            var canvasGroup = gameObject.GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
+            // 优先使用 TryGetComponent 避免 fake null 问题
+            if (!gameObject.TryGetComponent<CanvasGroup>(out var canvasGroup))
+            {
+                canvasGroup = gameObject.AddComponent<CanvasGroup>();
+            }
             canvasGroup.alpha = 0;
             gameObject.SetActive(true);
             float elapsed = 0;
@@ -194,7 +198,7 @@ namespace ReunionMovement.Core.UI
             {
                 elapsed += Time.deltaTime;
                 canvasGroup.alpha = Mathf.Clamp01(elapsed / duration);
-                await Task.Yield(); // Task.Yield 零分配，替代 Task.Delay(16)
+                await UniTask.Yield(PlayerLoopTiming.Update); // UniTask.Yield 零 GC，替代 Task.Delay
             }
             canvasGroup.alpha = 1;
         }
@@ -204,15 +208,18 @@ namespace ReunionMovement.Core.UI
         /// </summary>
         /// <param name="duration"></param>
         /// <returns></returns>
-        public virtual async Task FadeOut(float duration = 0.2f)
+        public virtual async UniTask FadeOut(float duration = 0.2f)
         {
-            var canvasGroup = gameObject.GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
+            if (!gameObject.TryGetComponent<CanvasGroup>(out var canvasGroup))
+            {
+                canvasGroup = gameObject.AddComponent<CanvasGroup>();
+            }
             float elapsed = 0;
             while (elapsed < duration)
             {
                 elapsed += Time.deltaTime;
                 canvasGroup.alpha = Mathf.Clamp01(1f - elapsed / duration);
-                await Task.Yield();
+                await UniTask.Yield(PlayerLoopTiming.Update);
             }
             canvasGroup.alpha = 0;
             gameObject.SetActive(false);

@@ -1,7 +1,7 @@
 using ReunionMovement.Core.UI;
+using Cysharp.Threading.Tasks;
 using System;
 using System.IO;
-using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -16,9 +16,9 @@ namespace ReunionMovement.Common.Util.EditorTools
     {
         // 脚本输出路径
         static string scriptOutPutPath = "Assets/ReunionMovement/GenerateScript/UI/UIPlane/";
-        // 场景导出UI路径
+        // 预制体导出路径
         static string prefabsOutPutPath = "Assets/ReunionMovement/Resources/Prefabs/UIs/";
-        // 场景导出UI路径
+        // 场景导出路径
         static string sceneOutPutPath = "Assets/ReunionMovement/Editor/UIScenes/";
 
         // 类名
@@ -204,7 +204,7 @@ namespace ReunionMovement.Common.Util.EditorTools
         /// <summary>
         /// 创建脚本
         /// </summary>
-        public async Task CreateSpript()
+        public async UniTask CreateSpript()
         {
             scriptName = className + "UIPlane";
             await GenerateScript(scriptName);
@@ -223,15 +223,30 @@ namespace ReunionMovement.Common.Util.EditorTools
         }
 
         /// <summary>
-        /// 绑定脚本到目标
+        /// 绑定脚本到目标（targetName 需在 Inspector 中设置）
         /// </summary>
         public void BindingSpriptToTarget()
         {
+            if (string.IsNullOrEmpty(targetName))
+            {
+                Log.Error("targetName 为空，请在 Inspector 中设置要绑定的目标名称。");
+                return;
+            }
             scriptName = className + "UIPlane";
             var type = Type.GetType("ReunionMovement.Core.UI." + scriptName + ", Assembly-CSharp");
             SetUIObj();
-            GameObject @object = uiObj.transform.Find(targetName).gameObject;
-            BindScript(@object, type);
+            if (uiObj == null)
+            {
+                Log.Error("uiObj 为空，无法绑定脚本到目标。");
+                return;
+            }
+            Transform targetTransform = uiObj.transform.Find(targetName);
+            if (targetTransform == null)
+            {
+                Log.Error($"未找到目标 Transform: {targetName}");
+                return;
+            }
+            BindScript(targetTransform.gameObject, type);
         }
 
         /// <summary>
@@ -272,14 +287,15 @@ namespace ReunionMovement.Common.Util.EditorTools
         /// </summary>
         void ExportingPrefabsFromAScene()
         {
-            var windowAssets = GetUIWIndoeAssetsFromCurrentScene();
+            var windowAsset = GetUIWindowAssetsFromCurrentScene();
+            if (windowAsset == null) return;
             var uiPrefabDir = prefabsOutPutPath;
             if (!Directory.Exists(uiPrefabDir))
             {
                 Directory.CreateDirectory(uiPrefabDir);
             }
 
-            ExportPrefab(windowAssets, uiPrefabDir);
+            ExportPrefab(windowAsset, uiPrefabDir);
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -304,7 +320,7 @@ namespace ReunionMovement.Common.Util.EditorTools
         /// 获取当前场景中的UIWindowAsset
         /// </summary>
         /// <returns></returns>
-        static UIWindowAsset GetUIWIndoeAssetsFromCurrentScene()
+        static UIWindowAsset GetUIWindowAssetsFromCurrentScene()
         {
             var windowAssets = FindFirstObjectByType<UIWindowAsset>();
 
@@ -322,7 +338,7 @@ namespace ReunionMovement.Common.Util.EditorTools
         /// </summary>
         /// <param name="name"></param>
         /// <returns></returns>
-        static async Task GenerateScript(string name)
+        static async UniTask GenerateScript(string name)
         {
             string ScriptTemplate = @"//此脚本是由工具自动生成，请勿手动创建
 

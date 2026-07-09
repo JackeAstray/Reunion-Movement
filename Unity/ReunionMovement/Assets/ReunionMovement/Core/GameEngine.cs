@@ -1,10 +1,10 @@
 using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
+using Cysharp.Threading.Tasks;
 using System.Collections;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using System.Threading.Tasks;
 
 namespace ReunionMovement.Core
 {
@@ -93,7 +93,7 @@ namespace ReunionMovement.Core
         /// <summary>
         /// 带错误处理的初始化包装（确保错误回调在主线程执行）
         /// </summary>
-        private static async Task InitWithErrorHandlingAsync(GameEngine appEngine)
+        private static async UniTask InitWithErrorHandlingAsync(GameEngine appEngine)
         {
             try
             {
@@ -112,7 +112,7 @@ namespace ReunionMovement.Core
         /// <summary>
         /// 初始化游戏引擎
         /// </summary>
-        private async Task InitAsync()
+        private async UniTask InitAsync()
         {
             var t0 = Time.realtimeSinceStartup; // 记录开始时间
 
@@ -140,7 +140,7 @@ namespace ReunionMovement.Core
         /// <summary>
         /// 执行初始化模块（异步）
         /// </summary>
-        private async Task OnInitModulesAsync(IList<ICustomSystem> modules)
+        private async UniTask OnInitModulesAsync(IList<ICustomSystem> modules)
         {
             foreach (ICustomSystem initModule in modules)
             {
@@ -170,12 +170,12 @@ namespace ReunionMovement.Core
 
             if (accumTime1s >= 1.0f)
             {
-                accumTime1s -= 1.0f;
+                accumTime1s = 0f;
                 UpdatePer1sEvent?.Invoke();
             }
             if (accumTime300ms >= 0.3f)
             {
-                accumTime300ms -= 0.3f;
+                accumTime300ms = 0f;
                 UpdatePer300msEvent?.Invoke();
             }
 
@@ -183,7 +183,7 @@ namespace ReunionMovement.Core
             {
                 for (int i = 0; i < gameModules.Count; i++)
                 {
-                    gameModules[i].Update(Time.deltaTime, Time.unscaledDeltaTime);
+                    gameModules[i]?.Update(Time.deltaTime, Time.unscaledDeltaTime);
                 }
             }
         }

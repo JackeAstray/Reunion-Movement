@@ -1,9 +1,9 @@
 using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
 using ReunionMovement.Core.Resources;
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -40,7 +40,7 @@ namespace ReunionMovement.Core.UI
         public GameObject headInfoUIRoot { get; private set; }
         public GameObject tipsUIRoot { get; private set; }
 
-        public async Task Init()
+        public async UniTask Init()
         {
             initProgress = 0;
 
@@ -83,7 +83,7 @@ namespace ReunionMovement.Core.UI
         /// <summary>
         /// 创建根节点
         /// </summary>
-        private Task CreateRoot()
+        private UniTask CreateRoot()
         {
             uiRoot = new GameObject("UIRoot");
             mainUIRoot = new GameObject("MainUIRoot");
@@ -111,7 +111,7 @@ namespace ReunionMovement.Core.UI
 
             initProgress = 50;
 
-            return Task.CompletedTask;
+            return UniTask.CompletedTask;
         }
 
 
@@ -363,7 +363,7 @@ namespace ReunionMovement.Core.UI
 
             UIController uiBase = uiState.uiWindow;
 
-            if (uiBase.gameObject.activeSelf)
+            if (uiBase != null && uiBase.gameObject.activeSelf)
             {
                 // 在 BeforeOpen 之前激活，确保 UI 可见
                 uiBase.gameObject.SetActive(true);

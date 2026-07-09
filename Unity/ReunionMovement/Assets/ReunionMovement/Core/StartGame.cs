@@ -8,12 +8,12 @@ using ReunionMovement.Core.Sound;
 using ReunionMovement.Core.Terminal;
 using ReunionMovement.Core.UI;
 using ReunionMovement.Core.UIInput;
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace ReunionMovement.Core
@@ -51,10 +51,10 @@ namespace ReunionMovement.Core
         }
 
         /// <summary>
-        /// 在初始化模块之前，协同程序
+        /// 在初始化模块之前执行（异步方法）
         /// </summary>
         /// <returns></returns>
-        public override Task OnBeforeInitAsync()
+        public override UniTask OnBeforeInitAsync()
         {
             Log.Debug("初始化前执行");
 
@@ -63,14 +63,14 @@ namespace ReunionMovement.Core
                 GameOption.LoadOptions();
             }
 
-            return Task.CompletedTask;
+            return UniTask.CompletedTask;
         }
 
         /// <summary>
         /// 游戏启动
         /// </summary>
         /// <returns></returns>
-        public override async Task OnGameStartAsync()
+        public override async UniTask OnGameStartAsync()
         {
             Log.Debug("游戏启动");
 

@@ -2,12 +2,12 @@
 using ReunionMovement.Core.Base;
 using ReunionMovement.Core.Resources;
 using ReunionMovement.Core.Scene;
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Pool;
@@ -69,13 +69,13 @@ namespace ReunionMovement.Core.Sound
         private Dictionary<GameObject, IObjectPool<GameObject>> pooledObjects = new Dictionary<GameObject, IObjectPool<GameObject>>();
         //生成对象池 特效
         private Dictionary<GameObject, GameObject> sfxObjects = new Dictionary<GameObject, GameObject>();
-        // 淡入淡出状态机（避免 async Task.Yield 每帧分配）
+        // 淡入淡出状态机（由 Update 驱动，配合 UniTaskCompletionSource 实现零 GC）
         private enum FadeState { None, FadingIn, FadingOut }
         private FadeState fadeState = FadeState.None;
         private float fadeTimer;
         private float fadeStartVolume;
         private float fadeTargetVolume;
-        private TaskCompletionSource<bool> fadeTcs;        
+        private UniTaskCompletionSource<bool> fadeTcs;        
         #endregion
 
         // 确保 AudioSource 存在（如果被销毁则重建）
@@ -106,7 +106,7 @@ namespace ReunionMovement.Core.Sound
         // 预热取消令牌（Clear 时取消正在进行的预热任务）
         private CancellationTokenSource warmupCts;
 
-        public Task Init()
+        public UniTask Init()
         {
             initProgress = 0;
 
@@ -140,13 +140,13 @@ namespace ReunionMovement.Core.Sound
             isInited = true;
             Log.Debug("SoundSystem 初始化完成");
 
-            return Task.CompletedTask;
+            return UniTask.CompletedTask;
         }
 
         /// <summary>
         /// 预热指定的音频剪辑到缓存，消除首次播放延迟
         /// </summary>
-        private async Task WarmupAudioClipsAsync(CancellationToken ct)
+        private async UniTask WarmupAudioClipsAsync(CancellationToken ct)
         {
             if (preloadAudioIndices == null || preloadAudioIndices.Count == 0) return;
 
@@ -248,7 +248,7 @@ namespace ReunionMovement.Core.Sound
         /// </summary>
         /// <param name="index">音乐配置索引</param>
         /// <param name="volume">音量（null 表示使用默认音量）</param>
-        public async Task PlayMusic(int index, float? volume = null)
+        public async UniTask PlayMusic(int index, float? volume = null)
         {
             if (soundConfigDict != null && soundConfigDict.TryGetValue(index, out SoundConfig soundConfig))
             {
@@ -299,7 +299,7 @@ namespace ReunionMovement.Core.Sound
         /// 音乐切换-带渐入渐出效果（优化版：新曲加载与淡出并行，减少等待时间）
         /// </summary>
         /// <param name="index"></param>
-        public async Task PlaySwitch(int index)
+        public async UniTask PlaySwitch(int index)
         {
             if (soundConfigDict == null || !soundConfigDict.TryGetValue(index, out SoundConfig soundConfig))
                 return;
@@ -328,32 +328,38 @@ namespace ReunionMovement.Core.Sound
         /// <summary>
         /// 渐入（由 Update 驱动，避免每帧 async 状态机分配）
         /// </summary>
-        private Task FadeIn()
+        private UniTask FadeIn()
         {
             EnsureAudioSource();
-            if (source == null) return Task.CompletedTask;
+            if (source == null) return UniTask.CompletedTask;
+
+            // 如果上一次淡入淡出尚未完成，先完成旧的 TCS 防止泄漏
+            fadeTcs?.TrySetResult(false);
 
             fadeStartVolume = 0f;
             fadeTargetVolume = GameOption.currentOption.musicVolume;
             fadeTimer = 0f;
             fadeState = FadeState.FadingIn;
-            fadeTcs = new TaskCompletionSource<bool>();
+            fadeTcs = new UniTaskCompletionSource<bool>();
             return fadeTcs.Task;
         }
 
         /// <summary>
-        /// 渐出（由 Update 驱动，避免每帧 async 状态机分配）
+        /// 渐出（由 Update 驱动，配合 UniTaskCompletionSource 实现零 GC）
         /// </summary>
-        private Task FadeOut()
+        private UniTask FadeOut()
         {
             EnsureAudioSource();
-            if (source == null) return Task.CompletedTask;
+            if (source == null) return UniTask.CompletedTask;
+
+            // 如果上一次淡入淡出尚未完成，先完成旧的 TCS 防止泄漏
+            fadeTcs?.TrySetResult(false);
 
             fadeStartVolume = source.volume;
             fadeTargetVolume = 0f;
             fadeTimer = 0f;
             fadeState = FadeState.FadingOut;
-            fadeTcs = new TaskCompletionSource<bool>();
+            fadeTcs = new UniTaskCompletionSource<bool>();
             return fadeTcs.Task;
         }
 
@@ -364,27 +370,46 @@ namespace ReunionMovement.Core.Sound
         /// <param name="index">声音配置索引</param>
         /// <param name="emitter">声音发射器</param>
         /// <param name="loop">是否循环</param>
-        public async Task PlaySfx(int index, Transform emitter = null, bool loop = false, float? volume = null, float pitch = 1f)
+        public async UniTask PlaySfx(int index, Transform emitter = null, bool loop = false, float? volume = null, float pitch = 1f)
         {
             try
             {
                 if (soundConfigDict != null && soundConfigDict.TryGetValue(index, out SoundConfig soundConfig))
                 {
                     AudioClip clip = await GetAudioClipAsync(soundConfig.Path, soundConfig.Name);
-                    if (clip != null && startupPools.Count > 0 && startupPools[0].prefab != null)
+                    if (clip != null && startupPools.Count > 0)
                     {
-                        GameObject obj = startupPools[0].prefab;
-                        GameObject go = Spawn(obj);
-                        if (go != null)
+                        // 遍历所有对象池，使用第一个有效的 prefab
+                        GameObject obj = null;
+                        foreach (var pool in startupPools)
                         {
-                            if (emitter != null)
+                            if (pool.prefab != null)
                             {
-                                go.transform.SetParent(emitter);
-                                go.transform.localPosition = Vector3.zero;
+                                obj = pool.prefab;
+                                break;
                             }
-                            SoundItem soundObj = go.GetComponent<SoundItem>();
-                            float effectiveVolume = volume ?? GameOption.currentOption.sfxVolume;
-                            soundObj.Processing(clip, emitter, loop, effectiveVolume, GameOption.currentOption.sfxMuted, pitch);
+                        }
+                        if (obj != null)
+                        {
+                            GameObject go = Spawn(obj);
+                            if (go != null)
+                            {
+                                if (emitter != null)
+                                {
+                                    go.transform.SetParent(emitter);
+                                    go.transform.localPosition = Vector3.zero;
+                                }
+                                SoundItem soundObj = go.GetComponent<SoundItem>();
+                                if (soundObj != null)
+                                {
+                                    float effectiveVolume = volume ?? GameOption.currentOption.sfxVolume;
+                                    soundObj.Processing(clip, emitter, loop, effectiveVolume, GameOption.currentOption.sfxMuted, pitch);
+                                }
+                                else
+                                {
+                                    Log.Warning($"PlaySfx: SoundItem 组件缺失于 {go.name}");
+                                }
+                            }
                         }
                     }
                 }
@@ -909,7 +934,7 @@ namespace ReunionMovement.Core.Sound
         /// <summary>
         /// 从缓存或资源加载音频剪辑  WAV(.wav)  AIFF/AIF(.aif, .aiff)  AU(.au)  Ogg Vorbis(.ogg)  MP3(.mp3)
         /// </summary>
-        private async Task<AudioClip> GetAudioClipAsync(string path, string name)
+        private async UniTask<AudioClip> GetAudioClipAsync(string path, string name)
         {
             string fullPath = string.Concat(path, name);
             if (audioClipCache.TryGetValue(fullPath, out AudioClip clip))

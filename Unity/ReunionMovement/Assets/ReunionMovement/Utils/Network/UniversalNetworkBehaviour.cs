@@ -50,9 +50,9 @@ namespace ReunionMovement.Common.Util
         public StringEvent onClientError;
 
         public UnityEvent onServerStarted;
-        public IntEvent onServerClientConnected; // client id
+        public IntEvent onServerClientConnected; // 客户端 ID
         public IntEvent onServerClientDisconnected;
-        public StringEvent onServerDataReceived; // stringified data
+        public StringEvent onServerDataReceived; // 字符串化的数据
         public StringEvent onServerError;
 
         // 供代码订阅的 C# 事件

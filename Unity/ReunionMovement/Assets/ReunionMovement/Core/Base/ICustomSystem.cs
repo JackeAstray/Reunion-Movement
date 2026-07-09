@@ -1,5 +1,4 @@
-using System.Collections;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace ReunionMovement.Core.Base
@@ -15,10 +14,10 @@ namespace ReunionMovement.Core.Base
         double InitProgress { get; }
 
         /// <summary>
-        /// 初始化协程
+        /// 初始化（UniTask 零 GC 异步）
         /// </summary>
         /// <returns></returns>
-        Task Init();
+        UniTask Init();
 
         /// <summary>
         /// 更新模块时间 （以秒为单位）

@@ -467,7 +467,7 @@ namespace ReunionMovement.Core.Terminal
             if (space_index >= 0)
             {
                 arg.String = s.Substring(0, space_index);
-                s = s.Substring(space_index + 1); // Remaining
+                s = s.Substring(space_index + 1); // 剩余部分
             }
             else
             {
