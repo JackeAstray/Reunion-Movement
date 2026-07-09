@@ -20,10 +20,10 @@ namespace ReunionMovement.Common.Util.Download
         /// <param name="worker">需要加锁执行的异步方法</param>
         public async UniTask LockAsync(Func<UniTask> worker)
         {
-            await semaphore.WaitAsync().ConfigureAwait(false);
+            await semaphore.WaitAsync();
             try
             {
-                await worker().ConfigureAwait(false);
+                await worker();
             }
             finally
             {
@@ -39,10 +39,10 @@ namespace ReunionMovement.Common.Util.Download
         /// <returns>异步操作结果</returns>
         public async UniTask<T> LockAsync<T>(Func<UniTask<T>> worker)
         {
-            await semaphore.WaitAsync().ConfigureAwait(false);
+            await semaphore.WaitAsync();
             try
             {
-                return await worker().ConfigureAwait(false);
+                return await worker();
             }
             finally
             {
