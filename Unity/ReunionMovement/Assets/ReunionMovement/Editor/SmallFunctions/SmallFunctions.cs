@@ -112,6 +112,11 @@ namespace ReunionMovement.Common.Util.EditorTools
         void AddRippleEffect<T, U>() where T : Component where U : Component
         {
             GameObject selectedObject = Selection.activeGameObject;
+            if (selectedObject == null)
+            {
+                Log.Warning("请先在 Hierarchy 中选中一个对象！");
+                return;
+            }
             var assetPath = EditorUtility.IsPersistent(selectedObject);
             if (assetPath == false)
             {
@@ -137,6 +142,11 @@ namespace ReunionMovement.Common.Util.EditorTools
         void RemoveRippleEffect<T>() where T : Component
         {
             GameObject selectedObject = Selection.activeGameObject;
+            if (selectedObject == null)
+            {
+                Log.Warning("请先在 Hierarchy 中选中一个对象！");
+                return;
+            }
             var assetPath = EditorUtility.IsPersistent(selectedObject);
             if (assetPath == false)
             {

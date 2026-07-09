@@ -1,7 +1,7 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -36,7 +36,7 @@ namespace ReunionMovement.Common.Util.Download
         /// <param name="headers"></param>
         /// <param name="timeoutSeconds"></param>
         /// <returns></returns>
-        public static async Task<HTTPResponse> Get(string uri, Dictionary<string, string> headers = null, int timeoutSeconds = 3)
+        public static async UniTask<HTTPResponse> Get(string uri, Dictionary<string, string> headers = null, int timeoutSeconds = 3)
         {
             var resp = new HTTPResponse();
 

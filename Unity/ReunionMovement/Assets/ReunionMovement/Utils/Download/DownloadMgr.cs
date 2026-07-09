@@ -1,8 +1,8 @@
 ﻿using ReunionMovement.Common.Util.HttpService;
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace ReunionMovement.Common.Util.Download
@@ -71,7 +71,7 @@ namespace ReunionMovement.Common.Util.Download
 
             ClearData();
 
-            // clear mappings
+            // 清除 MIME 类型映射
             mimeTypeToExtension.Clear();
         }
 
@@ -152,7 +152,7 @@ namespace ReunionMovement.Common.Util.Download
         /// <param name="uiPlane"></param>
         /// <param name="set"></param>
         /// <param name="action"></param>
-        public async Task DownloadFiles(List<string> url,
+        public async UniTask DownloadFiles(List<string> url,
             string savePath,
             Action<float> progress = null,
             Action action = null,

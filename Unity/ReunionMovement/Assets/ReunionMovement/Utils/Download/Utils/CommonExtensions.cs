@@ -1,17 +1,17 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace ReunionMovement.Common.Util.Download
 {
     /// <summary>
-    /// 任务扩展
+    /// UniTask 扩展（零 GC）
     /// </summary>
     public static class TaskExtensions
     {
-        public static async Task<TV> Then<T, TV>(this Task<T> task, Func<T, TV> then)
+        public static async UniTask<TV> Then<T, TV>(this UniTask<T> task, Func<T, TV> then)
         {
             var result = await task;
             return then(result);

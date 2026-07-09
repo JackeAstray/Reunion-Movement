@@ -3,9 +3,9 @@ using ReunionMovement.Common.Util;
 using ReunionMovement.Core.Base;
 using ReunionMovement.Core.Resources;
 using ReunionMovement.Core.Sound;
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace ReunionMovement.Core.Languages
@@ -38,7 +38,7 @@ namespace ReunionMovement.Core.Languages
                 { Multilingual.JA_JP, c => c.JA_JP },
             };
 
-        public Task Init()
+        public UniTask Init()
         {
             initProgress = 0;
 
@@ -61,7 +61,7 @@ namespace ReunionMovement.Core.Languages
             initProgress = 100;
             isInited = true;
             Log.Debug("LanguagesSystem 初始化完成");
-            return Task.CompletedTask;
+            return UniTask.CompletedTask;
         }
 
         public void Update(float logicTime, float realTime)

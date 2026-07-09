@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using UnityEngine.Networking;
 
 namespace ReunionMovement.Common.Util.Download
@@ -165,7 +165,7 @@ namespace ReunionMovement.Common.Util.Download
         /// 下载器的URI
         /// </summary>
         /// <returns></returns>
-        public override async Task<bool> Download()
+        public override async UniTask<bool> Download()
         {
             if (Downloading || Uris == null || Uris.Length == 0)
             {
@@ -185,17 +185,17 @@ namespace ReunionMovement.Common.Util.Download
                 Log.Error($"{GetType().FullName}.下载要求MaxConcurrency为非负整数。");
                 return false;
             }
-            var tasks = new List<Task<bool>>(threadCount);
+            var tasks = new List<UniTask<bool>>(threadCount);
             for (int i = 0; i < threadCount; i++)
             {
                 tasks.Add(Dispatch());
             }
 
-            await Task.WhenAll(tasks);
+            await UniTask.WhenAll(tasks);
 
             while (Downloading && !(DidError && !ContinueAfterFailure))
             {
-                await Task.Delay(75);
+                await UniTask.Delay(75);
             }
 
             return true;
@@ -206,7 +206,7 @@ namespace ReunionMovement.Common.Util.Download
         /// </summary>
         /// <param name="uri"></param>
         /// <returns></returns>
-        public override Task<bool> Download(string uri)
+        public override UniTask<bool> Download(string uri)
         {
             if (!Downloading)
             {
@@ -237,19 +237,19 @@ namespace ReunionMovement.Common.Util.Download
             }
 
             OnDownloadIndividualInvoked?.Invoke(uri);
-            return Task.FromResult(true);
+            return UniTask.FromResult(true);
         }
 
         /// <summary>
         /// 返回false的异步方法
         /// </summary>
         /// <returns></returns>
-        internal Task<bool> ReturnFalseAsync() => Task.FromResult(false);
+        internal UniTask<bool> ReturnFalseAsync() => UniTask.FromResult(false);
 
         /// <summary>
         /// 派遣下载器
         /// </summary>
-        internal Task<bool> Dispatch()
+        internal UniTask<bool> Dispatch()
         {
             if (pendingUris == null || pendingUris.Length == 0)
             {
@@ -333,7 +333,7 @@ namespace ReunionMovement.Common.Util.Download
         /// </summary>
         /// <param name="idf"></param>
         /// <returns></returns>
-        internal Task<bool> Dispatch(IDownloadExecutor idf)
+        internal UniTask<bool> Dispatch(IDownloadExecutor idf)
         {
             var req = idf.Download();
             if (req == null)
@@ -350,7 +350,7 @@ namespace ReunionMovement.Common.Util.Download
             return ReturnFalseAsync();
         }
 
-        internal async Task DispatchCompletion()
+        internal async UniTask DispatchCompletion()
         {
             await Locker.LockAsync(async () =>
             {
@@ -377,7 +377,7 @@ namespace ReunionMovement.Common.Util.Download
         /// </summary>
         /// <param name="idf"></param>
         /// <returns></returns>
-        internal async Task DispatchCompletion(IDownloadExecutor idf)
+        internal async UniTask DispatchCompletion(IDownloadExecutor idf)
         {
             await Locker.LockAsync(async () =>
             {
@@ -438,14 +438,14 @@ namespace ReunionMovement.Common.Util.Download
         /// 取消所有下载
         /// </summary>
         /// <returns></returns>
-        public override Task<bool> Cancel()
+        public override UniTask<bool> Cancel()
         {
             downloading = false;
             OnCancel?.Invoke();
             OnCancelInvoked?.Invoke();
             endTime = Environment.TickCount;
             HandleAbandonOnFailure();
-            return Task.FromResult(true);
+            return UniTask.FromResult(true);
         }
 
         /// <summary>
@@ -453,7 +453,7 @@ namespace ReunionMovement.Common.Util.Download
         /// </summary>
         /// <param name="uri"></param>
         /// <returns></returns>
-        public override Task<bool> Cancel(string uri)
+        public override UniTask<bool> Cancel(string uri)
         {
             OnCancelIndividual?.Invoke(uri);
 
@@ -467,13 +467,13 @@ namespace ReunionMovement.Common.Util.Download
             else if (!executorsOld.Any(idf => idf.Uri == uri))
             {
                 Log.Error($"对从未调用过的URI调用取消 {uri}");
-                return Task.FromResult(false);
+                return UniTask.FromResult(false);
             }
             else
             {
                 Log.Error("对已完成的URI调用取消");
             }
-            return Task.FromResult(true);
+            return UniTask.FromResult(true);
         }
 
         /// <summary>

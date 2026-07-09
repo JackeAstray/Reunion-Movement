@@ -16,7 +16,7 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static bool Probability(float chancePercent)
         {
-            // 限制概率在0~100之间（手动实现以兼容较旧的框架）
+            // 限制概率在0~100之间（手动 Clamp 以兼容 .NET Standard 2.0）
             if (chancePercent < 0f) chancePercent = 0f;
             if (chancePercent > 100f) chancePercent = 100f;
             return random.NextDouble() * 100.0 <= chancePercent;

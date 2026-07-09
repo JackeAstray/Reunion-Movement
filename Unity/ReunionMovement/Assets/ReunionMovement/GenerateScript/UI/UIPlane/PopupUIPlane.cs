@@ -51,6 +51,9 @@ namespace ReunionMovement.Core.UI
 
             switch (args.Length)
             {
+                case 0:
+                    Log.Error("PopupUIPlane: 未传入任何参数，窗口内容为空。");
+                    break;
                 case 1:
                     if (containerStr != null) containerStr.text = args[0] as string;
                     break;

@@ -44,7 +44,7 @@ namespace ReunionMovement.Common.Util
                 return new byte[length];
             }
 
-            // Dequeue the first item and check its size. If it's too small, allocate a new one.
+            // 取出队列首项并检查其大小。如果太小，则分配新的缓冲区。
             byte[] bytes = cachedBytesQueue.Dequeue();
 
             if (bytes.Length < length)

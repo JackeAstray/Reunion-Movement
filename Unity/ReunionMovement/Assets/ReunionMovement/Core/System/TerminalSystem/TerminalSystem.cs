@@ -1,8 +1,8 @@
 using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
 using ReunionMovement.Core.UI;
+using Cysharp.Threading.Tasks;
 using System;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -23,7 +23,7 @@ namespace ReunionMovement.Core.Terminal
         Keyboard keyboard;
         public TerminalRequest terminalRequest { get; private set; }
 
-        public Task Init()
+        public UniTask Init()
         {
             initProgress = 0;
 
@@ -48,7 +48,7 @@ namespace ReunionMovement.Core.Terminal
             isInited = true;
             Log.Debug("TerminalSystem 初始化完成");
 
-            return Task.CompletedTask;
+            return UniTask.CompletedTask;
         }
 
         public void Update(float logicTime, float realTime)

@@ -1,11 +1,8 @@
 ﻿using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
+using Cysharp.Threading.Tasks;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ReunionMovement.Core
 {
@@ -37,12 +34,12 @@ namespace ReunionMovement.Core
         /// 在初始化之前
         /// </summary>
         /// <returns></returns>
-        public abstract Task OnBeforeInitAsync();
+        public abstract UniTask OnBeforeInitAsync();
 
         /// <summary>
         /// 游戏启动
         /// </summary>
         /// <returns></returns>
-        public abstract Task OnGameStartAsync();
+        public abstract UniTask OnGameStartAsync();
     }
 }

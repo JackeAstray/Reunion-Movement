@@ -1,9 +1,9 @@
 using ReunionMovement.Common;
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
@@ -281,8 +281,8 @@ namespace ReunionMovement.UI.ButtonClick
                 pressStartTime = DateTime.Now;
                 longPressCts = new CancellationTokenSource();
                 progressCts = new CancellationTokenSource();
-                StartLongPressingCoroutine(longPressCts.Token);
-                StartProgressBarCoroutine(progressCts.Token);
+                StartLongPressingAsync(longPressCts.Token).Forget();
+                StartProgressBarAsync(progressCts.Token).Forget();
             }
         }
 
@@ -337,23 +337,16 @@ namespace ReunionMovement.UI.ButtonClick
         /// <summary>
         /// 长按协程
         /// </summary>
-        private async void StartLongPressingCoroutine(CancellationToken token)
+        private async UniTaskVoid StartLongPressingAsync(CancellationToken token)
         {
-            try
-            {
-                await Task.Delay((int)(longPressDuration * 1000f), token);
-                onLongPressing?.Invoke();
-            }
-            catch (TaskCanceledException)
-            {
-                Log.Debug("[LongClickButton] 长按协程被取消。");
-            }
+            bool canceled = await UniTask.Delay((int)(longPressDuration * 1000f), cancellationToken: token).SuppressCancellationThrow();
+            if (!canceled) onLongPressing?.Invoke();
         }
 
         /// <summary>
         /// 进度条动画协程
         /// </summary>
-        private async void StartProgressBarCoroutine(CancellationToken token)
+        private async UniTaskVoid StartProgressBarAsync(CancellationToken token)
         {
             try
             {
@@ -361,23 +354,18 @@ namespace ReunionMovement.UI.ButtonClick
                 progressBar.gameObject.SetActive(true);
                 progressBar.fillAmount = 0f;
                 float t = 0f;
-                while (t < longPressDuration)
+                while (t < longPressDuration && !token.IsCancellationRequested)
                 {
-                    if (token.IsCancellationRequested) break;
                     t += Time.unscaledDeltaTime;
                     progressBar.fillAmount = Mathf.Clamp01(t / longPressDuration);
-                    await Task.Yield();
+                    await UniTask.Yield(PlayerLoopTiming.Update);
                 }
                 if (!token.IsCancellationRequested)
                     progressBar.fillAmount = 1f;
             }
-            catch (TaskCanceledException)
-            {
-                Log.Debug("[LongClickButton] 进度条协程被取消。");
-            }
             catch (System.Exception ex)
             {
-                Log.Error($"[LongClickButton] 进度条协程异常: {ex.Message}");
+                Log.Error($"[LongClickButton] 进度条动画异常: {ex.Message}");
             }
         }
 

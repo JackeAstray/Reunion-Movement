@@ -1,11 +1,11 @@
 ﻿using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.U2D;
@@ -33,12 +33,12 @@ namespace ReunionMovement.Core.Resources
         // 图集缓存，避免每次 GetAtlasSprite 重复 Resources.Load
         private Dictionary<string, SpriteAtlas> atlasCache = new Dictionary<string, SpriteAtlas>();
 
-        public Task Init()
+        public UniTask Init()
         {
             initProgress = 100;
             isInited = true;
             Log.Debug("ResourcesSystem 初始化完成");
-            return Task.CompletedTask;
+            return UniTask.CompletedTask;
         }
 
         public void Update(float logicTime, float realTime)
@@ -95,7 +95,7 @@ namespace ReunionMovement.Core.Resources
         /// <param name="assetPath"></param>
         /// <param name="callback"></param>
         /// <returns></returns>
-        public async Task<T> LoadAsync<T>(string assetPath, bool isCache = true, UnityAction<T> callback = null) where T : Object
+        public async UniTask<T> LoadAsync<T>(string assetPath, bool isCache = true, UnityAction<T> callback = null) where T : Object
         {
             if (resourceTable.TryGetValue(assetPath, out var cachedAsset))
             {
@@ -306,7 +306,7 @@ namespace ReunionMovement.Core.Resources
     {
         public static ResourceRequestAwaiter GetAwaiter(this ResourceRequest request) => new ResourceRequestAwaiter(request);
 
-        public static async Task<T> LoadAsync<T>(string assetPath, UnityAction<T> callback = null) where T : Object
+        public static async UniTask<T> LoadAsync<T>(string assetPath, UnityAction<T> callback = null) where T : Object
         {
             try
             {

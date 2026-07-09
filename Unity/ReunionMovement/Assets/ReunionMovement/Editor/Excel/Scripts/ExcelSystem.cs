@@ -1,5 +1,6 @@
 ﻿using ReunionMovement.Common;
 using ReunionMovement.Common.Util;
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,7 +9,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
@@ -235,7 +235,7 @@ namespace ReunionMovement.EditorTools
         /// 生成脚本
         /// </summary>
         /// <param name="sheet"></param>
-        static async Task GenerateScript(SheetData sheet)
+        static async UniTask GenerateScript(SheetData sheet)
         {
             string scriptTemplate = @"//此脚本为工具生成，请勿手动创建 {_CREATE_TIME_} <ExcelTo>
 using System;
@@ -364,7 +364,7 @@ namespace ReunionMovement
         /// </summary>
         /// <param name="sheet"></param>
         /// <param name="order"></param>
-        static async Task GenerateScriptList(SheetData sheet, int order)
+        static async UniTask GenerateScriptList(SheetData sheet, int order)
         {
             string ScriptTemplate = @"//此脚本为工具生成，请勿手动创建 {_CREATE_TIME_} <ExcelTo>
 using System;

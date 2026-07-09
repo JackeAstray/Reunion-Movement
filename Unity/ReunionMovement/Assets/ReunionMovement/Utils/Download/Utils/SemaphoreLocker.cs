@@ -1,9 +1,9 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace ReunionMovement.Common.Util.Download
 {
@@ -18,7 +18,7 @@ namespace ReunionMovement.Common.Util.Download
         /// 异步执行带锁的操作
         /// </summary>
         /// <param name="worker">需要加锁执行的异步方法</param>
-        public async Task LockAsync(Func<Task> worker)
+        public async UniTask LockAsync(Func<UniTask> worker)
         {
             await semaphore.WaitAsync().ConfigureAwait(false);
             try
@@ -37,7 +37,7 @@ namespace ReunionMovement.Common.Util.Download
         /// <typeparam name="T">返回值类型</typeparam>
         /// <param name="worker">需要加锁执行的异步方法</param>
         /// <returns>异步操作结果</returns>
-        public async Task<T> LockAsync<T>(Func<Task<T>> worker)
+        public async UniTask<T> LockAsync<T>(Func<UniTask<T>> worker)
         {
             await semaphore.WaitAsync().ConfigureAwait(false);
             try

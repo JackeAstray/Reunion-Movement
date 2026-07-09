@@ -61,7 +61,7 @@ namespace ReunionMovement.Common
                 return;
             }
 
-            // 直接设置静态字段，跳過 setter 中的重复检查
+            // 直接设置静态字段，跳过 setter 中的重复检查
             if (!isInitialized)
             {
                 instance = this as T;
@@ -89,7 +89,7 @@ namespace ReunionMovement.Common
         /// </summary>
         private static T CreateInstance()
         {
-            // 使用 FindFirstObjectByType（比 FindAnyObjectByType 更适合单例语义）
+            // 使用 FindFirstObjectByType（比 FindObjectOfType 更适合单例语义）
             T foundInstance = FindFirstObjectByType<T>();
             if (foundInstance == null)
             {

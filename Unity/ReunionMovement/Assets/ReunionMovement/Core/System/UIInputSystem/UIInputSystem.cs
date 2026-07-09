@@ -2,9 +2,9 @@ using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
 using ReunionMovement.Core.Resources;
 using ReunionMovement.Core.UI;
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -94,7 +94,7 @@ namespace ReunionMovement.Core.UIInput
         #endregion
 
         #region 初始化
-        public async Task Init()
+        public async UniTask Init()
         {
             initProgress = 0;
 
@@ -181,7 +181,7 @@ namespace ReunionMovement.Core.UIInput
         /// <summary>
         /// 加载 InputActionAsset（从 Settings 文件夹）
         /// </summary>
-        private async Task LoadInputActionsAsync()
+        private async UniTask LoadInputActionsAsync()
         {
             // 尝试从 UISystem 的 InputSystemUIInputModule 获取已赋值的 actions
             if (inputModule != null && inputModule.actionsAsset != null)
@@ -205,7 +205,7 @@ namespace ReunionMovement.Core.UIInput
                 Log.Warning("UIInputSystem: 无法加载 InputSystem_Actions.inputactions，键盘导航将依赖默认绑定");
             }
 
-            await Task.CompletedTask;
+            await UniTask.CompletedTask;
         }
 
         /// <summary>

@@ -1,10 +1,10 @@
 ﻿using ReunionMovement.Common.Util.Coroutiner;
+using Cysharp.Threading.Tasks;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -17,7 +17,7 @@ namespace ReunionMovement.Common.Util.HttpService
     {
         private IHttpService service;
         private Dictionary<string, string> superHeaders;
-        private Dictionary<IHttpRequest, Coroutine> httpRequests;
+        private Dictionary<IHttpRequest, CancellationTokenSource> httpRequests;
 
         protected override void Awake()
         {
@@ -32,7 +32,7 @@ namespace ReunionMovement.Common.Util.HttpService
         public void Init(IHttpService service)
         {
             superHeaders = new Dictionary<string, string>();
-            httpRequests = new Dictionary<IHttpRequest, Coroutine>();
+            httpRequests = new Dictionary<IHttpRequest, CancellationTokenSource>();
             this.service = service;
         }
 
@@ -239,24 +239,20 @@ namespace ReunionMovement.Common.Util.HttpService
             Action<HttpResponse> onError = null,
             Action<HttpResponse> onNetworkError = null)
         {
-            var enumerator = SendCoroutine(request, onSuccess, onError, onNetworkError);
-            var coroutine = StartCoroutine(enumerator);
-            httpRequests.Add(request, coroutine);
+            var cts = new CancellationTokenSource();
+            httpRequests[request] = cts;
+            SendAsync(request, onSuccess, onError, onNetworkError, cts.Token).Forget();
         }
 
         /// <summary>
-        /// 用于发送请求和处理响应的协程
+        /// 异步发送请求并处理响应（UniTask 零 GC）
         /// </summary>
-        /// <param name="request"></param>
-        /// <param name="onSuccess"></param>
-        /// <param name="onError"></param>
-        /// <param name="onNetworkError"></param>
-        /// <returns></returns>
-        private IEnumerator SendCoroutine(IHttpRequest request, Action<HttpResponse> onSuccess = null,
-            Action<HttpResponse> onError = null, Action<HttpResponse> onNetworkError = null)
+        private async UniTaskVoid SendAsync(IHttpRequest request, Action<HttpResponse> onSuccess = null,
+            Action<HttpResponse> onError = null, Action<HttpResponse> onNetworkError = null, CancellationToken ct = default)
         {
-            yield return service.Send(request, onSuccess, onError, onNetworkError);
-            httpRequests.Remove(request);
+            bool canceled = await service.Send(request, onSuccess, onError, onNetworkError).ToUniTask(cancellationToken: ct).SuppressCancellationThrow();
+            if (!canceled)
+                httpRequests.Remove(request);
         }
 
         /// <summary>
@@ -267,13 +263,10 @@ namespace ReunionMovement.Common.Util.HttpService
         {
             service.Abort(request);
 
-            if (httpRequests.TryGetValue(request, out Coroutine coroutine))
+            if (httpRequests.TryGetValue(request, out CancellationTokenSource cts))
             {
-                if (coroutine != null)
-                {
-                    StopCoroutine(coroutine);
-                }
-
+                cts?.Cancel();
+                cts?.Dispose();
                 httpRequests.Remove(request);
             }
         }

@@ -24,12 +24,12 @@ namespace ReunionMovement.Core
             // 多语言支持
             public Multilingual language = Multilingual.ZH_CN;
             // 图形质量
-            public int graphicsQuality = 2; // 0: Low, 1: Medium, 2: High
+            public int graphicsQuality = 2; // 0: 低, 1: 中, 2: 高
             // 亮度
             public float brightness = 1.0f;
 
             #region 声音
-            //自动暂停（默认关以避免加载时静音）
+            // 自动暂停（默认关闭以避免加载时静音）
             public bool autoPause = false;
             // 主音量设置（默认不静音）
             public bool masterVolumeMuted = false;

@@ -1,9 +1,9 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 using UnityEngine.Networking;
 using UnityEngine;
 using Newtonsoft.Json;
@@ -143,7 +143,7 @@ namespace ReunionMovement.Common.Util
         /// <param name="fullpath">完整路径</param>
         /// <param name="content">内容</param>
         /// <returns></returns>
-        public static async Task SaveFile(string fullpath, string content) => await SaveFileAsync(fullpath, Encoding.UTF8.GetBytes(content));
+        public static async UniTask SaveFile(string fullpath, string content) => await SaveFileAsync(fullpath, Encoding.UTF8.GetBytes(content));
 
         /// <summary>
         /// 保存文件
@@ -151,7 +151,7 @@ namespace ReunionMovement.Common.Util
         /// <param name="fullpath"></param>
         /// <param name="content"></param>
         /// <returns>写入字节数，失败返回 -1</returns>
-        public static async Task<int> SaveFileAsync(string fullpath, byte[] content)
+        public static async UniTask<int> SaveFileAsync(string fullpath, byte[] content)
         {
             try
             {

@@ -1,11 +1,11 @@
 ﻿using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
 using ReunionMovement.Core.Resources;
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace ReunionMovement.Core.EventMessage
 {
@@ -26,12 +26,12 @@ namespace ReunionMovement.Core.EventMessage
 
         private readonly Dictionary<EventMessageType, DelegateEvent> eventTypeListeners = new Dictionary<EventMessageType, DelegateEvent>();
 
-        public Task Init()
+        public UniTask Init()
         {
             initProgress = 100;
             isInited = true;
             Log.Debug("EventMessageSystem 初始化完成");
-            return Task.CompletedTask;
+            return UniTask.CompletedTask;
         }
 
         public void Update(float logicTime, float realTime)
