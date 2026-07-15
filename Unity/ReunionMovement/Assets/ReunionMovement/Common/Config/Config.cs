@@ -11,6 +11,9 @@ namespace ReunionMovement
         // 本地路径
         public const string JsonPath = "AutoDatabase/";
         public const string UIPath = "Prefabs/UIs/";
+        // UI Toolkit 资源路径（相对于 Resources 文件夹）
+        public const string UIToolkitUxmlPath = "UI/UIToolkit/";
+        public const string UIToolkitUssPath = "UI/UIToolkit/Styles/";
 
         // ============================================================
         //  日志等级开关（Debug/Info 在 Release 构建中默认关闭以减少开销）

@@ -40,9 +40,16 @@ namespace ReunionMovement.Core.EventMessage
         private readonly Dictionary<EventMessageType, Subject<EventData>> eventSubjects
             = new Dictionary<EventMessageType, Subject<EventData>>();
 
-        /// <summary>订阅追踪 —— 记录每个 handler 对应的 IDisposable，用于 RemoveEventListener</summary>
-        private readonly Dictionary<EventMessageType, Dictionary<Action<EventData>, IDisposable>> subscriptionTrackers
-            = new Dictionary<EventMessageType, Dictionary<Action<EventData>, IDisposable>>();
+        /// <summary>订阅追踪列表 —— 使用结构体包装避免 delegate 作为字典 Key 的哈希不稳定问题</summary>
+        private readonly Dictionary<EventMessageType, List<SubscriptionEntry>> subscriptionTrackers
+            = new Dictionary<EventMessageType, List<SubscriptionEntry>>();
+
+        /// <summary>订阅条目（handler + 对应的 IDisposable）</summary>
+        private struct SubscriptionEntry
+        {
+            public Action<EventData> Handler;
+            public IDisposable Disposable;
+        }
 
         public UniTask Init()
         {
@@ -61,12 +68,12 @@ namespace ReunionMovement.Core.EventMessage
         {
             Log.Debug("EventMessageSystem 清除数据");
 
-            // 释放所有 R3 Subject 和订阅追踪
+            // 释放所有订阅追踪
             foreach (var kvp in subscriptionTrackers)
             {
-                foreach (var sub in kvp.Value.Values)
+                for (int i = 0; i < kvp.Value.Count; i++)
                 {
-                    sub?.Dispose();
+                    kvp.Value[i].Disposable?.Dispose();
                 }
                 kvp.Value.Clear();
             }
@@ -95,13 +102,13 @@ namespace ReunionMovement.Core.EventMessage
         }
 
         /// <summary>
-        /// 获取或创建订阅追踪器
+        /// 获取或创建订阅追踪列表
         /// </summary>
-        private Dictionary<Action<EventData>, IDisposable> GetOrCreateTracker(EventMessageType type)
+        private List<SubscriptionEntry> GetOrCreateTracker(EventMessageType type)
         {
             if (!subscriptionTrackers.TryGetValue(type, out var tracker))
             {
-                tracker = new Dictionary<Action<EventData>, IDisposable>();
+                tracker = new List<SubscriptionEntry>(4);
                 subscriptionTrackers[type] = tracker;
             }
             return tracker;
@@ -122,10 +129,13 @@ namespace ReunionMovement.Core.EventMessage
             var tracker = GetOrCreateTracker(type);
 
             // 避免重复订阅
-            if (tracker.ContainsKey(listenerFunc)) return;
+            for (int i = 0; i < tracker.Count; i++)
+            {
+                if (tracker[i].Handler == listenerFunc) return;
+            }
 
             var disposable = subject.Subscribe(data => listenerFunc(data));
-            tracker[listenerFunc] = disposable;
+            tracker.Add(new SubscriptionEntry { Handler = listenerFunc, Disposable = disposable });
         }
 
         /// <summary>
@@ -139,10 +149,14 @@ namespace ReunionMovement.Core.EventMessage
 
             if (subscriptionTrackers.TryGetValue(type, out var tracker))
             {
-                if (tracker.TryGetValue(listenerFunc, out var disposable))
+                for (int i = tracker.Count - 1; i >= 0; i--)
                 {
-                    disposable?.Dispose();
-                    tracker.Remove(listenerFunc);
+                    if (tracker[i].Handler == listenerFunc)
+                    {
+                        tracker[i].Disposable?.Dispose();
+                        tracker.RemoveAt(i);
+                        return;
+                    }
                 }
             }
         }
@@ -190,9 +204,9 @@ namespace ReunionMovement.Core.EventMessage
         {
             if (subscriptionTrackers.TryGetValue(type, out var tracker))
             {
-                foreach (var sub in tracker.Values)
+                for (int i = 0; i < tracker.Count; i++)
                 {
-                    sub?.Dispose();
+                    tracker[i].Disposable?.Dispose();
                 }
                 tracker.Clear();
                 subscriptionTrackers.Remove(type);
