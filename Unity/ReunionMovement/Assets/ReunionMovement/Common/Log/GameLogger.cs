@@ -9,278 +9,269 @@ namespace ReunionMovement.Common
         /// <summary>
         /// 设置游戏框架日志辅助器。
         /// </summary>
-        /// <param name="logHelper">要设置的游戏框架日志辅助器。</param>
         public static void SetLogHelper(ILogHelper helper)
         {
             logHelper = helper;
         }
 
-        /// <summary>
-        /// 打印调试级别日志，用于记录调试类日志信息。
-        /// </summary>
-        /// <param name="message">日志内容。</param>
+        // ============================================================
+        //  Debug
+        // ============================================================
         [HideInCallstack]
-        public static void Debug(object message)
+        public static void Debug(object message, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.Log(LogLevel.Debug, message);
+            logHelper.Log(LogLevel.Debug, message, channel);
         }
 
         [HideInCallstack]
-        public static void Debug(string message, Object context)
+        public static void Debug(string message, Object context, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.Log(LogLevel.Debug, message, context);
-        }
-
-        /// <summary>
-        /// 打印调试级别格式化日志，format 可使用常量字符串避免 GC 分配。
-        /// </summary>
-        [HideInCallstack]
-        public static void Debug(string format, object arg0)
-        {
-            if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Debug, format, arg0);
+            logHelper.Log(LogLevel.Debug, message, context, channel);
         }
 
         [HideInCallstack]
-        public static void Debug(string format, object arg0, object arg1)
+        public static void Debug(string format, object arg0, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Debug, format, arg0, arg1);
+            logHelper.LogFormat(LogLevel.Debug, channel, format, arg0);
         }
 
         [HideInCallstack]
-        public static void Debug(string format, object arg0, object arg1, object arg2)
+        public static void Debug(string format, object arg0, object arg1, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Debug, format, arg0, arg1, arg2);
+            logHelper.LogFormat(LogLevel.Debug, channel, format, arg0, arg1);
         }
 
         [HideInCallstack]
-        public static void Debug(string format, object arg0, object arg1, object arg2, object arg3)
+        public static void Debug(string format, object arg0, object arg1, object arg2, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Debug, format, arg0, arg1, arg2, arg3);
+            logHelper.LogFormat(LogLevel.Debug, channel, format, arg0, arg1, arg2);
+        }
+
+        [HideInCallstack]
+        public static void Debug(string format, object arg0, object arg1, object arg2, object arg3, LogChannel channel = LogChannel.General)
+        {
+            if (logHelper == null) return;
+            logHelper.LogFormat(LogLevel.Debug, channel, format, arg0, arg1, arg2, arg3);
         }
 
         [HideInCallstack]
         public static void Debug(string format, params object[] args)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Debug, format, args);
+            logHelper.LogFormat(LogLevel.Debug, LogChannel.General, format, args);
         }
 
-        /// <summary>
-        /// 打印信息级别日志，用于记录程序正常运行日志信息。
-        /// </summary>
-        /// <param name="message">日志内容。</param>
+        // ============================================================
+        //  Info
+        // ============================================================
         [HideInCallstack]
-        public static void Info(object message)
+        public static void Info(object message, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.Log(LogLevel.Info, message);
-        }
-
-        [HideInCallstack]
-        public static void Info(string message, Object context)
-        {
-            if (logHelper == null) return;
-            logHelper.Log(LogLevel.Info, message, context);
+            logHelper.Log(LogLevel.Info, message, channel);
         }
 
         [HideInCallstack]
-        public static void Info(string format, object arg0)
+        public static void Info(string message, Object context, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Info, format, arg0);
+            logHelper.Log(LogLevel.Info, message, context, channel);
         }
 
         [HideInCallstack]
-        public static void Info(string format, object arg0, object arg1)
+        public static void Info(string format, object arg0, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Info, format, arg0, arg1);
+            logHelper.LogFormat(LogLevel.Info, channel, format, arg0);
         }
 
         [HideInCallstack]
-        public static void Info(string format, object arg0, object arg1, object arg2)
+        public static void Info(string format, object arg0, object arg1, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Info, format, arg0, arg1, arg2);
+            logHelper.LogFormat(LogLevel.Info, channel, format, arg0, arg1);
         }
 
         [HideInCallstack]
-        public static void Info(string format, object arg0, object arg1, object arg2, object arg3)
+        public static void Info(string format, object arg0, object arg1, object arg2, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Info, format, arg0, arg1, arg2, arg3);
+            logHelper.LogFormat(LogLevel.Info, channel, format, arg0, arg1, arg2);
+        }
+
+        [HideInCallstack]
+        public static void Info(string format, object arg0, object arg1, object arg2, object arg3, LogChannel channel = LogChannel.General)
+        {
+            if (logHelper == null) return;
+            logHelper.LogFormat(LogLevel.Info, channel, format, arg0, arg1, arg2, arg3);
         }
 
         [HideInCallstack]
         public static void Info(string format, params object[] args)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Info, format, args);
+            logHelper.LogFormat(LogLevel.Info, LogChannel.General, format, args);
         }
 
-        /// <summary>
-        /// 打印警告级别日志，建议在发生局部功能逻辑错误，但尚不会导致游戏崩溃或异常时使用。
-        /// </summary>
-        /// <param name="message">日志内容。</param>
+        // ============================================================
+        //  Warning
+        // ============================================================
         [HideInCallstack]
-        public static void Warning(object message)
+        public static void Warning(object message, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.Log(LogLevel.Warning, message);
-        }
-
-        [HideInCallstack]
-        public static void Warning(string message, Object context)
-        {
-            if (logHelper == null) return;
-            logHelper.Log(LogLevel.Warning, message, context);
+            logHelper.Log(LogLevel.Warning, message, channel);
         }
 
         [HideInCallstack]
-        public static void Warning(string format, object arg0)
+        public static void Warning(string message, Object context, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Warning, format, arg0);
+            logHelper.Log(LogLevel.Warning, message, context, channel);
         }
 
         [HideInCallstack]
-        public static void Warning(string format, object arg0, object arg1)
+        public static void Warning(string format, object arg0, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Warning, format, arg0, arg1);
+            logHelper.LogFormat(LogLevel.Warning, channel, format, arg0);
         }
 
         [HideInCallstack]
-        public static void Warning(string format, object arg0, object arg1, object arg2)
+        public static void Warning(string format, object arg0, object arg1, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Warning, format, arg0, arg1, arg2);
+            logHelper.LogFormat(LogLevel.Warning, channel, format, arg0, arg1);
         }
 
         [HideInCallstack]
-        public static void Warning(string format, object arg0, object arg1, object arg2, object arg3)
+        public static void Warning(string format, object arg0, object arg1, object arg2, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Warning, format, arg0, arg1, arg2, arg3);
+            logHelper.LogFormat(LogLevel.Warning, channel, format, arg0, arg1, arg2);
+        }
+
+        [HideInCallstack]
+        public static void Warning(string format, object arg0, object arg1, object arg2, object arg3, LogChannel channel = LogChannel.General)
+        {
+            if (logHelper == null) return;
+            logHelper.LogFormat(LogLevel.Warning, channel, format, arg0, arg1, arg2, arg3);
         }
 
         [HideInCallstack]
         public static void Warning(string format, params object[] args)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Warning, format, args);
+            logHelper.LogFormat(LogLevel.Warning, LogChannel.General, format, args);
         }
 
-        /// <summary>
-        /// 打印错误级别日志，建议在发生功能逻辑错误，但尚不会导致游戏崩溃或异常时使用。
-        /// </summary>
-        /// <param name="message">日志内容。</param>
+        // ============================================================
+        //  Error
+        // ============================================================
         [HideInCallstack]
-        public static void Error(object message)
+        public static void Error(object message, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.Log(LogLevel.Error, message);
-        }
-
-        [HideInCallstack]
-        public static void Error(string message, Object context)
-        {
-            if (logHelper == null) return;
-            logHelper.Log(LogLevel.Error, message, context);
+            logHelper.Log(LogLevel.Error, message, channel);
         }
 
         [HideInCallstack]
-        public static void Error(string format, object arg0)
+        public static void Error(string message, Object context, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Error, format, arg0);
+            logHelper.Log(LogLevel.Error, message, context, channel);
         }
 
         [HideInCallstack]
-        public static void Error(string format, object arg0, object arg1)
+        public static void Error(string format, object arg0, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Error, format, arg0, arg1);
+            logHelper.LogFormat(LogLevel.Error, channel, format, arg0);
         }
 
         [HideInCallstack]
-        public static void Error(string format, object arg0, object arg1, object arg2)
+        public static void Error(string format, object arg0, object arg1, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Error, format, arg0, arg1, arg2);
+            logHelper.LogFormat(LogLevel.Error, channel, format, arg0, arg1);
         }
 
         [HideInCallstack]
-        public static void Error(string format, object arg0, object arg1, object arg2, object arg3)
+        public static void Error(string format, object arg0, object arg1, object arg2, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Error, format, arg0, arg1, arg2, arg3);
+            logHelper.LogFormat(LogLevel.Error, channel, format, arg0, arg1, arg2);
+        }
+
+        [HideInCallstack]
+        public static void Error(string format, object arg0, object arg1, object arg2, object arg3, LogChannel channel = LogChannel.General)
+        {
+            if (logHelper == null) return;
+            logHelper.LogFormat(LogLevel.Error, channel, format, arg0, arg1, arg2, arg3);
         }
 
         [HideInCallstack]
         public static void Error(string format, params object[] args)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Error, format, args);
+            logHelper.LogFormat(LogLevel.Error, LogChannel.General, format, args);
         }
 
-        /// <summary>
-        /// 打印严重错误级别日志，建议在发生严重错误，可能导致游戏崩溃或异常时使用，此时应尝试重启进程或重建游戏框架。
-        /// </summary>
-        /// <param name="message">日志内容。</param>
+        // ============================================================
+        //  Fatal
+        // ============================================================
         [HideInCallstack]
-        public static void Fatal(object message)
+        public static void Fatal(object message, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.Log(LogLevel.Fatal, message);
-        }
-
-        [HideInCallstack]
-        public static void Fatal(string message, Object context)
-        {
-            if (logHelper == null) return;
-            logHelper.Log(LogLevel.Fatal, message, context);
+            logHelper.Log(LogLevel.Fatal, message, channel);
         }
 
         [HideInCallstack]
-        public static void Fatal(string format, object arg0)
+        public static void Fatal(string message, Object context, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Fatal, format, arg0);
+            logHelper.Log(LogLevel.Fatal, message, context, channel);
         }
 
         [HideInCallstack]
-        public static void Fatal(string format, object arg0, object arg1)
+        public static void Fatal(string format, object arg0, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Fatal, format, arg0, arg1);
+            logHelper.LogFormat(LogLevel.Fatal, channel, format, arg0);
         }
 
         [HideInCallstack]
-        public static void Fatal(string format, object arg0, object arg1, object arg2)
+        public static void Fatal(string format, object arg0, object arg1, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Fatal, format, arg0, arg1, arg2);
+            logHelper.LogFormat(LogLevel.Fatal, channel, format, arg0, arg1);
         }
 
         [HideInCallstack]
-        public static void Fatal(string format, object arg0, object arg1, object arg2, object arg3)
+        public static void Fatal(string format, object arg0, object arg1, object arg2, LogChannel channel = LogChannel.General)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Fatal, format, arg0, arg1, arg2, arg3);
+            logHelper.LogFormat(LogLevel.Fatal, channel, format, arg0, arg1, arg2);
+        }
+
+        [HideInCallstack]
+        public static void Fatal(string format, object arg0, object arg1, object arg2, object arg3, LogChannel channel = LogChannel.General)
+        {
+            if (logHelper == null) return;
+            logHelper.LogFormat(LogLevel.Fatal, channel, format, arg0, arg1, arg2, arg3);
         }
 
         [HideInCallstack]
         public static void Fatal(string format, params object[] args)
         {
             if (logHelper == null) return;
-            logHelper.LogFormat(LogLevel.Fatal, format, args);
+            logHelper.LogFormat(LogLevel.Fatal, LogChannel.General, format, args);
         }
     }
 }
