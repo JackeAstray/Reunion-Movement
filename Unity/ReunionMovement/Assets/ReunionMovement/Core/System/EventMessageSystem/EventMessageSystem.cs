@@ -2,6 +2,7 @@
 using ReunionMovement.Core.Base;
 using ReunionMovement.Core.Resources;
 using Cysharp.Threading.Tasks;
+using R3;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +11,18 @@ using System.Text;
 namespace ReunionMovement.Core.EventMessage
 {
     /// <summary>
-    /// 事件消息系统
+    /// 事件数据
+    /// </summary>
+    public class EventData
+    {
+        /// <summary>事件类型</summary>
+        public EventMessageType type;
+        /// <summary>事件传递的数据</summary>
+        public object data;
+    }
+
+    /// <summary>
+    /// 事件消息系统 —— 基于 R3 Subject&lt;T&gt; 的类型安全事件总线
     /// </summary>
     public class EventMessageSystem : ICustomSystem
     {
@@ -24,13 +36,19 @@ namespace ReunionMovement.Core.EventMessage
         public double InitProgress { get { return initProgress; } }
         #endregion
 
-        private readonly Dictionary<EventMessageType, DelegateEvent> eventTypeListeners = new Dictionary<EventMessageType, DelegateEvent>();
+        /// <summary>R3 Subject 字典 —— 每种事件类型对应一个 Subject，支持多播和 LINQ 操作</summary>
+        private readonly Dictionary<EventMessageType, Subject<EventData>> eventSubjects
+            = new Dictionary<EventMessageType, Subject<EventData>>();
+
+        /// <summary>订阅追踪 —— 记录每个 handler 对应的 IDisposable，用于 RemoveEventListener</summary>
+        private readonly Dictionary<EventMessageType, Dictionary<Action<EventData>, IDisposable>> subscriptionTrackers
+            = new Dictionary<EventMessageType, Dictionary<Action<EventData>, IDisposable>>();
 
         public UniTask Init()
         {
             initProgress = 100;
             isInited = true;
-            Log.Debug("EventMessageSystem 初始化完成");
+            Log.Debug("EventMessageSystem 初始化完成 (R3)");
             return UniTask.CompletedTask;
         }
 
@@ -42,91 +60,148 @@ namespace ReunionMovement.Core.EventMessage
         public void Clear()
         {
             Log.Debug("EventMessageSystem 清除数据");
-            // 先清理每个 DelegateEvent 内部的监听器，再清空字典
-            foreach (var kvp in eventTypeListeners)
+
+            // 释放所有 R3 Subject 和订阅追踪
+            foreach (var kvp in subscriptionTrackers)
             {
+                foreach (var sub in kvp.Value.Values)
+                {
+                    sub?.Dispose();
+                }
                 kvp.Value.Clear();
             }
-            eventTypeListeners.Clear();
+            subscriptionTrackers.Clear();
+
+            foreach (var kvp in eventSubjects)
+            {
+                kvp.Value?.Dispose();
+            }
+            eventSubjects.Clear();
+
             isInited = false;
         }
 
         /// <summary>
-        /// 添加事件
+        /// 获取或创建指定事件类型的 Subject
         /// </summary>
-        /// <param name="type">事件类型</param>
-        /// <param name="listenerFunc">监听函数</param>
-        public void AddEventListener(EventMessageType type, DelegateEvent.EventHandler listenerFunc)
+        private Subject<EventData> GetOrCreateSubject(EventMessageType type)
         {
-            if (!eventTypeListeners.TryGetValue(type, out var delegateEvent))
+            if (!eventSubjects.TryGetValue(type, out var subject))
             {
-                delegateEvent = new DelegateEvent();
-                eventTypeListeners[type] = delegateEvent;
+                subject = new Subject<EventData>();
+                eventSubjects[type] = subject;
             }
-            delegateEvent.AddListener(listenerFunc);
+            return subject;
         }
 
         /// <summary>
-        /// 删除事件
+        /// 获取或创建订阅追踪器
+        /// </summary>
+        private Dictionary<Action<EventData>, IDisposable> GetOrCreateTracker(EventMessageType type)
+        {
+            if (!subscriptionTrackers.TryGetValue(type, out var tracker))
+            {
+                tracker = new Dictionary<Action<EventData>, IDisposable>();
+                subscriptionTrackers[type] = tracker;
+            }
+            return tracker;
+        }
+
+        #region 公共 API（保持向后兼容）
+
+        /// <summary>
+        /// 添加事件监听
         /// </summary>
         /// <param name="type">事件类型</param>
         /// <param name="listenerFunc">监听函数</param>
-        public void RemoveEventListener(EventMessageType type, DelegateEvent.EventHandler listenerFunc)
+        public void AddEventListener(EventMessageType type, Action<EventData> listenerFunc)
         {
             if (listenerFunc == null) return;
-            if (eventTypeListeners.TryGetValue(type, out var delegateEvent))
+
+            var subject = GetOrCreateSubject(type);
+            var tracker = GetOrCreateTracker(type);
+
+            // 避免重复订阅
+            if (tracker.ContainsKey(listenerFunc)) return;
+
+            var disposable = subject.Subscribe(data => listenerFunc(data));
+            tracker[listenerFunc] = disposable;
+        }
+
+        /// <summary>
+        /// 删除事件监听
+        /// </summary>
+        /// <param name="type">事件类型</param>
+        /// <param name="listenerFunc">监听函数</param>
+        public void RemoveEventListener(EventMessageType type, Action<EventData> listenerFunc)
+        {
+            if (listenerFunc == null) return;
+
+            if (subscriptionTrackers.TryGetValue(type, out var tracker))
             {
-                delegateEvent.RemoveListener(listenerFunc);
+                if (tracker.TryGetValue(listenerFunc, out var disposable))
+                {
+                    disposable?.Dispose();
+                    tracker.Remove(listenerFunc);
+                }
             }
         }
 
         /// <summary>
-        /// 泛型分发事件（可选）
+        /// 泛型分发事件
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="type"></param>
-        /// <param name="data"></param>
-        public void DispatchEvent<T>(EventMessageType type, T data)
+        /// <typeparam name="T">数据类型</typeparam>
+        /// <param name="type">事件类型</param>
+        /// <param name="data">事件数据</param>
+        public void DispatchEvent<T>(EventMessageType eventType, T eventData)
         {
-            if (eventTypeListeners.TryGetValue(type, out var delegateEvent))
+            if (eventSubjects.TryGetValue(eventType, out var subject))
             {
-                var eventData = new EventData
+                subject.OnNext(new EventData
                 {
-                    type = type,
-                    data = data
-                };
-                delegateEvent.Handle(eventData);
+                    type = eventType,
+                    data = eventData
+                });
             }
         }
 
         /// <summary>
-        /// 分发方法
+        /// 分发事件
         /// </summary>
-        /// <param name="type"></param>
-        /// <param name="data"></param>
-        public void DispatchEvent(EventMessageType type, object data)
+        /// <param name="eventType">事件类型</param>
+        /// <param name="eventData">事件数据</param>
+        public void DispatchEvent(EventMessageType eventType, object eventData)
         {
-            if (eventTypeListeners.TryGetValue(type, out var delegateEvent))
+            if (eventSubjects.TryGetValue(eventType, out var subject))
             {
-                var eventData = new EventData
+                subject.OnNext(new EventData
                 {
-                    type = type,
-                    data = data
-                };
-                delegateEvent.Handle(eventData);
+                    type = eventType,
+                    data = eventData
+                });
             }
         }
 
         /// <summary>
         /// 清除某一类型的事件监听器
         /// </summary>
-        /// <param name="type"></param>
+        /// <param name="type">事件类型</param>
         public void ClearEventTypeListeners(EventMessageType type)
         {
-            if (eventTypeListeners.TryGetValue(type, out var delegateEvent))
+            if (subscriptionTrackers.TryGetValue(type, out var tracker))
             {
-                delegateEvent.Clear();
-                eventTypeListeners.Remove(type);
+                foreach (var sub in tracker.Values)
+                {
+                    sub?.Dispose();
+                }
+                tracker.Clear();
+                subscriptionTrackers.Remove(type);
+            }
+
+            if (eventSubjects.TryGetValue(type, out var subject))
+            {
+                subject?.Dispose();
+                eventSubjects.Remove(type);
                 Log.Debug($"清除事件类型 {type} 的所有监听器");
             }
             else
@@ -142,5 +217,26 @@ namespace ReunionMovement.Core.EventMessage
         {
             Clear();
         }
+
+        #endregion
+
+        #region R3 原生 API（推荐新代码使用）
+
+        /// <summary>
+        /// 获取某个事件类型的 IObservable，支持 LINQ 操作符（推荐）
+        /// </summary>
+        /// <example>
+        /// EventMessageSystem.Instance.AsObservable(EventMessageType.ButtonClick)
+        ///     .Where(e => e.data is int id && id > 0)
+        ///     .Subscribe(e => HandleClick(e));
+        /// </example>
+        /// <param name="type">事件类型</param>
+        /// <returns>可观测序列</returns>
+        public Observable<EventData> AsObservable(EventMessageType type)
+        {
+            return GetOrCreateSubject(type);
+        }
+
+        #endregion
     }
 }

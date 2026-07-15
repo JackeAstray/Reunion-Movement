@@ -3,6 +3,7 @@ using ReunionMovement.Core.Base;
 using ReunionMovement.Core.Resources;
 using ReunionMovement.Core.UI;
 using Cysharp.Threading.Tasks;
+using R3;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -73,24 +74,72 @@ namespace ReunionMovement.Core.UIInput
 
         #endregion
 
-        #region 事件
-        /// <summary>焦点变更事件（参数：新选中的 GameObject）</summary>
-        public static event Action<GameObject> OnSelectionChanged;
+        #region R3 响应式事件（推荐新代码使用）
+
+        /// <summary>焦点变更事件</summary>
+        public readonly Subject<GameObject> SelectionChangedSubject = new Subject<GameObject>();
 
         /// <summary>按键绑定变更事件</summary>
-        public static event Action<UIInputBinding> OnBindingChanged;
+        public readonly Subject<UIInputBinding> BindingChangedSubject = new Subject<UIInputBinding>();
 
-        /// <summary>输入模式切换事件（参数：新模式）</summary>
-        public static event Action<InputMode> OnInputModeChanged;
+        /// <summary>输入模式切换事件</summary>
+        public readonly Subject<InputMode> InputModeChangedSubject = new Subject<InputMode>();
 
-        /// <summary>导航操作事件（参数：方向向量）</summary>
-        public static event Action<Vector2> OnNavigate;
+        /// <summary>导航操作事件（方向向量）</summary>
+        public readonly Subject<Vector2> NavigateSubject = new Subject<Vector2>();
 
         /// <summary>提交操作事件</summary>
-        public static event Action OnSubmit;
+        public readonly Subject<Unit> SubmitSubject = new Subject<Unit>();
 
         /// <summary>取消操作事件</summary>
-        public static event Action OnCancel;
+        public readonly Subject<Unit> CancelSubject = new Subject<Unit>();
+
+        #endregion
+
+        #region 兼容旧 static event（已废弃，转发到 R3 Subject）
+
+        [Obsolete("请使用 UIInputSystem.Instance.SelectionChangedSubject.Subscribe()", false)]
+        public static event Action<GameObject> OnSelectionChanged
+        {
+            add { Instance.SelectionChangedSubject.Subscribe(value); }
+            remove { }
+        }
+
+        [Obsolete("请使用 UIInputSystem.Instance.BindingChangedSubject.Subscribe()", false)]
+        public static event Action<UIInputBinding> OnBindingChanged
+        {
+            add { Instance.BindingChangedSubject.Subscribe(value); }
+            remove { }
+        }
+
+        [Obsolete("请使用 UIInputSystem.Instance.InputModeChangedSubject.Subscribe()", false)]
+        public static event Action<InputMode> OnInputModeChanged
+        {
+            add { Instance.InputModeChangedSubject.Subscribe(value); }
+            remove { }
+        }
+
+        [Obsolete("请使用 UIInputSystem.Instance.NavigateSubject.Subscribe()", false)]
+        public static event Action<Vector2> OnNavigate
+        {
+            add { Instance.NavigateSubject.Subscribe(value); }
+            remove { }
+        }
+
+        [Obsolete("请使用 UIInputSystem.Instance.SubmitSubject.Subscribe()", false)]
+        public static event Action OnSubmit
+        {
+            add { Instance.SubmitSubject.Subscribe(_ => value()); }
+            remove { }
+        }
+
+        [Obsolete("请使用 UIInputSystem.Instance.CancelSubject.Subscribe()", false)]
+        public static event Action OnCancel
+        {
+            add { Instance.CancelSubject.Subscribe(_ => value()); }
+            remove { }
+        }
+
         #endregion
 
         #region 初始化
@@ -145,7 +194,7 @@ namespace ReunionMovement.Core.UIInput
             {
                 var previous = CurrentSelected;
                 CurrentSelected = current;
-                OnSelectionChanged?.Invoke(current);
+                SelectionChangedSubject.OnNext(current);
 
                 if (current != null)
                 {
@@ -171,6 +220,14 @@ namespace ReunionMovement.Core.UIInput
             firstSelectedRegistry.Clear();
             CurrentSelected = null;
             LastSelected = null;
+
+            // 释放 R3 Subject（自动断开所有订阅）
+            SelectionChangedSubject?.Dispose();
+            BindingChangedSubject?.Dispose();
+            InputModeChangedSubject?.Dispose();
+            NavigateSubject?.Dispose();
+            SubmitSubject?.Dispose();
+            CancelSubject?.Dispose();
 
             isInited = false;
         }
@@ -403,7 +460,7 @@ namespace ReunionMovement.Core.UIInput
                     SaveBindings();
 
                     onComplete?.Invoke(keyName);
-                    OnBindingChanged?.Invoke(CurrentBinding);
+                    BindingChangedSubject.OnNext(CurrentBinding);
 
                     operation.Dispose();
                 })
@@ -494,7 +551,7 @@ namespace ReunionMovement.Core.UIInput
 
             ApplyBindingsToActions();
             SaveBindings();
-            OnBindingChanged?.Invoke(CurrentBinding);
+            BindingChangedSubject.OnNext(CurrentBinding);
         }
 
         /// <summary>
@@ -505,7 +562,7 @@ namespace ReunionMovement.Core.UIInput
             CurrentBinding = new UIInputBinding();
             ApplyBindingsToActions();
             SaveBindings();
-            OnBindingChanged?.Invoke(CurrentBinding);
+            BindingChangedSubject.OnNext(CurrentBinding);
             Log.Debug("UIInputSystem: 按键绑定已重置为默认值");
         }
 
@@ -676,7 +733,7 @@ namespace ReunionMovement.Core.UIInput
             TryFocusCurrentUI();
 
             Log.Debug("UIInputSystem: 切换到 UI 控制模式");
-            OnInputModeChanged?.Invoke(InputMode.UI);
+            InputModeChangedSubject.OnNext(InputMode.UI);
         }
 
         /// <summary>
@@ -712,7 +769,7 @@ namespace ReunionMovement.Core.UIInput
             toggleKeyPressed = false;
 
             Log.Debug("UIInputSystem: 切换到角色控制模式");
-            OnInputModeChanged?.Invoke(InputMode.Gameplay);
+            InputModeChangedSubject.OnNext(InputMode.Gameplay);
         }
 
         /// <summary>
@@ -827,16 +884,23 @@ namespace ReunionMovement.Core.UIInput
 
         #region UISystem 生命周期事件处理
 
+        /// <summary>R3 订阅句柄（用于取消订阅）</summary>
+        private IDisposable uiOpenSubscription;
+        private IDisposable uiCloseSubscription;
+
         private void RegisterUIEvents()
         {
-            UISystem.onOpenEvent += OnUIOpened;
-            UISystem.onCloseEvent += OnUIClosed;
+            // R3 原生订阅方式
+            uiOpenSubscription = UISystem.Instance.OnOpenSubject.Subscribe(OnUIOpened);
+            uiCloseSubscription = UISystem.Instance.OnCloseSubject.Subscribe(OnUIClosed);
         }
 
         private void UnregisterUIEvents()
         {
-            UISystem.onOpenEvent -= OnUIOpened;
-            UISystem.onCloseEvent -= OnUIClosed;
+            uiOpenSubscription?.Dispose();
+            uiOpenSubscription = null;
+            uiCloseSubscription?.Dispose();
+            uiCloseSubscription = null;
         }
 
         /// <summary>
@@ -971,19 +1035,20 @@ namespace ReunionMovement.Core.UIInput
 
         private void OnNavigatePerformed(InputAction.CallbackContext ctx)
         {
-            OnNavigate?.Invoke(ctx.ReadValue<Vector2>());
+            var value = ctx.ReadValue<Vector2>();
+            NavigateSubject.OnNext(value);
         }
 
         private void OnSubmitPerformed(InputAction.CallbackContext ctx)
         {
-            OnSubmit?.Invoke();
+            SubmitSubject.OnNext(Unit.Default);
         }
 
         private void OnCancelPerformed(InputAction.CallbackContext ctx)
         {
             // 如果当前帧已被切换键消耗，不再触发 OnCancel 事件
             if (cancelHandledThisFrame) return;
-            OnCancel?.Invoke();
+            CancelSubject.OnNext(Unit.Default);
         }
 
         #endregion
