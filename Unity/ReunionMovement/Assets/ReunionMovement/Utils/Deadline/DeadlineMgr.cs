@@ -47,21 +47,21 @@ namespace ReunionMovement.Common.Util
             var nowUtc = DateTime.UtcNow;
             if (IsClockRolledBackOrTampered(nowUtc))
             {
-                Debug.LogWarning("DeadlineMgr: 检测到系统时间被回拨或本地记录被篡改，触发限制处理。");
+                Log.Warning("DeadlineMgr: 检测到系统时间被回拨或本地记录被篡改，触发限制处理。");
                 PurgeActiveScene();
                 return;
             }
 
             if (!TryParseDate(startDate, out var start) || !TryParseDate(deadlineDate, out var end))
             {
-                Debug.LogError("DeadlineMgr: 日期格式错误，请使用 yyyy-MM-dd 或 yyyy-M-d。");
+                Log.Error("DeadlineMgr: 日期格式错误，请使用 yyyy-MM-dd 或 yyyy-M-d。");
                 return;
             }
 
             // 容错：若起始晚于截止，自动交换
             if (start > end)
             {
-                Debug.LogWarning($"DeadlineMgr: StartDate({start:yyyy-MM-dd}) 晚于 DeadlineDate({end:yyyy-MM-dd})，已自动交换。");
+                Log.Warning($"DeadlineMgr: StartDate({start:yyyy-MM-dd}) 晚于 DeadlineDate({end:yyyy-MM-dd})，已自动交换。");
                 var tmp = start;
                 start = end;
                 end = tmp;
@@ -101,7 +101,7 @@ namespace ReunionMovement.Common.Util
                 // 如果存在部分缺失，视为被篡改
                 if (!hasTicks || !hasHash)
                 {
-                    Debug.LogWarning("DeadlineMgr: 本地存储不完整（ticks/hash 缺失），已视为被篡改。");
+                    Log.Warning("DeadlineMgr: 本地存储不完整（ticks/hash 缺失），已视为被篡改。");
                     return true;
                 }
 
@@ -111,7 +111,7 @@ namespace ReunionMovement.Common.Util
                 if (!long.TryParse(storedTicksStr, out var storedTicks))
                 {
                     // 数据异常，认为被篡改
-                    Debug.LogWarning("DeadlineMgr: 本地存储的时间格式异常，已视为被篡改。");
+                    Log.Warning("DeadlineMgr: 本地存储的时间格式异常，已视为被篡改。");
                     return true;
                 }
 
@@ -119,7 +119,7 @@ namespace ReunionMovement.Common.Util
                 var expectedHash = ComputeHashForTicks(storedTicks);
                 if (!string.Equals(expectedHash, storedHash, StringComparison.OrdinalIgnoreCase))
                 {
-                    Debug.LogWarning("DeadlineMgr: 本地存储的完整性校验失败，已视为被篡改。");
+                    Log.Warning("DeadlineMgr: 本地存储的完整性校验失败，已视为被篡改。");
                     return true;
                 }
 
@@ -128,7 +128,7 @@ namespace ReunionMovement.Common.Util
                 // 如果当前 UTC 小于存储时间减去容忍阈值，则认为是回拨
                 if (nowUtc < storedUtc - RollbackTolerance)
                 {
-                    Debug.LogWarning($"DeadlineMgr: 发现系统时间回拨（当前UTC={nowUtc:o}，记录UTC={storedUtc:o}）。");
+                    Log.Warning($"DeadlineMgr: 发现系统时间回拨（当前UTC={nowUtc:o}，记录UTC={storedUtc:o}）。");
                     return true;
                 }
 
@@ -140,7 +140,7 @@ namespace ReunionMovement.Common.Util
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"DeadlineMgr: 检测时钟回拨时出现异常，按安全策略处理。异常: {ex.Message}");
+                Log.Warning($"DeadlineMgr: 检测时钟回拨时出现异常，按安全策略处理。异常: {ex.Message}");
                 return true;
             }
         }
@@ -223,7 +223,7 @@ namespace ReunionMovement.Common.Util
                 Destroy(self);
             }
 
-            Debug.LogWarning("DeadlineMgr: 当前日期不在允许范围内或检测到篡改，已删除当前场景的所有对象。");
+            Log.Warning("DeadlineMgr: 当前日期不在允许范围内或检测到篡改，已删除当前场景的所有对象。");
         }
     }
 }

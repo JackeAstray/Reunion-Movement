@@ -1,4 +1,5 @@
 using Cysharp.Threading.Tasks;
+using ReunionMovement.Common;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -177,14 +178,14 @@ namespace ReunionMovement.Common.Util
 
             if (csmoCamera == null)
             {
-                Debug.LogError("CameraUtil: 未找到可用 Camera 组件。", this);
+                Log.Error("CameraUtil: 未找到可用 Camera 组件。", this);
                 enabled = false;
                 return;
             }
 
             if (targetPos == null)
             {
-                Debug.LogError("CameraUtil: 未找到 Target 目标对象。", this);
+                Log.Error("CameraUtil: 未找到 Target 目标对象。", this);
                 enabled = false;
                 return;
             }

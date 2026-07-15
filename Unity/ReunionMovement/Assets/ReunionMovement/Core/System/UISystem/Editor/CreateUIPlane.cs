@@ -1,3 +1,4 @@
+using ReunionMovement.Common;
 using ReunionMovement.Core.UI;
 using Cysharp.Threading.Tasks;
 using System;
@@ -193,9 +194,23 @@ namespace ReunionMovement.Common.Util.EditorTools
             {
                 var evtSystemObj = new GameObject("EventSystem");
                 evtSystemObj.AddComponent<EventSystem>();
-                evtSystemObj.AddComponent<InputSystemUIInputModule>();
+                var inputModule = evtSystemObj.AddComponent<InputSystemUIInputModule>();
+
+                // 加载 InputSystem 的 Action 资产，否则 InputSystemUIInputModule 会处于未激活状态
+                var inputActions = Resources.Load<UnityEngine.InputSystem.InputActionAsset>("InputSystem_Actions");
+                if (inputActions != null)
+                {
+                    // Instantiate 一份独立副本，避免与运行时的 InputAction 状态互相污染
+                    inputModule.actionsAsset = UnityEngine.Object.Instantiate(inputActions);
+                    inputModule.enabled = true;
+                }
+                else
+                {
+                    Log.Warning("[CreateUIPlane] 未找到 InputSystem_Actions.inputactions，请手动为 EventSystem 的 InputSystemUIInputModule 赋值 actionsAsset");
+                }
             }
         }
+
         private void SaveScene(Scene scene, string path)
         {
             EditorSceneManager.SaveScene(scene, path);

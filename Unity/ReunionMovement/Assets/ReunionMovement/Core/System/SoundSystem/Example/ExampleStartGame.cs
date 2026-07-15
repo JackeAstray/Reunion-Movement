@@ -10,13 +10,16 @@ using ReunionMovement.Core.Terminal;
 using ReunionMovement.Core.UI;
 using Cysharp.Threading.Tasks;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace ReunionMovement.Example
 {
+    /// <summary>
+    /// 示例游戏入口 —— 演示如何自定义模块注册和启动流程。
+    /// 在 Bootstrap 中将 new StartGame() 替换为 new ExampleStartGame() 即可切换。
+    /// </summary>
     public class ExampleStartGame : GameEntry
     {
-        protected override IList<ICustomSystem> CreateModules()
+        public override IList<ICustomSystem> CreateModules()
         {
             var modules = base.CreateModules();
 
@@ -37,24 +40,16 @@ namespace ReunionMovement.Example
             return modules;
         }
 
-        /// <summary>
-        /// 在初始化模块之前，协同程序
-        /// </summary>
-        /// <returns></returns>
         public override UniTask OnBeforeInitAsync()
         {
-            Log.Debug("初始化前执行");
+            Log.Debug("[ExampleStartGame] 初始化前执行");
             GameOption.LoadOptions();
             return UniTask.CompletedTask;
         }
 
-        /// <summary>
-        /// 游戏启动
-        /// </summary>
-        /// <returns></returns>
         public override UniTask OnGameStartAsync()
         {
-            Log.Debug("游戏启动");
+            Log.Debug("[ExampleStartGame] 游戏启动");
             return UniTask.CompletedTask;
         }
     }
