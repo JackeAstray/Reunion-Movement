@@ -12,20 +12,20 @@ namespace ReunionMovement.Common.Util
             DrawDefaultInspector();
 
             GUILayout.Space(8);
-            GUILayout.Label("¿ìËÙ¿ØÖÆ", EditorStyles.boldLabel);
+            GUILayout.Label("å¿«é€Ÿæ§åˆ¶", EditorStyles.boldLabel);
 
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Æô¶¯"))
+            if (GUILayout.Button("å¯åŠ¨"))
             {
-                if (!Application.isPlaying) { Debug.LogWarning("Æô¶¯²Ù×÷ĞèÒª½øÈë²¥·ÅÄ£Ê½¡£"); }
+                if (!Application.isPlaying) { Log.Warning("å¯åŠ¨æ“ä½œéœ€è¦è¿›å…¥æ’­æ”¾æ¨¡å¼"); }
                 else
                 {
                     t.StartAsConfigured();
                 }
             }
-            if (GUILayout.Button("Í£Ö¹"))
+            if (GUILayout.Button("åœæ­¢"))
             {
-                if (!Application.isPlaying) { Debug.LogWarning("Í£Ö¹²Ù×÷ĞèÒª½øÈë²¥·ÅÄ£Ê½¡£"); }
+                if (!Application.isPlaying) { Log.Warning("åœæ­¢æ“ä½œéœ€è¦è¿›å…¥æ’­æ”¾æ¨¡å¼"); }
                 else
                 {
                     t.StopAll();
@@ -35,11 +35,11 @@ namespace ReunionMovement.Common.Util
 
             GUILayout.Space(4);
             GUILayout.BeginHorizontal();
-            GUILayout.Label("·¢ËÍÎÄ±¾:", GUILayout.Width(70));
+            GUILayout.Label("å‘é€æ–‡æœ¬:", GUILayout.Width(70));
             t.inspectorSendText = GUILayout.TextField(t.inspectorSendText);
-            if (GUILayout.Button("·¢ËÍ"))
+            if (GUILayout.Button("å‘é€"))
             {
-                if (!Application.isPlaying) { Debug.LogWarning("·¢ËÍ²Ù×÷ĞèÒª½øÈë²¥·ÅÄ£Ê½¡£"); }
+                if (!Application.isPlaying) { Log.Warning("å‘é€æ“ä½œéœ€è¦è¿›å…¥æ’­æ”¾æ¨¡å¼"); }
                 else
                 {
                     t.SendClientString(t.inspectorSendText);

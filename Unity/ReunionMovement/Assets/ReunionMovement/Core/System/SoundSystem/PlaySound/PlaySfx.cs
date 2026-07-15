@@ -1,4 +1,5 @@
 using Cysharp.Threading.Tasks;
+using ReunionMovement.Common;
 using ReunionMovement.Core.Sound;
 using UnityEngine;
 
@@ -39,7 +40,7 @@ namespace ReunionMovement.Core.Sound
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[PlaySfx] PlaySfxById 异常: {ex}");
+                Log.Error($"[PlaySfx] PlaySfxById 异常: {ex}");
             }
         }
 
@@ -54,7 +55,7 @@ namespace ReunionMovement.Core.Sound
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[PlaySfx] PlaySfxClip 异常: {ex}");
+                Log.Error($"[PlaySfx] PlaySfxClip 异常: {ex}");
             }
         }
 

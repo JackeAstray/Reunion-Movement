@@ -58,7 +58,7 @@ namespace ReunionMovement.Core.Sound
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[PlayMusic] Start 初始化异常: {ex}");
+                Log.Error($"[PlayMusic] Start 初始化异常: {ex}");
             }
         }
 
@@ -148,7 +148,7 @@ namespace ReunionMovement.Core.Sound
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[PlayMusic] PlayNext 异常: {ex}");
+                Log.Error($"[PlayMusic] PlayNext 异常: {ex}");
             }
         }
 
@@ -180,7 +180,7 @@ namespace ReunionMovement.Core.Sound
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[PlayMusic] PlayPrevious 异常: {ex}");
+                Log.Error($"[PlayMusic] PlayPrevious 异常: {ex}");
             }
         }
 
@@ -225,7 +225,7 @@ namespace ReunionMovement.Core.Sound
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[PlayMusic] ResumeMusic 异常: {ex}");
+                Log.Error($"[PlayMusic] ResumeMusic 异常: {ex}");
             }
         }
 

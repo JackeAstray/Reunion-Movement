@@ -22,14 +22,14 @@ namespace ReunionMovement.Core.Languages
 
         void Start()
         {
-            // 如果游戏已经初始化完毕，直接执行；否则等待初始化完成的广播
-            if (StartGame.IsGameInitFinished)
+            // 如果游戏引擎已经运行完毕，直接执行；否则等待初始化完成的广播
+            if (GameEngine.Current != null && GameEngine.Current.State == EngineState.Running)
             {
                 OnGameInitFinished();
             }
             else
             {
-                StartGame.OnGameInitComplete += OnGameInitFinished;
+                GameEngine.OnInitialized += OnGameInitFinished;
             }
         }
 
@@ -52,7 +52,7 @@ namespace ReunionMovement.Core.Languages
         private void OnDestroy()
         {
             // 取消订阅静态事件，防止悬空引用
-            StartGame.OnGameInitComplete -= OnGameInitFinished;
+            GameEngine.OnInitialized -= OnGameInitFinished;
 
             if (LanguagesSystem.Instance != null)
             {

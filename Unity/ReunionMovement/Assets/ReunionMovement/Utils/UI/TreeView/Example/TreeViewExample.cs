@@ -1,3 +1,4 @@
+using ReunionMovement.Common;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -19,9 +20,9 @@ namespace ReunionMovement.Example
                         new TreeViewData("四级结构 1",new List<TreeViewData>()
                         {
                         },
-                        ()=>{ Debug.Log("四级结构 1 测试"); }),
+                        new System.Action(() => Log.Debug("四级结构 1 测试"))),
                     },
-                    ()=>{ Debug.Log("三级结构 1 测试"); })
+                    new System.Action(() => Log.Debug("三级结构 1 测试")))
                     },
                 null),
             }, null);
@@ -35,9 +36,9 @@ namespace ReunionMovement.Example
                         new TreeViewData("四级结构 2",new List<TreeViewData>()
                         {
                         },
-                        ()=>{ Debug.Log("四级结构 2 测试"); }),
+                        new System.Action(() => Log.Debug("四级结构 2 测试"))),
                     },
-                    ()=>{ Debug.Log("三级结构 2 测试"); })
+                    new System.Action(() => Log.Debug("三级结构 2 测试")))
                     },
                 null),
             }, null, 0, false, true);

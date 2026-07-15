@@ -210,7 +210,7 @@ namespace ReunionMovement.Core
             }
             catch (Exception ex)
             {
-                Debug.LogError($"ApplyOptions 异常: {ex}");
+                Log.Error($"ApplyOptions 异常: {ex}");
             }
         }
 
@@ -294,7 +294,7 @@ namespace ReunionMovement.Core
             }
             catch (Exception ex)
             {
-                Debug.LogError($"ApplyOption 异常: {ex}");
+                Log.Error($"ApplyOption 异常: {ex}");
             }
         }
 
@@ -312,7 +312,7 @@ namespace ReunionMovement.Core
             }
             catch (Exception ex)
             {
-                Debug.LogError($"ResetOptions 异常: {ex}");
+                Log.Error($"ResetOptions 异常: {ex}");
             }
         }
     }

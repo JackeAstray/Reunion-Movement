@@ -93,7 +93,7 @@ namespace ReunionMovement.Example
         {
             if (target == null)
             {
-                Debug.LogError("MoveCommand: target is null");
+                Log.Error("MoveCommand: target is null");
                 return;
             }
 

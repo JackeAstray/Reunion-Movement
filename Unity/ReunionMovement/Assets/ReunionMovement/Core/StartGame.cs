@@ -9,25 +9,22 @@ using ReunionMovement.Core.Terminal;
 using ReunionMovement.Core.UI;
 using ReunionMovement.Core.UIInput;
 using Cysharp.Threading.Tasks;
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using UnityEngine;
 
 namespace ReunionMovement.Core
 {
     /// <summary>
-    /// 游戏入口类
+    /// 游戏入口 —— 注册所有模块并定义启动流程。
+    /// 不再依赖 MonoBehaviour，由 Bootstrap 实例化。
     /// </summary>
     public class StartGame : GameEntry
     {
-        // 全局游戏初始化状态标记与事件
-        public static bool IsGameInitFinished { get; private set; }
-        public static event Action OnGameInitComplete;
-
-        protected override IList<ICustomSystem> CreateModules()
+        /// <summary>
+        /// 注册所有游戏模块。列表顺序决定初始化顺序（先注册的先初始化）。
+        /// ResourcesSystem 必须在最前面（其他模块依赖它加载资源）。
+        /// </summary>
+        public override IList<ICustomSystem> CreateModules()
         {
             var modules = base.CreateModules();
 
@@ -51,12 +48,11 @@ namespace ReunionMovement.Core
         }
 
         /// <summary>
-        /// 在初始化模块之前执行（异步方法）
+        /// 在初始化模块之前执行（加载配置等）
         /// </summary>
-        /// <returns></returns>
         public override UniTask OnBeforeInitAsync()
         {
-            Log.Debug("初始化前执行");
+            Log.Debug("[StartGame] 初始化前执行");
 
             if (Application.platform != RuntimePlatform.WebGLPlayer)
             {
@@ -67,37 +63,24 @@ namespace ReunionMovement.Core
         }
 
         /// <summary>
-        /// 游戏启动
+        /// 游戏启动 —— 所有模块初始化完成后执行。
+        /// 打开主界面、加载场景等。
         /// </summary>
-        /// <returns></returns>
         public override async UniTask OnGameStartAsync()
         {
-            Log.Debug("游戏启动");
+            Log.Debug("[StartGame] 游戏启动");
 
             if (Application.platform != RuntimePlatform.WebGLPlayer)
             {
                 GameOption.ResetOptions();
             }
 
-            // 临时设置游戏选项
-            //GameOption.currentOption.sfxMuted = false;
-            //GameOption.currentOption.musicMuted = false;
-            //GameOption.SaveOptions();
-
-            // 播放声音
-            //SoundSystem.Instance.PlayMusic(100001);
-            //SoundSystem.Instance.PlaySfx(300001);
-
-            // 先打开 UI，再注册为场景切换时不隐藏
+            // 打开启动 UI 并注册为场景切换时不隐藏
             UISystem.Instance.OpenWindow("StartGameUIPlane");
             SceneSystem.Instance.ExcludeWindowFromSceneHide("StartGameUIPlane");
 
-            // 加载场景
+            // 加载初始场景
             await SceneSystem.Instance.LoadScene("Temp", true);
-
-            // 对于在场景大量散落的组件，使用静态标志位和事件通知，避免遗漏
-            IsGameInitFinished = true;
-            OnGameInitComplete?.Invoke();
         }
     }
 }
