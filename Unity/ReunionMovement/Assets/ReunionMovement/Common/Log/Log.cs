@@ -12,80 +12,84 @@ namespace ReunionMovement.Common
     /// - Warning / Error / Fatal 级别提供 format+args 重载，允许调用方传入常量格式字符串而非插值字符串，
     ///   避免调用侧的字符串分配。
     /// - 所有方法均标记 [HideInCallstack]，在 Console 中双击日志条目将直接跳转到原始调用位置。
+    ///
+    /// 频道支持：
+    /// - 所有方法均提供可选的 LogChannel 参数，默认值为 LogChannel.General。
+    /// - 通过 Config.Enable_Channel_XXX 可按子系统过滤日志输出。
+    /// - 示例：Log.Info("连接成功", LogChannel.Network);
     /// </summary>
     public static class Log
     {
         // ============================================================
+        //  内部辅助：检查日志级别 + 频道是否均开启
+        // ============================================================
+        [HideInCallstack]
+        private static bool IsEnabled(bool levelEnabled, LogChannel channel)
+        {
+            return Config.Enable_LOG && levelEnabled && Config.IsChannelEnabled(channel);
+        }
+
+        // ============================================================
         //  Debug — Release 构建中完全剔除（0GC）
         // ============================================================
 
+        [Conditional("UNITY_EDITOR")]
+        [Conditional("DEVELOPMENT_BUILD")]
+        [HideInCallstack]
+        public static void Debug(object message, LogChannel channel = LogChannel.General)
+        {
+            if (IsEnabled(Config.Enable_Debug_LOG, channel))
+                GameLogger.Debug(message, channel);
+        }
+
+        [Conditional("UNITY_EDITOR")]
+        [Conditional("DEVELOPMENT_BUILD")]
+        [HideInCallstack]
+        public static void Debug(string message, Object context, LogChannel channel = LogChannel.General)
+        {
+            if (IsEnabled(Config.Enable_Debug_LOG, channel))
+                GameLogger.Debug(message, context, channel);
+        }
+
+        [Conditional("UNITY_EDITOR")]
+        [Conditional("DEVELOPMENT_BUILD")]
+        [HideInCallstack]
+        public static void Debug(string format, object arg0, LogChannel channel = LogChannel.General)
+        {
+            if (IsEnabled(Config.Enable_Debug_LOG, channel))
+                GameLogger.Debug(format, arg0, channel);
+        }
+
+        [Conditional("UNITY_EDITOR")]
+        [Conditional("DEVELOPMENT_BUILD")]
+        [HideInCallstack]
+        public static void Debug(string format, object arg0, object arg1, LogChannel channel = LogChannel.General)
+        {
+            if (IsEnabled(Config.Enable_Debug_LOG, channel))
+                GameLogger.Debug(format, arg0, arg1, channel);
+        }
+
+        [Conditional("UNITY_EDITOR")]
+        [Conditional("DEVELOPMENT_BUILD")]
+        [HideInCallstack]
+        public static void Debug(string format, object arg0, object arg1, object arg2, LogChannel channel = LogChannel.General)
+        {
+            if (IsEnabled(Config.Enable_Debug_LOG, channel))
+                GameLogger.Debug(format, arg0, arg1, arg2, channel);
+        }
+
+        [Conditional("UNITY_EDITOR")]
+        [Conditional("DEVELOPMENT_BUILD")]
+        [HideInCallstack]
+        public static void Debug(string format, object arg0, object arg1, object arg2, object arg3, LogChannel channel = LogChannel.General)
+        {
+            if (IsEnabled(Config.Enable_Debug_LOG, channel))
+                GameLogger.Debug(format, arg0, arg1, arg2, arg3, channel);
+        }
+
         /// <summary>
-        /// 输出调试日志（仅在调试级别开启时输出）。
-        /// Release 构建中本方法及调用方的字符串插值会被编译器完全移除。
+        /// 5+ 参数兜底重载（使用 params object[]，会产生数组分配）。
         /// </summary>
-        [Conditional("UNITY_EDITOR")]
-        [Conditional("DEVELOPMENT_BUILD")]
-        [HideInCallstack]
-        public static void Debug(object message)
-        {
-            if (Config.Enable_LOG && Config.Enable_Debug_LOG)
-                GameLogger.Debug(message);
-        }
-
-        [Conditional("UNITY_EDITOR")]
-        [Conditional("DEVELOPMENT_BUILD")]
-        [HideInCallstack]
-        public static void Debug(string message, Object context)
-        {
-            if (Config.Enable_LOG && Config.Enable_Debug_LOG)
-                GameLogger.Debug(message, context);
-        }
-
-        [Conditional("UNITY_EDITOR")]
-        [Conditional("DEVELOPMENT_BUILD")]
-        [HideInCallstack]
-        public static void Debug<T>(T message)
-        {
-            if (Config.Enable_LOG && Config.Enable_Debug_LOG)
-                GameLogger.Debug(message);
-        }
-
-        [Conditional("UNITY_EDITOR")]
-        [Conditional("DEVELOPMENT_BUILD")]
-        [HideInCallstack]
-        public static void Debug(string format, object arg0)
-        {
-            if (Config.Enable_LOG && Config.Enable_Debug_LOG)
-                GameLogger.Debug(format, arg0);
-        }
-
-        [Conditional("UNITY_EDITOR")]
-        [Conditional("DEVELOPMENT_BUILD")]
-        [HideInCallstack]
-        public static void Debug(string format, object arg0, object arg1)
-        {
-            if (Config.Enable_LOG && Config.Enable_Debug_LOG)
-                GameLogger.Debug(format, arg0, arg1);
-        }
-
-        [Conditional("UNITY_EDITOR")]
-        [Conditional("DEVELOPMENT_BUILD")]
-        [HideInCallstack]
-        public static void Debug(string format, object arg0, object arg1, object arg2)
-        {
-            if (Config.Enable_LOG && Config.Enable_Debug_LOG)
-                GameLogger.Debug(format, arg0, arg1, arg2);
-        }
-
-        [Conditional("UNITY_EDITOR")]
-        [Conditional("DEVELOPMENT_BUILD")]
-        [HideInCallstack]
-        public static void Debug(string format, object arg0, object arg1, object arg2, object arg3)
-        {
-            if (Config.Enable_LOG && Config.Enable_Debug_LOG)
-                GameLogger.Debug(format, arg0, arg1, arg2, arg3);
-        }
-
         [Conditional("UNITY_EDITOR")]
         [Conditional("DEVELOPMENT_BUILD")]
         [HideInCallstack]
@@ -102,64 +106,55 @@ namespace ReunionMovement.Common
         [Conditional("UNITY_EDITOR")]
         [Conditional("DEVELOPMENT_BUILD")]
         [HideInCallstack]
-        public static void Info(object message)
+        public static void Info(object message, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Info_LOG)
-                GameLogger.Info(message);
+            if (IsEnabled(Config.Enable_Info_LOG, channel))
+                GameLogger.Info(message, channel);
         }
 
         [Conditional("UNITY_EDITOR")]
         [Conditional("DEVELOPMENT_BUILD")]
         [HideInCallstack]
-        public static void Info(string message, Object context)
+        public static void Info(string message, Object context, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Info_LOG)
-                GameLogger.Info(message, context);
+            if (IsEnabled(Config.Enable_Info_LOG, channel))
+                GameLogger.Info(message, context, channel);
         }
 
         [Conditional("UNITY_EDITOR")]
         [Conditional("DEVELOPMENT_BUILD")]
         [HideInCallstack]
-        public static void Info<T>(T message)
+        public static void Info(string format, object arg0, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Info_LOG)
-                GameLogger.Info(message);
+            if (IsEnabled(Config.Enable_Info_LOG, channel))
+                GameLogger.Info(format, arg0, channel);
         }
 
         [Conditional("UNITY_EDITOR")]
         [Conditional("DEVELOPMENT_BUILD")]
         [HideInCallstack]
-        public static void Info(string format, object arg0)
+        public static void Info(string format, object arg0, object arg1, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Info_LOG)
-                GameLogger.Info(format, arg0);
+            if (IsEnabled(Config.Enable_Info_LOG, channel))
+                GameLogger.Info(format, arg0, arg1, channel);
         }
 
         [Conditional("UNITY_EDITOR")]
         [Conditional("DEVELOPMENT_BUILD")]
         [HideInCallstack]
-        public static void Info(string format, object arg0, object arg1)
+        public static void Info(string format, object arg0, object arg1, object arg2, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Info_LOG)
-                GameLogger.Info(format, arg0, arg1);
+            if (IsEnabled(Config.Enable_Info_LOG, channel))
+                GameLogger.Info(format, arg0, arg1, arg2, channel);
         }
 
         [Conditional("UNITY_EDITOR")]
         [Conditional("DEVELOPMENT_BUILD")]
         [HideInCallstack]
-        public static void Info(string format, object arg0, object arg1, object arg2)
+        public static void Info(string format, object arg0, object arg1, object arg2, object arg3, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Info_LOG)
-                GameLogger.Info(format, arg0, arg1, arg2);
-        }
-
-        [Conditional("UNITY_EDITOR")]
-        [Conditional("DEVELOPMENT_BUILD")]
-        [HideInCallstack]
-        public static void Info(string format, object arg0, object arg1, object arg2, object arg3)
-        {
-            if (Config.Enable_LOG && Config.Enable_Info_LOG)
-                GameLogger.Info(format, arg0, arg1, arg2, arg3);
+            if (IsEnabled(Config.Enable_Info_LOG, channel))
+                GameLogger.Info(format, arg0, arg1, arg2, arg3, channel);
         }
 
         [Conditional("UNITY_EDITOR")]
@@ -176,52 +171,45 @@ namespace ReunionMovement.Common
         // ============================================================
 
         [HideInCallstack]
-        public static void Warning(object message)
+        public static void Warning(object message, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Warning_LOG)
-                GameLogger.Warning(message);
+            if (IsEnabled(Config.Enable_Warning_LOG, channel))
+                GameLogger.Warning(message, channel);
         }
 
         [HideInCallstack]
-        public static void Warning(string message, Object context)
+        public static void Warning(string message, Object context, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Warning_LOG)
-                GameLogger.Warning(message, context);
+            if (IsEnabled(Config.Enable_Warning_LOG, channel))
+                GameLogger.Warning(message, context, channel);
         }
 
         [HideInCallstack]
-        public static void Warning<T>(T message)
+        public static void Warning(string format, object arg0, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Warning_LOG)
-                GameLogger.Warning(message);
+            if (IsEnabled(Config.Enable_Warning_LOG, channel))
+                GameLogger.Warning(format, arg0, channel);
         }
 
         [HideInCallstack]
-        public static void Warning(string format, object arg0)
+        public static void Warning(string format, object arg0, object arg1, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Warning_LOG)
-                GameLogger.Warning(format, arg0);
+            if (IsEnabled(Config.Enable_Warning_LOG, channel))
+                GameLogger.Warning(format, arg0, arg1, channel);
         }
 
         [HideInCallstack]
-        public static void Warning(string format, object arg0, object arg1)
+        public static void Warning(string format, object arg0, object arg1, object arg2, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Warning_LOG)
-                GameLogger.Warning(format, arg0, arg1);
+            if (IsEnabled(Config.Enable_Warning_LOG, channel))
+                GameLogger.Warning(format, arg0, arg1, arg2, channel);
         }
 
         [HideInCallstack]
-        public static void Warning(string format, object arg0, object arg1, object arg2)
+        public static void Warning(string format, object arg0, object arg1, object arg2, object arg3, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Warning_LOG)
-                GameLogger.Warning(format, arg0, arg1, arg2);
-        }
-
-        [HideInCallstack]
-        public static void Warning(string format, object arg0, object arg1, object arg2, object arg3)
-        {
-            if (Config.Enable_LOG && Config.Enable_Warning_LOG)
-                GameLogger.Warning(format, arg0, arg1, arg2, arg3);
+            if (IsEnabled(Config.Enable_Warning_LOG, channel))
+                GameLogger.Warning(format, arg0, arg1, arg2, arg3, channel);
         }
 
         [HideInCallstack]
@@ -236,52 +224,45 @@ namespace ReunionMovement.Common
         // ============================================================
 
         [HideInCallstack]
-        public static void Error(object message)
+        public static void Error(object message, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Error_LOG)
-                GameLogger.Error(message);
+            if (IsEnabled(Config.Enable_Error_LOG, channel))
+                GameLogger.Error(message, channel);
         }
 
         [HideInCallstack]
-        public static void Error(string message, Object context)
+        public static void Error(string message, Object context, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Error_LOG)
-                GameLogger.Error(message, context);
+            if (IsEnabled(Config.Enable_Error_LOG, channel))
+                GameLogger.Error(message, context, channel);
         }
 
         [HideInCallstack]
-        public static void Error<T>(T message)
+        public static void Error(string format, object arg0, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Error_LOG)
-                GameLogger.Error(message);
+            if (IsEnabled(Config.Enable_Error_LOG, channel))
+                GameLogger.Error(format, arg0, channel);
         }
 
         [HideInCallstack]
-        public static void Error(string format, object arg0)
+        public static void Error(string format, object arg0, object arg1, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Error_LOG)
-                GameLogger.Error(format, arg0);
+            if (IsEnabled(Config.Enable_Error_LOG, channel))
+                GameLogger.Error(format, arg0, arg1, channel);
         }
 
         [HideInCallstack]
-        public static void Error(string format, object arg0, object arg1)
+        public static void Error(string format, object arg0, object arg1, object arg2, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Error_LOG)
-                GameLogger.Error(format, arg0, arg1);
+            if (IsEnabled(Config.Enable_Error_LOG, channel))
+                GameLogger.Error(format, arg0, arg1, arg2, channel);
         }
 
         [HideInCallstack]
-        public static void Error(string format, object arg0, object arg1, object arg2)
+        public static void Error(string format, object arg0, object arg1, object arg2, object arg3, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Error_LOG)
-                GameLogger.Error(format, arg0, arg1, arg2);
-        }
-
-        [HideInCallstack]
-        public static void Error(string format, object arg0, object arg1, object arg2, object arg3)
-        {
-            if (Config.Enable_LOG && Config.Enable_Error_LOG)
-                GameLogger.Error(format, arg0, arg1, arg2, arg3);
+            if (IsEnabled(Config.Enable_Error_LOG, channel))
+                GameLogger.Error(format, arg0, arg1, arg2, arg3, channel);
         }
 
         [HideInCallstack]
@@ -296,52 +277,45 @@ namespace ReunionMovement.Common
         // ============================================================
 
         [HideInCallstack]
-        public static void Fatal(object message)
+        public static void Fatal(object message, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Fatal_LOG)
-                GameLogger.Fatal(message);
+            if (IsEnabled(Config.Enable_Fatal_LOG, channel))
+                GameLogger.Fatal(message, channel);
         }
 
         [HideInCallstack]
-        public static void Fatal(string message, Object context)
+        public static void Fatal(string message, Object context, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Fatal_LOG)
-                GameLogger.Fatal(message, context);
+            if (IsEnabled(Config.Enable_Fatal_LOG, channel))
+                GameLogger.Fatal(message, context, channel);
         }
 
         [HideInCallstack]
-        public static void Fatal<T>(T message)
+        public static void Fatal(string format, object arg0, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Fatal_LOG)
-                GameLogger.Fatal(message);
+            if (IsEnabled(Config.Enable_Fatal_LOG, channel))
+                GameLogger.Fatal(format, arg0, channel);
         }
 
         [HideInCallstack]
-        public static void Fatal(string format, object arg0)
+        public static void Fatal(string format, object arg0, object arg1, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Fatal_LOG)
-                GameLogger.Fatal(format, arg0);
+            if (IsEnabled(Config.Enable_Fatal_LOG, channel))
+                GameLogger.Fatal(format, arg0, arg1, channel);
         }
 
         [HideInCallstack]
-        public static void Fatal(string format, object arg0, object arg1)
+        public static void Fatal(string format, object arg0, object arg1, object arg2, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Fatal_LOG)
-                GameLogger.Fatal(format, arg0, arg1);
+            if (IsEnabled(Config.Enable_Fatal_LOG, channel))
+                GameLogger.Fatal(format, arg0, arg1, arg2, channel);
         }
 
         [HideInCallstack]
-        public static void Fatal(string format, object arg0, object arg1, object arg2)
+        public static void Fatal(string format, object arg0, object arg1, object arg2, object arg3, LogChannel channel = LogChannel.General)
         {
-            if (Config.Enable_LOG && Config.Enable_Fatal_LOG)
-                GameLogger.Fatal(format, arg0, arg1, arg2);
-        }
-
-        [HideInCallstack]
-        public static void Fatal(string format, object arg0, object arg1, object arg2, object arg3)
-        {
-            if (Config.Enable_LOG && Config.Enable_Fatal_LOG)
-                GameLogger.Fatal(format, arg0, arg1, arg2, arg3);
+            if (IsEnabled(Config.Enable_Fatal_LOG, channel))
+                GameLogger.Fatal(format, arg0, arg1, arg2, arg3, channel);
         }
 
         [HideInCallstack]

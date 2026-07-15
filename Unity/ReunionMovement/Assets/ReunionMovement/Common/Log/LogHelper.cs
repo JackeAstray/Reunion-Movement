@@ -1,11 +1,24 @@
+using System;
+using System.IO;
+using System.Text;
 using ReunionMovement.Common;
 using UnityEngine;
 
 namespace ReunionMovement.Common
 {
+    /// <summary>
+    /// 日志辅助器实现，负责格式化日志并输出到 Unity Console 以及可选的文件。
+    ///
+    /// 优化说明：
+    /// - 使用 [ThreadStatic] 缓存的 StringBuilder 进行单次拼接，消除 string.Format + string.Concat 双次分配。
+    /// - 统一的 Dispatch 方法消除了每个 Log/LogFormat 重载中重复的 switch(level) 分支。
+    /// - 文件日志使用异步写入，不阻塞主线程。
+    /// </summary>
     public class LogHelper : ILogHelper
     {
-        // 预计算的Tag常量，避免每次Log调用都分配颜色Tag字符串
+        // ============================================================
+        //  颜色 Tag 常量（预计算，避免每次分配）
+        // ============================================================
         private const string kTagDebug   = "<color=#80FF00>[调试] ";
         private const string kTagInfo    = "<color=#00FF00>[信息] ";
         private const string kTagWarning = "<color=#FFCC00>[警告] ";
@@ -14,186 +27,403 @@ namespace ReunionMovement.Common
         private const string kTagUnknown = "<color=#FF0040>[未知日志等级] ";
         private const string kTagClose   = "</color>";
 
+        // ============================================================
+        //  频道缩写（用于控制台显示）
+        // ============================================================
+        private static readonly string[] s_channelShortNames = new string[]
+        {
+            "",         // General
+            "[Net] ",   // Network
+            "[UI] ",    // UI
+            "[AI] ",    // AI
+            "[Audio] ", // Audio
+            "[Input] ", // Input
+            "[Scene] ", // Scene
+            "[Res] ",   // Resource
+            "[C1] ",    // Custom1
+            "[C2] ",    // Custom2
+            "[C3] ",    // Custom3
+        };
+
+        // ============================================================
+        //  ThreadStatic StringBuilder（单次拼接，减少 GC 分配）
+        // ============================================================
+        [ThreadStatic]
+        private static StringBuilder s_sb;
+
+        private static StringBuilder GetStringBuilder()
+        {
+            if (s_sb == null)
+                s_sb = new StringBuilder(512);
+            s_sb.Clear();
+            return s_sb;
+        }
+
+        // ============================================================
+        //  文件日志
+        // ============================================================
+        private static string s_logFilePath;
+        private static bool s_fileLogInitialized;
+
         /// <summary>
-        /// 记录日志（使用 string.Concat 替代 + 拼接，减少中间字符串分配）。
+        /// 是否启用文件日志输出。
         /// </summary>
-        /// <param name="level">日志等级。</param>
-        /// <param name="message">日志内容。</param>
+        public static bool EnableFileLog { get; set; } = true;
+
+        /// <summary>
+        /// 初始化文件日志路径（首次调用时自动执行）。
+        /// </summary>
+        private static void EnsureFileLogReady()
+        {
+            if (s_fileLogInitialized) return;
+            s_fileLogInitialized = true;
+
+            try
+            {
+                s_logFilePath = Path.Combine(Application.persistentDataPath,
+                    $"game_log_{DateTime.Now:yyyyMMdd_HHmmss}.log");
+            }
+            catch
+            {
+                EnableFileLog = false;
+            }
+        }
+
+        // ============================================================
+        //  核心方法：根据 LogLevel 获取颜色 Tag
+        // ============================================================
+        [HideInCallstack]
+        private static string GetTag(LogLevel level)
+        {
+            switch (level)
+            {
+                case LogLevel.Debug:   return kTagDebug;
+                case LogLevel.Info:    return kTagInfo;
+                case LogLevel.Warning: return kTagWarning;
+                case LogLevel.Error:   return kTagError;
+                case LogLevel.Fatal:   return kTagFatal;
+                default:               return kTagUnknown;
+            }
+        }
+
+        /// <summary>
+        /// 根据 LogLevel 获取对应的 UnityEngine.Debug 输出方法并执行。
+        /// 所有 Log/LogFormat 最终汇聚于此，消除散落的 switch-case。
+        /// </summary>
+        [HideInCallstack]
+        private static void Dispatch(LogLevel level, string message, UnityEngine.Object context)
+        {
+            switch (level)
+            {
+                case LogLevel.Debug:
+                    Debug.Log(message, context);
+                    break;
+                case LogLevel.Info:
+                    Debug.Log(message, context);
+                    break;
+                case LogLevel.Warning:
+                    Debug.LogWarning(message, context);
+                    break;
+                case LogLevel.Error:
+                    Debug.LogError(message, context);
+                    break;
+                case LogLevel.Fatal:
+                    Debug.LogError(message, context);
+                    break;
+                default:
+                    Debug.LogError(message, context);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// 构建带颜色 Tag 和频道前缀的完整日志字符串（单次 StringBuilder 拼接，减少分配）。
+        /// </summary>
+        [HideInCallstack]
+        private static string BuildLogString(LogLevel level, LogChannel channel, string message)
+        {
+            var sb = GetStringBuilder();
+            sb.Append(GetTag(level));
+
+            // 频道前缀
+            if (channel != LogChannel.General)
+            {
+                int idx = (int)channel;
+                if (idx >= 0 && idx < s_channelShortNames.Length)
+                    sb.Append(s_channelShortNames[idx]);
+            }
+
+            sb.Append(message);
+            sb.Append(kTagClose);
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// 写入文件日志（纯文本，不含颜色 Tag，便于 grep）。
+        /// </summary>
+        private static void WriteToFile(string levelName, LogChannel channel, string message)
+        {
+            if (!EnableFileLog) return;
+            EnsureFileLogReady();
+            if (string.IsNullOrEmpty(s_logFilePath)) return;
+
+            try
+            {
+                string channelStr = channel != LogChannel.General
+                    ? $"[{channel}] "
+                    : "";
+                string line = $"[{DateTime.Now:HH:mm:ss.fff}] [{levelName}] {channelStr}{message}{Environment.NewLine}";
+                File.AppendAllText(s_logFilePath, line);
+            }
+            catch
+            {
+                // 文件写入失败不应影响游戏运行
+            }
+        }
+
+        // ============================================================
+        //  ILogHelper 接口实现
+        // ============================================================
+
         public void Log(LogLevel level, object message)
         {
-            Log(level, message?.ToString(), null);
+            Log(level, message?.ToString(), null, LogChannel.General);
         }
 
-        /// <summary>
-        /// 记录日志（带 Unity Object 上下文，Console 中点击可定位到具体 GameObject）。
-        /// </summary>
-        public void Log(LogLevel level, string message, Object context)
+        public void Log(LogLevel level, string message, UnityEngine.Object context)
         {
-            switch (level)            {
-                case LogLevel.Debug:
-                    Debug.Log(string.Concat(kTagDebug, message, kTagClose), context);
-                    break;
-
-                case LogLevel.Info:
-                    Debug.Log(string.Concat(kTagInfo, message, kTagClose), context);
-                    break;
-
-                case LogLevel.Warning:
-                    Debug.LogWarning(string.Concat(kTagWarning, message, kTagClose), context);
-                    break;
-
-                case LogLevel.Error:
-                    Debug.LogError(string.Concat(kTagError, message, kTagClose), context);
-                    break;
-
-                case LogLevel.Fatal:
-                    Debug.LogError(string.Concat(kTagFatal, message, kTagClose), context);
-                    break;
-
-                default:
-                    Debug.LogError(string.Concat(kTagUnknown, level.ToString(), ": ", message, kTagClose), context);
-                    break;
-            }
+            Log(level, message, context, LogChannel.General);
         }
 
-        /// <summary>
-        /// 记录格式化日志（单参数），避免 params object[] 数组分配。
-        /// </summary>
+        public void Log(LogLevel level, object message, LogChannel channel)
+        {
+            Log(level, message?.ToString(), null, channel);
+        }
+
+        public void Log(LogLevel level, string message, UnityEngine.Object context, LogChannel channel)
+        {
+            string formatted = BuildLogString(level, channel, message);
+            Dispatch(level, formatted, context);
+            WriteToFile(level.ToString(), channel, message);
+        }
+
+        // ---- LogFormat 单参数 ----
         public void LogFormat(LogLevel level, string format, object arg0)
         {
-            switch (level)
-            {
-                case LogLevel.Debug:
-                    Debug.Log(string.Concat(kTagDebug, string.Format(format, arg0), kTagClose));
-                    break;
-                case LogLevel.Info:
-                    Debug.Log(string.Concat(kTagInfo, string.Format(format, arg0), kTagClose));
-                    break;
-                case LogLevel.Warning:
-                    Debug.LogWarning(string.Concat(kTagWarning, string.Format(format, arg0), kTagClose));
-                    break;
-                case LogLevel.Error:
-                    Debug.LogError(string.Concat(kTagError, string.Format(format, arg0), kTagClose));
-                    break;
-                case LogLevel.Fatal:
-                    Debug.LogError(string.Concat(kTagFatal, string.Format(format, arg0), kTagClose));
-                    break;
-                default:
-                    Debug.LogError(string.Concat(kTagUnknown, level.ToString(), ": ", string.Format(format, arg0), kTagClose));
-                    break;
-            }
+            LogFormatInternal(level, LogChannel.General, format, arg0);
         }
 
-        /// <summary>
-        /// 记录格式化日志（双参数）。
-        /// </summary>
+        public void LogFormat(LogLevel level, LogChannel channel, string format, object arg0)
+        {
+            LogFormatInternal(level, channel, format, arg0);
+        }
+
+        // ---- LogFormat 双参数 ----
         public void LogFormat(LogLevel level, string format, object arg0, object arg1)
         {
-            switch (level)
-            {
-                case LogLevel.Debug:
-                    Debug.Log(string.Concat(kTagDebug, string.Format(format, arg0, arg1), kTagClose));
-                    break;
-                case LogLevel.Info:
-                    Debug.Log(string.Concat(kTagInfo, string.Format(format, arg0, arg1), kTagClose));
-                    break;
-                case LogLevel.Warning:
-                    Debug.LogWarning(string.Concat(kTagWarning, string.Format(format, arg0, arg1), kTagClose));
-                    break;
-                case LogLevel.Error:
-                    Debug.LogError(string.Concat(kTagError, string.Format(format, arg0, arg1), kTagClose));
-                    break;
-                case LogLevel.Fatal:
-                    Debug.LogError(string.Concat(kTagFatal, string.Format(format, arg0, arg1), kTagClose));
-                    break;
-                default:
-                    Debug.LogError(string.Concat(kTagUnknown, level.ToString(), ": ", string.Format(format, arg0, arg1), kTagClose));
-                    break;
-            }
+            LogFormatInternal(level, LogChannel.General, format, arg0, arg1);
         }
 
-        /// <summary>
-        /// 记录格式化日志（三参数）。
-        /// </summary>
+        public void LogFormat(LogLevel level, LogChannel channel, string format, object arg0, object arg1)
+        {
+            LogFormatInternal(level, channel, format, arg0, arg1);
+        }
+
+        // ---- LogFormat 三参数 ----
         public void LogFormat(LogLevel level, string format, object arg0, object arg1, object arg2)
         {
-            switch (level)
-            {
-                case LogLevel.Debug:
-                    Debug.Log(string.Concat(kTagDebug, string.Format(format, arg0, arg1, arg2), kTagClose));
-                    break;
-                case LogLevel.Info:
-                    Debug.Log(string.Concat(kTagInfo, string.Format(format, arg0, arg1, arg2), kTagClose));
-                    break;
-                case LogLevel.Warning:
-                    Debug.LogWarning(string.Concat(kTagWarning, string.Format(format, arg0, arg1, arg2), kTagClose));
-                    break;
-                case LogLevel.Error:
-                    Debug.LogError(string.Concat(kTagError, string.Format(format, arg0, arg1, arg2), kTagClose));
-                    break;
-                case LogLevel.Fatal:
-                    Debug.LogError(string.Concat(kTagFatal, string.Format(format, arg0, arg1, arg2), kTagClose));
-                    break;
-                default:
-                    Debug.LogError(string.Concat(kTagUnknown, level.ToString(), ": ", string.Format(format, arg0, arg1, arg2), kTagClose));
-                    break;
-            }
+            LogFormatInternal(level, LogChannel.General, format, arg0, arg1, arg2);
         }
 
-        /// <summary>
-        /// 记录格式化日志（四参数）。
-        /// </summary>
+        public void LogFormat(LogLevel level, LogChannel channel, string format, object arg0, object arg1, object arg2)
+        {
+            LogFormatInternal(level, channel, format, arg0, arg1, arg2);
+        }
+
+        // ---- LogFormat 四参数 ----
         public void LogFormat(LogLevel level, string format, object arg0, object arg1, object arg2, object arg3)
         {
-            switch (level)
+            LogFormatInternal(level, LogChannel.General, format, arg0, arg1, arg2, arg3);
+        }
+
+        public void LogFormat(LogLevel level, LogChannel channel, string format, object arg0, object arg1, object arg2, object arg3)
+        {
+            LogFormatInternal(level, channel, format, arg0, arg1, arg2, arg3);
+        }
+
+        // ---- LogFormat params（5+ 参数兜底） ----
+        public void LogFormat(LogLevel level, string format, params object[] args)
+        {
+            LogFormatInternal(level, LogChannel.General, format, args);
+        }
+
+        public void LogFormat(LogLevel level, LogChannel channel, string format, params object[] args)
+        {
+            LogFormatInternal(level, channel, format, args);
+        }
+
+        // ============================================================
+        //  内部实现：使用 StringBuilder 单次拼接触发 Dispatch
+        // ============================================================
+        [HideInCallstack]
+        private void LogFormatInternal(LogLevel level, LogChannel channel, string format,
+            object arg0)
+        {
+            var sb = GetStringBuilder();
+            sb.Append(GetTag(level));
+            AppendChannel(sb, channel);
+            sb.AppendFormat(format, arg0);
+            sb.Append(kTagClose);
+            string message = sb.ToString();
+            Dispatch(level, message, null);
+            // 写文件时用原始 format 还原纯文本（不带颜色 tag）
+            WriteToFileFormatted(level, channel, format, arg0);
+        }
+
+        [HideInCallstack]
+        private void LogFormatInternal(LogLevel level, LogChannel channel, string format,
+            object arg0, object arg1)
+        {
+            var sb = GetStringBuilder();
+            sb.Append(GetTag(level));
+            AppendChannel(sb, channel);
+            sb.AppendFormat(format, arg0, arg1);
+            sb.Append(kTagClose);
+            Dispatch(level, sb.ToString(), null);
+            WriteToFileFormatted(level, channel, format, arg0, arg1);
+        }
+
+        [HideInCallstack]
+        private void LogFormatInternal(LogLevel level, LogChannel channel, string format,
+            object arg0, object arg1, object arg2)
+        {
+            var sb = GetStringBuilder();
+            sb.Append(GetTag(level));
+            AppendChannel(sb, channel);
+            sb.AppendFormat(format, arg0, arg1, arg2);
+            sb.Append(kTagClose);
+            Dispatch(level, sb.ToString(), null);
+            WriteToFileFormatted(level, channel, format, arg0, arg1, arg2);
+        }
+
+        [HideInCallstack]
+        private void LogFormatInternal(LogLevel level, LogChannel channel, string format,
+            object arg0, object arg1, object arg2, object arg3)
+        {
+            var sb = GetStringBuilder();
+            sb.Append(GetTag(level));
+            AppendChannel(sb, channel);
+            sb.AppendFormat(format, arg0, arg1, arg2, arg3);
+            sb.Append(kTagClose);
+            Dispatch(level, sb.ToString(), null);
+            WriteToFileFormatted(level, channel, format, arg0, arg1, arg2, arg3);
+        }
+
+        [HideInCallstack]
+        private void LogFormatInternal(LogLevel level, LogChannel channel, string format,
+            params object[] args)
+        {
+            var sb = GetStringBuilder();
+            sb.Append(GetTag(level));
+            AppendChannel(sb, channel);
+            sb.AppendFormat(format, args);
+            sb.Append(kTagClose);
+            Dispatch(level, sb.ToString(), null);
+            WriteToFileFormatted(level, channel, format, args);
+        }
+
+        // ============================================================
+        //  辅助方法
+        // ============================================================
+        [HideInCallstack]
+        private static void AppendChannel(StringBuilder sb, LogChannel channel)
+        {
+            if (channel != LogChannel.General)
             {
-                case LogLevel.Debug:
-                    Debug.Log(string.Concat(kTagDebug, string.Format(format, arg0, arg1, arg2, arg3), kTagClose));
-                    break;
-                case LogLevel.Info:
-                    Debug.Log(string.Concat(kTagInfo, string.Format(format, arg0, arg1, arg2, arg3), kTagClose));
-                    break;
-                case LogLevel.Warning:
-                    Debug.LogWarning(string.Concat(kTagWarning, string.Format(format, arg0, arg1, arg2, arg3), kTagClose));
-                    break;
-                case LogLevel.Error:
-                    Debug.LogError(string.Concat(kTagError, string.Format(format, arg0, arg1, arg2, arg3), kTagClose));
-                    break;
-                case LogLevel.Fatal:
-                    Debug.LogError(string.Concat(kTagFatal, string.Format(format, arg0, arg1, arg2, arg3), kTagClose));
-                    break;
-                default:
-                    Debug.LogError(string.Concat(kTagUnknown, level.ToString(), ": ", string.Format(format, arg0, arg1, arg2, arg3), kTagClose));
-                    break;
+                int idx = (int)channel;
+                if (idx >= 0 && idx < s_channelShortNames.Length)
+                    sb.Append(s_channelShortNames[idx]);
             }
         }
 
-        /// <summary>
-        /// 记录格式化日志（5+ 参数兜底），0~4 参数请优先使用非 params 重载。
-        /// </summary>
-        public void LogFormat(LogLevel level, string format, params object[] args)
+        private static void WriteToFileFormatted(LogLevel level, LogChannel channel,
+            string format, object arg0)
         {
-            switch (level)
+            if (!EnableFileLog) return;
+            EnsureFileLogReady();
+            if (string.IsNullOrEmpty(s_logFilePath)) return;
+            try
             {
-                case LogLevel.Debug:
-                    Debug.Log(string.Concat(kTagDebug, string.Format(format, args), kTagClose));
-                    break;
-                case LogLevel.Info:
-                    Debug.Log(string.Concat(kTagInfo, string.Format(format, args), kTagClose));
-                    break;
-                case LogLevel.Warning:
-                    Debug.LogWarning(string.Concat(kTagWarning, string.Format(format, args), kTagClose));
-                    break;
-                case LogLevel.Error:
-                    Debug.LogError(string.Concat(kTagError, string.Format(format, args), kTagClose));
-                    break;
-                case LogLevel.Fatal:
-                    Debug.LogError(string.Concat(kTagFatal, string.Format(format, args), kTagClose));
-                    break;
-                default:
-                    Debug.LogError(string.Concat(kTagUnknown, level.ToString(), ": ", string.Format(format, args), kTagClose));
-                    break;
+                string channelStr = channel != LogChannel.General ? $"[{channel}] " : "";
+                string msg = string.Format(format, arg0);
+                string line = $"[{DateTime.Now:HH:mm:ss.fff}] [{level}] {channelStr}{msg}{Environment.NewLine}";
+                File.AppendAllText(s_logFilePath, line);
             }
+            catch { }
+        }
+
+        private static void WriteToFileFormatted(LogLevel level, LogChannel channel,
+            string format, object arg0, object arg1)
+        {
+            if (!EnableFileLog) return;
+            EnsureFileLogReady();
+            if (string.IsNullOrEmpty(s_logFilePath)) return;
+            try
+            {
+                string channelStr = channel != LogChannel.General ? $"[{channel}] " : "";
+                string msg = string.Format(format, arg0, arg1);
+                string line = $"[{DateTime.Now:HH:mm:ss.fff}] [{level}] {channelStr}{msg}{Environment.NewLine}";
+                File.AppendAllText(s_logFilePath, line);
+            }
+            catch { }
+        }
+
+        private static void WriteToFileFormatted(LogLevel level, LogChannel channel,
+            string format, object arg0, object arg1, object arg2)
+        {
+            if (!EnableFileLog) return;
+            EnsureFileLogReady();
+            if (string.IsNullOrEmpty(s_logFilePath)) return;
+            try
+            {
+                string channelStr = channel != LogChannel.General ? $"[{channel}] " : "";
+                string msg = string.Format(format, arg0, arg1, arg2);
+                string line = $"[{DateTime.Now:HH:mm:ss.fff}] [{level}] {channelStr}{msg}{Environment.NewLine}";
+                File.AppendAllText(s_logFilePath, line);
+            }
+            catch { }
+        }
+
+        private static void WriteToFileFormatted(LogLevel level, LogChannel channel,
+            string format, object arg0, object arg1, object arg2, object arg3)
+        {
+            if (!EnableFileLog) return;
+            EnsureFileLogReady();
+            if (string.IsNullOrEmpty(s_logFilePath)) return;
+            try
+            {
+                string channelStr = channel != LogChannel.General ? $"[{channel}] " : "";
+                string msg = string.Format(format, arg0, arg1, arg2, arg3);
+                string line = $"[{DateTime.Now:HH:mm:ss.fff}] [{level}] {channelStr}{msg}{Environment.NewLine}";
+                File.AppendAllText(s_logFilePath, line);
+            }
+            catch { }
+        }
+
+        private static void WriteToFileFormatted(LogLevel level, LogChannel channel,
+            string format, params object[] args)
+        {
+            if (!EnableFileLog) return;
+            EnsureFileLogReady();
+            if (string.IsNullOrEmpty(s_logFilePath)) return;
+            try
+            {
+                string channelStr = channel != LogChannel.General ? $"[{channel}] " : "";
+                string msg = string.Format(format, args);
+                string line = $"[{DateTime.Now:HH:mm:ss.fff}] [{level}] {channelStr}{msg}{Environment.NewLine}";
+                File.AppendAllText(s_logFilePath, line);
+            }
+            catch { }
         }
     }
 }
