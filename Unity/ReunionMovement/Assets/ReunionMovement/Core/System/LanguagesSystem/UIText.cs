@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json.Bson;
 using ReunionMovement.Common;
-using ReunionMovement.Common.Util;
+using R3;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,13 +12,19 @@ using UnityEngine.UI;
 
 namespace ReunionMovement.Core.Languages
 {
-    public class UIText : ObserverBase
+    /// <summary>
+    /// UI 多语言文本组件 —— 通过 R3 订阅语言切换事件自动更新
+    /// </summary>
+    public class UIText : MonoBehaviour
     {
         // 语言文本ID
         [SerializeField] private int number;
 
         private TMP_Text tmpTextComponent;
         private Text textComponent;
+
+        /// <summary>R3 订阅管理器 —— OnDestroy 时自动取消所有订阅</summary>
+        private IDisposable languageSubscription;
 
         void Start()
         {
@@ -34,7 +40,7 @@ namespace ReunionMovement.Core.Languages
         }
 
         /// <summary>
-        /// 游戏初始化完成后的回调方法，注册语言系统观察者并更新文本
+        /// 游戏初始化完成后的回调方法，注册 R3 语言订阅并更新文本
         /// </summary>
         private void OnGameInitFinished()
         {
@@ -45,8 +51,13 @@ namespace ReunionMovement.Core.Languages
                 Log.Error("UIText组件需要绑定TMP_Text或Text组件");
                 return;
             }
-            LanguagesSystem.Instance.RegisterObserver(this);
-            UpdateData();
+
+            // 使用 R3 订阅语言切换 —— 自动处理订阅生命周期
+            languageSubscription = LanguagesSystem.Instance.CurrentLanguage
+                .Subscribe(_ => GetTextLanguage());
+
+            // 首次更新文本
+            GetTextLanguage();
         }
 
         private void OnDestroy()
@@ -54,19 +65,9 @@ namespace ReunionMovement.Core.Languages
             // 取消订阅静态事件，防止悬空引用
             GameEngine.OnInitialized -= OnGameInitFinished;
 
-            if (LanguagesSystem.Instance != null)
-            {
-                LanguagesSystem.Instance.RemoveObserver(this);
-            }
-        }
-
-        /// <summary>
-        /// 更新数据
-        /// </summary>
-        /// <param name="args"></param>
-        public override void UpdateData(params object[] args)
-        {
-            GetTextLanguage();
+            // 释放 R3 订阅
+            languageSubscription?.Dispose();
+            languageSubscription = null;
         }
 
         /// <summary>

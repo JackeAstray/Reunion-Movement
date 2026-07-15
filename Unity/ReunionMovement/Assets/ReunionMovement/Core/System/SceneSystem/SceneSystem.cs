@@ -1,6 +1,7 @@
 ﻿using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
 using Cysharp.Threading.Tasks;
+using R3;
 using System;
 using System.Collections.Generic;
 using UnityEngine.Events;
@@ -11,7 +12,22 @@ using ReunionMovement.Core.UI;
 namespace ReunionMovement.Core.Scene
 {
     /// <summary>
-    /// 场景系统
+    /// 场景加载状态
+    /// </summary>
+    public enum SceneLoadState
+    {
+        /// <summary>空闲</summary>
+        Idle,
+        /// <summary>加载中</summary>
+        Loading,
+        /// <summary>已加载</summary>
+        Loaded,
+        /// <summary>加载失败</summary>
+        Failed
+    }
+
+    /// <summary>
+    /// 场景系统 —— 使用 R3 Subject/ReactiveProperty 管理场景加载状态与进度
     /// </summary>
     public class SceneSystem : ICustomSystem
     {
@@ -37,7 +53,33 @@ namespace ReunionMovement.Core.Scene
         // 场景切换时不隐藏的窗口名称集合（由 LoadScene 调用方在切换前注册）
         private readonly HashSet<string> excludeFromSceneHide = new HashSet<string>();
 
-        public event Action<float> getProgress;                           // 事件 用于处理进度条
+        #region R3 响应式属性（推荐新代码使用）
+
+        /// <summary>场景加载进度（0~1）</summary>
+        public readonly Subject<float> ProgressSubject = new Subject<float>();
+
+        /// <summary>场景加载状态（可观测属性，UI 可直接绑定）</summary>
+        public ReactiveProperty<SceneLoadState> LoadState { get; private set; }
+            = new ReactiveProperty<SceneLoadState>(SceneLoadState.Idle);
+
+        /// <summary>当前场景名称变更</summary>
+        public readonly Subject<string> SceneChangedSubject = new Subject<string>();
+
+        /// <summary>场景加载完成事件（参数：场景名）</summary>
+        public readonly Subject<string> SceneLoadedSubject = new Subject<string>();
+
+        #endregion
+
+        #region 兼容旧 API（已废弃，转发到 R3）
+
+        [Obsolete("请使用 SceneSystem.Instance.ProgressSubject.Subscribe()", false)]
+        public event Action<float> getProgress
+        {
+            add { Instance.ProgressSubject.Subscribe(value); }
+            remove { }
+        }
+
+        #endregion
 
         public float startProgressWaitingTime;                            // 开始 - 等待时长
         public float endProgressWaitingTime;                              // 结束 - 等待时长
@@ -70,10 +112,16 @@ namespace ReunionMovement.Core.Scene
 
             isInited = false;
             isLoading = false;
-            getProgress = null;
             beforeSceneLoadingCompletionCallback = null;
             sceneLoadingCompletionCallback = null;
             targetSceneName = null;
+
+            // 释放 R3 Subject/ReactiveProperty
+            ProgressSubject?.Dispose();
+            LoadState?.Dispose();
+            LoadState = null;
+            SceneChangedSubject?.Dispose();
+            SceneLoadedSubject?.Dispose();
         }
 
         #region Load
@@ -126,6 +174,7 @@ namespace ReunionMovement.Core.Scene
 
             // 锁屏
             isLoading = true;
+            LoadState.Value = SceneLoadState.Loading;
             // 开始加载
             sceneLoadingCompletionCallback = slcc;
             beforeSceneLoadingCompletionCallback = bslcc;
@@ -147,6 +196,7 @@ namespace ReunionMovement.Core.Scene
             catch (Exception ex)
             {
                 Log.Error($"场景加载异常：{ex}");
+                LoadState.Value = SceneLoadState.Failed;
                 // 确保异常情况下回调也被触发、状态被重置
                 ExecuteBslcc();
                 ExecuteSlcc();
@@ -259,6 +309,9 @@ namespace ReunionMovement.Core.Scene
             isLoading = false;
             currentSceneName = targetSceneName;
             targetSceneName = null;
+            LoadState.Value = SceneLoadState.Loaded;
+            SceneChangedSubject.OnNext(currentSceneName);
+            SceneLoadedSubject.OnNext(currentSceneName);
         }
 
         /// <summary>
@@ -285,7 +338,7 @@ namespace ReunionMovement.Core.Scene
         {
             try
             {
-                getProgress?.Invoke(progress);
+                ProgressSubject.OnNext(progress);
             }
             catch (Exception ex)
             {

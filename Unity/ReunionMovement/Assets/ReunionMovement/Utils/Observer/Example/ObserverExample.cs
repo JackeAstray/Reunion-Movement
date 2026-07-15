@@ -1,33 +1,35 @@
 using ReunionMovement.Common;
-using ReunionMovement.Common.Util;
+using R3;
+using System;
 using UnityEngine;
 
 namespace ReunionMovement.Example
 {
     /// <summary>
-    /// 观察者例子
+    /// 观察者示例 —— 使用 R3 Subscribe 替代 ObserverBase
     /// </summary>
-    public class ObserverExample : ObserverBase
+    public class ObserverExample : MonoBehaviour
     {
         public int exampleValue;
 
-        public void Init(SubjectBase subject)
+        private IDisposable subscription;
+
+        public void Init(SubjectExample subject)
         {
-            // 确保我们使用传递的主题而不是未初始化的字段
-            this.subject = subject;
-            if (this.subject != null)
-            {
-                this.subject.Attach(this);
-            }
+            // 使用 R3 订阅 ReactiveProperty 的变化
+            subscription = subject.Value
+                .Subscribe(value =>
+                {
+                    Log.Debug($"收到数值变化通知: {value}");
+                    exampleValue = value;
+                });
         }
 
-        public override void UpdateData(params object[] args)
+        private void OnDestroy()
         {
-            if (args != null && args.Length > 0 && args[0] is int value)
-            {
-                Log.Debug($"收到数值变化通知: {value}");
-                exampleValue = value;
-            }
+            // 释放 R3 订阅，防止内存泄漏
+            subscription?.Dispose();
+            subscription = null;
         }
     }
 }

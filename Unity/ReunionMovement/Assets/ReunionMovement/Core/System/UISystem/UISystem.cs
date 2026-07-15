@@ -2,6 +2,7 @@ using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
 using ReunionMovement.Core.Resources;
 using Cysharp.Threading.Tasks;
+using R3;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -11,7 +12,7 @@ using UnityEngine.InputSystem.UI;
 namespace ReunionMovement.Core.UI
 {
     /// <summary>
-    /// UI系统
+    /// UI系统 —— UI 生命周期事件使用 R3 Subject 替代 static event
     /// </summary>
     public class UISystem : ICustomSystem
     {
@@ -28,10 +29,53 @@ namespace ReunionMovement.Core.UI
         // UI加载状态缓存（用于跟踪每个UI窗口的加载状态）
         private Dictionary<string, UILoadState> uiStateCache = new Dictionary<string, UILoadState>(32);
 
-        public static event Action<UIController> onInitEvent;
-        public static event Action<UIController> onOpenEvent;
-        public static event Action<UIController> onSetEvent;
-        public static event Action<UIController> onCloseEvent;
+        #region R3 响应式事件（推荐新代码使用）
+
+        /// <summary>UI 初始化完成事件</summary>
+        public readonly Subject<UIController> OnInitSubject = new Subject<UIController>();
+
+        /// <summary>UI 打开事件</summary>
+        public readonly Subject<UIController> OnOpenSubject = new Subject<UIController>();
+
+        /// <summary>UI 设置事件</summary>
+        public readonly Subject<UIController> OnSetSubject = new Subject<UIController>();
+
+        /// <summary>UI 关闭事件</summary>
+        public readonly Subject<UIController> OnCloseSubject = new Subject<UIController>();
+
+        #endregion
+
+        #region 兼容旧 static event（已废弃，转发到 R3 Subject）
+
+        [Obsolete("请使用 UISystem.Instance.OnInitSubject.Subscribe()", false)]
+        public static event Action<UIController> onInitEvent
+        {
+            add { Instance.OnInitSubject.Subscribe(value); }
+            remove { /* R3 Subject 不支持按 delegate 移除，建议迁移到 Subscribe() */ }
+        }
+
+        [Obsolete("请使用 UISystem.Instance.OnOpenSubject.Subscribe()", false)]
+        public static event Action<UIController> onOpenEvent
+        {
+            add { Instance.OnOpenSubject.Subscribe(value); }
+            remove { /* 迁移到 Subscribe() + IDisposable.Dispose() */ }
+        }
+
+        [Obsolete("请使用 UISystem.Instance.OnSetSubject.Subscribe()", false)]
+        public static event Action<UIController> onSetEvent
+        {
+            add { Instance.OnSetSubject.Subscribe(value); }
+            remove { }
+        }
+
+        [Obsolete("请使用 UISystem.Instance.OnCloseSubject.Subscribe()", false)]
+        public static event Action<UIController> onCloseEvent
+        {
+            add { Instance.OnCloseSubject.Subscribe(value); }
+            remove { }
+        }
+
+        #endregion
 
         public EventSystem EventSystem;
         public GameObject uiRoot { get; private set; }
@@ -62,11 +106,11 @@ namespace ReunionMovement.Core.UI
             isInited = false;
             uiStateCache.Clear();
             uiControllerTypeCache.Clear();
-            // 清空静态事件，避免订阅者引用残留阻止 GC 回收
-            onInitEvent = null;
-            onOpenEvent = null;
-            onSetEvent = null;
-            onCloseEvent = null;
+            // 释放 R3 Subject（自动断开所有订阅）
+            OnInitSubject?.Dispose();
+            OnOpenSubject?.Dispose();
+            OnSetSubject?.Dispose();
+            OnCloseSubject?.Dispose();
         }
 
         /// <summary>
@@ -212,7 +256,7 @@ namespace ReunionMovement.Core.UI
 
             Log.Debug($"OnInit UI {uiBase.gameObject.name}");
 
-            onInitEvent?.Invoke(uiBase);
+            OnInitSubject.OnNext(uiBase);
 
             if (open)
             {
@@ -275,7 +319,7 @@ namespace ReunionMovement.Core.UI
             if (uiBase.gameObject.activeSelf)
             {
                 uiBase.OnClose();
-                onCloseEvent?.Invoke(uiBase);
+                OnCloseSubject.OnNext(uiBase);
             }
 
             // 在 BeforeOpen 之前激活，确保 UI 可见（不论子类 BeforeOpen 行为如何）
@@ -289,7 +333,7 @@ namespace ReunionMovement.Core.UI
                     uiBase.OnOpen(args);
                 }, $"OnOpen UI {uiBase.gameObject.name}");
 
-                onOpenEvent?.Invoke(uiBase);
+                OnOpenSubject.OnNext(uiBase);
             });
         }
 
@@ -376,7 +420,7 @@ namespace ReunionMovement.Core.UI
 
                     Log.Debug(string.Format("OnSet UI {0}, cost {1}", uiBase.gameObject.name, setElapsed));
 
-                    onSetEvent?.Invoke(uiBase);
+                    OnSetSubject.OnNext(uiBase);
                 });
             }
         }
@@ -426,7 +470,7 @@ namespace ReunionMovement.Core.UI
 
             uiState.uiWindow.OnClose();
 
-            onCloseEvent?.Invoke(uiState.uiWindow);
+            OnCloseSubject.OnNext(uiState.uiWindow);
 
             if (!uiState.isStaticUI)
             {

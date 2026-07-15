@@ -1,9 +1,9 @@
 using ReunionMovement.Common;
-using ReunionMovement.Common.Util;
 using ReunionMovement.Core.Base;
 using ReunionMovement.Core.Resources;
 using ReunionMovement.Core.Sound;
 using Cysharp.Threading.Tasks;
+using R3;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -11,9 +11,9 @@ using UnityEngine;
 namespace ReunionMovement.Core.Languages
 {
     /// <summary>
-    /// 语言系统
+    /// 语言系统 —— 使用 R3 ReactiveProperty 管理语言切换通知
     /// </summary>
-    public class LanguagesSystem : SubjectBase, ICustomSystem
+    public class LanguagesSystem : ICustomSystem
     {
         #region 单例与初始化
         private static readonly Lazy<LanguagesSystem> instance = new(() => new LanguagesSystem());
@@ -25,7 +25,17 @@ namespace ReunionMovement.Core.Languages
         public double InitProgress { get { return initProgress; } }
         #endregion
 
-        public Multilingual multilingual = Multilingual.ZH_CN;
+        /// <summary>R3 响应式语言属性 —— 值变化时自动通知所有订阅者</summary>
+        public ReactiveProperty<Multilingual> CurrentLanguage { get; private set; }
+            = new ReactiveProperty<Multilingual>(Multilingual.ZH_CN);
+
+        /// <summary>兼容旧代码的非响应式访问器</summary>
+        public Multilingual multilingual
+        {
+            get => CurrentLanguage.Value;
+            set => CurrentLanguage.Value = value;
+        }
+
         private LanguagesContainer languagesContainer;
         private Dictionary<int, LanguagesConfig> languagesDict;
         // 多语言枚举 → 文本字段选择器（避免 switch-case，支持扩展新语言）
@@ -69,11 +79,12 @@ namespace ReunionMovement.Core.Languages
 
         }
 
-        public override void Clear()
+        public void Clear()
         {
             Log.Debug("LanguagesSystem 清除数据");
-            // 清除基类维护的观察者列表
-            base.Clear();
+            // 释放 R3 ReactiveProperty，自动断开所有订阅
+            CurrentLanguage?.Dispose();
+            CurrentLanguage = null;
             // 重置初始化状态和相关数据
             isInited = false;
             initProgress = 0;
@@ -91,14 +102,12 @@ namespace ReunionMovement.Core.Languages
         }
 
         /// <summary>
-        /// 设置多语言
+        /// 设置多语言 —— 通过 ReactiveProperty 自动通知所有订阅者
         /// </summary>
         /// <param name="multilingual"></param>
         public void SetMultilingual(Multilingual multilingual)
         {
-            this.multilingual = multilingual;
-            // 通知所有观察者
-            SetState();
+            CurrentLanguage.Value = multilingual;
         }
 
         /// <summary>
@@ -131,32 +140,6 @@ namespace ReunionMovement.Core.Languages
             }
 
             return string.Empty; // 如果未找到对应的文本，返回空字符串
-        }
-
-        /// <summary>
-        /// 注册观察者
-        /// </summary>
-        /// <param name="observer"></param>
-        public void RegisterObserver(ObserverBase observer)
-        {
-            base.Attach(observer);
-        }
-
-        /// <summary>
-        /// 移除观察者
-        /// </summary>
-        /// <param name="observer"></param>
-        public void RemoveObserver(ObserverBase observer)
-        {
-            base.Remove(observer);
-        }
-
-        /// <summary>
-        /// 清除所有观察者
-        /// </summary>
-        public void ClearObservers()
-        {
-            base.Clear();
         }
     }
 }
