@@ -45,38 +45,6 @@ namespace ReunionMovement.Core.UI
 
         #endregion
 
-        #region 兼容旧 static event（已废弃，转发到 R3 Subject）
-
-        [Obsolete("请使用 UISystem.Instance.OnInitSubject.Subscribe()", false)]
-        public static event Action<UIController> onInitEvent
-        {
-            add { Instance.OnInitSubject.Subscribe(value); }
-            remove { /* R3 Subject 不支持按 delegate 移除，建议迁移到 Subscribe() */ }
-        }
-
-        [Obsolete("请使用 UISystem.Instance.OnOpenSubject.Subscribe()", false)]
-        public static event Action<UIController> onOpenEvent
-        {
-            add { Instance.OnOpenSubject.Subscribe(value); }
-            remove { /* 迁移到 Subscribe() + IDisposable.Dispose() */ }
-        }
-
-        [Obsolete("请使用 UISystem.Instance.OnSetSubject.Subscribe()", false)]
-        public static event Action<UIController> onSetEvent
-        {
-            add { Instance.OnSetSubject.Subscribe(value); }
-            remove { }
-        }
-
-        [Obsolete("请使用 UISystem.Instance.OnCloseSubject.Subscribe()", false)]
-        public static event Action<UIController> onCloseEvent
-        {
-            add { Instance.OnCloseSubject.Subscribe(value); }
-            remove { }
-        }
-
-        #endregion
-
         public EventSystem EventSystem;
         public GameObject uiRoot { get; private set; }
         public GameObject mainUIRoot { get; private set; }

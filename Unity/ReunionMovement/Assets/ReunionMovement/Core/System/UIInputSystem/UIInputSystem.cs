@@ -17,7 +17,7 @@ namespace ReunionMovement.Core.UIInput
     /// UI 输入系统 —— 提供键盘/手柄控制 UGUI 导航的核心功能
     /// 包括：自动聚焦首个可选元素、焦点追踪、按键自定义重绑定
     /// </summary>
-    public class UIInputSystem : ICustomSystem
+    public class UIInputSystem : ICustomSystem, IRequiresUpdate
     {
         #region 单例与初始化
         private static readonly Lazy<UIInputSystem> instance = new(() => new UIInputSystem());
@@ -93,52 +93,6 @@ namespace ReunionMovement.Core.UIInput
 
         /// <summary>取消操作事件</summary>
         public readonly Subject<Unit> CancelSubject = new Subject<Unit>();
-
-        #endregion
-
-        #region 兼容旧 static event（已废弃，转发到 R3 Subject）
-
-        [Obsolete("请使用 UIInputSystem.Instance.SelectionChangedSubject.Subscribe()", false)]
-        public static event Action<GameObject> OnSelectionChanged
-        {
-            add { Instance.SelectionChangedSubject.Subscribe(value); }
-            remove { }
-        }
-
-        [Obsolete("请使用 UIInputSystem.Instance.BindingChangedSubject.Subscribe()", false)]
-        public static event Action<UIInputBinding> OnBindingChanged
-        {
-            add { Instance.BindingChangedSubject.Subscribe(value); }
-            remove { }
-        }
-
-        [Obsolete("请使用 UIInputSystem.Instance.InputModeChangedSubject.Subscribe()", false)]
-        public static event Action<InputMode> OnInputModeChanged
-        {
-            add { Instance.InputModeChangedSubject.Subscribe(value); }
-            remove { }
-        }
-
-        [Obsolete("请使用 UIInputSystem.Instance.NavigateSubject.Subscribe()", false)]
-        public static event Action<Vector2> OnNavigate
-        {
-            add { Instance.NavigateSubject.Subscribe(value); }
-            remove { }
-        }
-
-        [Obsolete("请使用 UIInputSystem.Instance.SubmitSubject.Subscribe()", false)]
-        public static event Action OnSubmit
-        {
-            add { Instance.SubmitSubject.Subscribe(_ => value()); }
-            remove { }
-        }
-
-        [Obsolete("请使用 UIInputSystem.Instance.CancelSubject.Subscribe()", false)]
-        public static event Action OnCancel
-        {
-            add { Instance.CancelSubject.Subscribe(_ => value()); }
-            remove { }
-        }
 
         #endregion
 
@@ -632,9 +586,9 @@ namespace ReunionMovement.Core.UIInput
         }
 
         /// <summary>
-        /// 手动设置当前选中的 GameObject
+        /// 将焦点压入栈并设置为当前选中（包装方法，包含边界检查）
         /// </summary>
-        public void SetSelectedGameObject(GameObject go)
+        public void PushFocus(GameObject go)
         {
             if (eventSystem == null) return;
 
@@ -648,17 +602,29 @@ namespace ReunionMovement.Core.UIInput
             focusStack.Push(go);
             eventSystem.SetSelectedGameObject(go);
             CurrentSelected = go;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (focusStack.Count > 32)
+            {
+                Log.Warning($"UIInputSystem: 焦点栈深度异常 ({focusStack.Count})，可能存在 Push/Pop 不对称调用");
+            }
+#endif
         }
 
         /// <summary>
-        /// 恢复上一个焦点（弹窗关闭时调用）
+        /// 弹出当前焦点并恢复到上一个（包装方法，包含边界检查）
         /// </summary>
-        public void RestorePreviousFocus()
+        public void PopFocus()
         {
-            if (focusStack.Count > 0)
+            if (focusStack.Count == 0)
             {
-                focusStack.Pop();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Log.Warning("UIInputSystem: PopFocus 调用时焦点栈为空，可能存在不对称的 Push/Pop");
+#endif
+                return;
             }
+
+            focusStack.Pop();
 
             GameObject restoreTarget = null;
             if (focusStack.Count > 0)
@@ -678,10 +644,32 @@ namespace ReunionMovement.Core.UIInput
         }
 
         /// <summary>
+        /// 手动设置当前选中的 GameObject（直接替换栈顶）
+        /// </summary>
+        public void SetSelectedGameObject(GameObject go)
+        {
+            PushFocus(go);
+        }
+
+        /// <summary>
+        /// 恢复上一个焦点（弹窗关闭时调用）
+        /// </summary>
+        public void RestorePreviousFocus()
+        {
+            PopFocus();
+        }
+
+        /// <summary>
         /// 清除当前焦点（取消所有选中）
         /// </summary>
         public void ClearFocus()
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (focusStack.Count > 0)
+            {
+                Log.Debug($"UIInputSystem: ClearFocus 清除了 {focusStack.Count} 个焦点记录");
+            }
+#endif
             focusStack.Clear();
             eventSystem?.SetSelectedGameObject(null);
             CurrentSelected = null;
