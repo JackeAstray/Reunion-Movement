@@ -8,11 +8,14 @@ namespace ReunionMovement.Common.Util
 {
     /// <summary>
     /// 加密工具类
+    /// 注意：此工具类提供的是混淆级别的保护（obfuscation），并非密码学安全的加密。
+    /// 如需保护敏感数据（如用户凭证、支付信息），请使用 AES-256-GCM 或服务端加密。
+    /// 当前实现使用多字节位置相关的 XOR 混淆 + 密钥种子混合，可抵御简单的静态分析。
     /// </summary>
     public static class EncryptUtil
     {
         /// <summary>
-        /// 加密字节长度
+        /// 加密字节长度（XOR 混淆的头部字节数）
         /// </summary>
         public const int encryptBytesLength = 64;
 
@@ -53,16 +56,41 @@ namespace ReunionMovement.Common.Util
             return seed != 0 ? seed : 0x6D8E2F1A;
         }
 
+        /// <summary>
+        /// 获取位置相关的偏移头字节（用于偏移加密的固定头部填充）
+        /// </summary>
         private static byte GetOffsetHead()
         {
             EnsureKeySeed();
             return (byte)(((keySeed >> 24) ^ (keySeed >> 16) ^ (keySeed >> 8) ^ keySeed) & 0xFF);
         }
 
-        private static byte GetXOrKey()
+        /// <summary>
+        /// 获取位置相关的多字节 XOR 密钥。
+        /// 使用完整 4 字节种子根据位置轮转，使密钥流不重复单一字节。
+        /// </summary>
+        /// <param name="position">当前字节在数据中的位置</param>
+        private static byte GetXOrKey(int position)
         {
             EnsureKeySeed();
-            return (byte)(((keySeed >> 16) ^ (keySeed >> 8) ^ 0x5A) & 0xFF);
+            // 基于位置的密钥轮转：使用种子的不同字节 + 位置混合
+            uint rotated = keySeed;
+            int shift = (position & 3) * 8; // position % 4 → 选择 4 字节中的哪一个
+            rotated = ((rotated << (position & 31)) | (rotated >> (32 - (position & 31))));
+            rotated ^= (uint)(position * 0x9E3779B9); // 黄金比例常数，增加非线性
+            return (byte)((rotated >> shift) & 0xFF);
+        }
+
+        /// <summary>
+        /// 获取密钥字节数组（用于批量 XOR 操作，减少方法调用开销）
+        /// </summary>
+        private static void FillXOrKey(byte[] keyBuffer, int length)
+        {
+            EnsureKeySeed();
+            for (int i = 0; i < length; i++)
+            {
+                keyBuffer[i] = GetXOrKey(i);
+            }
         }
 
         private static void EnsureKeySeed()
@@ -178,15 +206,15 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 使用二进制数据进行异或加密/解密
+        /// 使用二进制数据进行多字节位置相关的异或加密/解密。
+        /// 密钥随字节位置变化，避免单字节 XOR 的易破解性。
         /// </summary>
         public static void EncryptXOr(byte[] bytes, int length = encryptBytesLength)
         {
             int actualLength = Math.Min(length, bytes?.Length ?? 0);
-            byte xorKey = GetXOrKey();
             for (int i = 0; i < actualLength; i++)
             {
-                bytes[i] ^= xorKey;
+                bytes[i] ^= GetXOrKey(i);
             }
         }
 

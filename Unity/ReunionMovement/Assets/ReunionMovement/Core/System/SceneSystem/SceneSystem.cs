@@ -49,6 +49,7 @@ namespace ReunionMovement.Core.Scene
         private string currentSceneName = null;                           // 当前场景名，如若没有场景，则默认返回
         private string previousSceneName = null;                          // 上一个场景名
         private bool isLoading = false;                                   // 是否正在加载中
+        private int isLoadingAtomic = 0;                                  // isLoading 的原子操作备份（用于 Interlocked）
         private const string loadSceneName = "LoadingScene";              // 加载场景名字
         // 场景切换时不隐藏的窗口名称集合（由 LoadScene 调用方在切换前注册）
         private readonly HashSet<string> excludeFromSceneHide = new HashSet<string>();
@@ -112,16 +113,20 @@ namespace ReunionMovement.Core.Scene
 
             isInited = false;
             isLoading = false;
+            System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
             beforeSceneLoadingCompletionCallback = null;
             sceneLoadingCompletionCallback = null;
             targetSceneName = null;
 
             // 释放 R3 Subject/ReactiveProperty
             ProgressSubject?.Dispose();
+            ProgressSubject = null;
             LoadState?.Dispose();
             LoadState = null;
             SceneChangedSubject?.Dispose();
+            SceneChangedSubject = null;
             SceneLoadedSubject?.Dispose();
+            SceneLoadedSubject = null;
         }
 
         #region Load
@@ -157,23 +162,23 @@ namespace ReunionMovement.Core.Scene
         /// <param name="slcc">场景加载完成回调</param>
         public async UniTask LoadScene(string levelName, bool openLoad = false, UnityAction bslcc = null, UnityAction slcc = null)
         {
-            // 正在加载其他场景：拒绝新请求并记录警告
-            if (isLoading)
+            // 原子操作：防止并发加载（即使在异步上下文中也能安全防护）
+            if (System.Threading.Interlocked.CompareExchange(ref isLoadingAtomic, 1, 0) != 0)
             {
                 Log.Warning("场景加载被拒绝：当前正在加载 {0}，无法同时加载 {1}", targetSceneName, levelName);
                 return;
             }
+            isLoading = true;
 
             // 目标场景已加载：直接回调
             if (currentSceneName == levelName)
             {
+                isLoading = false;
+                System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
                 bslcc?.Invoke();
                 slcc?.Invoke();
                 return;
             }
-
-            // 锁屏
-            isLoading = true;
             LoadState.Value = SceneLoadState.Loading;
             // 开始加载
             sceneLoadingCompletionCallback = slcc;
@@ -201,6 +206,7 @@ namespace ReunionMovement.Core.Scene
                 ExecuteBslcc();
                 ExecuteSlcc();
                 isLoading = false;
+                System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
                 targetSceneName = null;
                 currentSceneName = previousSceneName;
             }
@@ -245,6 +251,7 @@ namespace ReunionMovement.Core.Scene
                 ExecuteBslcc();
                 ExecuteSlcc();
                 isLoading = false;
+                System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
                 targetSceneName = null;
                 currentSceneName = previousSceneName;
                 return;
@@ -307,6 +314,7 @@ namespace ReunionMovement.Core.Scene
         private void OnTargetSceneLoaded()
         {
             isLoading = false;
+            System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
             currentSceneName = targetSceneName;
             targetSceneName = null;
             LoadState.Value = SceneLoadState.Loaded;

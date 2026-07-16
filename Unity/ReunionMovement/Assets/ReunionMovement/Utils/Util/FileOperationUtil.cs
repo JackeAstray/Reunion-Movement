@@ -189,7 +189,8 @@ namespace ReunionMovement.Common.Util
             try
             {
                 var tempStr = File.ReadAllText(fileAbslutePath);
-                return JsonConvert.DeserializeObject<T>(tempStr);
+                var settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.None };
+                return JsonConvert.DeserializeObject<T>(tempStr, settings);
             }
             catch (Exception e)
             {

@@ -1,14 +1,40 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Security.Cryptography;
 
 namespace ReunionMovement.Common.Util
 {
     /// <summary>
     /// 抽卡系统 模拟
+    /// 注意：客户端抽卡仅为表现层模拟，实际抽卡结果应由服务端下发以保证公平性。
+    /// 客户端使用加密随机数生成器增加不可预测性。
     /// </summary>
     public class GachaSystem : MonoBehaviour
     {
+        // ===== 加密随机数生成器（不可预测，替代 UnityEngine.Random） =====
+        private static readonly RNGCryptoServiceProvider cryptoRng = new RNGCryptoServiceProvider();
+
+        /// <summary>生成 [0, 1) 范围的加密随机浮点数</summary>
+        private static float CryptoRandomValue()
+        {
+            var bytes = new byte[4];
+            cryptoRng.GetBytes(bytes);
+            // 将 4 字节转换为 [0, 1) 的浮点数
+            uint randomUint = (uint)(bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24));
+            return randomUint / (uint.MaxValue + 1.0);
+        }
+
+        /// <summary>生成 [min, max) 范围的加密随机整数</summary>
+        private static int CryptoRandomRange(int min, int max)
+        {
+            if (min >= max) return min;
+            uint range = (uint)(max - min);
+            var bytes = new byte[4];
+            cryptoRng.GetBytes(bytes);
+            uint randomUint = (uint)(bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24));
+            return min + (int)(randomUint % range);
+        }
         // ===== 数据结构 =====
         [System.Serializable]
         public class GachaItem
@@ -96,11 +122,7 @@ namespace ReunionMovement.Common.Util
             // 上限保护，防止概率溢出
             currentRate = Mathf.Min(currentRate, 1.0f);
 
-            return Random.value <= currentRate;
-        }
-
-        /// <summary>
-        /// 获取五星物品
+            return CryptoRandomValue() <= currentRate;
         /// </summary>
         /// <returns></returns>
         private GachaItem Get5StarItem()
@@ -109,7 +131,7 @@ namespace ReunionMovement.Common.Util
             last5StarPullCount = pity5Star;
 
             // 判断是否为UP
-            bool isUp = isGuaranteedUp5Star ? true : Random.value <= 0.5f;
+            bool isUp = isGuaranteedUp5Star ? true : CryptoRandomValue() <= 0.5f;
             isGuaranteedUp5Star = !isUp; // 未出UP则触发大保底
 
             // 更新是否为UP的状态
@@ -135,7 +157,7 @@ namespace ReunionMovement.Common.Util
             {
                 currentRate = Mathf.Min(0.66f + (0.34f * (pity4Star - 8)), 1.0f);
             }
-            return Random.value <= currentRate;
+            return CryptoRandomValue() <= currentRate;
         }
 
         /// <summary>
@@ -145,7 +167,7 @@ namespace ReunionMovement.Common.Util
         private GachaItem Get4StarItem()
         {
             // 判断是否触发UP保底
-            bool isUp = isGuaranteedUp4Star ? true : Random.value <= 0.5f;
+            bool isUp = isGuaranteedUp4Star ? true : CryptoRandomValue() <= 0.5f;
             isGuaranteedUp4Star = !isUp; // 更新保底状态
 
             // 更新是否为UP的状态
@@ -192,7 +214,7 @@ namespace ReunionMovement.Common.Util
                 Log.Error("卡池为空！请在 Inspector 中配置卡池列表");
                 return null;
             }
-            return pool[Random.Range(0, pool.Count)];
+            return pool[CryptoRandomRange(0, pool.Count)];
         }
 
         // ===== 十连优化 =====

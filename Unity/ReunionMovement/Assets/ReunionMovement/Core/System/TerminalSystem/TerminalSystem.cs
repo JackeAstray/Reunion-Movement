@@ -29,7 +29,8 @@ namespace ReunionMovement.Core.Terminal
 
             keyboard = Keyboard.current;
 
-            // 创建或查找TerminalRequest MonoBehaviour，而不是使用“new”
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // 创建或查找TerminalRequest MonoBehaviour，而不是使用"new"
             var existing = GameObject.FindFirstObjectByType<TerminalRequest>();
             if (existing != null)
             {
@@ -43,6 +44,7 @@ namespace ReunionMovement.Core.Terminal
             }
 
             terminalRequest.RegisterCommands();
+#endif
 
             initProgress = 100;
             isInited = true;
@@ -53,6 +55,8 @@ namespace ReunionMovement.Core.Terminal
 
         public void Update(float logicTime, float realTime)
         {
+            // 终端系统仅在编辑器或开发构建中可用，生产构建完全禁用
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             // 确保 keyboard 可用（运行时 Keyboard.current 可能会在开始时为 null）
             if (keyboard == null)
                 keyboard = Keyboard.current;
@@ -69,6 +73,7 @@ namespace ReunionMovement.Core.Terminal
                     UISystem.Instance.ToggleWindow("TerminalUIPlane");
                 }
             }
+#endif
         }
 
         public void Clear()
@@ -83,6 +88,7 @@ namespace ReunionMovement.Core.Terminal
             }
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         #region 打开指定UI
         //测试指令： OpenWindow PopupUIPlane 提示 测试 Ok No 
         [RegisterCommand(Help = "OpenWindow 1-16 String", MinArgCount = 1, MaxArgCount = 16)]
@@ -136,5 +142,6 @@ namespace ReunionMovement.Core.Terminal
             }
         }
         #endregion
+#endif
     }
 }
