@@ -38,12 +38,12 @@ namespace ReunionMovement.Common.Util.HttpService
         #region Super Headers
         /// <summary>
         /// SuperHeaders是键值对，将被添加到每个后续的HttpRequest中。
-        /// 返回只读包装以避免每次调用都分配新字典。
+        /// 返回真正的只读包装，防止外部代码通过类型转换修改内部字典。
         /// </summary>
         /// <returns>A read-only wrapper of super-headers.</returns>
         public IReadOnlyDictionary<string, string> GetSuperHeaders()
         {
-            return superHeaders;
+            return new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(superHeaders);
         }
 
         /// <summary>
@@ -275,8 +275,12 @@ namespace ReunionMovement.Common.Util.HttpService
             // 快速路径：无请求时跳过
             if (httpRequests.Count == 0) return;
 
-            // 防御性拷贝，避免在进度回调中修改请求队列导致 foreach 抛出 InvalidOperationException
-            foreach (var httpRequest in httpRequests.Keys.ToList())
+            // 使用 Keys 的数组快照做一次分配（仅在需要时），
+            // 替代每次 ToList() 以避免在进度回调中修改集合导致异常
+            var requests = httpRequests.Keys;
+            var snapshot = new IHttpRequest[requests.Count];
+            requests.CopyTo(snapshot, 0);
+            foreach (var httpRequest in snapshot)
             {
                 (httpRequest as IUpdateProgress)?.UpdateProgress();
             }

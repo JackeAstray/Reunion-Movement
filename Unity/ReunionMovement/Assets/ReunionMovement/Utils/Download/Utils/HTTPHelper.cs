@@ -88,7 +88,8 @@ namespace ReunionMovement.Common.Util.Download
         }
 
         /// <summary>
-        /// 从Uri获取文件名
+        /// 从Uri获取文件名（已做路径遍历防护）。
+        /// 使用 Path.GetFileName 剥离目录分隔符，防止 "../../../etc/passwd" 类攻击。
         /// </summary>
         /// <param name="uri"></param>
         /// <returns></returns>
@@ -106,6 +107,26 @@ namespace ReunionMovement.Common.Util.Download
                 var arr2 = v.Split('%');
                 v = arr2[^1];
             }
+
+            // 路径遍历防护：使用 Path.GetFileName 剥离任何目录穿越字符
+            // 先做 URL 解码以防编码绕过（如 %2e%2e%2f）
+            try
+            {
+                string decoded = Uri.UnescapeDataString(v);
+                string safe = Path.GetFileName(decoded);
+                if (!string.IsNullOrEmpty(safe))
+                    v = safe;
+            }
+            catch
+            {
+                // 解码失败时使用原始值，由 Path.GetFileName 做最终净化
+                v = Path.GetFileName(v);
+            }
+
+            // 过滤空文件名和纯扩展名（如 ".bashrc"）
+            if (string.IsNullOrEmpty(v) || v.StartsWith(".") && v.Length < 3)
+                v = "download.dat";
+
             return v;
         }
 

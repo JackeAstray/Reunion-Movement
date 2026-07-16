@@ -3,32 +3,43 @@ using UnityEngine;
 namespace ReunionMovement.Common
 {
     /// <summary>
-    /// 单例管理器
+    /// 单例管理器（线程安全）
     /// </summary>
     public class SingletonMgr<T> : MonoBehaviour where T : MonoBehaviour
     {
-        private static T instance;
+        private static volatile T instance;
+        private static readonly object instanceLock = new object();
+
         public static T Instance
         {
             get
             {
                 if (instance == null)
                 {
-                    instance = CreateInstance();
+                    lock (instanceLock)
+                    {
+                        if (instance == null)
+                        {
+                            instance = CreateInstance();
+                        }
+                    }
                 }
                 return instance;
             }
             protected set
             {
-                if (instance == null)
+                lock (instanceLock)
                 {
-                    instance = value;
-                    isInitialized = true;
-                    OnInstanceCreated?.Invoke(instance);
-                }
-                else if (instance != value)
-                {
-                    Destroy(value.gameObject);
+                    if (instance == null)
+                    {
+                        instance = value;
+                        isInitialized = true;
+                        OnInstanceCreated?.Invoke(instance);
+                    }
+                    else if (instance != value)
+                    {
+                        Destroy(value.gameObject);
+                    }
                 }
             }
         }
@@ -54,19 +65,22 @@ namespace ReunionMovement.Common
 
         protected virtual void Awake()
         {
-            if (instance != null && instance != this)
+            lock (instanceLock)
             {
-                Log.Warning("[SingletonMgr] 检测到重复的 {0} 单例，已销毁: {1}", typeof(T).Name, gameObject.name);
-                Destroy(this.gameObject);
-                return;
-            }
+                if (instance != null && instance != this)
+                {
+                    Log.Warning("[SingletonMgr] 检测到重复的 {0} 单例，已销毁: {1}", typeof(T).Name, gameObject.name);
+                    Destroy(this.gameObject);
+                    return;
+                }
 
-            // 直接设置静态字段，跳过 setter 中的重复检查
-            if (!isInitialized)
-            {
-                instance = this as T;
-                isInitialized = true;
-                OnInstanceCreated?.Invoke(instance);
+                // 直接设置静态字段，跳过 setter 中的重复检查
+                if (!isInitialized)
+                {
+                    instance = this as T;
+                    isInitialized = true;
+                    OnInstanceCreated?.Invoke(instance);
+                }
             }
         }
 
@@ -75,17 +89,21 @@ namespace ReunionMovement.Common
         /// </summary>
         public static void DestroyInstance()
         {
-            if (instance != null)
+            lock (instanceLock)
             {
-                OnInstanceDestroyed?.Invoke();
-                Destroy(instance.gameObject);
-                instance = null;
-                isInitialized = false;
+                if (instance != null)
+                {
+                    OnInstanceDestroyed?.Invoke();
+                    Destroy(instance.gameObject);
+                    instance = null;
+                    isInitialized = false;
+                }
             }
         }
 
         /// <summary>
-        /// 创建单例实例（仅在场景中无现有实例时作为兜底）
+        /// 创建单例实例（仅在场景中无现有实例时作为兜底）。
+        /// 注意：此方法在 Instance getter 的锁内调用，调用方已持有 instanceLock。
         /// </summary>
         private static T CreateInstance()
         {

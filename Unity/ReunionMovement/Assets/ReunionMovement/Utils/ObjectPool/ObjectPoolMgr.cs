@@ -139,6 +139,7 @@ namespace ReunionMovement.Common.Util
             {
                 pool.Clear();
             }
+            spawnPools.Clear();
         }
 
         #region 静态方法

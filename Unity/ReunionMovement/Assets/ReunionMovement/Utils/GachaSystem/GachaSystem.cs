@@ -46,7 +46,8 @@ namespace ReunionMovement.Common.Util
 
         // ===== 核心抽卡逻辑 =====
         /// <summary>
-        /// 执行一次抽卡
+        /// 执行一次抽卡（优先判定五星，其次四星，否则三星）。
+        /// 每次抽卡同时推进五星和四星保底计数。
         /// </summary>
         /// <returns></returns>
         public GachaItem PerformPull()
@@ -54,12 +55,12 @@ namespace ReunionMovement.Common.Util
             pity5Star++;
             pity4Star++;
 
-            // 五星保底判断[3](@ref)
+            // 五星保底判断
             if (Check5StarPull())
             {
                 return Get5StarItem();
             }
-            // 四星保底判断[5](@ref)
+            // 四星保底判断
             else if (Check4StarPull())
             {
                 return Get4StarItem();
@@ -68,6 +69,15 @@ namespace ReunionMovement.Common.Util
             {
                 return Get3StarItem();
             }
+        }
+
+        /// <summary>
+        /// 执行一次抽卡并强制返回四星（用于十连保底，正常推进五星保底计数）。
+        /// </summary>
+        private GachaItem PerformPullForce4Star()
+        {
+            pity5Star++; // 这次替换抽卡也计入五星保底
+            return Get4StarItem();
         }
 
         /// <summary>
@@ -187,25 +197,31 @@ namespace ReunionMovement.Common.Util
 
         // ===== 十连优化 =====
         /// <summary>
-        /// 执行十连抽卡
+        /// 执行十连抽卡（保底至少一个四星或以上物品）。
+        /// 优先保留原有的五星/四星结果；仅在没有任何 4★+ 时替换最后一个 3★ 为 4★。
         /// </summary>
         /// <returns></returns>
         public List<GachaItem> Perform10Pull()
         {
             List<GachaItem> results = new List<GachaItem>();
             bool hasFourStarOrAbove = false;
+            int lastThreeStarIndex = -1;
 
             for (int i = 0; i < 10; i++)
             {
                 GachaItem item = PerformPull();
                 results.Add(item);
-                if (item.starRating >= 4) hasFourStarOrAbove = true;
+                if (item.starRating >= 4)
+                    hasFourStarOrAbove = true;
+                else
+                    lastThreeStarIndex = i; // 记录最后一个三星的位置
             }
 
-            // 确保至少有一个四星或以上物品
-            if (!hasFourStarOrAbove)
+            // 确保至少有一个四星或以上物品。
+            // 直接调用 Get4StarItem 替换最后一个三星结果，避免 PerformPullForce4Star 额外推进 pity5Star 导致保底计数偏移。
+            if (!hasFourStarOrAbove && lastThreeStarIndex >= 0)
             {
-                results[9] = Get4StarItem();
+                results[lastThreeStarIndex] = Get4StarItem();
             }
 
             return results;
@@ -214,9 +230,11 @@ namespace ReunionMovement.Common.Util
 
 
         // ===== 测试方法 =====
-        public void Start()
+        void Start()
         {
-            Test();
+#if UNITY_EDITOR
+            // Test(); // 仅在需要调试时手动取消注释，避免覆盖 Inspector 中配置的卡池数据
+#endif
         }
 
         public void Test()

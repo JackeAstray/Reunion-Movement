@@ -126,6 +126,13 @@ namespace ReunionMovement.Common.Util.Download
             DidHeadReq = true;
             hreq.completed += (resp) =>
             {
+                // 防止 UWR 已被释放或回调时对象已销毁
+                if (uwr == null)
+                {
+                    MultipartDownload = false;
+                    return;
+                }
+
                 if (uwr.result != UnityWebRequest.Result.Success)
                 {
                     Log.Debug("URI {0} 不支持HEAD请求，因此不支持分块下载。 错误: {1}", Uri, uwr.error);

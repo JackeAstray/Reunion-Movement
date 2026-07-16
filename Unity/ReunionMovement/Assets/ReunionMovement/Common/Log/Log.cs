@@ -89,13 +89,14 @@ namespace ReunionMovement.Common
 
         /// <summary>
         /// 5+ 参数兜底重载（使用 params object[]，会产生数组分配）。
+        /// 默认使用 General 频道；如需指定频道请使用其他重载。
         /// </summary>
         [Conditional("UNITY_EDITOR")]
         [Conditional("DEVELOPMENT_BUILD")]
         [HideInCallstack]
         public static void Debug(string format, params object[] args)
         {
-            if (Config.Enable_LOG && Config.Enable_Debug_LOG)
+            if (IsEnabled(Config.Enable_Debug_LOG, LogChannel.General))
                 GameLogger.Debug(format, args);
         }
 
@@ -162,7 +163,7 @@ namespace ReunionMovement.Common
         [HideInCallstack]
         public static void Info(string format, params object[] args)
         {
-            if (Config.Enable_LOG && Config.Enable_Info_LOG)
+            if (IsEnabled(Config.Enable_Info_LOG, LogChannel.General))
                 GameLogger.Info(format, args);
         }
 
@@ -215,7 +216,7 @@ namespace ReunionMovement.Common
         [HideInCallstack]
         public static void Warning(string format, params object[] args)
         {
-            if (Config.Enable_LOG && Config.Enable_Warning_LOG)
+            if (IsEnabled(Config.Enable_Warning_LOG, LogChannel.General))
                 GameLogger.Warning(format, args);
         }
 
@@ -268,7 +269,7 @@ namespace ReunionMovement.Common
         [HideInCallstack]
         public static void Error(string format, params object[] args)
         {
-            if (Config.Enable_LOG && Config.Enable_Error_LOG)
+            if (IsEnabled(Config.Enable_Error_LOG, LogChannel.General))
                 GameLogger.Error(format, args);
         }
 
@@ -321,7 +322,7 @@ namespace ReunionMovement.Common
         [HideInCallstack]
         public static void Fatal(string format, params object[] args)
         {
-            if (Config.Enable_LOG && Config.Enable_Fatal_LOG)
+            if (IsEnabled(Config.Enable_Fatal_LOG, LogChannel.General))
                 GameLogger.Fatal(format, args);
         }
     }

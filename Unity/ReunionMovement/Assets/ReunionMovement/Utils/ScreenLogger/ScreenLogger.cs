@@ -53,16 +53,17 @@ namespace ReunionMovement
 
         GUIStyle styleContainer, styleText;
         int padding = 5;
+        Texture2D backgroundTex; // 保存引用以便在销毁时释放
 
         public void Awake()
         {
-            Texture2D back = new Texture2D(1, 1);
+            backgroundTex = new Texture2D(1, 1);
             backgroundColor.a = backgroundOpacity;
-            back.SetPixel(0, 0, backgroundColor);
-            back.Apply();
+            backgroundTex.SetPixel(0, 0, backgroundColor);
+            backgroundTex.Apply();
 
             styleContainer = new GUIStyle();
-            styleContainer.normal.background = back;
+            styleContainer.normal.background = backgroundTex;
             styleContainer.wordWrap = true;
             styleContainer.padding = new RectOffset(padding, padding, padding, padding);
 
@@ -72,6 +73,15 @@ namespace ReunionMovement
             if (isPersistent)
             {
                 DontDestroyOnLoad(this);
+            }
+        }
+
+        void OnDestroy()
+        {
+            if (backgroundTex != null)
+            {
+                Destroy(backgroundTex);
+                backgroundTex = null;
             }
         }
 

@@ -66,8 +66,16 @@ namespace ReunionMovement.Common.Util.Download
 
         private void OnDestroy()
         {
-            // 仅在自身是当前活跃单例时才清理数据，避免重复实例被销毁时误清
-            if (Instance != this) return;
+            // 使用反射方式检查是否为当前活跃单例，避免访问 Instance 属性触发意外 CreateInstance
+            // SingletonMgr<T>.IsInitialized 为静态属性，不会触发懒加载
+            if (!SingletonMgr<DownloadMgr>.IsInitialized) return;
+
+            // 安全获取实例：仅在已初始化且实例存活时进行引用比较
+            var current = SingletonMgr<DownloadMgr>.Instance;
+            if (current == null || current != this)
+            {
+                return;
+            }
 
             ClearData();
 

@@ -140,6 +140,11 @@ namespace ReunionMovement.Common.Util
         /// <returns>分割后的字段</returns>
         public static string StringSplit(this string fullString, string[] separator, bool removeEmptyEntries, int subStringIndex)
         {
+            if (string.IsNullOrEmpty(fullString))
+            {
+                return string.Empty;
+            }
+
             string[] stringArray = null;
             if (removeEmptyEntries)
             {
@@ -168,6 +173,11 @@ namespace ReunionMovement.Common.Util
         /// <returns>分割后的字段</returns>
         public static string[] StringSplit(this string fullString, string[] separator, int count, bool removeEmptyEntries)
         {
+            if (string.IsNullOrEmpty(fullString))
+            {
+                return Array.Empty<string>();
+            }
+
             string[] stringArray = null;
             if (removeEmptyEntries)
             {
@@ -188,6 +198,11 @@ namespace ReunionMovement.Common.Util
         /// <returns>分割后的字段数组</returns>
         public static string[] StringSplit(this string fullString, string[] separator)
         {
+            if (string.IsNullOrEmpty(fullString))
+            {
+                return Array.Empty<string>();
+            }
+
             string[] stringArray = fullString.Split(separator, StringSplitOptions.None);
             return stringArray;
         }

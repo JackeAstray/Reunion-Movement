@@ -30,11 +30,12 @@ namespace ReunionMovement.Common.Util.Timer
         }
 
         /// <summary>
-        /// 移除计时器
+        /// 移除计时器（先取消再移除，确保回调被正确清理）
         /// </summary>
         /// <param name="timer"></param>
         public void RemoveTimer(Timer timer)
         {
+            timer?.Cancel();
             timers.Remove(timer);
         }
 

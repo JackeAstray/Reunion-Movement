@@ -13,7 +13,7 @@ namespace ReunionMovement.Common
     /// - 使用 ZString 的 Utf8ValueStringBuilder（struct，池化缓冲）替代 StringBuilder，
     ///   消除 StringBuilder 本身的堆分配，实现真正的零分配日志格式化。
     /// - 统一的 Dispatch 方法消除了每个 Log/LogFormat 重载中重复的 switch(level) 分支。
-    /// - 文件日志使用异步写入，不阻塞主线程。
+    /// - 文件日志使用同步写入（短日志开销可控），避免异步带来的缓冲与排序复杂度。
     /// </summary>
     public class LogHelper : ILogHelper
     {
@@ -47,7 +47,8 @@ namespace ReunionMovement.Common
         };
 
         // ============================================================
-        //  文件日志
+        //  文件日志（同步写入：由于日志通常较短，同步 IO 开销可控；
+        //  如需极高吞吐可改为后台线程写入）
         // ============================================================
         private static string s_logFilePath;
         private static bool s_fileLogInitialized;
