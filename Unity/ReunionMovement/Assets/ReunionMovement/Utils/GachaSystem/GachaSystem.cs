@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -13,16 +14,15 @@ namespace ReunionMovement.Common.Util
     public class GachaSystem : MonoBehaviour
     {
         // ===== 加密随机数生成器（不可预测，替代 UnityEngine.Random） =====
-        private static readonly RNGCryptoServiceProvider cryptoRng = new RNGCryptoServiceProvider();
+        // 使用 RandomNumberGenerator 替代已过时的 RNGCryptoServiceProvider
 
         /// <summary>生成 [0, 1) 范围的加密随机浮点数</summary>
         private static float CryptoRandomValue()
         {
-            var bytes = new byte[4];
-            cryptoRng.GetBytes(bytes);
-            // 将 4 字节转换为 [0, 1) 的浮点数
-            uint randomUint = (uint)(bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24));
-            return randomUint / (uint.MaxValue + 1.0);
+            byte[] bytes = new byte[4];
+            RandomNumberGenerator.Fill(bytes);
+            uint randomUint = BitConverter.ToUInt32(bytes, 0);
+            return (float)(randomUint / (uint.MaxValue + 1.0));
         }
 
         /// <summary>生成 [min, max) 范围的加密随机整数</summary>
@@ -30,9 +30,9 @@ namespace ReunionMovement.Common.Util
         {
             if (min >= max) return min;
             uint range = (uint)(max - min);
-            var bytes = new byte[4];
-            cryptoRng.GetBytes(bytes);
-            uint randomUint = (uint)(bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24));
+            byte[] bytes = new byte[4];
+            RandomNumberGenerator.Fill(bytes);
+            uint randomUint = BitConverter.ToUInt32(bytes, 0);
             return min + (int)(randomUint % range);
         }
         // ===== 数据结构 =====
@@ -123,8 +123,11 @@ namespace ReunionMovement.Common.Util
             currentRate = Mathf.Min(currentRate, 1.0f);
 
             return CryptoRandomValue() <= currentRate;
+        }
+
+        /// <summary>
+        /// 五星物品获取
         /// </summary>
-        /// <returns></returns>
         private GachaItem Get5StarItem()
         {
             // 记录当前抽数

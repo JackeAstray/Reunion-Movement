@@ -48,8 +48,7 @@ namespace ReunionMovement.Core.Scene
         private string targetSceneName = null;                            // 将要加载的场景名
         private string currentSceneName = null;                           // 当前场景名，如若没有场景，则默认返回
         private string previousSceneName = null;                          // 上一个场景名
-        private bool isLoading = false;                                   // 是否正在加载中
-        private int isLoadingAtomic = 0;                                  // isLoading 的原子操作备份（用于 Interlocked）
+        private int isLoadingAtomic = 0;                                  // 原子操作：0=空闲, 1=加载中（Interlocked）
         private const string loadSceneName = "LoadingScene";              // 加载场景名字
         // 场景切换时不隐藏的窗口名称集合（由 LoadScene 调用方在切换前注册）
         private readonly HashSet<string> excludeFromSceneHide = new HashSet<string>();
@@ -57,17 +56,17 @@ namespace ReunionMovement.Core.Scene
         #region R3 响应式属性（推荐新代码使用）
 
         /// <summary>场景加载进度（0~1）</summary>
-        public readonly Subject<float> ProgressSubject = new Subject<float>();
+        public Subject<float> ProgressSubject { get; private set; } = new Subject<float>();
 
         /// <summary>场景加载状态（可观测属性，UI 可直接绑定）</summary>
         public ReactiveProperty<SceneLoadState> LoadState { get; private set; }
             = new ReactiveProperty<SceneLoadState>(SceneLoadState.Idle);
 
         /// <summary>当前场景名称变更</summary>
-        public readonly Subject<string> SceneChangedSubject = new Subject<string>();
+        public Subject<string> SceneChangedSubject { get; private set; } = new Subject<string>();
 
         /// <summary>场景加载完成事件（参数：场景名）</summary>
-        public readonly Subject<string> SceneLoadedSubject = new Subject<string>();
+        public Subject<string> SceneLoadedSubject { get; private set; } = new Subject<string>();
 
         #endregion
 
@@ -92,6 +91,12 @@ namespace ReunionMovement.Core.Scene
         {
             initProgress = 0;
 
+            // 重建可能已被 Clear() 释放的 R3 Subject（支持模块重初始化）
+            ProgressSubject ??= new Subject<float>();
+            LoadState ??= new ReactiveProperty<SceneLoadState>(SceneLoadState.Idle);
+            SceneChangedSubject ??= new Subject<string>();
+            SceneLoadedSubject ??= new Subject<string>();
+
             currentSceneName = SceneManager.GetActiveScene().name;
             startProgressWaitingTime = 0.5f;
             endProgressWaitingTime = 0.5f;
@@ -112,13 +117,12 @@ namespace ReunionMovement.Core.Scene
             Log.Debug("SceneSystem 清除数据");
 
             isInited = false;
-            isLoading = false;
             System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
             beforeSceneLoadingCompletionCallback = null;
             sceneLoadingCompletionCallback = null;
             targetSceneName = null;
 
-            // 释放 R3 Subject/ReactiveProperty
+            // 释放 R3 Subject/ReactiveProperty（重置为 null 以便 Init 时重建）
             ProgressSubject?.Dispose();
             ProgressSubject = null;
             LoadState?.Dispose();
@@ -127,6 +131,7 @@ namespace ReunionMovement.Core.Scene
             SceneChangedSubject = null;
             SceneLoadedSubject?.Dispose();
             SceneLoadedSubject = null;
+            excludeFromSceneHide.Clear();
         }
 
         #region Load
@@ -168,12 +173,10 @@ namespace ReunionMovement.Core.Scene
                 Log.Warning("场景加载被拒绝：当前正在加载 {0}，无法同时加载 {1}", targetSceneName, levelName);
                 return;
             }
-            isLoading = true;
 
             // 目标场景已加载：直接回调
             if (currentSceneName == levelName)
             {
-                isLoading = false;
                 System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
                 bslcc?.Invoke();
                 slcc?.Invoke();
@@ -205,7 +208,7 @@ namespace ReunionMovement.Core.Scene
                 // 确保异常情况下回调也被触发、状态被重置
                 ExecuteBslcc();
                 ExecuteSlcc();
-                isLoading = false;
+
                 System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
                 targetSceneName = null;
                 currentSceneName = previousSceneName;
@@ -250,7 +253,6 @@ namespace ReunionMovement.Core.Scene
                 // 触发并清空所有回调，避免泄漏
                 ExecuteBslcc();
                 ExecuteSlcc();
-                isLoading = false;
                 System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
                 targetSceneName = null;
                 currentSceneName = previousSceneName;
@@ -313,7 +315,6 @@ namespace ReunionMovement.Core.Scene
         /// </summary>
         private void OnTargetSceneLoaded()
         {
-            isLoading = false;
             System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
             currentSceneName = targetSceneName;
             targetSceneName = null;
