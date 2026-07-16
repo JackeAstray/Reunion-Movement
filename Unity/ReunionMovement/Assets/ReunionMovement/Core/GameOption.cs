@@ -75,7 +75,7 @@ namespace ReunionMovement.Core
 
         /// <summary>
         /// 加载游戏选项从 PlayerPrefs（默认仅首次加载，后续从内存读取）。
-        /// 优先读取 JSON 格式；如不存在则回退到旧版逐字段读取以保持向后兼容。
+        /// 读取 JSON 格式存档；如不存在或反序列化失败则使用默认选项。
         /// </summary>
         /// <param name="forceReload">强制重新从 PlayerPrefs 读取（例如恢复默认后重新加载）</param>
         public static void LoadOptions(bool forceReload = false)
@@ -86,7 +86,6 @@ namespace ReunionMovement.Core
             const string jsonKey = "game_options_json";
             if (PlayerPrefs.HasKey(jsonKey))
             {
-                // 新版 JSON 格式 —— 单次读取
                 var json = PlayerPrefs.GetString(jsonKey);
                 try
                 {
@@ -100,57 +99,13 @@ namespace ReunionMovement.Core
                 }
                 catch (Exception ex)
                 {
-                    Log.Warning("JSON 反序列化 GameOption 失败，回退到旧版逐字段读取: {0}", ex.Message);
+                    Log.Warning("JSON 反序列化 GameOption 失败，使用默认选项: {0}", ex.Message);
                 }
             }
 
-            // 回退：旧版逐字段读取（兼容旧存档）
-            LoadOptionsLegacy();
-
-            // 读取完毕后立即应用到游戏（分辨率、音量、质量等）
+            // 无存档或反序列化失败，使用默认选项
+            currentOption = new Option();
             ApplyOptions();
-
-            // 将旧版数据迁移为新版 JSON 格式（下次启动直接走快速路径）
-            SaveOptions();
-        }
-
-        /// <summary>
-        /// 旧版逐字段读取（兼容迁移，之后不再维护）
-        /// </summary>
-        private static void LoadOptionsLegacy()
-        {
-            currentOption.version = PlayerPrefs.GetString("version", currentOption.version);
-            currentOption.fullscreen = PlayerPrefs.GetInt("fullscreen", currentOption.fullscreen ? 1 : 0) == 1;
-            currentOption.resolutionWidth = PlayerPrefs.GetInt("resolutionWidth", currentOption.resolutionWidth);
-            currentOption.resolutionHeight = PlayerPrefs.GetInt("resolutionHeight", currentOption.resolutionHeight);
-            currentOption.vsync = PlayerPrefs.GetInt("vsync", currentOption.vsync ? 1 : 0) == 1;
-            currentOption.framerate = PlayerPrefs.GetInt("framerate", currentOption.framerate);
-
-            string langStr = PlayerPrefs.GetString("language", currentOption.language.ToString());
-            if (Enum.TryParse<Multilingual>(langStr, out var langEnum))
-            {
-                currentOption.language = langEnum;
-            }
-            currentOption.graphicsQuality = PlayerPrefs.GetInt("graphicsQuality", currentOption.graphicsQuality);
-            currentOption.brightness = PlayerPrefs.GetFloat("brightness", currentOption.brightness);
-
-            currentOption.autoPause = PlayerPrefs.GetInt("autoPause", currentOption.autoPause ? 1 : 0) == 1;
-            currentOption.masterVolumeMuted = PlayerPrefs.GetInt("masterVolumeMuted", currentOption.masterVolumeMuted ? 1 : 0) == 1;
-            currentOption.masterVolume = PlayerPrefs.GetFloat("masterVolume", currentOption.masterVolume);
-            currentOption.musicMuted = PlayerPrefs.GetInt("musicMuted", currentOption.musicMuted ? 1 : 0) == 1;
-            currentOption.musicVolume = PlayerPrefs.GetFloat("musicVolume", currentOption.musicVolume);
-            currentOption.musicFadeTime = PlayerPrefs.GetFloat("musicFadeTime", currentOption.musicFadeTime);
-            currentOption.sfxMuted = PlayerPrefs.GetInt("sfxMuted", currentOption.sfxMuted ? 1 : 0) == 1;
-            currentOption.sfxVolume = PlayerPrefs.GetFloat("sfxVolume", currentOption.sfxVolume);
-
-            currentOption.uiNavUp = PlayerPrefs.GetString("uiNavUp", currentOption.uiNavUp);
-            currentOption.uiNavDown = PlayerPrefs.GetString("uiNavDown", currentOption.uiNavDown);
-            currentOption.uiNavLeft = PlayerPrefs.GetString("uiNavLeft", currentOption.uiNavLeft);
-            currentOption.uiNavRight = PlayerPrefs.GetString("uiNavRight", currentOption.uiNavRight);
-            currentOption.uiSubmit = PlayerPrefs.GetString("uiSubmit", currentOption.uiSubmit);
-            currentOption.uiCancel = PlayerPrefs.GetString("uiCancel", currentOption.uiCancel);
-            currentOption.uiToggleToUI = PlayerPrefs.GetString("uiToggleToUI", currentOption.uiToggleToUI);
-            currentOption.uiToggleToGameplay = PlayerPrefs.GetString("uiToggleToGameplay", currentOption.uiToggleToGameplay);
         }
 
         /// <summary>

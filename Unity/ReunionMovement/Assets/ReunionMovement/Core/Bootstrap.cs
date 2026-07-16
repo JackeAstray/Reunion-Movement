@@ -8,11 +8,22 @@ namespace ReunionMovement.Core
     /// <summary>
     /// 游戏启动引导器 —— 通过 RuntimeInitializeOnLoadMethod 在场景加载前自动启动引擎。
     /// 替代原有的场景 GameObject + GameEntry.Awake() 模式。
+    ///
+    /// 在测试场景中跳过自动启动的方法（任选其一）：
+    ///   1. 将测试场景命名为 "Test" 或 "_" 开头（如 Test_Physics、_Sandbox）
+    ///   2. 在进入 Play Mode 前通过任意脚本设置：Bootstrap.ForceDisable = true
     /// </summary>
     public static class Bootstrap
     {
         /// <summary>防止编辑器 Domain Reload 时重复初始化</summary>
         private static bool isInitialized;
+
+        /// <summary>
+        /// 强制禁用自动启动（设置为 true 后，所有场景都不会触发 Bootstrap）。
+        /// 适用于测试场景或需要在 Play Mode 中手动控制初始化流程的情况。
+        /// 设置后只在当前 Play Mode 会话有效（Domain Reload 时重置为 false）。
+        /// </summary>
+        public static bool ForceDisable { get; set; }
 
         /// <summary>
         /// 在第一个场景加载前自动执行，初始化游戏引擎。
@@ -23,6 +34,27 @@ namespace ReunionMovement.Core
         {
             // 防止编辑器 Domain Reload 时重复执行
             if (isInitialized) return;
+
+            // 手动禁用开关（可在任意 [RuntimeInitializeOnLoadMethod] 中提前设置）
+            if (ForceDisable)
+            {
+                Log.Debug("[Bootstrap] ForceDisable = true，跳过自动启动");
+                return;
+            }
+
+#if UNITY_EDITOR
+            // 编辑器下：测试/沙盒/示例场景跳过自动启动
+            var testScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+            if (testScene.name.StartsWith("Test") ||
+                testScene.name.StartsWith("_") ||
+                testScene.name.Contains("Example") ||
+                testScene.name.Contains("UIPlaneScene"))
+            {
+                Log.Debug("[Bootstrap] 测试场景 '{0}'，跳过自动启动", testScene.name);
+                return;
+            }
+#endif
+
             isInitialized = true;
 
             // 如果引擎已存在且正在运行/启动中，跳过
