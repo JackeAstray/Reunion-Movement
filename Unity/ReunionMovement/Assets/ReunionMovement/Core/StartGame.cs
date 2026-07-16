@@ -79,11 +79,11 @@ namespace ReunionMovement.Core
             }
 
             // 打开启动 UI 并注册为场景切换时不隐藏
-            // UISystem.Instance.OpenWindow("StartGameUIPlane");
+            UISystem.Instance.OpenWindow("StartGameUIPlane");
             SceneSystem.Instance.ExcludeWindowFromSceneHide("StartGameUIPlane");
 
             // 打开启动 UI Toolkit 面板
-            UIToolkitSystem.Instance.OpenPanel<StartGameUIPanel>("StartGame");
+            // UIToolkitSystem.Instance.OpenPanel<StartGameUIPanel>("StartGame");
 
             // 加载初始场景
             await SceneSystem.Instance.LoadScene("Temp", true);

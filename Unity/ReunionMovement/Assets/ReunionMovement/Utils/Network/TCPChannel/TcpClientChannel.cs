@@ -68,6 +68,9 @@ namespace ReunionMovement.Common.Util
         {
             client.Disconnect();
             client.OnData = null;
+            // 清理所有事件订阅，防止内存泄漏和重复回调
+            client.OnConnected = null;
+            client.OnDisconnected = null;
             onDataReceived = null;
         }
 

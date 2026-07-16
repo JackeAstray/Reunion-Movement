@@ -38,6 +38,19 @@ namespace ReunionMovement.Common.Util
             }
         }
 
+        /// <summary>
+        /// 将 Channel 加入延迟删除队列，在下次 TickUpdate 时安全移除（避免在 TickRefresh 回调中直接修改列表）。
+        /// </summary>
+        /// <param name="channel">待移除的网络通道</param>
+        public void ScheduleRemove(INetworkChannel channel)
+        {
+            if (channel == null) return;
+            lock (syncRoot)
+            {
+                channelDictRemove.Add(channel);
+            }
+        }
+
         public void RemoveChannel(string channelName)
         {
             lock (syncRoot)

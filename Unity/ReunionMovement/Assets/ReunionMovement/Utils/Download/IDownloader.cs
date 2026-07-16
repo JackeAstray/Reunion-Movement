@@ -179,10 +179,10 @@ namespace ReunionMovement.Common.Util.Download
         public abstract bool Paused { get; }
         public abstract bool DidError { get; protected set; }
         public abstract int NumFilesRemaining { get; }
-        public abstract int StartTime { get; }
-        public abstract int EndTime { get; }
+        public abstract long StartTime { get; }
+        public abstract long EndTime { get; }
 
-        public int ElapsedTime
+        public long ElapsedTime
         {
             get
             {
@@ -193,10 +193,12 @@ namespace ReunionMovement.Common.Util.Download
 
                 if (EndTime == 0)
                 {
-                    return Math.Abs(Environment.TickCount - StartTime);
+                    long diff = Environment.TickCount - StartTime;
+                    return diff >= 0 ? diff : 0;
                 }
 
-                return Math.Abs(EndTime - StartTime);
+                long endDiff = EndTime - StartTime;
+                return endDiff >= 0 ? endDiff : 0;
             }
         }
 

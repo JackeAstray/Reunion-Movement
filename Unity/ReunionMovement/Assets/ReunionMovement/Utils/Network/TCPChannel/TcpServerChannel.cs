@@ -88,6 +88,9 @@ namespace ReunionMovement.Common.Util
         {
             server.Stop();
             server.OnData = null;
+            // 清理所有事件订阅，防止内存泄漏和重复回调
+            server.OnConnected = null;
+            server.OnDisconnected = null;
             onDataReceived = null;
             onAbort?.Invoke();
             onAbort = null;

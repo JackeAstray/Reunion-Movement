@@ -47,6 +47,8 @@ namespace ReunionMovement.Core
             {
                 Log.Error("[Bootstrap] 启动过程发生未处理异常: {0}\n{1}", ex.Message, ex.StackTrace);
                 isInitialized = false;
+                // 清理可能已部分初始化的引擎，避免状态残留与 GameObject 泄漏
+                GameEngine.Current?.Dispose();
             }
         }
 

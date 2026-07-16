@@ -189,13 +189,20 @@ namespace ReunionMovement.Common.Util.StateMachine
         }
 
         /// <summary>
-        /// 执行状态切换
+        /// 执行状态切换。若目标状态未注册，则记录错误并保持当前状态。
         /// </summary>
         /// <param name="newState"></param>
         private void PerformStateChange(TLabel newState)
         {
             try
             {
+                // 防御：检查目标状态是否已注册
+                if (!stateDictionary.TryGetValue(newState, out State targetState))
+                {
+                    Log.Error("状态切换失败：目标状态 {0} 未注册。保持当前状态。", newState);
+                    return;
+                }
+
                 TLabel oldLabel = default(TLabel);
                 if (currentState != null)
                 {
@@ -205,7 +212,7 @@ namespace ReunionMovement.Common.Util.StateMachine
                     stateHistory.Push(currentState);
                 }
 
-                currentState = stateDictionary[newState];
+                currentState = targetState;
                 currentState?.OnStart?.Invoke();
                 OnStateEnter?.Invoke(newState);
                 OnStateChanged?.Invoke(oldLabel, newState);

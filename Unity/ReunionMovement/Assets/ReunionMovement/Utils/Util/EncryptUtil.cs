@@ -17,14 +17,68 @@ namespace ReunionMovement.Common.Util
         public const int encryptBytesLength = 64;
 
         /// <summary>
-        /// 偏移加密的头部字节值
+        /// 用于派生加解密密钥的种子值（可在运行时通过 SetKeySeed 更改）。
+        /// 默认使用 AppHash 产生与安装实例相关的密钥，避免硬编码常量被反编译直接利用。
         /// </summary>
-        private const byte encryptOffsetHead = 64;
+        private static uint keySeed;
+        private static bool keySeedInitialized;
+
+        private static readonly object keyLock = new object();
 
         /// <summary>
-        /// 异或加密Key
+        /// 设置加密种子。应在游戏启动早期调用（如登录后从服务端下发）。
+        /// 传入 0 将使用默认种子。
         /// </summary>
-        private const byte encryptXOrKey = 64;
+        public static void SetKeySeed(uint seed)
+        {
+            lock (keyLock)
+            {
+                keySeed = seed != 0 ? seed : GetDefaultSeed();
+                keySeedInitialized = true;
+            }
+        }
+
+        private static uint GetDefaultSeed()
+        {
+            // 混合多个来源产生与安装实例相关的默认种子，避免纯常量
+            uint seed = 0x5A7B3C9D;
+            try
+            {
+                string id = UnityEngine.Application.identifier ?? "ReunionMovement";
+                foreach (char c in id)
+                    seed = ((seed << 7) | (seed >> 25)) ^ c;
+                seed ^= (uint)UnityEngine.Application.version.GetHashCode();
+            }
+            catch { /* 降级：使用编译时常量 */ }
+            return seed != 0 ? seed : 0x6D8E2F1A;
+        }
+
+        private static byte GetOffsetHead()
+        {
+            EnsureKeySeed();
+            return (byte)(((keySeed >> 24) ^ (keySeed >> 16) ^ (keySeed >> 8) ^ keySeed) & 0xFF);
+        }
+
+        private static byte GetXOrKey()
+        {
+            EnsureKeySeed();
+            return (byte)(((keySeed >> 16) ^ (keySeed >> 8) ^ 0x5A) & 0xFF);
+        }
+
+        private static void EnsureKeySeed()
+        {
+            if (!keySeedInitialized)
+            {
+                lock (keyLock)
+                {
+                    if (!keySeedInitialized)
+                    {
+                        keySeed = GetDefaultSeed();
+                        keySeedInitialized = true;
+                    }
+                }
+            }
+        }
 
         /// <summary>
         /// 缓存的字节数组队列，用于重用字节数组以减少内存分配
@@ -81,9 +135,10 @@ namespace ReunionMovement.Common.Util
             byte[] cachedBytes = GetCachedBytes(newLength);
 
             //写入额外的头部数据
+            byte offsetHead = GetOffsetHead();
             for (int i = 0; i < encryptBytesLength; i++)
             {
-                cachedBytes[i] = encryptOffsetHead;
+                cachedBytes[i] = offsetHead;
             }
 
             //写入原始数据
@@ -128,9 +183,10 @@ namespace ReunionMovement.Common.Util
         public static void EncryptXOr(byte[] bytes, int length = encryptBytesLength)
         {
             int actualLength = Math.Min(length, bytes?.Length ?? 0);
+            byte xorKey = GetXOrKey();
             for (int i = 0; i < actualLength; i++)
             {
-                bytes[i] ^= encryptXOrKey;
+                bytes[i] ^= xorKey;
             }
         }
 

@@ -38,11 +38,13 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 生成对象
+        /// 生成对象。先从池中取可用对象（自动跳过已被外部销毁的），池空则新建。
         /// </summary>
         public GameObject Spawn()
         {
             GameObject obj = null;
+            int nullsSkipped = 0;
+
             while (objectQueue.Count > 0)
             {
                 obj = objectQueue.Dequeue();
@@ -54,10 +56,13 @@ namespace ReunionMovement.Common.Util
                 else
                 {
                     // 对象已被外部销毁（Destroy），不再可用
-                    currentCount--;
+                    nullsSkipped++;
                     obj = null;
                 }
             }
+
+            // 统一扣除因外部销毁而失联的对象数（在循环后一次性扣减，避免多次 -- 导致漂移）
+            currentCount -= nullsSkipped;
 
             if (obj == null)
             {

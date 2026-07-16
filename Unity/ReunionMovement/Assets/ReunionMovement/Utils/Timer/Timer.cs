@@ -55,13 +55,21 @@ namespace ReunionMovement.Common.Util.Timer
         }
 
         /// <summary>
-        /// 开始计时器，设置状态为Running，如果之前是Idle或Paused状态，则从0开始计时
+        /// 开始计时器。如果当前为 Idle 状态则从 0 开始计时；
+        /// 如果当前为 Paused 状态则从暂停处继续（保留 elapsed）。
+        /// 如果已在 Running 状态则忽略。
         /// </summary>
         public void Start()
         {
             if (state == TimerState.Running) return;
+
+            // 仅当从 Idle/Finished/Cancelled 启动时才清零
+            if (state != TimerState.Paused)
+            {
+                elapsed = 0f;
+                loopCount = 0;
+            }
             state = TimerState.Running;
-            elapsed = 0f;
         }
 
         /// <summary>
