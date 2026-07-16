@@ -131,7 +131,7 @@ namespace ReunionMovement.Core.Languages
                 }
                 else
                 {
-                    Log.Error($"未找到ID为{number}的语言配置");
+                    Log.Error("未找到ID为{0}的语言配置", number);
                 }
             }
             else

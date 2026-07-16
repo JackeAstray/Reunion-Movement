@@ -181,7 +181,7 @@ namespace ReunionMovement.Common.Util.StateMachine
         {
             if (currentState != null && !IsTransitionConditionsMet(newState))
             {
-                Log.Error($"无法从状态 {currentState.label} 转换到 {newState}，条件未满足。");
+                Log.Error("无法从状态 {0} 转换到 {1}，条件未满足。", currentState.label, newState);
                 return;
             }
 
@@ -212,7 +212,7 @@ namespace ReunionMovement.Common.Util.StateMachine
             }
             catch (Exception ex)
             {
-                Log.Error($"状态转换时发生异常: {ex.Message}");
+                Log.Error("状态转换时发生异常: {0}", ex.Message);
             }
         }
 
@@ -222,7 +222,7 @@ namespace ReunionMovement.Common.Util.StateMachine
         private void HandleStateTimeout()
         {
             // 超时后的状态转换逻辑
-            Log.Debug($"状态 {currentState.label} 超时，切换到默认状态");
+            Log.Debug("状态 {0} 超时，切换到默认状态", currentState.label);
 
             // 只有当 defaultStateLabel 被设置为有效状态时，才允许切换到默认状态
             if (!EqualityComparer<TLabel>.Default.Equals(defaultStateLabel, default(TLabel)))

@@ -47,7 +47,7 @@ namespace ReunionMovement.Common.Util
             }
             catch (Exception ex)
             {
-                Log.Error($"[ScreenCaptureUtil] CaptureFullScreenAsync failed: {ex}");
+                Log.Error("[ScreenCaptureUtil] CaptureFullScreenAsync failed: {0}", ex);
                 return null;
             }
         }
@@ -84,7 +84,7 @@ namespace ReunionMovement.Common.Util
                     rect.height = Mathf.Min(rect.height, Screen.height - rect.y);
                     if (rect.width <= 0 || rect.height <= 0)
                     {
-                        Log.Error($"[ScreenCaptureUtil] 截图区域无效: {rect}");
+                        Log.Error("[ScreenCaptureUtil] 截图区域无效: {0}", rect);
                         return null;
                     }
 
@@ -104,7 +104,7 @@ namespace ReunionMovement.Common.Util
             }
             catch (Exception ex)
             {
-                Log.Error($"[ScreenCaptureUtil] CaptureAreaAsync failed: {ex}");
+                Log.Error("[ScreenCaptureUtil] CaptureAreaAsync failed: {0}", ex);
                 return null;
             }
         }

@@ -129,7 +129,7 @@ namespace ReunionMovement.Common.Util.Download
 
                     if (!Uri.TryCreate(str, UriKind.Absolute, out _))
                     {
-                        Log.Error($"URI {str} cannot be fed into {GetType().Name}.Uris");
+                        Log.Error("URI {0} cannot be fed into {1}.Uris", str, GetType().Name);
                         continue;
                     }
 

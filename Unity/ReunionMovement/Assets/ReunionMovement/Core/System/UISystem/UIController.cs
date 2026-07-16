@@ -128,7 +128,7 @@ namespace ReunionMovement.Core.UI
             {
                 if (isLog)
                 {
-                    Log.Error($"Get UI<{type.Name}> Control Error: {uri}");
+                    Log.Error("Get UI<{0}> Control Error: {1}", type.Name, uri);
                 }
                 return null;
             }

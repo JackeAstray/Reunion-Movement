@@ -97,7 +97,7 @@ namespace ReunionMovement.Common.Util
             }
             catch (Exception ex)
             {
-                Log.Error($"[{CommandName}] OnExecuted 回调异常: {ex}");
+                Log.Error("[{0}] OnExecuted 回调异常: {1}", CommandName, ex);
             }
         }
 
@@ -113,7 +113,7 @@ namespace ReunionMovement.Common.Util
             }
             catch (Exception ex)
             {
-                Log.Error($"[{CommandName}] OnUndone 回调异常: {ex}");
+                Log.Error("[{0}] OnUndone 回调异常: {1}", CommandName, ex);
             }
         }
 

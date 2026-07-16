@@ -160,7 +160,7 @@ namespace ReunionMovement.Core.Scene
             // 正在加载其他场景：拒绝新请求并记录警告
             if (isLoading)
             {
-                Log.Warning($"场景加载被拒绝：当前正在加载 {targetSceneName}，无法同时加载 {levelName}");
+                Log.Warning("场景加载被拒绝：当前正在加载 {0}，无法同时加载 {1}", targetSceneName, levelName);
                 return;
             }
 
@@ -195,7 +195,7 @@ namespace ReunionMovement.Core.Scene
             }
             catch (Exception ex)
             {
-                Log.Error($"场景加载异常：{ex}");
+                Log.Error("场景加载异常：{0}", ex);
                 LoadState.Value = SceneLoadState.Failed;
                 // 确保异常情况下回调也被触发、状态被重置
                 ExecuteBslcc();
@@ -214,7 +214,7 @@ namespace ReunionMovement.Core.Scene
             var async = SceneManager.LoadSceneAsync(loadSceneName, loadSceneMode);
             if (async == null)
             {
-                Log.Warning($"过渡场景 {loadSceneName} 加载失败，跳过过渡场景");
+                Log.Warning("过渡场景 {0} 加载失败，跳过过渡场景", loadSceneName);
                 // 即便失败也要触发回调，避免回调泄漏
                 ExecuteBslcc();
                 CallbackProgress(0);
@@ -240,7 +240,7 @@ namespace ReunionMovement.Core.Scene
 
             if (async == null)
             {
-                Log.Error($"加载场景失败：{nameof(AsyncOperation)} 为 null");
+                Log.Error("加载场景失败：{0} 为 null", nameof(AsyncOperation));
                 // 触发并清空所有回调，避免泄漏
                 ExecuteBslcc();
                 ExecuteSlcc();
@@ -342,7 +342,7 @@ namespace ReunionMovement.Core.Scene
             }
             catch (Exception ex)
             {
-                Log.Error($"getProgress 回调异常（忽略）：{ex}");
+                Log.Error("getProgress 回调异常（忽略）：{0}", ex);
             }
         }
 

@@ -75,7 +75,7 @@ namespace ReunionMovement.Core.Resources
             var assets = UnityEngine.Resources.Load<T>(assetPath);
             if (assets == null)
             {
-                Log.Error($"资源没有找到,路径为:{assetPath}");
+                Log.Error("资源没有找到,路径为:{0}", assetPath);
                 return null;
             }
 
@@ -108,7 +108,7 @@ namespace ReunionMovement.Core.Resources
             var assets = await ResourcesUtil.LoadAsync<T>(assetPath, callback);
             if (assets == null)
             {
-                Log.Error($"资源没有找到,路径为:{assetPath}");
+                Log.Error("资源没有找到,路径为:{0}", assetPath);
                 return null;
             }
 
@@ -148,13 +148,13 @@ namespace ReunionMovement.Core.Resources
             }
             if (atlas is null)
             {
-                Log.Error($"图集：{atlasName}不存在，请检查！");
+                Log.Error("图集：{0}不存在，请检查！", atlasName);
                 return null;
             }
             var sprite = atlas.GetSprite(spriteName);
             if (sprite is null)
             {
-                Log.Error($"{atlasName} 图集中Sprite:{spriteName} 不存在，请检查！");
+                Log.Error("{0} 图集中Sprite:{1} 不存在，请检查！", atlasName, spriteName);
             }
             return sprite;
         }
@@ -172,13 +172,13 @@ namespace ReunionMovement.Core.Resources
             var obj = UnityEngine.Resources.Load<T>(path);
             if (obj == null)
             {
-                Log.Error($"资源没有找到,路径为:{path}");
+                Log.Error("资源没有找到,路径为:{0}", path);
                 return null;
             }
             var go = GameObject.Instantiate(obj);
             if (go == null)
             {
-                Log.Error($"实例化 {path} 失败!");
+                Log.Error("实例化 {0} 失败!", path);
             }
             return go;
         }
@@ -318,7 +318,7 @@ namespace ReunionMovement.Core.Resources
             }
             catch (Exception ex)
             {
-                Log.Error($"异步加载资源失败: {assetPath}, {ex.Message}");
+                Log.Error("异步加载资源失败: {0}, {1}", assetPath, ex.Message);
                 callback?.Invoke(null);
                 return null;
             }

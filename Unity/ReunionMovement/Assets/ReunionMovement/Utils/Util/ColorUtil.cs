@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Globalization;
+using Cysharp.Text;
 using UnityEngine;
 
 namespace ReunionMovement.Common.Util
@@ -22,7 +23,7 @@ namespace ReunionMovement.Common.Util
             int g = Mathf.RoundToInt(Mathf.Clamp01(target.g) * 255.0f);
             int b = Mathf.RoundToInt(Mathf.Clamp01(target.b) * 255.0f);
             int a = Mathf.RoundToInt(Mathf.Clamp01(target.a) * 255.0f);
-            return $"{r:X2}{g:X2}{b:X2}{a:X2}";
+            return ZString.Format("{0:X2}{1:X2}{2:X2}{3:X2}", r, g, b, a);
         }
 
         /// <summary>

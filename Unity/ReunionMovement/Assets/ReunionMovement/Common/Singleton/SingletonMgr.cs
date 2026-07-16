@@ -56,7 +56,7 @@ namespace ReunionMovement.Common
         {
             if (instance != null && instance != this)
             {
-                Log.Warning($"[SingletonMgr] 检测到重复的 {typeof(T).Name} 单例，已销毁: {gameObject.name}");
+                Log.Warning("[SingletonMgr] 检测到重复的 {0} 单例，已销毁: {1}", typeof(T).Name, gameObject.name);
                 Destroy(this.gameObject);
                 return;
             }

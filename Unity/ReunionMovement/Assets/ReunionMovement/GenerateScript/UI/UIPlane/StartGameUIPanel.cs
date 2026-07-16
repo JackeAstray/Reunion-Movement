@@ -194,7 +194,7 @@ namespace ReunionMovement.Core.UI
             }
             else
             {
-                Log.Warning($"[StartGameUIPanel] 未找到图片: Resources/{path}");
+                Log.Warning("[StartGameUIPanel] 未找到图片: Resources/{0}", path);
             }
         }
     }

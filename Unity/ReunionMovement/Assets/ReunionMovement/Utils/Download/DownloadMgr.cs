@@ -138,7 +138,7 @@ namespace ReunionMovement.Common.Util.Download
                 })
                 .OnError(error => 
                 {
-                    Log.Error($"下载图片失败: {error}");
+                    Log.Error("下载图片失败: {0}", error);
                     onComplete?.Invoke(null);
                 })
                 .Send();
@@ -173,7 +173,7 @@ namespace ReunionMovement.Common.Util.Download
                 {
                     if (skipIfExists)
                     {
-                        Log.Debug($"文件已存在，跳过下载: {localFilePath}");
+                        Log.Debug("文件已存在，跳过下载: {0}", localFilePath);
                         continue;
                     }
                     else if (deleteIfExists)
@@ -181,11 +181,11 @@ namespace ReunionMovement.Common.Util.Download
                         try
                         {
                             File.Delete(localFilePath);
-                            Log.Debug($"已删除旧文件: {localFilePath}");
+                            Log.Debug("已删除旧文件: {0}", localFilePath);
                         }
                         catch (Exception ex)
                         {
-                            Log.Error($"删除文件失败: {localFilePath}, {ex.Message}");
+                            Log.Error("删除文件失败: {0}, {1}", localFilePath, ex.Message);
                             error?.Invoke($"删除文件失败: {localFilePath}, {ex.Message}");
                             continue;
                         }
@@ -223,7 +223,7 @@ namespace ReunionMovement.Common.Util.Download
 
             ufd.OnDownloadError += (string uri, int errorCode, string errorMsg) =>
             {
-                Log.Error($"错误代码={errorCode}, EM={errorMsg}, URU={uri}");
+                Log.Error("错误代码={0}, EM={1}, URU={2}", errorCode, errorMsg, uri);
                 error?.Invoke(errorMsg);
             };
 
@@ -233,7 +233,7 @@ namespace ReunionMovement.Common.Util.Download
             }
             catch (Exception ex)
             {
-                Log.Error($"下载过程中发生异常: {ex.Message}");
+                Log.Error("下载过程中发生异常: {0}", ex.Message);
                 error?.Invoke(ex.Message);
             }
         }
@@ -264,7 +264,7 @@ namespace ReunionMovement.Common.Util.Download
             }
             catch (Exception ex)
             {
-                Log.Error($"从本地加载失败: {ex.Message}");
+                Log.Error("从本地加载失败: {0}", ex.Message);
                 return false;
             }
         }
@@ -287,11 +287,11 @@ namespace ReunionMovement.Common.Util.Download
 
                 byte[] bytes = texture.EncodeToPNG();
                 File.WriteAllBytes(filePath, bytes);
-                Log.Debug($"保存到本地成功: {filePath}");
+                Log.Debug("保存到本地成功: {0}", filePath);
             }
             catch (Exception ex)
             {
-                Log.Error($"保存失败: {ex.Message}");
+                Log.Error("保存失败: {0}", ex.Message);
             }
         }
 

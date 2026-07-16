@@ -61,7 +61,7 @@ namespace ReunionMovement.Common.Util
             // 容错：若起始晚于截止，自动交换
             if (start > end)
             {
-                Log.Warning($"DeadlineMgr: StartDate({start:yyyy-MM-dd}) 晚于 DeadlineDate({end:yyyy-MM-dd})，已自动交换。");
+                Log.Warning("DeadlineMgr: StartDate({0:yyyy-MM-dd}) 晚于 DeadlineDate({1:yyyy-MM-dd})，已自动交换。", start, end);
                 var tmp = start;
                 start = end;
                 end = tmp;
@@ -128,7 +128,7 @@ namespace ReunionMovement.Common.Util
                 // 如果当前 UTC 小于存储时间减去容忍阈值，则认为是回拨
                 if (nowUtc < storedUtc - RollbackTolerance)
                 {
-                    Log.Warning($"DeadlineMgr: 发现系统时间回拨（当前UTC={nowUtc:o}，记录UTC={storedUtc:o}）。");
+                    Log.Warning("DeadlineMgr: 发现系统时间回拨（当前UTC={0:o}，记录UTC={1:o}）。", nowUtc, storedUtc);
                     return true;
                 }
 
@@ -140,7 +140,7 @@ namespace ReunionMovement.Common.Util
             }
             catch (Exception ex)
             {
-                Log.Warning($"DeadlineMgr: 检测时钟回拨时出现异常，按安全策略处理。异常: {ex.Message}");
+                Log.Warning("DeadlineMgr: 检测时钟回拨时出现异常，按安全策略处理。异常: {0}", ex.Message);
                 return true;
             }
         }

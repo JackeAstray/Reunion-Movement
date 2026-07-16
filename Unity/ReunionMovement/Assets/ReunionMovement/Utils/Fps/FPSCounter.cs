@@ -1,5 +1,6 @@
 using UnityEngine;
 using TMPro;
+using Cysharp.Text;
 
 namespace ReunionMovement.Common.Util
 {
@@ -109,7 +110,7 @@ namespace ReunionMovement.Common.Util
 
                 if (fpsText != null)
                 {
-                    fpsText.text = $"FPS: {(int)fps}";
+                    fpsText.text = ZString.Format("FPS: {0}", (int)fps);
                     fpsText.color = fps <= badFps ? badColor : (fps <= okFps ? okColor : goodColor);
                 }
             }

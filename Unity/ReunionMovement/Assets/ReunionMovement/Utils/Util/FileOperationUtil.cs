@@ -41,7 +41,7 @@ namespace ReunionMovement.Common.Util
                 }
                 catch (Exception e)
                 {
-                    Log.Debug($"GetAllFileSize: 无法读取文件大小 {file} -> {e.Message}");
+                    Log.Debug("GetAllFileSize: 无法读取文件大小 {0} -> {1}", file, e.Message);
                 }
             }
             // 向上取整到KB
@@ -64,7 +64,7 @@ namespace ReunionMovement.Common.Util
                 }
                 catch (Exception e)
                 {
-                    Log.Debug($"GetAllFileSizeBytes: 无法读取文件大小 {file} -> {e.Message}");
+                    Log.Debug("GetAllFileSizeBytes: 无法读取文件大小 {0} -> {1}", file, e.Message);
                 }
             }
             return totalBytes;
@@ -111,7 +111,7 @@ namespace ReunionMovement.Common.Util
         {
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
-                Log.Debug($"ReadAllBytes: 文件不存在 {path}");
+                Log.Debug("ReadAllBytes: 文件不存在 {0}", path);
                 return Array.Empty<byte>();
             }
 
@@ -132,7 +132,7 @@ namespace ReunionMovement.Common.Util
             }
             catch (Exception e)
             {
-                Log.Error($"ReadAllBytes() 路径:{path}, 错误:{e.Message}");
+                Log.Error("ReadAllBytes() 路径:{0}, 错误:{1}", path, e.Message);
                 return Array.Empty<byte>();
             }
         }
@@ -167,7 +167,7 @@ namespace ReunionMovement.Common.Util
             }
             catch (Exception e)
             {
-                Log.Error($"SaveFile() 路径:{fullpath}, 错误:{e.Message}");
+                Log.Error("SaveFile() 路径:{0}, 错误:{1}", fullpath, e.Message);
                 return -1;
             }
         }
@@ -193,7 +193,7 @@ namespace ReunionMovement.Common.Util
             }
             catch (Exception e)
             {
-                Log.Error($"LoadJson() 路径:{fileAbslutePath}, 错误:{e.Message}");
+                Log.Error("LoadJson() 路径:{0}, 错误:{1}", fileAbslutePath, e.Message);
                 return default;
             }
         }
@@ -219,7 +219,7 @@ namespace ReunionMovement.Common.Util
             }
             catch (Exception e)
             {
-                Log.Error($"SaveJson() 路径:{filePath}, 文件:{fileName}, 错误:{e.Message}");
+                Log.Error("SaveJson() 路径:{0}, 文件:{1}, 错误:{2}", filePath, fileName, e.Message);
                 return false;
             }
         }
@@ -249,7 +249,7 @@ namespace ReunionMovement.Common.Util
                         yield return www.SendWebRequest();
                         if (www.result != UnityWebRequest.Result.Success)
                         {
-                            Log.Debug($"复制文件失败：{www.error}");
+                            Log.Debug("复制文件失败：{0}", www.error);
                         }
                         else
                         {
@@ -259,7 +259,7 @@ namespace ReunionMovement.Common.Util
                             }
                             catch (Exception e)
                             {
-                                Log.Error($"CopyFileToTarget 写入失败:{targetPath} -> {e.Message}");
+                                Log.Error("CopyFileToTarget 写入失败:{0} -> {1}", targetPath, e.Message);
                             }
                         }
                     }
@@ -274,7 +274,7 @@ namespace ReunionMovement.Common.Util
                         }
                         catch (Exception e)
                         {
-                            Log.Error($"CopyFileToTarget 复制失败:{originalPath} -> {e.Message}");
+                            Log.Error("CopyFileToTarget 复制失败:{0} -> {1}", originalPath, e.Message);
                         }
                     }
                     break;
@@ -290,7 +290,7 @@ namespace ReunionMovement.Common.Util
                         }
                         catch (Exception e)
                         {
-                            Log.Error($"CopyFileToTarget 复制失败:{originalPath} -> {e.Message}");
+                            Log.Error("CopyFileToTarget 复制失败:{0} -> {1}", originalPath, e.Message);
                         }
                     }
                     break;

@@ -169,7 +169,7 @@ namespace ReunionMovement.Common.Util.Download
         {
             if (Downloading || Uris == null || Uris.Length == 0)
             {
-                Log.Error($"{GetType().FullName}.Download() 不能在属性Uris设置为null或empty的情况下调用");
+                Log.Error("{0}.Download() 不能在属性Uris设置为null或empty的情况下调用", GetType().FullName);
                 return false;
             }
             OnDownloadInvoked?.Invoke();
@@ -182,7 +182,7 @@ namespace ReunionMovement.Common.Util.Download
             int threadCount = Math.Min(MaxConcurrency, numFilesRemaining);
             if (threadCount <= 0)
             {
-                Log.Error($"{GetType().FullName}.下载要求MaxConcurrency为非负整数。");
+                Log.Error("{0}.下载要求MaxConcurrency为非负整数。", GetType().FullName);
                 return false;
             }
             var tasks = new List<UniTask<bool>>(threadCount);
@@ -294,7 +294,7 @@ namespace ReunionMovement.Common.Util.Download
                         }
                         else
                         {
-                            Log.Warning($"Download for {idf.Uri} returned null（未进入下载流程）");
+                            Log.Warning("Download for {0} returned null（未进入下载流程）", idf.Uri);
                             // 如果还有待下载的 URI，则继续调度
                             if (pendingUris != null && pendingUris.Length > 0)
                             {
@@ -306,7 +306,7 @@ namespace ReunionMovement.Common.Util.Download
                 else
                 {
                     // HeadRequest 返回 null，视为该 URI 不可分块，继续处理下一个
-                    Log.Warning($"HeadRequest for {idf.Uri} returned null，跳过该 URI");
+                    Log.Warning("HeadRequest for {0} returned null，跳过该 URI", idf.Uri);
                     _ = DispatchCompletion(idf);
                 }
 
@@ -466,7 +466,7 @@ namespace ReunionMovement.Common.Util.Download
             }
             else if (!executorsOld.Any(idf => idf.Uri == uri))
             {
-                Log.Error($"对从未调用过的URI调用取消 {uri}");
+                Log.Error("对从未调用过的URI调用取消 {0}", uri);
                 return UniTask.FromResult(false);
             }
             else
