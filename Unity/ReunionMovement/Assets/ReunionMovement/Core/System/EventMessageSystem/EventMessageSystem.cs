@@ -40,16 +40,9 @@ namespace ReunionMovement.Core.EventMessage
         private readonly Dictionary<EventMessageType, Subject<EventData>> eventSubjects
             = new Dictionary<EventMessageType, Subject<EventData>>();
 
-        /// <summary>订阅追踪列表 —— 使用结构体包装避免 delegate 作为字典 Key 的哈希不稳定问题</summary>
-        private readonly Dictionary<EventMessageType, List<SubscriptionEntry>> subscriptionTrackers
-            = new Dictionary<EventMessageType, List<SubscriptionEntry>>();
-
-        /// <summary>订阅条目（handler + 对应的 IDisposable）</summary>
-        private struct SubscriptionEntry
-        {
-            public Action<EventData> Handler;
-            public IDisposable Disposable;
-        }
+        /// <summary>订阅追踪 —— 每个事件类型对应 handler→IDisposable 映射，O(1) 查重与移除</summary>
+        private readonly Dictionary<EventMessageType, Dictionary<Action<EventData>, IDisposable>> subscriptionTrackers
+            = new Dictionary<EventMessageType, Dictionary<Action<EventData>, IDisposable>>();
 
         public UniTask Init()
         {
@@ -71,9 +64,9 @@ namespace ReunionMovement.Core.EventMessage
             // 释放所有订阅追踪
             foreach (var kvp in subscriptionTrackers)
             {
-                for (int i = 0; i < kvp.Value.Count; i++)
+                foreach (var disposable in kvp.Value.Values)
                 {
-                    kvp.Value[i].Disposable?.Dispose();
+                    disposable?.Dispose();
                 }
                 kvp.Value.Clear();
             }
@@ -102,13 +95,13 @@ namespace ReunionMovement.Core.EventMessage
         }
 
         /// <summary>
-        /// 获取或创建订阅追踪列表
+        /// 获取或创建订阅追踪字典（handler → IDisposable，O(1) 查重与移除）
         /// </summary>
-        private List<SubscriptionEntry> GetOrCreateTracker(EventMessageType type)
+        private Dictionary<Action<EventData>, IDisposable> GetOrCreateTracker(EventMessageType type)
         {
             if (!subscriptionTrackers.TryGetValue(type, out var tracker))
             {
-                tracker = new List<SubscriptionEntry>(4);
+                tracker = new Dictionary<Action<EventData>, IDisposable>(4);
                 subscriptionTrackers[type] = tracker;
             }
             return tracker;
@@ -128,14 +121,11 @@ namespace ReunionMovement.Core.EventMessage
             var subject = GetOrCreateSubject(type);
             var tracker = GetOrCreateTracker(type);
 
-            // 避免重复订阅
-            for (int i = 0; i < tracker.Count; i++)
-            {
-                if (tracker[i].Handler == listenerFunc) return;
-            }
+            // O(1) 查重，避免重复订阅同一 handler
+            if (tracker.ContainsKey(listenerFunc)) return;
 
             var disposable = subject.Subscribe(data => listenerFunc(data));
-            tracker.Add(new SubscriptionEntry { Handler = listenerFunc, Disposable = disposable });
+            tracker[listenerFunc] = disposable;
         }
 
         /// <summary>
@@ -147,17 +137,11 @@ namespace ReunionMovement.Core.EventMessage
         {
             if (listenerFunc == null) return;
 
-            if (subscriptionTrackers.TryGetValue(type, out var tracker))
+            if (subscriptionTrackers.TryGetValue(type, out var tracker)
+                && tracker.TryGetValue(listenerFunc, out var disposable))
             {
-                for (int i = tracker.Count - 1; i >= 0; i--)
-                {
-                    if (tracker[i].Handler == listenerFunc)
-                    {
-                        tracker[i].Disposable?.Dispose();
-                        tracker.RemoveAt(i);
-                        return;
-                    }
-                }
+                disposable?.Dispose();
+                tracker.Remove(listenerFunc);
             }
         }
 
@@ -204,9 +188,9 @@ namespace ReunionMovement.Core.EventMessage
         {
             if (subscriptionTrackers.TryGetValue(type, out var tracker))
             {
-                for (int i = 0; i < tracker.Count; i++)
+                foreach (var disposable in tracker.Values)
                 {
-                    tracker[i].Disposable?.Dispose();
+                    disposable?.Dispose();
                 }
                 tracker.Clear();
                 subscriptionTrackers.Remove(type);

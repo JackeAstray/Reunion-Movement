@@ -1,4 +1,5 @@
 ﻿using ReunionMovement.Common;
+using Newtonsoft.Json;
 using System;
 using UnityEngine;
 using ReunionMovement.Core.Sound;
@@ -7,6 +8,7 @@ namespace ReunionMovement.Core
 {
     public static class GameOption
     {
+        [Serializable]
         public class Option
         {
             // 版本号
@@ -72,7 +74,8 @@ namespace ReunionMovement.Core
         private static bool isLoaded = false;
 
         /// <summary>
-        /// 加载游戏选项从 PlayerPrefs（默认仅首次加载，后续从内存读取）
+        /// 加载游戏选项从 PlayerPrefs（默认仅首次加载，后续从内存读取）。
+        /// 优先读取 JSON 格式；如不存在则回退到旧版逐字段读取以保持向后兼容。
         /// </summary>
         /// <param name="forceReload">强制重新从 PlayerPrefs 读取（例如恢复默认后重新加载）</param>
         public static void LoadOptions(bool forceReload = false)
@@ -80,6 +83,42 @@ namespace ReunionMovement.Core
             if (isLoaded && !forceReload) return;
             isLoaded = true;
 
+            const string jsonKey = "game_options_json";
+            if (PlayerPrefs.HasKey(jsonKey))
+            {
+                // 新版 JSON 格式 —— 单次读取
+                var json = PlayerPrefs.GetString(jsonKey);
+                try
+                {
+                    var loaded = JsonConvert.DeserializeObject<Option>(json);
+                    if (loaded != null)
+                    {
+                        currentOption = loaded;
+                        ApplyOptions();
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning("JSON 反序列化 GameOption 失败，回退到旧版逐字段读取: {0}", ex.Message);
+                }
+            }
+
+            // 回退：旧版逐字段读取（兼容旧存档）
+            LoadOptionsLegacy();
+
+            // 读取完毕后立即应用到游戏（分辨率、音量、质量等）
+            ApplyOptions();
+
+            // 将旧版数据迁移为新版 JSON 格式（下次启动直接走快速路径）
+            SaveOptions();
+        }
+
+        /// <summary>
+        /// 旧版逐字段读取（兼容迁移，之后不再维护）
+        /// </summary>
+        private static void LoadOptionsLegacy()
+        {
             currentOption.version = PlayerPrefs.GetString("version", currentOption.version);
             currentOption.fullscreen = PlayerPrefs.GetInt("fullscreen", currentOption.fullscreen ? 1 : 0) == 1;
             currentOption.resolutionWidth = PlayerPrefs.GetInt("resolutionWidth", currentOption.resolutionWidth);
@@ -87,7 +126,6 @@ namespace ReunionMovement.Core
             currentOption.vsync = PlayerPrefs.GetInt("vsync", currentOption.vsync ? 1 : 0) == 1;
             currentOption.framerate = PlayerPrefs.GetInt("framerate", currentOption.framerate);
 
-            // 将 Multilingual 枚举转换为 string，再从 PlayerPrefs 获取后解析回枚举
             string langStr = PlayerPrefs.GetString("language", currentOption.language.ToString());
             if (Enum.TryParse<Multilingual>(langStr, out var langEnum))
             {
@@ -96,7 +134,6 @@ namespace ReunionMovement.Core
             currentOption.graphicsQuality = PlayerPrefs.GetInt("graphicsQuality", currentOption.graphicsQuality);
             currentOption.brightness = PlayerPrefs.GetFloat("brightness", currentOption.brightness);
 
-            // 声音设置
             currentOption.autoPause = PlayerPrefs.GetInt("autoPause", currentOption.autoPause ? 1 : 0) == 1;
             currentOption.masterVolumeMuted = PlayerPrefs.GetInt("masterVolumeMuted", currentOption.masterVolumeMuted ? 1 : 0) == 1;
             currentOption.masterVolume = PlayerPrefs.GetFloat("masterVolume", currentOption.masterVolume);
@@ -106,7 +143,6 @@ namespace ReunionMovement.Core
             currentOption.sfxMuted = PlayerPrefs.GetInt("sfxMuted", currentOption.sfxMuted ? 1 : 0) == 1;
             currentOption.sfxVolume = PlayerPrefs.GetFloat("sfxVolume", currentOption.sfxVolume);
 
-            // UI 输入按键绑定
             currentOption.uiNavUp = PlayerPrefs.GetString("uiNavUp", currentOption.uiNavUp);
             currentOption.uiNavDown = PlayerPrefs.GetString("uiNavDown", currentOption.uiNavDown);
             currentOption.uiNavLeft = PlayerPrefs.GetString("uiNavLeft", currentOption.uiNavLeft);
@@ -115,49 +151,24 @@ namespace ReunionMovement.Core
             currentOption.uiCancel = PlayerPrefs.GetString("uiCancel", currentOption.uiCancel);
             currentOption.uiToggleToUI = PlayerPrefs.GetString("uiToggleToUI", currentOption.uiToggleToUI);
             currentOption.uiToggleToGameplay = PlayerPrefs.GetString("uiToggleToGameplay", currentOption.uiToggleToGameplay);
-
-            // 读取完毕后立即应用到游戏（分辨率、音量、质量等）
-            ApplyOptions();
         }
 
         /// <summary>
-        /// 保存游戏选项到 PlayerPrefs
+        /// 保存游戏选项到 PlayerPrefs（JSON 格式，单次写入）
         /// </summary>
         public static void SaveOptions()
         {
-            PlayerPrefs.SetString("version", currentOption.version);
-            PlayerPrefs.SetInt("fullscreen", currentOption.fullscreen ? 1 : 0);
-            PlayerPrefs.SetInt("resolutionWidth", currentOption.resolutionWidth);
-            PlayerPrefs.SetInt("resolutionHeight", currentOption.resolutionHeight);
-            PlayerPrefs.SetInt("vsync", currentOption.vsync ? 1 : 0);
-            PlayerPrefs.SetInt("framerate", currentOption.framerate);
-
-            // 将 Multilingual 枚举转换为 string 存储
-            PlayerPrefs.SetString("language", currentOption.language.ToString());
-            PlayerPrefs.SetInt("graphicsQuality", currentOption.graphicsQuality);
-            PlayerPrefs.SetFloat("brightness", currentOption.brightness);
-
-            // 声音设置
-            PlayerPrefs.SetInt("autoPause", currentOption.autoPause ? 1 : 0);
-            PlayerPrefs.SetInt("masterVolumeMuted", currentOption.masterVolumeMuted ? 1 : 0);
-            PlayerPrefs.SetFloat("masterVolume", currentOption.masterVolume);
-            PlayerPrefs.SetInt("musicMuted", currentOption.musicMuted ? 1 : 0);
-            PlayerPrefs.SetFloat("musicVolume", currentOption.musicVolume);
-            PlayerPrefs.SetFloat("musicFadeTime", currentOption.musicFadeTime);
-            PlayerPrefs.SetInt("sfxMuted", currentOption.sfxMuted ? 1 : 0);
-            PlayerPrefs.SetFloat("sfxVolume", currentOption.sfxVolume);
-
-            // UI 输入按键绑定
-            PlayerPrefs.SetString("uiNavUp", currentOption.uiNavUp);
-            PlayerPrefs.SetString("uiNavDown", currentOption.uiNavDown);
-            PlayerPrefs.SetString("uiNavLeft", currentOption.uiNavLeft);
-            PlayerPrefs.SetString("uiNavRight", currentOption.uiNavRight);
-            PlayerPrefs.SetString("uiSubmit", currentOption.uiSubmit);
-            PlayerPrefs.SetString("uiCancel", currentOption.uiCancel);
-            PlayerPrefs.SetString("uiToggleToUI", currentOption.uiToggleToUI);
-            PlayerPrefs.SetString("uiToggleToGameplay", currentOption.uiToggleToGameplay);
-
-            PlayerPrefs.Save();
+            const string jsonKey = "game_options_json";
+            try
+            {
+                var json = JsonConvert.SerializeObject(currentOption);
+                PlayerPrefs.SetString(jsonKey, json);
+                PlayerPrefs.Save();
+            }
+            catch (Exception ex)
+            {
+                Log.Error("保存 GameOption 失败: {0}", ex.Message);
+            }
         }
 
         /// <summary>

@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using System.Threading;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Pool;
 using UnityEngine.Rendering;
@@ -197,16 +196,55 @@ namespace ReunionMovement.Core.Sound
             // 取消正在进行的预热任务
             warmupCts?.Cancel();
             warmupCts = null;
+            // 取消正在进行的淡入淡出
+            fadeTcs?.TrySetCanceled();
+            fadeTcs = null;
+            fadeState = FadeState.None;
+
             startupPools.Clear();
+
+            // 释放预设对象池中的所有 GameObject（Dispose 比 Clear 更彻底）
             foreach (var pool in pooledObjects.Values)
             {
-                pool.Clear();
+                if (pool is IDisposable disposable)
+                    disposable.Dispose();
+                else
+                    pool.Clear();
             }
             pooledObjects.Clear();
+
+            // 销毁所有已生成的音效对象（避免 GameObject 泄漏）
+            foreach (var sfxObj in sfxObjects.Values)
+            {
+                if (sfxObj != null)
+                    UnityEngine.Object.Destroy(sfxObj);
+            }
             sfxObjects.Clear();
+
+            // 停止音乐并释放 AudioSource
+            if (source != null)
+            {
+                source.Stop();
+                source.clip = null;
+            }
+
             audioClipCache?.Clear();
             audioClipCacheOrder?.Clear();
             soundConfigDict?.Clear();
+            soundConfigContainer = null;
+
+            // 销毁音频根节点
+            if (musicRoot != null)
+            {
+                UnityEngine.Object.Destroy(musicRoot);
+                musicRoot = null;
+                source = null;
+            }
+            if (sfxRoot != null)
+            {
+                UnityEngine.Object.Destroy(sfxRoot);
+                sfxRoot = null;
+            }
         }
 
         /// <summary>

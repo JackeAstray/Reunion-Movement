@@ -3,7 +3,6 @@ using ReunionMovement.Common;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.UI.ImageExtensions;
-using Unity.VisualScripting;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif

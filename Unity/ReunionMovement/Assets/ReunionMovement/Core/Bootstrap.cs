@@ -16,9 +16,10 @@ namespace ReunionMovement.Core
 
         /// <summary>
         /// 在第一个场景加载前自动执行，初始化游戏引擎。
+        /// 使用 UniTask.Forget() 替代 async void，确保异常能被 UniTask 调度器正确捕获。
         /// </summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        private static async void OnBeforeSceneLoad()
+        private static void OnBeforeSceneLoad()
         {
             // 防止编辑器 Domain Reload 时重复执行
             if (isInitialized) return;
@@ -39,17 +40,16 @@ namespace ReunionMovement.Core
                 }
             }
 
-            try
-            {
-                await InitializeEngineAsync();
-            }
-            catch (Exception ex)
+            // 使用 Forget() 替代 async void：
+            // - 异常会通过 UniTaskScheduler.UnobservedTaskException 传播（可全局订阅）
+            // - 同时提供内联错误处理，清理部分初始化的引擎状态
+            InitializeEngineAsync().Forget(ex =>
             {
                 Log.Error("[Bootstrap] 启动过程发生未处理异常: {0}\n{1}", ex.Message, ex.StackTrace);
                 isInitialized = false;
                 // 清理可能已部分初始化的引擎，避免状态残留与 GameObject 泄漏
                 GameEngine.Current?.Dispose();
-            }
+            });
         }
 
         /// <summary>
