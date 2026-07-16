@@ -54,9 +54,14 @@ namespace ReunionMovement.Common.Util.HttpService
             return Post(uri, Encoding.UTF8.GetBytes(json), "application/json");
         }
 
+        private static readonly JsonSerializerSettings SafeJsonSettings = new JsonSerializerSettings
+        {
+            TypeNameHandling = TypeNameHandling.None
+        };
+
         public IHttpRequest PostJson<T>(string uri, T payload) where T : class
         {
-            var json = JsonConvert.SerializeObject(payload);
+            var json = JsonConvert.SerializeObject(payload, SafeJsonSettings);
             return PostJson(uri, json);
         }
 

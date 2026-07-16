@@ -292,14 +292,9 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static int GetNearestPower2(int num)
         {
-            if (num == 0)
-            {
-                return 0;
-            }
-
             if (num <= 0)
             {
-                Log.Error("GetNearestPower2: 输入必须为正整数");
+                Log.Error("GetNearestPower2: 输入必须为正整数, 当前值: {0}", num);
                 return 0;
             }
 
@@ -540,11 +535,30 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 打开一个URL链接
+        /// 打开一个URL链接（仅允许 http/https 协议，防止打开恶意链接或本地文件）
         /// </summary>
         /// <param name="url"></param>
         public static void OpenURL(string url)
         {
+            if (string.IsNullOrEmpty(url))
+            {
+                Log.Error("OpenURL: URL 不能为空");
+                return;
+            }
+
+            // 验证 URL 协议，仅允许 http 和 https
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                Log.Error("OpenURL: 无效的 URL 格式: {0}", url);
+                return;
+            }
+
+            if (uri.Scheme != "https" && uri.Scheme != "http")
+            {
+                Log.Error("OpenURL: 不支持的协议 '{0}'，仅允许 http/https", uri.Scheme);
+                return;
+            }
+
             Application.OpenURL(url);
         }
 

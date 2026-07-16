@@ -323,10 +323,16 @@ namespace ReunionMovement.Common.Util.StateMachine
         /// 此方法仅适用于保存状态结构（标签、超时等），不保存行为。
         /// </summary>
         /// <returns></returns>
+        // 全局共用的 JSON 序列化设置（禁用 TypeNameHandling 防止反序列化漏洞）
+        private static readonly JsonSerializerSettings SafeJsonSettings = new JsonSerializerSettings
+        {
+            TypeNameHandling = TypeNameHandling.None
+        };
+
         public string Serialize()
         {
             // 序列化当前状态、历史状态等信息（不含 Action 委托）
-            return JsonConvert.SerializeObject(this);
+            return JsonConvert.SerializeObject(this, SafeJsonSettings);
         }
 
         /// <summary>
@@ -336,7 +342,7 @@ namespace ReunionMovement.Common.Util.StateMachine
         /// <param name="json"></param>
         public StateMachine<TLabel> Deserialize(string json)
         {
-            return JsonConvert.DeserializeObject<StateMachine<TLabel>>(json);
+            return JsonConvert.DeserializeObject<StateMachine<TLabel>>(json, SafeJsonSettings);
         }
 
         /// <summary>
