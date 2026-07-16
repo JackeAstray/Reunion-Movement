@@ -31,7 +31,7 @@ namespace ReunionMovement.Common.Util
             }
             else
             {
-                Log.Error($"注册对象池失败：已存在对象池 {name} ！");
+                Log.Error("注册对象池失败：已存在对象池 {0} ！", name);
             }
         }
 
@@ -46,7 +46,7 @@ namespace ReunionMovement.Common.Util
             }
             else
             {
-                Log.Error($"移除对象池失败：不存在对象池 {name} ！");
+                Log.Error("移除对象池失败：不存在对象池 {0} ！", name);
             }
         }
 
@@ -56,7 +56,7 @@ namespace ReunionMovement.Common.Util
             {
                 return pool.Count;
             }
-            Log.Warning($"获取对象数量失败：不存在对象池 {name} ！");
+            Log.Warning("获取对象数量失败：不存在对象池 {0} ！", name);
             return 0;
         }
 
@@ -66,7 +66,7 @@ namespace ReunionMovement.Common.Util
             {
                 return pool.Spawn();
             }
-            Log.Error($"生成对象失败：不存在对象池 {name} ！");
+            Log.Error("生成对象失败：不存在对象池 {0} ！", name);
             return null;
         }
 
@@ -78,7 +78,7 @@ namespace ReunionMovement.Common.Util
             }
             else
             {
-                Log.Error($"回收对象失败：不存在对象池 {name} ！");
+                Log.Error("回收对象失败：不存在对象池 {0} ！", name);
             }
         }
 
@@ -97,7 +97,7 @@ namespace ReunionMovement.Common.Util
             }
             else
             {
-                Log.Error($"回收对象失败：不存在对象池 {name} ！");
+                Log.Error("回收对象失败：不存在对象池 {0} ！", name);
             }
         }
 
@@ -117,7 +117,7 @@ namespace ReunionMovement.Common.Util
             }
             else
             {
-                Log.Error($"回收对象失败：不存在对象池 {name} ！");
+                Log.Error("回收对象失败：不存在对象池 {0} ！", name);
             }
         }
 
@@ -129,7 +129,7 @@ namespace ReunionMovement.Common.Util
             }
             else
             {
-                Log.Error($"清空对象池失败：不存在对象池 {name} ！");
+                Log.Error("清空对象池失败：不存在对象池 {0} ！", name);
             }
         }
 

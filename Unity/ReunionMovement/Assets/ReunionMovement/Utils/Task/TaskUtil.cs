@@ -222,10 +222,10 @@ namespace ReunionMovement.Common.Util
                     Log.Debug("任务被取消");
                     break;
                 case TimeoutException timeoutEx:
-                    Log.Warning($"任务超时: {timeoutEx.Message}");
+                    Log.Warning("任务超时: {0}", timeoutEx.Message);
                     break;
                 default:
-                    Log.Error($"任务异常: {ex?.Message}");
+                    Log.Error("任务异常: {0}", ex?.Message);
                     break;
             }
         }

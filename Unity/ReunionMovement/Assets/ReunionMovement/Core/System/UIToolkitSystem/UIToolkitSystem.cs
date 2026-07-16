@@ -257,7 +257,7 @@ namespace ReunionMovement.Core.UIToolkit
                     .Load<VisualTreeAsset>($"{UXML_PATH_PREFIX}{panelName}", isCache: true);
                 if (asset == null)
                 {
-                    Log.Error($"[UIToolkitSystem] 无法加载 UXML: Resources/{UXML_PATH_PREFIX}{panelName}");
+                    Log.Error("[UIToolkitSystem] 无法加载 UXML: Resources/{0}{1}", UXML_PATH_PREFIX, panelName);
                     return null;
                 }
                 panelAssetCache[panelName] = asset;
@@ -276,7 +276,7 @@ namespace ReunionMovement.Core.UIToolkit
             panel.OnOpen(data);
             OnPanelOpenSubject.OnNext(panel);
 
-            Log.Debug($"[UIToolkitSystem] 打开面板: {panelName}");
+            Log.Debug("[UIToolkitSystem] 打开面板: {0}", panelName);
             return panel;
         }
 
@@ -322,7 +322,7 @@ namespace ReunionMovement.Core.UIToolkit
                     .LoadAsync<VisualTreeAsset>($"{UXML_PATH_PREFIX}{panelName}", isCache: true);
                 if (asset == null)
                 {
-                    Log.Error($"[UIToolkitSystem] 无法加载 UXML: Resources/{UXML_PATH_PREFIX}{panelName}");
+                    Log.Error("[UIToolkitSystem] 无法加载 UXML: Resources/{0}{1}", UXML_PATH_PREFIX, panelName);
                     return null;
                 }
                 panelAssetCache[panelName] = asset;
@@ -341,7 +341,7 @@ namespace ReunionMovement.Core.UIToolkit
             panel.OnOpen(data);
             OnPanelOpenSubject.OnNext(panel);
 
-            Log.Debug($"[UIToolkitSystem] 打开面板: {panelName}");
+            Log.Debug("[UIToolkitSystem] 打开面板: {0}", panelName);
             return panel;
         }
 
@@ -370,7 +370,7 @@ namespace ReunionMovement.Core.UIToolkit
             RebuildStackWithout(panel);
 
             OnPanelCloseSubject.OnNext(panel);
-            Log.Debug($"[UIToolkitSystem] 关闭面板: {panelName}");
+            Log.Debug("[UIToolkitSystem] 关闭面板: {0}", panelName);
         }
 
         /// <summary>

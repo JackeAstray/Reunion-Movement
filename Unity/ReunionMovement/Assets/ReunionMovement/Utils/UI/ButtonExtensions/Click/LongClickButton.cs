@@ -101,7 +101,7 @@ namespace ReunionMovement.UI.ButtonClick
         /// </summary>
         private void TriggerLongClick()
         {
-            Log.Debug($"[LongClickButton] 长按事件触发。");
+            Log.Debug("[LongClickButton] 长按事件触发。");
             onLongClick?.Invoke();
             ResetPressTime();
         }

@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using System.Text;
+using Cysharp.Text;
 using ReunionMovement.Common;
 using UnityEngine;
 
@@ -10,7 +10,8 @@ namespace ReunionMovement.Common
     /// 日志辅助器实现，负责格式化日志并输出到 Unity Console 以及可选的文件。
     ///
     /// 优化说明：
-    /// - 使用 [ThreadStatic] 缓存的 StringBuilder 进行单次拼接，消除 string.Format + string.Concat 双次分配。
+    /// - 使用 ZString 的 Utf8ValueStringBuilder（struct，池化缓冲）替代 StringBuilder，
+    ///   消除 StringBuilder 本身的堆分配，实现真正的零分配日志格式化。
     /// - 统一的 Dispatch 方法消除了每个 Log/LogFormat 重载中重复的 switch(level) 分支。
     /// - 文件日志使用异步写入，不阻塞主线程。
     /// </summary>
@@ -44,20 +45,6 @@ namespace ReunionMovement.Common
             "[C2] ",    // Custom2
             "[C3] ",    // Custom3
         };
-
-        // ============================================================
-        //  ThreadStatic StringBuilder（单次拼接，减少 GC 分配）
-        // ============================================================
-        [ThreadStatic]
-        private static StringBuilder s_sb;
-
-        private static StringBuilder GetStringBuilder()
-        {
-            if (s_sb == null)
-                s_sb = new StringBuilder(512);
-            s_sb.Clear();
-            return s_sb;
-        }
 
         // ============================================================
         //  文件日志
@@ -137,12 +124,12 @@ namespace ReunionMovement.Common
         }
 
         /// <summary>
-        /// 构建带颜色 Tag 和频道前缀的完整日志字符串（单次 StringBuilder 拼接，减少分配）。
+        /// 构建带颜色 Tag 和频道前缀的完整日志字符串（ZString 零分配拼接）。
         /// </summary>
         [HideInCallstack]
         private static string BuildLogString(LogLevel level, LogChannel channel, string message)
         {
-            var sb = GetStringBuilder();
+            using var sb = ZString.CreateStringBuilder();
             sb.Append(GetTag(level));
 
             // 频道前缀
@@ -170,9 +157,10 @@ namespace ReunionMovement.Common
             try
             {
                 string channelStr = channel != LogChannel.General
-                    ? $"[{channel}] "
+                    ? ZString.Format("[{0}] ", channel)
                     : "";
-                string line = $"[{DateTime.Now:HH:mm:ss.fff}] [{levelName}] {channelStr}{message}{Environment.NewLine}";
+                string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
+                    DateTime.Now, levelName, channelStr, message, Environment.NewLine);
                 File.AppendAllText(s_logFilePath, line);
             }
             catch
@@ -263,15 +251,20 @@ namespace ReunionMovement.Common
         }
 
         // ============================================================
-        //  内部实现：使用 StringBuilder 单次拼接触发 Dispatch
+        //  内部实现：使用 ZString Utf8ValueStringBuilder 零分配拼接
         // ============================================================
         [HideInCallstack]
         private void LogFormatInternal(LogLevel level, LogChannel channel, string format,
             object arg0)
         {
-            var sb = GetStringBuilder();
+            using var sb = ZString.CreateStringBuilder();
             sb.Append(GetTag(level));
-            AppendChannel(sb, channel);
+            if (channel != LogChannel.General)
+            {
+                int idx = (int)channel;
+                if (idx >= 0 && idx < s_channelShortNames.Length)
+                    sb.Append(s_channelShortNames[idx]);
+            }
             sb.AppendFormat(format, arg0);
             sb.Append(kTagClose);
             string message = sb.ToString();
@@ -284,9 +277,14 @@ namespace ReunionMovement.Common
         private void LogFormatInternal(LogLevel level, LogChannel channel, string format,
             object arg0, object arg1)
         {
-            var sb = GetStringBuilder();
+            using var sb = ZString.CreateStringBuilder();
             sb.Append(GetTag(level));
-            AppendChannel(sb, channel);
+            if (channel != LogChannel.General)
+            {
+                int idx = (int)channel;
+                if (idx >= 0 && idx < s_channelShortNames.Length)
+                    sb.Append(s_channelShortNames[idx]);
+            }
             sb.AppendFormat(format, arg0, arg1);
             sb.Append(kTagClose);
             Dispatch(level, sb.ToString(), null);
@@ -297,9 +295,14 @@ namespace ReunionMovement.Common
         private void LogFormatInternal(LogLevel level, LogChannel channel, string format,
             object arg0, object arg1, object arg2)
         {
-            var sb = GetStringBuilder();
+            using var sb = ZString.CreateStringBuilder();
             sb.Append(GetTag(level));
-            AppendChannel(sb, channel);
+            if (channel != LogChannel.General)
+            {
+                int idx = (int)channel;
+                if (idx >= 0 && idx < s_channelShortNames.Length)
+                    sb.Append(s_channelShortNames[idx]);
+            }
             sb.AppendFormat(format, arg0, arg1, arg2);
             sb.Append(kTagClose);
             Dispatch(level, sb.ToString(), null);
@@ -310,9 +313,14 @@ namespace ReunionMovement.Common
         private void LogFormatInternal(LogLevel level, LogChannel channel, string format,
             object arg0, object arg1, object arg2, object arg3)
         {
-            var sb = GetStringBuilder();
+            using var sb = ZString.CreateStringBuilder();
             sb.Append(GetTag(level));
-            AppendChannel(sb, channel);
+            if (channel != LogChannel.General)
+            {
+                int idx = (int)channel;
+                if (idx >= 0 && idx < s_channelShortNames.Length)
+                    sb.Append(s_channelShortNames[idx]);
+            }
             sb.AppendFormat(format, arg0, arg1, arg2, arg3);
             sb.Append(kTagClose);
             Dispatch(level, sb.ToString(), null);
@@ -323,27 +331,18 @@ namespace ReunionMovement.Common
         private void LogFormatInternal(LogLevel level, LogChannel channel, string format,
             params object[] args)
         {
-            var sb = GetStringBuilder();
+            using var sb = ZString.CreateStringBuilder();
             sb.Append(GetTag(level));
-            AppendChannel(sb, channel);
-            sb.AppendFormat(format, args);
-            sb.Append(kTagClose);
-            Dispatch(level, sb.ToString(), null);
-            WriteToFileFormatted(level, channel, format, args);
-        }
-
-        // ============================================================
-        //  辅助方法
-        // ============================================================
-        [HideInCallstack]
-        private static void AppendChannel(StringBuilder sb, LogChannel channel)
-        {
             if (channel != LogChannel.General)
             {
                 int idx = (int)channel;
                 if (idx >= 0 && idx < s_channelShortNames.Length)
                     sb.Append(s_channelShortNames[idx]);
             }
+            sb.AppendFormat(format, args);
+            sb.Append(kTagClose);
+            Dispatch(level, sb.ToString(), null);
+            WriteToFileFormatted(level, channel, format, args);
         }
 
         private static void WriteToFileFormatted(LogLevel level, LogChannel channel,
@@ -354,9 +353,10 @@ namespace ReunionMovement.Common
             if (string.IsNullOrEmpty(s_logFilePath)) return;
             try
             {
-                string channelStr = channel != LogChannel.General ? $"[{channel}] " : "";
-                string msg = string.Format(format, arg0);
-                string line = $"[{DateTime.Now:HH:mm:ss.fff}] [{level}] {channelStr}{msg}{Environment.NewLine}";
+                string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
+                string msg = ZString.Format(format, arg0);
+                string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
+                    DateTime.Now, level, channelStr, msg, Environment.NewLine);
                 File.AppendAllText(s_logFilePath, line);
             }
             catch { }
@@ -370,9 +370,10 @@ namespace ReunionMovement.Common
             if (string.IsNullOrEmpty(s_logFilePath)) return;
             try
             {
-                string channelStr = channel != LogChannel.General ? $"[{channel}] " : "";
-                string msg = string.Format(format, arg0, arg1);
-                string line = $"[{DateTime.Now:HH:mm:ss.fff}] [{level}] {channelStr}{msg}{Environment.NewLine}";
+                string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
+                string msg = ZString.Format(format, arg0, arg1);
+                string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
+                    DateTime.Now, level, channelStr, msg, Environment.NewLine);
                 File.AppendAllText(s_logFilePath, line);
             }
             catch { }
@@ -386,9 +387,10 @@ namespace ReunionMovement.Common
             if (string.IsNullOrEmpty(s_logFilePath)) return;
             try
             {
-                string channelStr = channel != LogChannel.General ? $"[{channel}] " : "";
-                string msg = string.Format(format, arg0, arg1, arg2);
-                string line = $"[{DateTime.Now:HH:mm:ss.fff}] [{level}] {channelStr}{msg}{Environment.NewLine}";
+                string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
+                string msg = ZString.Format(format, arg0, arg1, arg2);
+                string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
+                    DateTime.Now, level, channelStr, msg, Environment.NewLine);
                 File.AppendAllText(s_logFilePath, line);
             }
             catch { }
@@ -402,9 +404,10 @@ namespace ReunionMovement.Common
             if (string.IsNullOrEmpty(s_logFilePath)) return;
             try
             {
-                string channelStr = channel != LogChannel.General ? $"[{channel}] " : "";
-                string msg = string.Format(format, arg0, arg1, arg2, arg3);
-                string line = $"[{DateTime.Now:HH:mm:ss.fff}] [{level}] {channelStr}{msg}{Environment.NewLine}";
+                string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
+                string msg = ZString.Format(format, arg0, arg1, arg2, arg3);
+                string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
+                    DateTime.Now, level, channelStr, msg, Environment.NewLine);
                 File.AppendAllText(s_logFilePath, line);
             }
             catch { }
@@ -418,9 +421,10 @@ namespace ReunionMovement.Common
             if (string.IsNullOrEmpty(s_logFilePath)) return;
             try
             {
-                string channelStr = channel != LogChannel.General ? $"[{channel}] " : "";
-                string msg = string.Format(format, args);
-                string line = $"[{DateTime.Now:HH:mm:ss.fff}] [{level}] {channelStr}{msg}{Environment.NewLine}";
+                string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
+                string msg = ZString.Format(format, args);
+                string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
+                    DateTime.Now, level, channelStr, msg, Environment.NewLine);
                 File.AppendAllText(s_logFilePath, line);
             }
             catch { }

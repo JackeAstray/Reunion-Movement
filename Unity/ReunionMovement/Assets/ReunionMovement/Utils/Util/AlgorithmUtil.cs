@@ -435,7 +435,7 @@ namespace ReunionMovement.Common.Util
 
             if (startIndex < 0 || count < 0 || startIndex + count > array.Count)
             {
-                Log.Error($"Shuffle: 输入参数错误，startIndex: {startIndex}, count: {count}, array.Count: {array.Count}");
+                Log.Error("Shuffle: 输入参数错误，startIndex: {0}, count: {1}, array.Count: {2}", startIndex, count, array.Count);
                 return;
             }
 
@@ -2228,7 +2228,7 @@ namespace ReunionMovement.Common.Util
                     // 如果需要抛出错误
                     if (raise_error)
                     {
-                        Log.Error($"查找子项失败, id:{objName} ,parent={id1}");
+                        Log.Error("查找子项失败, id:{0} ,parent={1}", objName, id1);
                     }
                     break;
                 }
@@ -3074,7 +3074,7 @@ namespace ReunionMovement.Common.Util
             {
                 if (isLog)
                 {
-                    Log.Error($"[获取错误<object[]>], 越界: {index}  {openArgs.Length}");
+                    Log.Error("[获取错误<object[]>], 越界: {0}  {1}", index, openArgs.Length);
                 }
                 return default;
             }
@@ -3121,7 +3121,7 @@ namespace ReunionMovement.Common.Util
             catch (Exception ex)
             {
                 if (isLog)
-                    Log.Error($"[获取错误<object[]>], '{arrElement}' 无法转换为类型<{typeof(T)}>: {ex}");
+                    Log.Error("[获取错误<object[]>], '{0}' 无法转换为类型<{1}>: {2}", arrElement, typeof(T), ex);
                 return default;
             }
         }

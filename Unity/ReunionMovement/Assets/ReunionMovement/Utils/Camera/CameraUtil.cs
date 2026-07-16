@@ -453,7 +453,7 @@ namespace ReunionMovement.Common.Util
                 Vector2 mousePosition = mouse.position.ReadValue();
                 if (raycastBase.CastRayFromScreenPoint(mousePosition, out RaycastHit hitInfo))
                 {
-                    Log.Debug($"CameraUtil: Hit {hitInfo.collider.gameObject.name} at {hitInfo.point}");
+                    Log.Debug("CameraUtil: Hit {0} at {1}", hitInfo.collider.gameObject.name, hitInfo.point);
                 }
             }
 
@@ -464,7 +464,7 @@ namespace ReunionMovement.Common.Util
                 {
                     if (raycastBase.CastRayFromScreenPoint(t.screenPosition, out RaycastHit hitInfo))
                     {
-                        Log.Debug($"CameraUtil: Hit {hitInfo.collider.gameObject.name} at {hitInfo.point}");
+                        Log.Debug("CameraUtil: Hit {0} at {1}", hitInfo.collider.gameObject.name, hitInfo.point);
                     }
                 }
             }

@@ -37,13 +37,13 @@ namespace ReunionMovement.Common.Util.Download
         {
             if (string.IsNullOrEmpty(classname))
             {
-                Log.Error($"{classname} 是Null 或 Empty");
+                Log.Error("{0} 是Null 或 Empty", classname);
                 return null;
             }
 
             if (!typeMap.TryGetValue(classname, out var type))
             {
-                Log.Error($"未找到名为 {classname} 的下载执行器类型");
+                Log.Error("未找到名为 {0} 的下载执行器类型", classname);
                 return null;
             }
 

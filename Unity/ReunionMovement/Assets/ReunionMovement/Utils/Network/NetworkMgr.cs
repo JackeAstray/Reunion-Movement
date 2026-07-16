@@ -284,7 +284,7 @@ namespace ReunionMovement.Common.Util
             for (int i = 0; i < toClose.Count; i++)
             {
                 try { toClose[i].Close(); }
-                catch (System.Exception ex) { Log.Warning($"NetworkMgr.OnTermination 关闭 channel 失败: {ex.Message}"); }
+                catch (System.Exception ex) { Log.Warning("NetworkMgr.OnTermination 关闭 channel 失败: {0}", ex.Message); }
             }
         }
 

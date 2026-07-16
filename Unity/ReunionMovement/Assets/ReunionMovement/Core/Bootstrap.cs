@@ -45,7 +45,7 @@ namespace ReunionMovement.Core
             }
             catch (Exception ex)
             {
-                Log.Error($"[Bootstrap] 启动过程发生未处理异常: {ex.Message}\n{ex.StackTrace}");
+                Log.Error("[Bootstrap] 启动过程发生未处理异常: {0}\n{1}", ex.Message, ex.StackTrace);
                 isInitialized = false;
             }
         }
@@ -76,7 +76,7 @@ namespace ReunionMovement.Core
 
             if (!result.IsSuccess)
             {
-                Log.Error($"[Bootstrap] 游戏启动失败: {result.ErrorMessage}");
+                Log.Error("[Bootstrap] 游戏启动失败: {0}", result.ErrorMessage);
                 isInitialized = false;
                 // 失败时不阻塞，GameEngine.State == Failed 可供 UI 层查询
             }

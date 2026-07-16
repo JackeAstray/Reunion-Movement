@@ -1831,7 +1831,7 @@ namespace ReunionMovement.UI.ImageExtensions
                     Shader shader = Shader.Find(shaderName);
                     if (shader == null)
                     {
-                        Log.Warning($"着色器 '{shaderName}' 未找到，已回退到 'Sprites/Default'。请确认项目中存在对应着色器。");
+                        Log.Warning("着色器 '{0}' 未找到，已回退到 'Sprites/Default'。请确认项目中存在对应着色器。", shaderName);
                         shader = Shader.Find("Sprites/Default");
                     }
 

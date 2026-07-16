@@ -64,7 +64,7 @@ namespace ReunionMovement.Common.Util
         {
             if (maxValue <= 0)
             {
-                Log.Error($"RandomRange(int): 非法的 maxValue={maxValue}，返回0");
+                Log.Error("RandomRange(int): 非法的 maxValue={0}，返回0", maxValue);
                 return 0;
             }
             return random.Next(maxValue);
@@ -79,7 +79,7 @@ namespace ReunionMovement.Common.Util
         {
             if (maxValue <= 0.0)
             {
-                Log.Error($"RandomRange(double): 非法的 maxValue={maxValue}，返回0");
+                Log.Error("RandomRange(double): 非法的 maxValue={0}，返回0", maxValue);
                 return 0.0;
             }
             return random.NextDouble() * maxValue;
@@ -129,7 +129,7 @@ namespace ReunionMovement.Common.Util
         {
             if (range < 0f)
             {
-                Log.Error($"RandomOffset: 传入的 range 为负值 ({range})，使用其绝对值");
+                Log.Error("RandomOffset: 传入的 range 为负值 ({0})，使用其绝对值", range);
                 range = Math.Abs(range);
             }
             var offset = random.NextDouble() * range - range / 2.0;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using Cysharp.Text;
 using UnityEngine;
 
 namespace ReunionMovement.Common.Util
@@ -140,7 +141,7 @@ namespace ReunionMovement.Common.Util
                 {
                     // Path.Combine 会把以目录分隔符开头的路径视为根路径并忽略第一部分。
                     // 手动拼接以保留 streamingAssetsPath
-                    tempPath = Application.streamingAssetsPath.TrimEnd('/', '\\') + "/" + path.TrimStart('/', '\\');
+                    tempPath = ZString.Concat(Application.streamingAssetsPath.TrimEnd('/', '\\'), "/", path.TrimStart('/', '\\'));
                 }
                 else
                 {
@@ -181,7 +182,7 @@ namespace ReunionMovement.Common.Util
                 }
                 else if (path.StartsWith("/") || path.StartsWith("\\"))
                 {
-                    tempPath = Application.persistentDataPath.TrimEnd('/', '\\') + "/" + path.TrimStart('/', '\\');
+                    tempPath = ZString.Concat(Application.persistentDataPath.TrimEnd('/', '\\'), "/", path.TrimStart('/', '\\'));
                 }
                 else
                 {
@@ -272,7 +273,7 @@ namespace ReunionMovement.Common.Util
                 }
                 catch (Exception ex)
                 {
-                    Log.Error($"GetLocalPath: 创建目录失败 {savePath} -> {ex}");
+                    Log.Error("GetLocalPath: 创建目录失败 {0} -> {1}", savePath, ex);
                 }
             }
 

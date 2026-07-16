@@ -58,7 +58,7 @@ namespace ReunionMovement.Core.Sound
             }
             catch (System.Exception ex)
             {
-                Log.Error($"[PlayMusic] Start 初始化异常: {ex}");
+                Log.Error("[PlayMusic] Start 初始化异常: {0}", ex);
             }
         }
 
@@ -148,7 +148,7 @@ namespace ReunionMovement.Core.Sound
             }
             catch (System.Exception ex)
             {
-                Log.Error($"[PlayMusic] PlayNext 异常: {ex}");
+                Log.Error("[PlayMusic] PlayNext 异常: {0}", ex);
             }
         }
 
@@ -180,7 +180,7 @@ namespace ReunionMovement.Core.Sound
             }
             catch (System.Exception ex)
             {
-                Log.Error($"[PlayMusic] PlayPrevious 异常: {ex}");
+                Log.Error("[PlayMusic] PlayPrevious 异常: {0}", ex);
             }
         }
 
@@ -225,7 +225,7 @@ namespace ReunionMovement.Core.Sound
             }
             catch (System.Exception ex)
             {
-                Log.Error($"[PlayMusic] ResumeMusic 异常: {ex}");
+                Log.Error("[PlayMusic] ResumeMusic 异常: {0}", ex);
             }
         }
 
@@ -330,7 +330,7 @@ namespace ReunionMovement.Core.Sound
                     playbackMonitorCts.Cancel();
                     playbackMonitorCts.Dispose();
                 }
-                catch (System.Exception ex) { Log.Warning($"PlayMusic 取消监控令牌异常: {ex.Message}"); }
+                catch (System.Exception ex) { Log.Warning("PlayMusic 取消监控令牌异常: {0}", ex.Message); }
                 playbackMonitorCts = null;
             }
         }

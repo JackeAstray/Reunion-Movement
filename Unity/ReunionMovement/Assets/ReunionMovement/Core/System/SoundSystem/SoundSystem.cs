@@ -5,8 +5,8 @@ using ReunionMovement.Core.Scene;
 using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
+using System.Linq;
 using System.Threading;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -150,7 +150,7 @@ namespace ReunionMovement.Core.Sound
         {
             if (preloadAudioIndices == null || preloadAudioIndices.Count == 0) return;
 
-            Log.Debug($"[SoundSystem] 开始预热 {preloadAudioIndices.Count} 个音频...");
+            Log.Debug("[SoundSystem] 开始预热 {0} 个音频...", preloadAudioIndices.Count);
             int loaded = 0;
             foreach (int index in preloadAudioIndices)
             {
@@ -161,7 +161,7 @@ namespace ReunionMovement.Core.Sound
                     loaded++;
                 }
             }
-            Log.Debug($"[SoundSystem] 音频预热完成: {loaded}/{preloadAudioIndices.Count}");
+            Log.Debug("[SoundSystem] 音频预热完成: {0}/{1}", loaded, preloadAudioIndices.Count);
         }
 
         public void Update(float logicTime, float realTime)
@@ -407,7 +407,7 @@ namespace ReunionMovement.Core.Sound
                                 }
                                 else
                                 {
-                                    Log.Warning($"PlaySfx: SoundItem 组件缺失于 {go.name}");
+                                    Log.Warning("PlaySfx: SoundItem 组件缺失于 {0}", go.name);
                                 }
                             }
                         }
@@ -416,7 +416,7 @@ namespace ReunionMovement.Core.Sound
             }
             catch (Exception ex)
             {
-                Log.Error($"PlaySfx 异常: {ex.Message}");
+                Log.Error("PlaySfx 异常: {0}", ex.Message);
             }
         }
 
@@ -469,7 +469,7 @@ namespace ReunionMovement.Core.Sound
 
                 if (AudioSettings.Reset(config))
                 {
-                    Log.Debug($"[AudioSettings] 音频配置已应用 DSP Buffer: {config.dspBufferSize} samples, Bluetooth: {isBluetooth}");
+                    Log.Debug("[AudioSettings] 音频配置已应用 DSP Buffer: {0} samples, Bluetooth: {1}", config.dspBufferSize, isBluetooth);
                 }
                 else
                 {
@@ -478,7 +478,7 @@ namespace ReunionMovement.Core.Sound
             }
             catch (System.Exception ex)
             {
-                Log.Warning($"[AudioSettings] 音频配置异常: {ex.Message}");
+                Log.Warning("[AudioSettings] 音频配置异常: {0}", ex.Message);
             }
         }
 
@@ -559,7 +559,7 @@ namespace ReunionMovement.Core.Sound
 
             if (pool.prefab == null)
             {
-                Log.Error($"SoundSystem 对象池 prefab 加载失败，路径: {poolPath}");
+                Log.Error("SoundSystem 对象池 prefab 加载失败，路径: {0}", poolPath);
                 return;
             }
 
@@ -716,14 +716,14 @@ namespace ReunionMovement.Core.Sound
                 else
                 {
                     // 如果没有对应的池，直接销毁
-                    Log.Warning($"没有找到预制件 {prefab.name} 对应的对象池，直接销毁对象。");
+                    Log.Warning("没有找到预制件 {0} 对应的对象池，直接销毁对象。", prefab.name);
                     UnityEngine.Object.Destroy(obj);
                 }
             }
             else
             {
                 // 如果对象不在生成池中，则直接销毁
-                Log.Warning($"对象 {obj.name} 不在生成池中，直接销毁。");
+                Log.Warning("对象 {0} 不在生成池中，直接销毁。", obj.name);
                 UnityEngine.Object.Destroy(obj);
             }
         }
@@ -744,7 +744,7 @@ namespace ReunionMovement.Core.Sound
         /// <param name="prefab"></param>
         public void RecycleAll(GameObject prefab)
         {
-            // 使用 ToList() 创建一个副本，以避免在迭代时修改集合
+            // 使用 ToList() 创建副本，避免迭代时修改集合
             var spawned = sfxObjects.Where(kvp => kvp.Value == prefab).Select(kvp => kvp.Key).ToList();
             foreach (var obj in spawned)
             {
@@ -956,7 +956,7 @@ namespace ReunionMovement.Core.Sound
             }
             else
             {
-                Log.Error($"加载AudioClip失败: {fullPath}");
+                Log.Error("加载AudioClip失败: {0}", fullPath);
             }
             return clip;
         }

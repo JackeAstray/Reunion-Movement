@@ -115,7 +115,6 @@ namespace ReunionMovement.Common.Util
 
         // 用于平滑滚动的取消令牌（跳转时可选，UniTask 零 GC）
         CancellationTokenSource scrollCts = null;
-        Coroutine scrollCoroutine = null;
 
         // 当启用循环时使用的 cycle 倍数（固定为 3, 中间为初始显示区）
         const int LOOP_CYCLES = 3;
@@ -899,7 +898,6 @@ namespace ReunionMovement.Common.Util
             scrollCts?.Cancel();
             scrollCts?.Dispose();
             scrollCts = null;
-            scrollCoroutine = null;
         }
 
         /// <summary>
@@ -949,8 +947,6 @@ namespace ReunionMovement.Common.Util
                     onPageChanged?.Invoke(currentPage);
                 }
             }
-
-            scrollCoroutine = null;
         }
 
         /// <summary>

@@ -142,7 +142,7 @@ namespace ReunionMovement.Core
                 IsAppPlaying = true;
 
                 var elapsed = Time.realtimeSinceStartup - t0;
-                Log.Debug($"[GameEngine] 初始化完成，总耗时: {elapsed:F3}s");
+                Log.Debug("[GameEngine] 初始化完成，总耗时: {0:F3}s", elapsed);
 
                 OnInitialized?.Invoke();
                 return InitResult.Success();
@@ -151,7 +151,7 @@ namespace ReunionMovement.Core
             {
                 State = EngineState.Failed;
                 string errorMsg = ex.InnerException?.Message ?? ex.Message;
-                Log.Error($"[GameEngine] 初始化失败: {errorMsg}\n{ex.StackTrace}");
+                Log.Error("[GameEngine] 初始化失败: {0}\n{1}", errorMsg, ex.StackTrace);
                 OnInitFailed?.Invoke(errorMsg);
                 return InitResult.Failure(errorMsg, ex);
             }
@@ -182,9 +182,9 @@ namespace ReunionMovement.Core
 
 #if UNITY_EDITOR
                 var nowMem = GC.GetTotalMemory(false);
-                Log.Debug($"  Module [{module.GetType().Name}] Init: {endTime - startTime:F3}s, 内存: {nowMem - startMem} bytes");
+                Log.Debug("  Module [{0}] Init: {1:F3}s, 内存: {2} bytes", module.GetType().Name, endTime - startTime, nowMem - startMem);
 #else
-                Log.Debug($"  Module [{module.GetType().Name}] Init: {endTime - startTime:F3}s");
+                Log.Debug("  Module [{0}] Init: {1:F3}s", module.GetType().Name, endTime - startTime);
 #endif
             }
         }

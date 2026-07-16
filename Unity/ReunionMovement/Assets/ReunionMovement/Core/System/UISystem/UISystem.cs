@@ -142,7 +142,7 @@ namespace ReunionMovement.Core.UI
             var windowAsset = uiObj.GetComponent<UIWindowAsset>();
             if (windowAsset == null)
             {
-                Log.Error($"UI对象 {uiObj.name} 缺少 UIWindowAsset 组件！");
+                Log.Error("UI对象 {0} 缺少 UIWindowAsset 组件！", uiObj.name);
                 return;
             }
             var parent = windowAsset.panelType switch
@@ -156,7 +156,7 @@ namespace ReunionMovement.Core.UI
             uiObj.transform.SetParent(parent);
             if (parent == uiRoot.transform)
             {
-                Log.Error($"没有默认PanelType: {windowAsset.panelType}");
+                Log.Error("没有默认PanelType: {0}", windowAsset.panelType);
             }
         }
 
@@ -175,7 +175,7 @@ namespace ReunionMovement.Core.UI
             }
 
             GameObject uiObj = ResourcesSystem.Instance.InstantiateAsset<GameObject>(Config.UIPath + name);
-            Log.Debug($"[UISystem] LoadWindow({name}) Instantiate → {(uiObj ? uiObj.name : "NULL")}, activeSelf={uiObj?.activeSelf}");
+            Log.Debug("[UISystem] LoadWindow({0}) Instantiate → {1}, activeSelf={2}", name, (uiObj ? uiObj.name : "NULL"), uiObj?.activeSelf);
             if (uiObj == null)
             {
                 return null;
@@ -189,11 +189,11 @@ namespace ReunionMovement.Core.UI
             var uiController = uiObj.GetComponent<UIController>() ?? CreateUIController(uiObj, name);
             if (uiController == null)
             {
-                Log.Error($"加载 UI {name} 失败，找不到或无法创建 UIController 脚本！");
+                Log.Error("加载 UI {0} 失败，找不到或无法创建 UIController 脚本！", name);
                 UnityEngine.Object.Destroy(uiObj);
                 return null;
             }
-            Log.Debug($"[UISystem] LoadWindow({name}) uiController={uiController.GetType().Name}");
+            Log.Debug("[UISystem] LoadWindow({0}) uiController={1}", name, uiController.GetType().Name);
 
             var uiLoadState = new UILoadState(name)
             {
@@ -207,7 +207,7 @@ namespace ReunionMovement.Core.UI
             uiStateCache.Add(name, uiLoadState);
 
             InitWindow(uiLoadState, uiLoadState.uiWindow, uiLoadState.openWhenFinish, uiLoadState.openArgs);
-            Log.Debug($"[UISystem] LoadWindow({name}) 完成, activeSelf={uiController.gameObject.activeSelf}");
+            Log.Debug("[UISystem] LoadWindow({0}) 完成, activeSelf={1}", name, uiController.gameObject.activeSelf);
 
             return uiLoadState;
         }
@@ -222,7 +222,7 @@ namespace ReunionMovement.Core.UI
 
             uiBase.OnInit();
 
-            Log.Debug($"OnInit UI {uiBase.gameObject.name}");
+            Log.Debug("OnInit UI {0}", uiBase.gameObject.name);
 
             OnInitSubject.OnNext(uiBase);
 
@@ -232,7 +232,7 @@ namespace ReunionMovement.Core.UI
                 // 防御：OnOpen 可能因 BeforeOpen 被子类覆盖而延迟激活，此处兜底
                 if (!uiBase.gameObject.activeSelf)
                 {
-                    Log.Warning($"UI {uiBase.gameObject.name} OnOpen 后仍未激活，强制激活");
+                    Log.Warning("UI {0} OnOpen 后仍未激活，强制激活", uiBase.gameObject.name);
                     uiBase.gameObject.SetActive(true);
                 }
             }
@@ -282,7 +282,7 @@ namespace ReunionMovement.Core.UI
 
             UIController uiBase = uiState.uiWindow;
 
-            Log.Debug($"[UISystem] OnOpen({uiBase.gameObject.name}) activeSelf before={uiBase.gameObject.activeSelf}");
+            Log.Debug("[UISystem] OnOpen({0}) activeSelf before={1}", uiBase.gameObject.name, uiBase.gameObject.activeSelf);
 
             if (uiBase.gameObject.activeSelf)
             {
@@ -292,7 +292,7 @@ namespace ReunionMovement.Core.UI
 
             // 在 BeforeOpen 之前激活，确保 UI 可见（不论子类 BeforeOpen 行为如何）
             uiBase.gameObject.SetActive(true);
-            Log.Debug($"[UISystem] OnOpen({uiBase.gameObject.name}) SetActive(true) → activeSelf={uiBase.gameObject.activeSelf}");
+            Log.Debug("[UISystem] OnOpen({0}) SetActive(true) → activeSelf={1}", uiBase.gameObject.name, uiBase.gameObject.activeSelf);
 
             uiBase.BeforeOpen(args, () =>
             {
@@ -318,7 +318,7 @@ namespace ReunionMovement.Core.UI
             if (!uiStateCache.TryGetValue(uiName, out uiState))
             {
                 uiState = LoadWindow(uiName, true, args);
-                Log.Debug($"[UISystem] OpenWindow({uiName}) LoadWindow → {(uiState != null ? "OK" : "NULL")}");
+                Log.Debug("[UISystem] OpenWindow({0}) LoadWindow → {1}", uiName, (uiState != null ? "OK" : "NULL"));
                 return uiState;
             }
 
@@ -422,14 +422,14 @@ namespace ReunionMovement.Core.UI
             // 未开始Load
             if (!uiStateCache.TryGetValue(name, out uiState))
             {
-                Log.Error($"[CloseWindow]没有加载的UIWindow: {name}");
+                Log.Error("[CloseWindow]没有加载的UIWindow: {0}", name);
                 return;
             }
 
             // Loading中
             if (uiState.isLoading)
             {
-                Log.Error($"[CloseWindow]是加载中的{name}");
+                Log.Error("[CloseWindow]是加载中的{0}", name);
                 uiState.openWhenFinish = false;
                 return;
             }
@@ -492,7 +492,7 @@ namespace ReunionMovement.Core.UI
             uiStateCache.TryGetValue(uiName, out uiState);
             if (uiState == null || uiState.uiWindow == null)
             {
-                Log.Warning($"{uiName} 已被销毁");
+                Log.Warning("{0} 已被销毁", uiName);
                 return;
             }
 
@@ -755,7 +755,7 @@ namespace ReunionMovement.Core.UI
             }
             if (type == null)
             {
-                Log.Error($"CreateUIController: 未能找到UI脚本组件 ReunionMovement.Core.UI.{uiTemplateName}！");
+                Log.Error("CreateUIController: 未能找到UI脚本组件 ReunionMovement.Core.UI.{0}！", uiTemplateName);
                 return null;
             }
             UIController uiBase = uiObj.AddComponent(type) as UIController;
@@ -771,7 +771,7 @@ namespace ReunionMovement.Core.UI
             action();
             float elapsed = Time.realtimeSinceStartup - startTime;
 
-            Log.Debug($"{message}, cost {elapsed}");
+            Log.Debug("{0}, cost {1}", message, elapsed);
         }
 
         /// <summary>

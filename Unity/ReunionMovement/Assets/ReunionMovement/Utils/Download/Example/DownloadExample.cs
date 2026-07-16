@@ -105,17 +105,17 @@ public class DownloadExample : MonoBehaviour
 
     public void OnProgress(float arg)
     {
-        Log.Debug($"下载进度: {arg * 100}%");
+        Log.Debug("下载进度: {0}%", arg * 100);
     }
 
     public void OnSuccess()
     {
-        Log.Debug($"完成全部下载");
+        Log.Debug("完成全部下载");
     }
 
     public void OnError(string arg)
     {
-        Log.Error($"错误: {arg}");
+        Log.Error("错误: {0}", arg);
     }
 
     // 保留兼容旧回调

@@ -216,11 +216,11 @@ namespace ReunionMovement.Core.EventMessage
             {
                 subject?.Dispose();
                 eventSubjects.Remove(type);
-                Log.Debug($"清除事件类型 {type} 的所有监听器");
+                Log.Debug("清除事件类型 {0} 的所有监听器", type);
             }
             else
             {
-                Log.Warning($"尝试清除不存在的事件类型 {type} 的监听器");
+                Log.Warning("尝试清除不存在的事件类型 {0} 的监听器", type);
             }
         }
 

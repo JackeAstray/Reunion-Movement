@@ -57,7 +57,7 @@ namespace ReunionMovement.UI.ButtonClick
         /// </summary>
         private void Press()
         {
-            Log.Debug($"[DoubleClickButton] 双击事件触发。");
+            Log.Debug("[DoubleClickButton] 双击事件触发。");
             if (onDoubleClick != null)
             {
                 onDoubleClick.Invoke();

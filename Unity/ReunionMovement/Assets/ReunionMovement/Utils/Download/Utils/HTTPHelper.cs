@@ -132,12 +132,12 @@ namespace ReunionMovement.Common.Util.Download
                 }
             }
 
-            Log.Debug($"Head URI={uri}");
+            Log.Debug("Head URI={0}", uri);
             if (headers != null)
             {
                 foreach (var str in headers)
                 {
-                    Log.Debug($"[{str.Key}={str.Value}]");
+                    Log.Debug("[{0}={1}]", str.Key, str.Value);
                 }
             }
 
@@ -173,7 +173,7 @@ namespace ReunionMovement.Common.Util.Download
             {
                 foreach (var str in headers)
                 {
-                    Log.Debug($"[{str.Key}={str.Value}]");
+                    Log.Debug("[{0}={1}]", str.Key, str.Value);
                 }
             }
 

@@ -66,9 +66,6 @@ namespace ReunionMovement.Core.UIInput
         /// <summary>进入 UI 模式前的玩家操作映射状态缓存（用于恢复）</summary>
         private bool playerMapWasEnabled = false;
 
-        /// <summary>切换键是否已按下（防止持续触发）</summary>
-        private bool toggleKeyPressed = false;
-
         /// <summary>UI 模式下的 Cancel 是否已被本帧处理（防止与切换键冲突）</summary>
         private bool cancelHandledThisFrame = false;
 
@@ -239,7 +236,7 @@ namespace ReunionMovement.Core.UIInput
             }
             catch (Exception ex)
             {
-                Log.Error($"UIInputSystem: 应用按键绑定失败: {ex.Message}");
+                Log.Error("UIInputSystem: 应用按键绑定失败: {0}", ex.Message);
             }
         }
 
@@ -385,7 +382,7 @@ namespace ReunionMovement.Core.UIInput
             var action = inputActions.FindAction($"UI/{actionName}");
             if (action == null)
             {
-                Log.Warning($"UIInputSystem: 找不到 UI/{actionName} Action");
+                Log.Warning("UIInputSystem: 找不到 UI/{0} Action", actionName);
                 onCancel?.Invoke();
                 return;
             }
@@ -606,7 +603,7 @@ namespace ReunionMovement.Core.UIInput
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (focusStack.Count > 32)
             {
-                Log.Warning($"UIInputSystem: 焦点栈深度异常 ({focusStack.Count})，可能存在 Push/Pop 不对称调用");
+                Log.Warning("UIInputSystem: 焦点栈深度异常 ({0})，可能存在 Push/Pop 不对称调用", focusStack.Count);
             }
 #endif
         }
@@ -667,7 +664,7 @@ namespace ReunionMovement.Core.UIInput
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (focusStack.Count > 0)
             {
-                Log.Debug($"UIInputSystem: ClearFocus 清除了 {focusStack.Count} 个焦点记录");
+                Log.Debug("UIInputSystem: ClearFocus 清除了 {0} 个焦点记录", focusStack.Count);
             }
 #endif
             focusStack.Clear();
@@ -715,7 +712,6 @@ namespace ReunionMovement.Core.UIInput
             }
 
             currentMode = InputMode.UI;
-            toggleKeyPressed = false;
 
             // 尝试聚焦当前打开的 UI 窗口
             TryFocusCurrentUI();
@@ -754,7 +750,6 @@ namespace ReunionMovement.Core.UIInput
             }
 
             currentMode = InputMode.Gameplay;
-            toggleKeyPressed = false;
 
             Log.Debug("UIInputSystem: 切换到角色控制模式");
             InputModeChangedSubject.OnNext(InputMode.Gameplay);

@@ -20,7 +20,7 @@ namespace ReunionMovement.Example
             subscription = subject.Value
                 .Subscribe(value =>
                 {
-                    Log.Debug($"收到数值变化通知: {value}");
+                    Log.Debug("收到数值变化通知: {0}", value);
                     exampleValue = value;
                 });
         }

@@ -109,7 +109,7 @@ namespace ReunionMovement.Common.Util.Download
                 }
                 catch (Exception ex)
                 {
-                    Log.Error($"删除文件失败: {ex}");
+                    Log.Error("删除文件失败: {0}", ex);
                 }
             }
             return false;
@@ -128,7 +128,7 @@ namespace ReunionMovement.Common.Util.Download
             {
                 if (uwr.result != UnityWebRequest.Result.Success)
                 {
-                    Log.Debug($"URI {Uri} 不支持HEAD请求，因此不支持分块下载。 错误: {uwr.error}");
+                    Log.Debug("URI {0} 不支持HEAD请求，因此不支持分块下载。 错误: {1}", Uri, uwr.error);
                     MultipartDownload = false;
                     return;
                 }
@@ -140,14 +140,14 @@ namespace ReunionMovement.Common.Util.Download
                     !headers.TryGetValue("Accept-Ranges", out var acceptRanges) ||
                     !string.Equals(acceptRanges, "bytes", StringComparison.OrdinalIgnoreCase))
                 {
-                    Log.Debug($"URI {Uri} 不支持分块下载。");
+                    Log.Debug("URI {0} 不支持分块下载。", Uri);
                     MultipartDownload = false;
                     return;
                 }
 
                 if (!int.TryParse(headers["Content-Length"], out expectedSize))
                 {
-                    Log.Debug($"URI {Uri} 不支持分块下载。Content-Length 解析失败。");
+                    Log.Debug("URI {0} 不支持分块下载。Content-Length 解析失败。", Uri);
                     MultipartDownload = false;
                     return;
                 }
@@ -209,7 +209,7 @@ namespace ReunionMovement.Common.Util.Download
                     int remaining = expectedSize - fileSize;
                     if (remaining <= 0)
                     {
-                        Log.Warning($"文件已存在且大小符合要求，跳过下载: {DownloadResultPath}");
+                        Log.Warning("文件已存在且大小符合要求，跳过下载: {0}", DownloadResultPath);
                         return null;
                     }
 
