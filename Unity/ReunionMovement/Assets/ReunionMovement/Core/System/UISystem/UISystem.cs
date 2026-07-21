@@ -307,10 +307,9 @@ namespace ReunionMovement.Core.UI
 
         /// <summary>
         /// 打开窗口（非复制）
+        /// <summary>
+        /// 打开窗口（字符串键）—— 保持现有 API 兼容
         /// </summary>
-        /// <param name="uiName"></param>
-        /// <param name="args"></param>
-        /// <returns></returns>
         public UILoadState OpenWindow(string uiName, params object[] args)
         {
             //TODO: 需要先创建脚本对象，再根据脚本中的值进行加载资源
@@ -357,6 +356,20 @@ namespace ReunionMovement.Core.UI
             }
             OnSet(uiState, args);
             return uiState;
+        }
+
+        /// <summary>
+        /// [推荐] 类型安全的打开窗口重载 —— 通过 UIController 类型名自动推断 UI 名称。
+        /// 使用方式：UISystem.Instance.OpenWindow&lt;PopupUIPlane&gt;(args);
+        /// 优点：编译时检查、重构安全、无字符串拼写错误。
+        /// </summary>
+        /// <typeparam name="T">UI 控制器类型（类名需与 prefab 名一致）</typeparam>
+        /// <param name="args">打开参数</param>
+        public UILoadState OpenWindow<T>(params object[] args) where T : UIController
+        {
+            // 约定：类型名 = prefab 名（如 PopupUIPlane 对应 PopupUIPlane.prefab）
+            string uiName = typeof(T).Name;
+            return OpenWindow(uiName, args);
         }
 
         /// <summary>

@@ -24,6 +24,7 @@ namespace ReunionMovement.Core.Languages
 
         /// <summary>R3 订阅管理器 —— OnDestroy 时自动取消所有订阅</summary>
         private IDisposable languageSubscription;
+        private IDisposable initSubscription;
 
         void Start()
         {
@@ -34,7 +35,9 @@ namespace ReunionMovement.Core.Languages
             }
             else
             {
-                GameEngine.OnInitialized += OnGameInitFinished;
+                // 使用 R3 Subject 订阅（自动管理生命周期，无需手动 -=）
+                initSubscription = GameEngine.OnInitializedSubject
+                    .Subscribe(_ => OnGameInitFinished());
             }
         }
 
@@ -57,16 +60,19 @@ namespace ReunionMovement.Core.Languages
 
             // 首次更新文本
             GetTextLanguage();
+
+            // 初始化完成后释放 initSubscription（仅需一次）
+            initSubscription?.Dispose();
+            initSubscription = null;
         }
 
         private void OnDestroy()
         {
-            // 取消订阅静态事件，防止悬空引用
-            GameEngine.OnInitialized -= OnGameInitFinished;
-
-            // 释放 R3 订阅
+            // 释放 R3 订阅（无需手动 -=，IDisposable 自动管理）
             languageSubscription?.Dispose();
             languageSubscription = null;
+            initSubscription?.Dispose();
+            initSubscription = null;
         }
 
         /// <summary>
