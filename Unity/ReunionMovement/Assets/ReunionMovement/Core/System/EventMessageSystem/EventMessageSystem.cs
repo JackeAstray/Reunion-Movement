@@ -11,14 +11,20 @@ using System.Text;
 namespace ReunionMovement.Core.EventMessage
 {
     /// <summary>
-    /// 事件数据
+    /// 事件数据（值类型 —— 零堆分配，R3 Subject&lt;T&gt; 原生支持 struct）
     /// </summary>
-    public class EventData
+    public readonly struct EventData
     {
         /// <summary>事件类型</summary>
-        public EventMessageType type;
+        public readonly EventMessageType type;
         /// <summary>事件传递的数据</summary>
-        public object data;
+        public readonly object data;
+
+        public EventData(EventMessageType type, object data)
+        {
+            this.type = type;
+            this.data = data;
+        }
     }
 
     /// <summary>
@@ -155,11 +161,7 @@ namespace ReunionMovement.Core.EventMessage
         {
             if (eventSubjects.TryGetValue(eventType, out var subject))
             {
-                subject.OnNext(new EventData
-                {
-                    type = eventType,
-                    data = eventData
-                });
+                subject.OnNext(new EventData(eventType, eventData));
             }
         }
 
@@ -172,11 +174,7 @@ namespace ReunionMovement.Core.EventMessage
         {
             if (eventSubjects.TryGetValue(eventType, out var subject))
             {
-                subject.OnNext(new EventData
-                {
-                    type = eventType,
-                    data = eventData
-                });
+                subject.OnNext(new EventData(eventType, eventData));
             }
         }
 

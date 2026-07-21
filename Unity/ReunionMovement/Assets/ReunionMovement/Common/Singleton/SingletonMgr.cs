@@ -3,25 +3,29 @@ using UnityEngine;
 namespace ReunionMovement.Common
 {
     /// <summary>
-    /// 单例管理器（线程安全）
+    /// 单例管理器（线程安全）。
+    ///
+    /// 与 Lazy&lt;T&gt; 模式不同，此 MonoBehaviour 单例适用于需要挂载到场景 GameObject 的组件。
+    /// 纯 C# 系统模块推荐使用 Lazy&lt;T&gt; 单例（更轻量，无需 GameObject）。
     /// </summary>
     public class SingletonMgr<T> : MonoBehaviour where T : MonoBehaviour
     {
-        private static volatile T instance;
+        private static T instance;
         private static readonly object instanceLock = new object();
 
+        /// <summary>单例实例（线程安全访问）</summary>
         public static T Instance
         {
             get
             {
-                if (instance == null)
+                // 快速路径：无锁读取（Unity 主线程调用时无需锁）
+                if (instance != null) return instance;
+
+                lock (instanceLock)
                 {
-                    lock (instanceLock)
+                    if (instance == null)
                     {
-                        if (instance == null)
-                        {
-                            instance = CreateInstance();
-                        }
+                        instance = CreateInstance();
                     }
                 }
                 return instance;
@@ -30,63 +34,44 @@ namespace ReunionMovement.Common
             {
                 lock (instanceLock)
                 {
-                    if (instance == null)
+                    if (instance != null && instance != value)
+                    {
+                        // 已有不同实例：销毁新对象，保留原实例
+                        if (value != null && value.gameObject != null)
+                            Destroy(value.gameObject);
+                        return;
+                    }
+                    if (instance == null && value != null)
                     {
                         instance = value;
-                        isInitialized = true;
                         OnInstanceCreated?.Invoke(instance);
-                    }
-                    else if (instance != value)
-                    {
-                        Destroy(value.gameObject);
                     }
                 }
             }
         }
 
-        /// <summary>
-        /// 是否初始化
-        /// </summary>
-        private static bool isInitialized = false;
+        /// <summary>单例是否已初始化（不会触发懒加载）</summary>
         public static bool IsInitialized
         {
-            get { return isInitialized; }
+            get
+            {
+                lock (instanceLock) { return instance != null; }
+            }
         }
 
-        /// <summary>
-        /// 单例实例创建事件
-        /// </summary>
+        /// <summary>单例实例创建事件</summary>
         public static event System.Action<T> OnInstanceCreated;
 
-        /// <summary>
-        /// 单例实例销毁事件
-        /// </summary>
+        /// <summary>单例实例销毁事件</summary>
         public static event System.Action OnInstanceDestroyed;
 
         protected virtual void Awake()
         {
-            lock (instanceLock)
-            {
-                if (instance != null && instance != this)
-                {
-                    Log.Warning("[SingletonMgr] 检测到重复的 {0} 单例，已销毁: {1}", typeof(T).Name, gameObject.name);
-                    Destroy(this.gameObject);
-                    return;
-                }
-
-                // 直接设置静态字段，跳过 setter 中的重复检查
-                if (!isInitialized)
-                {
-                    instance = this as T;
-                    isInitialized = true;
-                    OnInstanceCreated?.Invoke(instance);
-                }
-            }
+            // 使用 setter 设置实例（自动处理重复检测与事件触发）
+            Instance = this as T;
         }
 
-        /// <summary>
-        /// 手动销毁单例
-        /// </summary>
+        /// <summary>手动销毁单例</summary>
         public static void DestroyInstance()
         {
             lock (instanceLock)
@@ -94,35 +79,27 @@ namespace ReunionMovement.Common
                 if (instance != null)
                 {
                     OnInstanceDestroyed?.Invoke();
-                    Destroy(instance.gameObject);
+                    if (instance.gameObject != null)
+                        Destroy(instance.gameObject);
                     instance = null;
-                    isInitialized = false;
                 }
             }
         }
 
         /// <summary>
-        /// 创建单例实例（仅在场景中无现有实例时作为兜底）。
-        /// 注意：此方法在 Instance getter 的锁内调用，调用方已持有 instanceLock。
+        /// 创建单例实例（场景中无现有实例时作为兜底）。
+        /// 调用方已持有 instanceLock。
         /// </summary>
         private static T CreateInstance()
         {
-            // 使用 FindFirstObjectByType（比 FindObjectOfType 更适合单例语义）
             T foundInstance = FindFirstObjectByType<T>();
             if (foundInstance == null)
             {
-                GameObject singletonObject = new GameObject();
-                foundInstance = singletonObject.AddComponent<T>();
-                singletonObject.name = typeof(T).ToString() + " (Singleton)";
+                var go = new GameObject($"{typeof(T).Name} (Singleton)");
+                foundInstance = go.AddComponent<T>();
             }
 
-            // 仅当尚未初始化时才设置标志并触发事件（避免与 Awake→setter 路径重复触发）
-            if (!isInitialized)
-            {
-                isInitialized = true;
-                OnInstanceCreated?.Invoke(foundInstance);
-            }
-
+            OnInstanceCreated?.Invoke(foundInstance);
             return foundInstance;
         }
     }

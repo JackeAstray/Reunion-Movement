@@ -1,4 +1,5 @@
 ﻿using ReunionMovement.Common;
+using ReunionMovement.Common.Util.Timer;
 using ReunionMovement.Core.Base;
 using ReunionMovement.Core.EventMessage;
 using ReunionMovement.Core.Languages;
@@ -25,27 +26,24 @@ namespace ReunionMovement.Core
         /// 注册所有游戏模块。列表顺序决定初始化顺序（先注册的先初始化）。
         /// ResourcesSystem 必须在最前面（其他模块依赖它加载资源）。
         /// </summary>
+        /// <summary>
+        /// 注册所有游戏模块。列表顺序决定初始化顺序（先注册的先初始化）。
+        /// ResourcesSystem 必须在最前面（其他模块依赖它加载资源）。
+        /// </summary>
         public override IList<ICustomSystem> CreateModules()
         {
-            var modules = base.CreateModules();
+            var modules = new List<ICustomSystem>(10);
 
-            modules.Add(ResourcesSystem.Instance);
-
-            modules.Add(SceneSystem.Instance);
-
-            modules.Add(EventMessageSystem.Instance);
-
-            modules.Add(LanguagesSystem.Instance);
-
-            modules.Add(SoundSystem.Instance);
-
-            modules.Add(UISystem.Instance);
-
-            modules.Add(UIInputSystem.Instance);
-
-            modules.Add(UIToolkitSystem.Instance);
-
-            modules.Add(TerminalSystem.Instance);
+            modules.Add(ResourcesSystem.Instance);    // 0: 资源加载（最高依赖）
+            modules.Add(SceneSystem.Instance);        // 1: 场景管理
+            modules.Add(EventMessageSystem.Instance); // 2: 事件总线
+            modules.Add(LanguagesSystem.Instance);    // 3: 多语言
+            modules.Add(SoundSystem.Instance);        // 4: 音频（需要 Update 驱动淡入淡出）
+            modules.Add(TimerMgr.Instance);           // 5: 计时器（需要 Update 驱动）
+            modules.Add(UISystem.Instance);           // 6: UI 管理
+            modules.Add(UIInputSystem.Instance);      // 7: UI 输入（需要 Update 驱动导航）
+            modules.Add(UIToolkitSystem.Instance);    // 8: UI Toolkit
+            modules.Add(TerminalSystem.Instance);     // 9: 终端（需要 Update 检测按键）
 
             return modules;
         }
@@ -79,8 +77,8 @@ namespace ReunionMovement.Core
             }
 
             // 打开启动 UI 并注册为场景切换时不隐藏
-            UISystem.Instance.OpenWindow("StartGameUIPlane");
-            SceneSystem.Instance.ExcludeWindowFromSceneHide("StartGameUIPlane");
+            UISystem.Instance.OpenWindow(UINames.StartGame);
+            SceneSystem.Instance.ExcludeWindowFromSceneHide(UINames.StartGame);
 
             // 打开启动 UI Toolkit 面板
             // UIToolkitSystem.Instance.OpenPanel<StartGameUIPanel>("StartGame");

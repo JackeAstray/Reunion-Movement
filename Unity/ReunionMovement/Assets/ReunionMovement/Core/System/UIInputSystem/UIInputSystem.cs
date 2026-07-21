@@ -17,7 +17,7 @@ namespace ReunionMovement.Core.UIInput
     /// UI 输入系统 —— 提供键盘/手柄控制 UGUI 导航的核心功能
     /// 包括：自动聚焦首个可选元素、焦点追踪、按键自定义重绑定
     /// </summary>
-    public class UIInputSystem : ICustomSystem, IRequiresUpdate
+    public class UIInputSystem : ICustomSystem
     {
         #region 单例与初始化
         private static readonly Lazy<UIInputSystem> instance = new(() => new UIInputSystem());

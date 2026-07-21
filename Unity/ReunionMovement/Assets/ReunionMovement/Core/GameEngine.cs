@@ -1,6 +1,7 @@
 using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
 using Cysharp.Threading.Tasks;
+using R3;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -22,11 +23,33 @@ namespace ReunionMovement.Core
         /// <summary>当前生命周期状态</summary>
         public EngineState State { get; private set; } = EngineState.Uninitialized;
 
-        /// <summary>初始化完成事件</summary>
-        public static event Action OnInitialized;
+        // ============================================================
+        //  R3 响应式事件（推荐使用）—— 自动管理订阅生命周期，无内存泄漏
+        // ============================================================
 
-        /// <summary>初始化失败事件（供 UI 层展示错误提示）</summary>
-        public static event Action<string> OnInitFailed;
+        /// <summary>初始化完成（R3 Subject）</summary>
+        public static Subject<Unit> OnInitializedSubject { get; private set; } = new Subject<Unit>();
+
+        /// <summary>初始化失败（R3 Subject，参数为错误消息）</summary>
+        public static Subject<string> OnInitFailedSubject { get; private set; } = new Subject<string>();
+
+        // ---- 向后兼容的 C# 事件（已废弃，转发到 R3 Subject）----
+
+        /// <summary>[已废弃] 初始化完成事件。请使用 OnInitializedSubject.Subscribe()</summary>
+        [Obsolete("请使用 GameEngine.OnInitializedSubject.Subscribe()", false)]
+        public static event Action OnInitialized
+        {
+            add { OnInitializedSubject.Subscribe(_ => value()); }
+            remove { /* R3 Subject 不支持移除单个订阅者；请使用 IDisposable.Dispose() */ }
+        }
+
+        /// <summary>[已废弃] 初始化失败事件。请使用 GameEngine.OnInitFailedSubject.Subscribe()</summary>
+        [Obsolete("请使用 GameEngine.OnInitFailedSubject.Subscribe()", false)]
+        public static event Action<string> OnInitFailed
+        {
+            add { OnInitFailedSubject.Subscribe(value); }
+            remove { /* R3 Subject 不支持移除单个订阅者；请使用 IDisposable.Dispose() */ }
+        }
         #endregion
 
         #region 模块
@@ -35,7 +58,7 @@ namespace ReunionMovement.Core
         private IList<ICustomSystem> modules;
 
         /// <summary>需要每帧 Update 的模块（预过滤，避免空调用）</summary>
-        private readonly List<ICustomSystem> updatableModules = new List<ICustomSystem>();
+        private readonly List<ISystemUpdatable> updatableModules = new List<ISystemUpdatable>();
         #endregion
 
         #region 游戏入口
@@ -48,13 +71,45 @@ namespace ReunionMovement.Core
         private float accumTime300ms;
         #endregion
 
-        #region 全局事件（保持向后兼容）
-        /// <summary>每帧更新事件</summary>
-        public static event Action UpdateEvent;
-        /// <summary>每 300ms 更新事件</summary>
-        public static event Action UpdatePer300msEvent;
-        /// <summary>每 1s 更新事件</summary>
-        public static event Action UpdatePer1sEvent;
+        #region 全局事件
+        // ============================================================
+        //  R3 响应式定时事件（推荐使用）
+        // ============================================================
+
+        /// <summary>每帧更新（R3 Subject）</summary>
+        public static Subject<Unit> UpdateSubject { get; private set; } = new Subject<Unit>();
+
+        /// <summary>每 300ms 更新（R3 Subject）</summary>
+        public static Subject<Unit> UpdatePer300msSubject { get; private set; } = new Subject<Unit>();
+
+        /// <summary>每 1s 更新（R3 Subject）</summary>
+        public static Subject<Unit> UpdatePer1sSubject { get; private set; } = new Subject<Unit>();
+
+        // ---- 向后兼容的 C# 事件（已废弃，转发到 R3 Subject）----
+
+        /// <summary>[已废弃] 每帧更新事件。请使用 UpdateSubject.Subscribe()</summary>
+        [Obsolete("请使用 GameEngine.UpdateSubject.Subscribe()", false)]
+        public static event Action UpdateEvent
+        {
+            add { UpdateSubject.Subscribe(_ => value()); }
+            remove { /* R3 Subject 不支持移除单个订阅者；请使用 IDisposable.Dispose() */ }
+        }
+
+        /// <summary>[已废弃] 每 300ms 更新事件。请使用 UpdatePer300msSubject.Subscribe()</summary>
+        [Obsolete("请使用 GameEngine.UpdatePer300msSubject.Subscribe()", false)]
+        public static event Action UpdatePer300msEvent
+        {
+            add { UpdatePer300msSubject.Subscribe(_ => value()); }
+            remove { /* R3 Subject 不支持移除单个订阅者；请使用 IDisposable.Dispose() */ }
+        }
+
+        /// <summary>[已废弃] 每 1s 更新事件。请使用 UpdatePer1sSubject.Subscribe()</summary>
+        [Obsolete("请使用 GameEngine.UpdatePer1sSubject.Subscribe()", false)]
+        public static event Action UpdatePer1sEvent
+        {
+            add { UpdatePer1sSubject.Subscribe(_ => value()); }
+            remove { /* R3 Subject 不支持移除单个订阅者；请使用 IDisposable.Dispose() */ }
+        }
         #endregion
 
         #region 应用状态（保持向后兼容）
@@ -144,7 +199,7 @@ namespace ReunionMovement.Core
                 var elapsed = Time.realtimeSinceStartup - t0;
                 Log.Debug("[GameEngine] 初始化完成，总耗时: {0:F3}s", elapsed);
 
-                OnInitialized?.Invoke();
+                OnInitializedSubject.OnNext(Unit.Default);
                 return InitResult.Success();
             }
             catch (Exception ex)
@@ -152,7 +207,7 @@ namespace ReunionMovement.Core
                 State = EngineState.Failed;
                 string errorMsg = ex.InnerException?.Message ?? ex.Message;
                 Log.Error("[GameEngine] 初始化失败: {0}\n{1}", errorMsg, ex.StackTrace);
-                OnInitFailed?.Invoke(errorMsg);
+                OnInitFailedSubject.OnNext(errorMsg);
                 return InitResult.Failure(errorMsg, ex);
             }
         }
@@ -174,10 +229,10 @@ namespace ReunionMovement.Core
                 await module.Init();
                 var endTime = Time.realtimeSinceStartup;
 
-                // 预过滤：记录需要 Update 的模块
-                if (module is IRequiresUpdate)
+                // 预过滤：记录需要 Update 的模块（ISystemUpdatable 取代 IRequiresUpdate）
+                if (module is ISystemUpdatable updatable)
                 {
-                    updatableModules.Add(module);
+                    updatableModules.Add(updatable);
                 }
 
 #if UNITY_EDITOR
@@ -195,7 +250,7 @@ namespace ReunionMovement.Core
         {
             if (State != EngineState.Running) return;
 
-            UpdateEvent?.Invoke();
+            UpdateSubject.OnNext(Unit.Default);
 
             accumTime1s += deltaTime;
             accumTime300ms += deltaTime;
@@ -203,15 +258,15 @@ namespace ReunionMovement.Core
             if (accumTime1s >= 1.0f)
             {
                 accumTime1s = 0f;
-                UpdatePer1sEvent?.Invoke();
+                UpdatePer1sSubject.OnNext(Unit.Default);
             }
             if (accumTime300ms >= 0.3f)
             {
                 accumTime300ms = 0f;
-                UpdatePer300msEvent?.Invoke();
+                UpdatePer300msSubject.OnNext(Unit.Default);
             }
 
-            // 仅遍历需要 Update 的模块（通过 IRequiresUpdate 标记接口预过滤）
+            // 仅遍历需要 Update 的模块（通过 ISystemUpdatable 接口预过滤）
             for (int i = 0; i < updatableModules.Count; i++)
             {
                 updatableModules[i]?.Update(deltaTime, unscaledDeltaTime);
@@ -257,12 +312,12 @@ namespace ReunionMovement.Core
             GameEntry = null;
             Current = null;
 
-            // 清除静态事件，避免引用残留阻止 GC
-            UpdateEvent = null;
-            UpdatePer300msEvent = null;
-            UpdatePer1sEvent = null;
-            OnInitialized = null;
-            OnInitFailed = null;
+            // 释放 R3 Subject（自动断开所有订阅，避免引用残留阻止 GC）
+            UpdateSubject?.Dispose();
+            UpdatePer300msSubject?.Dispose();
+            UpdatePer1sSubject?.Dispose();
+            OnInitializedSubject?.Dispose();
+            OnInitFailedSubject?.Dispose();
         }
         #endregion
     }

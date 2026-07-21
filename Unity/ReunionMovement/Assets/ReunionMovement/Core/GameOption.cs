@@ -1,5 +1,4 @@
 ﻿using ReunionMovement.Common;
-using Newtonsoft.Json;
 using System;
 using UnityEngine;
 using ReunionMovement.Core.Sound;
@@ -89,7 +88,7 @@ namespace ReunionMovement.Core
                 var json = PlayerPrefs.GetString(jsonKey);
                 try
                 {
-                    var loaded = JsonConvert.DeserializeObject<Option>(json);
+                    var loaded = JsonUtility.FromJson<Option>(json);
                     if (loaded != null)
                     {
                         currentOption = loaded;
@@ -116,7 +115,7 @@ namespace ReunionMovement.Core
             const string jsonKey = "game_options_json";
             try
             {
-                var json = JsonConvert.SerializeObject(currentOption);
+                var json = JsonUtility.ToJson(currentOption);
                 PlayerPrefs.SetString(jsonKey, json);
                 PlayerPrefs.Save();
             }
@@ -134,9 +133,12 @@ namespace ReunionMovement.Core
             try
             {
 #if UNITY_WEBGL
-                // WebGL 平台：分辨率由浏览器控制，Screen.SetResolution/QualitySettings.vSyncCount 不可用
-                // 目标帧率在 WebGL 上由浏览器 requestAnimationFrame 控制
-                Application.targetFrameRate = currentOption.framerate;
+                // WebGL 平台限制：
+                // - Screen.SetResolution   → 不支持（分辨率由浏览器控制）
+                // - QualitySettings.vSyncCount → 不支持（垂直同步由浏览器控制）
+                // - Application.targetFrameRate → 无效（帧率由 requestAnimationFrame 控制）
+                // - Screen.fullScreen → 需要用户手势触发，不能代码强制
+                // 因此跳过分辨率/全屏/垂直同步相关设置
 #else
                 // 分辨率与全屏
                 Screen.SetResolution(currentOption.resolutionWidth, currentOption.resolutionHeight, currentOption.fullscreen);

@@ -1,34 +1,17 @@
 using Cysharp.Threading.Tasks;
-using UnityEngine;
 
 namespace ReunionMovement.Core.Base
 {
     /// <summary>
-    /// 自定义模块
+    /// 自定义模块（完整接口）—— 继承三个细粒度接口。
+    ///
+    /// 遵循接口隔离原则 (ISP)：
+    /// - 如果模块仅需 Init，可实现 ISystemInitializable
+    /// - 如果模块需要每帧 Update，额外实现 ISystemUpdatable
+    /// - 如果模块需要清理逻辑，额外实现 ISystemDisposable
+    /// - 如果模块需要全部功能，实现 ICustomSystem（等同于三者全部）
     /// </summary>
-    public interface ICustomSystem
+    public interface ICustomSystem : ISystemInitializable, ISystemUpdatable, ISystemDisposable
     {
-        /// <summary>
-        /// 初始化进度
-        /// </summary>
-        double InitProgress { get; }
-
-        /// <summary>
-        /// 初始化（UniTask 零 GC 异步）
-        /// </summary>
-        /// <returns></returns>
-        UniTask Init();
-
-        /// <summary>
-        /// 更新模块时间 （以秒为单位）
-        /// </summary>
-        /// <param name="logicTime">逻辑流逝时间</param>
-        /// <param name="realTime">真实流逝时间(timeScale从上一帧到当前帧的独立间隔（秒）)</param>
-        void Update(float logicTime, float realTime);
-
-        /// <summary>
-        /// 清理
-        /// </summary>
-        void Clear();
     }
 }
