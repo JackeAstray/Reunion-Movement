@@ -5,12 +5,18 @@ namespace ReunionMovement.Common.Util
 {
     public sealed class NetworkMgr : SingletonMgr<NetworkMgr>
     {
+        // 主通道列表（用于 Tick 迭代，List 遍历比 Dictionary 快）
         List<INetworkChannel> channelList = new List<INetworkChannel>();
+        // 按名称索引（O(1) 查找，与 channelList 并行维护）
+        Dictionary<string, INetworkChannel> channelIndex = new Dictionary<string, INetworkChannel>();
         List<INetworkChannel> channelDictRemove = new List<INetworkChannel>();
         private List<INetworkChannel> tickSnapshot;  // TickUpdate 复用的快照列表（零分配）
         private Thread netRun;
         private volatile bool isRunning = false;
         private readonly object syncRoot = new object();
+
+        /// <summary>网络 tick 间隔（ms）。移动端建议 10-20ms，PC 可用 5ms。</summary>
+        private const int NetworkTickIntervalMs = 10;
 
         public int NetworkChannelCount
         {
@@ -34,7 +40,17 @@ namespace ReunionMovement.Common.Util
             if (channel == null) return;
             lock (syncRoot)
             {
+                // 如果同名通道已存在，先移除旧的
+                if (!string.IsNullOrEmpty(channel.ChannelName) && channelIndex.TryGetValue(channel.ChannelName, out var existing))
+                {
+                    channelList.Remove(existing);
+                    channelIndex.Remove(channel.ChannelName);
+                }
                 channelList.Add(channel);
+                if (!string.IsNullOrEmpty(channel.ChannelName))
+                {
+                    channelIndex[channel.ChannelName] = channel;
+                }
             }
         }
 
@@ -55,13 +71,11 @@ namespace ReunionMovement.Common.Util
         {
             lock (syncRoot)
             {
-                for (int i = channelList.Count - 1; i >= 0; i--)
+                if (channelIndex.TryGetValue(channelName, out var found))
                 {
-                    if (channelList[i].ChannelName == channelName)
-                    {
-                        channelList.RemoveAt(i);
-                        return;
-                    }
+                    channelList.Remove(found);
+                    channelIndex.Remove(channelName);
+                    return;
                 }
             }
             Log.Error("不存在：" + channelName);
@@ -72,13 +86,10 @@ namespace ReunionMovement.Common.Util
             if (channel == null) return;
             lock (syncRoot)
             {
-                for (int i = channelList.Count - 1; i >= 0; i--)
+                if (channelList.Remove(channel))
                 {
-                    if (channelList[i] == channel)
-                    {
-                        channelList.RemoveAt(i);
-                        return;
-                    }
+                    channelIndex.Remove(channel.ChannelName);
+                    return;
                 }
             }
             Log.Error("不存在：" + channel.ChannelName);
@@ -89,14 +100,10 @@ namespace ReunionMovement.Common.Util
             INetworkChannel toClose = null;
             lock (syncRoot)
             {
-                for (int i = 0; i < channelList.Count; i++)
+                if (channelIndex.TryGetValue(channelName, out toClose))
                 {
-                    if (channelList[i].ChannelName == channelName)
-                    {
-                        toClose = channelList[i];
-                        channelList.RemoveAt(i);
-                        break;
-                    }
+                    channelList.Remove(toClose);
+                    channelIndex.Remove(channelName);
                 }
             }
 
@@ -114,14 +121,10 @@ namespace ReunionMovement.Common.Util
             INetworkChannel toClose = null;
             lock (syncRoot)
             {
-                for (int i = 0; i < channelList.Count; i++)
+                if (channelList.Remove(channel))
                 {
-                    if (channelList[i] == channel)
-                    {
-                        toClose = channelList[i];
-                        channelList.RemoveAt(i);
-                        break;
-                    }
+                    channelIndex.Remove(channel.ChannelName);
+                    toClose = channel;
                 }
             }
 
@@ -137,32 +140,17 @@ namespace ReunionMovement.Common.Util
         {
             lock (syncRoot)
             {
-                for (int i = 0; i < channelList.Count; i++)
-                {
-                    if (channelList[i].ChannelName == channelName)
-                    {
-                        return channelList[i];
-                    }
-                }
+                channelIndex.TryGetValue(channelName, out var found);
+                return found;
             }
-
-            return null;
         }
 
         public bool HasChannel(string channelName)
         {
             lock (syncRoot)
             {
-                for (int i = 0; i < channelList.Count; i++)
-                {
-                    if (channelList[i].ChannelName == channelName)
-                    {
-                        return true;
-                    }
-                }
+                return channelIndex.ContainsKey(channelName);
             }
-
-            return false;
         }
 
         public List<INetworkChannel> GetAllChannels()
@@ -179,6 +167,7 @@ namespace ReunionMovement.Common.Util
             lock (syncRoot)
             {
                 channelList.Clear();
+                channelIndex.Clear();
                 channelDictRemove.Clear();
             }
         }
@@ -202,7 +191,8 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// Update线程
+        /// Update线程 —— 以 NetworkTickIntervalMs 间隔驱动网络 Tick。
+        /// 不再使用 1ms 忙等，避免移动端 CPU 无法深度睡眠导致发热。
         /// </summary>
         private void ThreadOnUpdate()
         {
@@ -216,7 +206,7 @@ namespace ReunionMovement.Common.Util
                 {
                     Log.Warning("NetworkMgr.ThreadOnUpdate 捕获异常：" + ex);
                 }
-                Thread.Sleep(1);
+                Thread.Sleep(NetworkTickIntervalMs);
             }
         }
 
@@ -233,13 +223,14 @@ namespace ReunionMovement.Common.Util
 
         private void TickUpdate()
         {
-            // 零分配方案：直接处理待删除列表，锁定内拷贝引用到复用列表再解锁 tick
             lock (syncRoot)
             {
-                // 直接在锁内处理待删除（Remove 是 O(n)，但 channelDictRemove 通常很小）
+                // 处理延迟删除队列 —— 同步清理 List 和 Index
                 for (int i = channelDictRemove.Count - 1; i >= 0; i--)
                 {
-                    channelList.Remove(channelDictRemove[i]);
+                    var ch = channelDictRemove[i];
+                    channelList.Remove(ch);
+                    channelIndex.Remove(ch.ChannelName);
                 }
                 channelDictRemove.Clear();
 
@@ -292,6 +283,7 @@ namespace ReunionMovement.Common.Util
             {
                 toClose = new List<INetworkChannel>(channelList);
                 channelList.Clear();
+                channelIndex.Clear();
             }
 
             for (int i = 0; i < toClose.Count; i++)

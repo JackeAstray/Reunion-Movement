@@ -15,7 +15,21 @@ namespace ReunionMovement.Common.Util.Download
         private readonly Dictionary<string, Texture2D> imageCache = new Dictionary<string, Texture2D>();
         private readonly LinkedList<string> imageCacheOrder = new LinkedList<string>(); // LRU 访问顺序
         private readonly object imageCacheLock = new object();
-        private const int MaxImageCacheSize = 50;
+
+        /// <summary>平台自适应图片缓存上限（WebGL 内存最受限，移动端次之，PC 最宽裕）</summary>
+        private static int MaxImageCacheSize
+        {
+            get
+            {
+#if UNITY_WEBGL
+                return 10;
+#elif UNITY_IOS || UNITY_ANDROID
+                return 20;
+#else
+                return 50;
+#endif
+            }
+        }
         private readonly Dictionary<string, string> mimeTypeToExtension = new Dictionary<string, string>
         {
             {"text/html",".html"},
@@ -61,6 +75,12 @@ namespace ReunionMovement.Common.Util.Download
                 imageCache.Clear();
                 imageCacheOrder.Clear();
             }
+
+            // 移动端/WebGL 建议在清除纹理缓存后主动触发一次卸载，
+            // 确保 GPU 内存及时回收（PC 上可选择性跳过以减少卡顿）
+#if UNITY_IOS || UNITY_ANDROID || UNITY_WEBGL
+            Resources.UnloadUnusedAssets();
+#endif
             Log.Debug("DownloadManagerModule 清除数据");
         }
 

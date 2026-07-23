@@ -57,11 +57,11 @@ namespace ReunionMovement.Core.UIInput
         /// <summary>重绑定进行中标记</summary>
         private bool isRebinding = false;
 
-        /// <summary>当前输入模式</summary>
-        private InputMode currentMode = InputMode.Gameplay;
+        /// <summary>当前 UI 控制模式</summary>
+        private UIControlMode currentMode = UIControlMode.Gameplay;
 
-        /// <summary>当前输入模式（只读）</summary>
-        public InputMode CurrentMode => currentMode;
+        /// <summary>当前 UI 控制模式（只读）</summary>
+        public UIControlMode CurrentMode => currentMode;
 
         /// <summary>进入 UI 模式前的玩家操作映射状态缓存（用于恢复）</summary>
         private bool playerMapWasEnabled = false;
@@ -80,7 +80,7 @@ namespace ReunionMovement.Core.UIInput
         public readonly Subject<UIInputBinding> BindingChangedSubject = new Subject<UIInputBinding>();
 
         /// <summary>输入模式切换事件</summary>
-        public readonly Subject<InputMode> InputModeChangedSubject = new Subject<InputMode>();
+        public readonly Subject<UIControlMode> UIControlModeChangedSubject = new Subject<UIControlMode>();
 
         /// <summary>导航操作事件（方向向量）</summary>
         public readonly Subject<Vector2> NavigateSubject = new Subject<Vector2>();
@@ -137,7 +137,7 @@ namespace ReunionMovement.Core.UIInput
             PollToggleKeys();
 
             // 仅在 UI 模式下轮询焦点变化
-            if (currentMode != InputMode.UI) return;
+            if (currentMode != UIControlMode.UIControl) return;
 
             // 轮询检测焦点变化（EventSystem 的 currentSelectedGameObject 可能在 InputSystemUIInputModule 内部更新）
             var current = eventSystem != null ? eventSystem.currentSelectedGameObject : null;
@@ -162,9 +162,9 @@ namespace ReunionMovement.Core.UIInput
             UnregisterInputCallbacks();
 
             // 切回 Gameplay 模式以恢复 Player map
-            if (currentMode == InputMode.UI)
+            if (currentMode == UIControlMode.UIControl)
             {
-                SwitchToGameplayMode();
+                DisableUIControl();
             }
 
             focusStack.Clear();
@@ -175,7 +175,7 @@ namespace ReunionMovement.Core.UIInput
             // 释放 R3 Subject（自动断开所有订阅）
             SelectionChangedSubject?.Dispose();
             BindingChangedSubject?.Dispose();
-            InputModeChangedSubject?.Dispose();
+            UIControlModeChangedSubject?.Dispose();
             NavigateSubject?.Dispose();
             SubmitSubject?.Dispose();
             CancelSubject?.Dispose();
@@ -682,15 +682,15 @@ namespace ReunionMovement.Core.UIInput
 
         #endregion
 
-        #region 输入模式切换（Gameplay ↔ UI）
+        #region UI 控制模式切换（Gameplay ↔ UIControl）
 
         /// <summary>
-        /// 切换到 UI 控制模式
-        /// 禁用 Player Action Map，启用 UI Action Map，自动聚焦当前打开的 UI 窗口
+        /// 启用 UI 控制模式
+        /// 关闭 Player 输入，启用键盘/手柄 UI 导航，并自动聚焦当前打开的 UI 窗口
         /// </summary>
-        public void SwitchToUIMode()
+        public void EnableUIControl()
         {
-            if (currentMode == InputMode.UI) return;
+            if (currentMode == UIControlMode.UIControl) return;
             if (inputActions == null) return;
 
             // 记录 Player map 状态
@@ -701,9 +701,7 @@ namespace ReunionMovement.Core.UIInput
                 playerMap.Disable();
             }
 
-            // 启用 UI map
-            var uiMap = inputActions.FindActionMap("UI");
-            uiMap?.Enable();
+            SetUIActionsEnabled(enablePointerActions: true, enableNavigationActions: true);
 
             // 启用 InputSystemUIInputModule
             if (inputModule != null)
@@ -711,35 +709,35 @@ namespace ReunionMovement.Core.UIInput
                 inputModule.enabled = true;
             }
 
-            currentMode = InputMode.UI;
+            currentMode = UIControlMode.UIControl;
 
             // 尝试聚焦当前打开的 UI 窗口
             TryFocusCurrentUI();
 
-            Log.Debug("UIInputSystem: 切换到 UI 控制模式");
-            InputModeChangedSubject.OnNext(InputMode.UI);
+            Log.Debug("UIInputSystem: 启用 UI 控制模式");
+            UIControlModeChangedSubject.OnNext(UIControlMode.UIControl);
         }
 
         /// <summary>
-        /// 切换到角色控制模式（Gameplay）
-        /// 禁用 UI Action Map，恢复 Player Action Map，清除 UI 焦点
+        /// 禁用 UI 控制模式
+        /// 恢复 Player 输入，仅保留鼠标/触摸对 UI 的点击能力，并清除 UI 焦点
         /// </summary>
-        public void SwitchToGameplayMode()
+        public void DisableUIControl()
         {
-            if (currentMode == InputMode.Gameplay) return;
+            if (currentMode == UIControlMode.Gameplay) return;
             if (inputActions == null) return;
 
             // 清除 UI 焦点
             ClearFocus();
 
-            // 禁用 UI map
-            var uiMap = inputActions.FindActionMap("UI");
-            uiMap?.Disable();
+            // 保留鼠标/触摸指针事件，避免 Gameplay 模式下 UI 完全不可点击。
+            // 仅关闭导航/提交/取消，让键盘/手柄不再驱动 UI 焦点。
+            SetUIActionsEnabled(enablePointerActions: true, enableNavigationActions: false);
 
-            // 禁用 InputSystemUIInputModule 以释放输入给角色
+            // 保持 InputSystemUIInputModule 激活，使鼠标/触摸仍可驱动 UI。
             if (inputModule != null)
             {
-                inputModule.enabled = false;
+                inputModule.enabled = true;
             }
 
             // 恢复 Player map
@@ -749,24 +747,24 @@ namespace ReunionMovement.Core.UIInput
                 playerMap.Enable();
             }
 
-            currentMode = InputMode.Gameplay;
+            currentMode = UIControlMode.Gameplay;
 
-            Log.Debug("UIInputSystem: 切换到角色控制模式");
-            InputModeChangedSubject.OnNext(InputMode.Gameplay);
+            Log.Debug("UIInputSystem: 禁用 UI 控制模式");
+            UIControlModeChangedSubject.OnNext(UIControlMode.Gameplay);
         }
 
         /// <summary>
-        /// 在 Gameplay 和 UI 模式之间切换
+        /// 在 Gameplay 和 UIControl 模式之间切换
         /// </summary>
-        public void ToggleInputMode()
+        public void ToggleUIControl()
         {
-            if (currentMode == InputMode.Gameplay)
+            if (currentMode == UIControlMode.Gameplay)
             {
-                SwitchToUIMode();
+                EnableUIControl();
             }
             else
             {
-                SwitchToGameplayMode();
+                DisableUIControl();
             }
         }
 
@@ -810,7 +808,7 @@ namespace ReunionMovement.Core.UIInput
         /// </summary>
         private void PollToggleKeys()
         {
-            if (currentMode == InputMode.Gameplay)
+            if (currentMode == UIControlMode.Gameplay)
             {
                 // 在 Gameplay 模式：检测进入 UI 模式的切换键
                 if (Keyboard.current != null)
@@ -818,12 +816,12 @@ namespace ReunionMovement.Core.UIInput
                     var toggleKey = GetKeyFromName(CurrentBinding.toggleToUI);
                     if (toggleKey != Key.None && Keyboard.current[toggleKey].wasPressedThisFrame)
                     {
-                        SwitchToUIMode();
+                        EnableUIControl();
                         return;
                     }
                 }
             }
-            else // InputMode.UI
+            else // UIControlMode.UIControl
             {
                 // 在 UI 模式：检测退出 UI 模式的切换键
                 if (Keyboard.current != null)
@@ -833,7 +831,7 @@ namespace ReunionMovement.Core.UIInput
                     {
                         // 标记 cancel 已被本帧处理，避免 OnCancel 事件重复触发
                         cancelHandledThisFrame = true;
-                        SwitchToGameplayMode();
+                        DisableUIControl();
                         return;
                     }
                 }
@@ -894,7 +892,7 @@ namespace ReunionMovement.Core.UIInput
             if (controller == null) return;
 
             // 仅在 UI 模式下才自动聚焦；Gameplay 模式下窗口打开不抢焦点
-            if (currentMode != InputMode.UI) return;
+            if (currentMode != UIControlMode.UIControl) return;
 
             // 优先从 UIController 获取 firstSelected
             var firstSelected = controller.firstSelected;
@@ -979,19 +977,51 @@ namespace ReunionMovement.Core.UIInput
                 cancelAction.performed += OnCancelPerformed;
             }
 
-            // 默认启动为 Gameplay 模式：启用 Player map，禁用 UI map
+            // 默认启动为 Gameplay 模式：启用 Player map，仅关闭 UI 导航/提交/取消；
+            // 保留鼠标/触摸点击所需的 Point/Click/Scroll 等动作。
             var playerMap = inputActions.FindActionMap("Player");
-            var uiMap = inputActions.FindActionMap("UI");
 
             playerMap?.Enable();
-            uiMap?.Disable();
+            SetUIActionsEnabled(enablePointerActions: true, enableNavigationActions: false);
 
-            if (inputModule != null)
+            // 保持 EventSystem 的 InputSystemUIInputModule 激活，
+            // 否则 UISystem 刚创建的运行时组件会立刻显示为未激活状态。
+            // Gameplay 模式下通过禁用 UI ActionMap 来屏蔽键盘/手柄导航，
+            // 但保留鼠标/触摸驱动的 UI 交互能力用于调试场景和运行时面板。
+
+            currentMode = UIControlMode.Gameplay;
+        }
+
+        private void SetUIActionsEnabled(bool enablePointerActions, bool enableNavigationActions)
+        {
+            if (inputActions == null) return;
+
+            SetActionEnabled("UI/Point", enablePointerActions);
+            SetActionEnabled("UI/LeftClick", enablePointerActions);
+            SetActionEnabled("UI/RightClick", enablePointerActions);
+            SetActionEnabled("UI/MiddleClick", enablePointerActions);
+            SetActionEnabled("UI/ScrollWheel", enablePointerActions);
+            SetActionEnabled("UI/TrackedDevicePosition", enablePointerActions);
+            SetActionEnabled("UI/TrackedDeviceOrientation", enablePointerActions);
+
+            SetActionEnabled("UI/Navigate", enableNavigationActions);
+            SetActionEnabled("UI/Submit", enableNavigationActions);
+            SetActionEnabled("UI/Cancel", enableNavigationActions);
+        }
+
+        private void SetActionEnabled(string actionPath, bool enabled)
+        {
+            var action = inputActions?.FindAction(actionPath);
+            if (action == null) return;
+
+            if (enabled)
             {
-                inputModule.enabled = false;
+                action.Enable();
             }
-
-            currentMode = InputMode.Gameplay;
+            else
+            {
+                action.Disable();
+            }
         }
 
         private void UnregisterInputCallbacks()

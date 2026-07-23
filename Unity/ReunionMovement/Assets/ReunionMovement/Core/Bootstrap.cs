@@ -25,6 +25,9 @@ namespace ReunionMovement.Core
         /// </summary>
         public static bool ForceDisable { get; set; }
 
+        /// <summary>当前是否为测试/调试场景（引擎仍启动，但跳过自动场景跳转）</summary>
+        public static bool IsTestScene { get; private set; }
+
         /// <summary>
         /// 在第一个场景加载前自动执行，初始化游戏引擎。
         /// 使用 UniTask.Forget() 替代 async void，确保异常能被 UniTask 调度器正确捕获。
@@ -43,15 +46,20 @@ namespace ReunionMovement.Core
             }
 
 #if UNITY_EDITOR
-            // 编辑器下：测试/沙盒/示例场景跳过自动启动
-            var testScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
-            if (testScene.name.StartsWith("Test") ||
-                testScene.name.StartsWith("_") ||
-                testScene.name.Contains("Example") ||
-                testScene.name.Contains("UIPlaneScene"))
+            // 编辑器下：测试/沙盒/示例场景 —— 仍启动引擎（初始化所有模块），但标记为测试场景
+            // 以便 StartGame.OnGameStartAsync() 跳过自动场景跳转
+            var activeScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+            if (activeScene.name.StartsWith("Test") ||
+                activeScene.name.StartsWith("_") ||
+                activeScene.name.Contains("Example") ||
+                activeScene.name.Contains("UIPlaneScene") ||
+                activeScene.name.Contains("Music") ||
+                activeScene.name.Contains("Audio") ||
+                activeScene.name.Contains("Debug"))
             {
-                Log.Debug("[Bootstrap] 测试场景 '{0}'，跳过自动启动", testScene.name);
-                return;
+                Log.Debug("[Bootstrap] 测试场景 '{0}'，引擎正常启动但跳过自动场景跳转", activeScene.name);
+                IsTestScene = true;
+                // 不 return，继续初始化引擎
             }
 #endif
 

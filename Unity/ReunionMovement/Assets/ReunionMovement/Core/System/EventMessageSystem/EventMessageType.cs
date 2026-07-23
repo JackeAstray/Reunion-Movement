@@ -1,10 +1,4 @@
-﻿using ReunionMovement.Core.Base;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace ReunionMovement.Core.EventMessage
+﻿namespace ReunionMovement.Core.EventMessage
 {
     public enum EventMessageType
     {

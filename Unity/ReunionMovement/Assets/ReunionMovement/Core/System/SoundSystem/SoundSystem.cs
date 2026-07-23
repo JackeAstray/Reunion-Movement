@@ -5,8 +5,6 @@ using ReunionMovement.Core.Scene;
 using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Linq;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.Pool;
@@ -57,10 +55,12 @@ namespace ReunionMovement.Core.Sound
         private SoundConfigContainer soundConfigContainer;
         // 将声音配置列表转换为字典以加快查找速度
         private Dictionary<int, SoundConfig> soundConfigDict;
-        // 缓存已加载的AudioClip（LRU 限制防止内存无限增长）
+        // 缓存已加载的AudioClip（真正的 LRU：LinkedList + Dictionary 实现 O(1) 访问与驱逐）
         private Dictionary<string, AudioClip> audioClipCache;
         private const int MaxAudioClipCacheSize = 64;
-        private readonly Queue<string> audioClipCacheOrder = new Queue<string>();
+        private readonly LinkedList<string> audioClipCacheOrder = new LinkedList<string>();
+        private readonly Dictionary<string, LinkedListNode<string>> audioClipCacheNodes
+            = new Dictionary<string, LinkedListNode<string>>();
 
         // 启动时预设对象池
         public List<StartupPool> startupPools = new List<StartupPool>();
@@ -74,7 +74,14 @@ namespace ReunionMovement.Core.Sound
         private float fadeTimer;
         private float fadeStartVolume;
         private float fadeTargetVolume;
-        private UniTaskCompletionSource<bool> fadeTcs;        
+        private UniTaskCompletionSource<bool> fadeTcs;
+
+        // 可复用列表（避免 SetSfxProperties / RecycleAll 等方法每次分配 List）
+        private List<GameObject> reusableSpawnedList;
+        private List<GameObject> GetSpawnedList()
+        {
+            return reusableSpawnedList ?? (reusableSpawnedList = new List<GameObject>());
+        }
         #endregion
 
         // 确保 AudioSource 存在（如果被销毁则重建）
@@ -230,6 +237,7 @@ namespace ReunionMovement.Core.Sound
 
             audioClipCache?.Clear();
             audioClipCacheOrder?.Clear();
+            audioClipCacheNodes?.Clear();
             soundConfigDict?.Clear();
             soundConfigContainer = null;
 
@@ -266,8 +274,12 @@ namespace ReunionMovement.Core.Sound
         public void SetSfxProperties(float volume, bool muted)
         {
             if (sfxObjects.Count == 0) return;
-            // 防御性拷贝，避免遍历时集合被修改
-            var snapshot = new List<GameObject>(sfxObjects.Keys);
+            // 使用可复用列表避免每次分配
+            var snapshot = GetSpawnedList();
+            foreach (var kvp in sfxObjects)
+            {
+                snapshot.Add(kvp.Key);
+            }
             foreach (var obj in snapshot)
             {
                 if (obj != null)
@@ -279,6 +291,7 @@ namespace ReunionMovement.Core.Sound
                     }
                 }
             }
+            snapshot.Clear();
         }
 
         /// <summary>
@@ -415,38 +428,25 @@ namespace ReunionMovement.Core.Sound
                 if (soundConfigDict != null && soundConfigDict.TryGetValue(index, out SoundConfig soundConfig))
                 {
                     AudioClip clip = await GetAudioClipAsync(soundConfig.Path, soundConfig.Name);
-                    if (clip != null && startupPools.Count > 0)
+                    if (clip != null && cachedSfxPrefab != null)
                     {
-                        // 遍历所有对象池，使用第一个有效的 prefab
-                        GameObject obj = null;
-                        foreach (var pool in startupPools)
+                        GameObject go = Spawn(cachedSfxPrefab);
+                        if (go != null)
                         {
-                            if (pool.prefab != null)
+                            if (emitter != null)
                             {
-                                obj = pool.prefab;
-                                break;
+                                go.transform.SetParent(emitter);
+                                go.transform.localPosition = Vector3.zero;
                             }
-                        }
-                        if (obj != null)
-                        {
-                            GameObject go = Spawn(obj);
-                            if (go != null)
+                            SoundItem soundObj = go.GetComponent<SoundItem>();
+                            if (soundObj != null)
                             {
-                                if (emitter != null)
-                                {
-                                    go.transform.SetParent(emitter);
-                                    go.transform.localPosition = Vector3.zero;
-                                }
-                                SoundItem soundObj = go.GetComponent<SoundItem>();
-                                if (soundObj != null)
-                                {
-                                    float effectiveVolume = volume ?? GameOption.currentOption.sfxVolume;
-                                    soundObj.Processing(clip, emitter, loop, effectiveVolume, GameOption.currentOption.sfxMuted, pitch);
-                                }
-                                else
-                                {
-                                    Log.Warning("PlaySfx: SoundItem 组件缺失于 {0}", go.name);
-                                }
+                                float effectiveVolume = volume ?? GameOption.currentOption.sfxVolume;
+                                soundObj.Processing(clip, emitter, loop, effectiveVolume, GameOption.currentOption.sfxMuted, pitch);
+                            }
+                            else
+                            {
+                                Log.Warning("PlaySfx: SoundItem 组件缺失于 {0}", go.name);
                             }
                         }
                     }
@@ -546,19 +546,20 @@ namespace ReunionMovement.Core.Sound
                 return true;
             }
 #elif UNITY_IOS && !UNITY_EDITOR
-            // iOS 上无法直接检测蓝牙，但可以用 AudioSession 的端口类型推断
-            // 保守策略：iOS 蓝牙音频延迟通常更高，使用较大 buffer
+            // TODO: 通过原生插件调用 AVAudioSession.CurrentRoute 检测蓝牙端口类型
+            // (AVAudioSessionPortBluetoothA2DP / BluetoothLE / BluetoothHFP)
+            // 当前无法在 C# 层可靠检测 iOS 蓝牙，默认使用有线优化值 512。
+            // 如需蓝牙稳定性，可在 Player Settings 中将 DSP Buffer 设为 Best Performance。
             try
             {
                 // 检查当前音频输出类型（通过 AudioSettings 间接判断）
                 var config = AudioSettings.GetConfiguration();
-                // iOS 有线耳机通常使用 44100 采样率，蓝牙设备可能不同
-                // 由于无法 100% 准确检测，移动端默认使用较大 buffer
-                return true; // 保守策略
+                // 如果用户手动将采样率设为较低值，可能是蓝牙设备
+                return false; // 默认假设有线连接以获得更低延迟
             }
             catch
             {
-                return true;
+                return false;
             }
 #else
             return false;
@@ -581,8 +582,13 @@ namespace ReunionMovement.Core.Sound
 
             source = musicRoot.AddComponent<AudioSource>();
 
-            GameObject.DontDestroyOnLoad(musicRoot);
-            GameObject.DontDestroyOnLoad(sfxRoot);
+            // 仅在真正的 Play Mode 中挂到 DontDestroyOnLoad。
+            // 编辑器播放状态切换、预览或脚本触发的编辑器上下文不允许调用它。
+            if (Application.isPlaying)
+            {
+                GameObject.DontDestroyOnLoad(musicRoot);
+                GameObject.DontDestroyOnLoad(sfxRoot);
+            }
         }
 
         /// <summary>
@@ -603,11 +609,16 @@ namespace ReunionMovement.Core.Sound
 
             startupPools.Add(pool);
 
-            for (int i = 0; i < startupPools.Count; i++)
-            {
-                CreatePool(startupPools[i].prefab, startupPools[i].size, startupPools[i].parent);
-            }
+            // 仅对新添加的 pool 创建对象池（不再冗余重建所有已有池）
+            CreatePool(pool.prefab, pool.size, pool.parent);
+
+            // 缓存第一个有效 prefab，避免 PlaySfx 每次遍历 startupPools
+            if (cachedSfxPrefab == null)
+                cachedSfxPrefab = pool.prefab;
         }
+
+        // 缓存的音效 prefab（避免 PlaySfx 每次遍历 startupPools）
+        private GameObject cachedSfxPrefab;
 
         /// <summary>
         /// 创建对象池
@@ -782,12 +793,18 @@ namespace ReunionMovement.Core.Sound
         /// <param name="prefab"></param>
         public void RecycleAll(GameObject prefab)
         {
-            // 使用 ToList() 创建副本，避免迭代时修改集合
-            var spawned = sfxObjects.Where(kvp => kvp.Value == prefab).Select(kvp => kvp.Key).ToList();
-            foreach (var obj in spawned)
+            // 先收集匹配的对象到临时列表，再统一回收（避免迭代时修改集合）
+            var toRecycle = GetSpawnedList();
+            foreach (var kvp in sfxObjects)
+            {
+                if (kvp.Value == prefab)
+                    toRecycle.Add(kvp.Key);
+            }
+            foreach (var obj in toRecycle)
             {
                 Recycle(obj);
             }
+            toRecycle.Clear(); // 复用列表，不清空外层引用
         }
 
         /// <summary>
@@ -796,16 +813,20 @@ namespace ReunionMovement.Core.Sound
         public void RecycleAll()
         {
             if (sfxObjects.Count == 0) return;
-            // 创建一个键的副本进行迭代，以避免在回收时修改集合
-            var allSpawnedKeys = new List<GameObject>(sfxObjects.Keys);
+            // 使用可复用列表收集 key，避免每次分配 new List
+            var allSpawnedKeys = GetSpawnedList();
+            foreach (var kvp in sfxObjects)
+            {
+                allSpawnedKeys.Add(kvp.Key);
+            }
             foreach (var obj in allSpawnedKeys)
             {
-                // Recycle会从sfxObjects中移除对象，所以我们需要检查键是否存在
                 if (sfxObjects.ContainsKey(obj))
                 {
                     Recycle(obj);
                 }
             }
+            allSpawnedKeys.Clear();
         }
 
         /// <summary>
@@ -975,22 +996,32 @@ namespace ReunionMovement.Core.Sound
         private async UniTask<AudioClip> GetAudioClipAsync(string path, string name)
         {
             string fullPath = string.Concat(path, name);
+
+            // 命中缓存：Touch 访问条目（移到链表尾部 = 最近使用），实现真正的 LRU
             if (audioClipCache.TryGetValue(fullPath, out AudioClip clip))
             {
+                if (audioClipCacheNodes.TryGetValue(fullPath, out var hitNode))
+                {
+                    audioClipCacheOrder.Remove(hitNode);
+                    audioClipCacheOrder.AddLast(hitNode);
+                }
                 return clip;
             }
 
             clip = await ResourcesSystem.Instance.LoadAsync<AudioClip>(fullPath);
             if (clip != null)
             {
-                // LRU 驱逐：缓存满时移除最旧的条目
-                if (audioClipCache.Count >= MaxAudioClipCacheSize && audioClipCacheOrder.Count > 0)
+                // LRU 驱逐：缓存满时移除最久未使用的条目（链表头部）
+                if (audioClipCache.Count >= MaxAudioClipCacheSize && audioClipCacheOrder.First != null)
                 {
-                    string oldest = audioClipCacheOrder.Dequeue();
-                    audioClipCache.Remove(oldest);
+                    var oldestNode = audioClipCacheOrder.First;
+                    audioClipCache.Remove(oldestNode.Value);
+                    audioClipCacheNodes.Remove(oldestNode.Value);
+                    audioClipCacheOrder.RemoveFirst();
                 }
                 audioClipCache[fullPath] = clip;
-                audioClipCacheOrder.Enqueue(fullPath);
+                var node = audioClipCacheOrder.AddLast(fullPath);
+                audioClipCacheNodes[fullPath] = node;
             }
             else
             {

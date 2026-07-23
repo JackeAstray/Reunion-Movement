@@ -49,11 +49,11 @@ namespace ReunionMovement.Core.Sound
                 if (playlist != null && playlist.Count > 0)
                 {
                     playlistPosition = Mathf.Clamp(playlistPosition, 0, playlist.Count - 1);
-                    await PlayPlaylistAt(playlistPosition);
+                    await PlayPlaylistAtAsync(playlistPosition);
                 }
                 else
                 {
-                    await PlayMusicClip();
+                    await PlayMusicClipAsync();
                 }
             }
             catch (System.Exception ex)
@@ -63,25 +63,26 @@ namespace ReunionMovement.Core.Sound
         }
 
         /// <summary>
-        /// 播放音乐剪辑（兼容旧单曲字段）
+        /// 播放音乐剪辑 - Button 可绑定
         /// </summary>
-        /// <returns></returns>
-        public async UniTask PlayMusicClip()
+        public void PlayMusicClip()
         {
-            // 如果存在播放列表并且有内容，播放列表当前位置的曲目
+            PlayMusicClipAsync().Forget();
+        }
+
+        private async UniTask PlayMusicClipAsync()
+        {
             if (playlist != null && playlist.Count > 0)
             {
                 playlistPosition = Mathf.Clamp(playlistPosition, 0, playlist.Count - 1);
-                await PlayPlaylistAt(playlistPosition);
+                await PlayPlaylistAtAsync(playlistPosition);
                 return;
             }
 
-            // 将淡出/淡入时间传递给SoundSystem
             SoundSystem.Instance.fadeDuration = fadeDuration;
 
             if (useFade)
             {
-                // 使用渐入渐出切换
                 await SoundSystem.Instance.PlaySwitch(musicIndex);
             }
             else
@@ -94,16 +95,20 @@ namespace ReunionMovement.Core.Sound
         }
 
         /// <summary>
-        /// 播放播放列表中指定位置的曲目
+        /// 播放列表中指定位置 - Button 可绑定（参数 int pos）
         /// </summary>
-        public async UniTask PlayPlaylistAt(int pos)
+        public void PlayPlaylistAt(int pos)
+        {
+            PlayPlaylistAtAsync(pos).Forget();
+        }
+
+        private async UniTask PlayPlaylistAtAsync(int pos)
         {
             if (playlist == null || playlist.Count == 0) return;
 
             playlistPosition = Mathf.Clamp(pos, 0, playlist.Count - 1);
             int index = playlist[playlistPosition];
 
-            // 将淡出/淡入时间传递给SoundSystem
             SoundSystem.Instance.fadeDuration = fadeDuration;
 
             if (useFade)
@@ -120,9 +125,14 @@ namespace ReunionMovement.Core.Sound
         }
 
         /// <summary>
-        /// 播放下一曲
+        /// 播放下一曲 - Button 可绑定
         /// </summary>
-        public async UniTaskVoid PlayNext()
+        public void PlayNext()
+        {
+            PlayNextAsync().Forget();
+        }
+
+        private async UniTask PlayNextAsync()
         {
             try
             {
@@ -133,18 +143,15 @@ namespace ReunionMovement.Core.Sound
                 if (playlistPosition >= playlist.Count)
                 {
                     if (loopPlaylist)
-                    {
                         playlistPosition = 0;
-                    }
                     else
                     {
-                        // 到达末尾且不循环，则停在最后一首
                         playlistPosition = playlist.Count - 1;
                         return;
                     }
                 }
 
-                await PlayPlaylistAt(playlistPosition);
+                await PlayPlaylistAtAsync(playlistPosition);
             }
             catch (System.Exception ex)
             {
@@ -153,9 +160,14 @@ namespace ReunionMovement.Core.Sound
         }
 
         /// <summary>
-        /// 播放上一曲
+        /// 播放上一曲 - Button 可绑定
         /// </summary>
-        public async UniTaskVoid PlayPrevious()
+        public void PlayPrevious()
+        {
+            PlayPreviousAsync().Forget();
+        }
+
+        private async UniTask PlayPreviousAsync()
         {
             try
             {
@@ -166,9 +178,7 @@ namespace ReunionMovement.Core.Sound
                 if (playlistPosition < 0)
                 {
                     if (loopPlaylist)
-                    {
                         playlistPosition = playlist.Count - 1;
-                    }
                     else
                     {
                         playlistPosition = 0;
@@ -176,7 +186,7 @@ namespace ReunionMovement.Core.Sound
                     }
                 }
 
-                await PlayPlaylistAt(playlistPosition);
+                await PlayPlaylistAtAsync(playlistPosition);
             }
             catch (System.Exception ex)
             {
@@ -185,7 +195,7 @@ namespace ReunionMovement.Core.Sound
         }
 
         /// <summary>
-        /// 暂停音乐
+        /// 暂停音乐 - Button 可绑定
         /// </summary>
         public void PauseMusic()
         {
@@ -194,13 +204,17 @@ namespace ReunionMovement.Core.Sound
         }
 
         /// <summary>
-        /// 恢复音乐
+        /// 恢复音乐 - Button 可绑定
         /// </summary>
-        public async UniTaskVoid ResumeMusic()
+        public void ResumeMusic()
+        {
+            ResumeMusicAsync().Forget();
+        }
+
+        private async UniTask ResumeMusicAsync()
         {
             try
             {
-                // 如果已经有clip，则直接恢复播放并启动监视器
                 var audio = GetAudioSource();
                 if (audio != null && audio.clip != null)
                 {
@@ -209,18 +223,16 @@ namespace ReunionMovement.Core.Sound
                     return;
                 }
 
-                // 否则尝试根据playlist或单曲索引加载并播放
                 CancelPlaybackMonitor();
 
                 if (playlist != null && playlist.Count > 0)
                 {
-                    // 确保playlistPosition在有效范围内
                     playlistPosition = Mathf.Clamp(playlistPosition, 0, playlist.Count - 1);
-                    await PlayPlaylistAt(playlistPosition);
+                    await PlayPlaylistAtAsync(playlistPosition);
                 }
                 else
                 {
-                    await PlayMusicClip();
+                    await PlayMusicClipAsync();
                 }
             }
             catch (System.Exception ex)
@@ -317,7 +329,7 @@ namespace ReunionMovement.Core.Sound
             {
                 // 延迟一帧以确保SoundSystem内部状态更新
                 await UniTask.Yield(PlayerLoopTiming.Update);
-                PlayNext().Forget();
+                PlayNext();
             }
         }
 

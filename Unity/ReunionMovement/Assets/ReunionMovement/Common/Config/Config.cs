@@ -6,6 +6,10 @@ namespace ReunionMovement
     /// <summary>
     /// 配置类 —— 优先从 GameConfig ScriptableObject 加载，缺失时使用静态默认值。
     /// 资源路径使用 const（编译时常量），日志开关支持 ScriptableObject 运行时覆盖。
+    ///
+    /// 优化：首次调用 EnsureLoaded() 后缓存 GameConfig 引用，后续属性访问直接读字段，
+    /// 避免每次 getter 都走 LoadConfig() 的 null 传播路径。
+    /// 推荐在 GameEngine.BeforeInit 阶段调用 EnsureLoaded()。
     /// </summary>
     public static class Config
     {
@@ -18,19 +22,42 @@ namespace ReunionMovement
         public const string UIToolkitUssPath = "UI/UIToolkit/Styles/";
 
         // ============================================================
-        //  ScriptableObject 配置（懒加载，回退到静态默认值）
+        //  ScriptableObject 配置
         // ============================================================
         private static GameConfig cachedConfig;
         private static bool configLoaded;
 
-        private static GameConfig LoadConfig()
+        /// <summary>
+        /// 确保配置已加载（推荐在 GameEngine.BeforeInit 阶段调用）。
+        /// 幂等操作 —— 多次调用只执行一次 Resources.Load。
+        /// </summary>
+        public static void EnsureLoaded()
         {
             if (!configLoaded)
             {
                 configLoaded = true;
                 cachedConfig = Resources.Load<GameConfig>("ScriptableObjects/GameConfig");
             }
-            return cachedConfig;
+        }
+
+        /// <summary>
+        /// 强制重新加载配置（运行时修改 ScriptableObject 后调用）。
+        /// </summary>
+        public static void RefreshConfig()
+        {
+            configLoaded = false;
+            cachedConfig = null;
+            EnsureLoaded();
+        }
+
+        /// <summary>获取当前缓存的配置引用（可能为 null）。</summary>
+        private static GameConfig Cfg
+        {
+            get
+            {
+                if (!configLoaded) EnsureLoaded();
+                return cachedConfig;
+            }
         }
 
         // ============================================================
@@ -38,15 +65,15 @@ namespace ReunionMovement
         // ============================================================
         public static bool Enable_LOG
         {
-            get => LoadConfig()?.enableLog ?? true;
-            set { if (LoadConfig() != null) LoadConfig().enableLog = value; }
+            get => Cfg?.enableLog ?? true;
+            set { if (Cfg != null) Cfg.enableLog = value; }
         }
 
         public static bool Enable_Debug_LOG
         {
             get
             {
-                var cfg = LoadConfig();
+                var cfg = Cfg;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 return cfg?.EnableDebugLog ?? true;
 #else
@@ -59,7 +86,7 @@ namespace ReunionMovement
         {
             get
             {
-                var cfg = LoadConfig();
+                var cfg = Cfg;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 return cfg?.EnableInfoLog ?? true;
 #else
@@ -70,20 +97,20 @@ namespace ReunionMovement
 
         public static bool Enable_Warning_LOG
         {
-            get => LoadConfig()?.enableWarningLog ?? true;
-            set { if (LoadConfig() != null) LoadConfig().enableWarningLog = value; }
+            get => Cfg?.enableWarningLog ?? true;
+            set { if (Cfg != null) Cfg.enableWarningLog = value; }
         }
 
         public static bool Enable_Error_LOG
         {
-            get => LoadConfig()?.enableErrorLog ?? true;
-            set { if (LoadConfig() != null) LoadConfig().enableErrorLog = value; }
+            get => Cfg?.enableErrorLog ?? true;
+            set { if (Cfg != null) Cfg.enableErrorLog = value; }
         }
 
         public static bool Enable_Fatal_LOG
         {
-            get => LoadConfig()?.enableFatalLog ?? true;
-            set { if (LoadConfig() != null) LoadConfig().enableFatalLog = value; }
+            get => Cfg?.enableFatalLog ?? true;
+            set { if (Cfg != null) Cfg.enableFatalLog = value; }
         }
 
         // ============================================================
@@ -91,7 +118,7 @@ namespace ReunionMovement
         // ============================================================
         private static bool Channel(LogChannel channel, bool defaultValue)
         {
-            var cfg = LoadConfig();
+            var cfg = Cfg;
             if (cfg == null) return defaultValue;
             return channel switch
             {
@@ -113,57 +140,57 @@ namespace ReunionMovement
         public static bool Enable_Channel_General
         {
             get => Channel(LogChannel.General, true);
-            set { var c = LoadConfig(); if (c != null) c.channelGeneral = value; }
+            set { var c = Cfg; if (c != null) c.channelGeneral = value; }
         }
         public static bool Enable_Channel_Network
         {
             get => Channel(LogChannel.Network, true);
-            set { var c = LoadConfig(); if (c != null) c.channelNetwork = value; }
+            set { var c = Cfg; if (c != null) c.channelNetwork = value; }
         }
         public static bool Enable_Channel_UI
         {
             get => Channel(LogChannel.UI, true);
-            set { var c = LoadConfig(); if (c != null) c.channelUI = value; }
+            set { var c = Cfg; if (c != null) c.channelUI = value; }
         }
         public static bool Enable_Channel_AI
         {
             get => Channel(LogChannel.AI, true);
-            set { var c = LoadConfig(); if (c != null) c.channelAI = value; }
+            set { var c = Cfg; if (c != null) c.channelAI = value; }
         }
         public static bool Enable_Channel_Audio
         {
             get => Channel(LogChannel.Audio, true);
-            set { var c = LoadConfig(); if (c != null) c.channelAudio = value; }
+            set { var c = Cfg; if (c != null) c.channelAudio = value; }
         }
         public static bool Enable_Channel_Input
         {
             get => Channel(LogChannel.Input, true);
-            set { var c = LoadConfig(); if (c != null) c.channelInput = value; }
+            set { var c = Cfg; if (c != null) c.channelInput = value; }
         }
         public static bool Enable_Channel_Scene
         {
             get => Channel(LogChannel.Scene, true);
-            set { var c = LoadConfig(); if (c != null) c.channelScene = value; }
+            set { var c = Cfg; if (c != null) c.channelScene = value; }
         }
         public static bool Enable_Channel_Resource
         {
             get => Channel(LogChannel.Resource, true);
-            set { var c = LoadConfig(); if (c != null) c.channelResource = value; }
+            set { var c = Cfg; if (c != null) c.channelResource = value; }
         }
         public static bool Enable_Channel_Custom1
         {
             get => Channel(LogChannel.Custom1, true);
-            set { var c = LoadConfig(); if (c != null) c.channelCustom1 = value; }
+            set { var c = Cfg; if (c != null) c.channelCustom1 = value; }
         }
         public static bool Enable_Channel_Custom2
         {
             get => Channel(LogChannel.Custom2, true);
-            set { var c = LoadConfig(); if (c != null) c.channelCustom2 = value; }
+            set { var c = Cfg; if (c != null) c.channelCustom2 = value; }
         }
         public static bool Enable_Channel_Custom3
         {
             get => Channel(LogChannel.Custom3, true);
-            set { var c = LoadConfig(); if (c != null) c.channelCustom3 = value; }
+            set { var c = Cfg; if (c != null) c.channelCustom3 = value; }
         }
 
         /// <summary>检查指定频道是否开启。</summary>

@@ -142,9 +142,24 @@ namespace ReunionMovement.Core
                 Current = null;
             }
 
+            // 重新初始化 static Subject（上一轮 Dispose 可能已将其置 null）
+            ResetStaticSubjects();
+
             var engine = new GameEngine();
             Current = engine;
             return engine;
+        }
+
+        /// <summary>
+        /// 在引擎重建时重置 static Subject（上轮 Dispose 后可能为 null）
+        /// </summary>
+        private static void ResetStaticSubjects()
+        {
+            if (UpdateSubject          == null) UpdateSubject          = new Subject<Unit>();
+            if (UpdatePer300msSubject  == null) UpdatePer300msSubject  = new Subject<Unit>();
+            if (UpdatePer1sSubject     == null) UpdatePer1sSubject     = new Subject<Unit>();
+            if (OnInitializedSubject   == null) OnInitializedSubject   = new Subject<Unit>();
+            if (OnInitFailedSubject    == null) OnInitFailedSubject    = new Subject<string>();
         }
 
         /// <summary>
@@ -312,12 +327,27 @@ namespace ReunionMovement.Core
             GameEntry = null;
             Current = null;
 
-            // 释放 R3 Subject（自动断开所有订阅，避免引用残留阻止 GC）
+            // 完成并释放 R3 Subject：
+            // 1) OnCompleted 通知所有订阅者流已结束（允许 Dispose 清理订阅）
+            // 2) Dispose 释放 Subject 自身资源
+            // 3) 置 null 以便 Create() 中 ResetStaticSubjects() 重新初始化
+            UpdateSubject?.OnCompleted();
+            UpdatePer300msSubject?.OnCompleted();
+            UpdatePer1sSubject?.OnCompleted();
+            OnInitializedSubject?.OnCompleted();
+            OnInitFailedSubject?.OnCompleted();
+
             UpdateSubject?.Dispose();
             UpdatePer300msSubject?.Dispose();
             UpdatePer1sSubject?.Dispose();
             OnInitializedSubject?.Dispose();
             OnInitFailedSubject?.Dispose();
+
+            UpdateSubject          = null;
+            UpdatePer300msSubject  = null;
+            UpdatePer1sSubject     = null;
+            OnInitializedSubject   = null;
+            OnInitFailedSubject    = null;
         }
         #endregion
     }

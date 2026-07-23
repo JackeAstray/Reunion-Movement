@@ -5,22 +5,38 @@ using Cysharp.Threading.Tasks;
 using R3;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace ReunionMovement.Core.EventMessage
 {
     /// <summary>
-    /// 事件数据（值类型 —— 零堆分配，R3 Subject&lt;T&gt; 原生支持 struct）
+    /// 事件数据（struct 避免堆分配，但 object data 字段对值类型仍会产生装箱）。
+    /// 若需完全零装箱，请使用 EventData&lt;T&gt; 泛型变体配合 AddEventListenerTyped / DispatchEventTyped。
     /// </summary>
     public readonly struct EventData
     {
         /// <summary>事件类型</summary>
         public readonly EventMessageType type;
-        /// <summary>事件传递的数据</summary>
+        /// <summary>事件传递的数据（引用类型不装箱，值类型会发生装箱）</summary>
         public readonly object data;
 
         public EventData(EventMessageType type, object data)
+        {
+            this.type = type;
+            this.data = data;
+        }
+    }
+
+    /// <summary>
+    /// 泛型事件数据 —— 真正零装箱（值类型不会被包装为 object）。
+    /// 推荐新代码使用，搭配 AddEventListenerTyped / DispatchEventTyped。
+    /// </summary>
+    /// <typeparam name="T">数据类型</typeparam>
+    public readonly struct EventData<T>
+    {
+        public readonly EventMessageType type;
+        public readonly T data;
+
+        public EventData(EventMessageType type, T data)
         {
             this.type = type;
             this.data = data;
@@ -50,6 +66,15 @@ namespace ReunionMovement.Core.EventMessage
         private readonly Dictionary<EventMessageType, Dictionary<Action<EventData>, IDisposable>> subscriptionTrackers
             = new Dictionary<EventMessageType, Dictionary<Action<EventData>, IDisposable>>();
 
+        // ============================================================
+        //  泛型零装箱通道（推荐新代码使用）
+        //  使用 object 作为字典值存储不同类型的 Subject，运行时强转
+        // ============================================================
+        private readonly Dictionary<EventMessageType, object> typedSubjects
+            = new Dictionary<EventMessageType, object>();
+        private readonly Dictionary<EventMessageType, object> typedTrackers
+            = new Dictionary<EventMessageType, object>();
+
         public UniTask Init()
         {
             initProgress = 100;
@@ -78,11 +103,25 @@ namespace ReunionMovement.Core.EventMessage
             }
             subscriptionTrackers.Clear();
 
+            // 释放泛型零装箱通道的订阅追踪
+            foreach (var obj in typedTrackers.Values)
+            {
+                if (obj is IDisposable disp) disp.Dispose();
+            }
+            typedTrackers.Clear();
+
             foreach (var kvp in eventSubjects)
             {
                 kvp.Value?.Dispose();
             }
             eventSubjects.Clear();
+
+            // 释放泛型零装箱 Subjects
+            foreach (var obj in typedSubjects.Values)
+            {
+                if (obj is IDisposable disp) disp.Dispose();
+            }
+            typedSubjects.Clear();
 
             isInited = false;
         }
@@ -231,6 +270,97 @@ namespace ReunionMovement.Core.EventMessage
         public Observable<EventData> AsObservable(EventMessageType type)
         {
             return GetOrCreateSubject(type);
+        }
+
+        // ============================================================
+        //  泛型零装箱 API（推荐新代码使用，值类型不会装箱）
+        // ============================================================
+
+        /// <summary>
+        /// 获取或创建泛型 Subject（零装箱通道）。
+        /// 使用 object 字典存储不同类型的 Subject&lt;EventData&lt;T&gt;&gt;，运行时强转。
+        /// </summary>
+        private Subject<EventData<T>> GetOrCreateTypedSubject<T>(EventMessageType type)
+        {
+            if (typedSubjects.TryGetValue(type, out var obj) && obj is Subject<EventData<T>> existing)
+            {
+                return existing;
+            }
+            var subject = new Subject<EventData<T>>();
+            typedSubjects[type] = subject;
+            return subject;
+        }
+
+        /// <summary>
+        /// 获取或创建泛型订阅追踪字典（零装箱通道）。
+        /// </summary>
+        private Dictionary<Action<EventData<T>>, IDisposable> GetOrCreateTypedTracker<T>(EventMessageType type)
+        {
+            if (typedTrackers.TryGetValue(type, out var obj) && obj is Dictionary<Action<EventData<T>>, IDisposable> existing)
+            {
+                return existing;
+            }
+            var tracker = new Dictionary<Action<EventData<T>>, IDisposable>(4);
+            typedTrackers[type] = tracker;
+            return tracker;
+        }
+
+        /// <summary>
+        /// 零装箱添加事件监听（值类型不会产生 GC 分配）。
+        /// </summary>
+        /// <typeparam name="T">数据类型</typeparam>
+        /// <param name="type">事件类型</param>
+        /// <param name="listenerFunc">监听函数</param>
+        public void AddEventListenerTyped<T>(EventMessageType type, Action<EventData<T>> listenerFunc)
+        {
+            if (listenerFunc == null) return;
+
+            var subject = GetOrCreateTypedSubject<T>(type);
+            var tracker = GetOrCreateTypedTracker<T>(type);
+
+            if (tracker.ContainsKey(listenerFunc)) return;
+
+            var disposable = subject.Subscribe(data => listenerFunc(data));
+            tracker[listenerFunc] = disposable;
+        }
+
+        /// <summary>
+        /// 零装箱移除事件监听。
+        /// </summary>
+        public void RemoveEventListenerTyped<T>(EventMessageType type, Action<EventData<T>> listenerFunc)
+        {
+            if (listenerFunc == null) return;
+
+            if (typedTrackers.TryGetValue(type, out var obj)
+                && obj is Dictionary<Action<EventData<T>>, IDisposable> tracker
+                && tracker.TryGetValue(listenerFunc, out var disposable))
+            {
+                disposable?.Dispose();
+                tracker.Remove(listenerFunc);
+            }
+        }
+
+        /// <summary>
+        /// 零装箱分发事件（值类型不会装箱，推荐高频事件使用）。
+        /// </summary>
+        /// <typeparam name="T">数据类型</typeparam>
+        /// <param name="eventType">事件类型</param>
+        /// <param name="eventData">事件数据</param>
+        public void DispatchEventTyped<T>(EventMessageType eventType, T eventData)
+        {
+            if (typedSubjects.TryGetValue(eventType, out var obj)
+                && obj is Subject<EventData<T>> subject)
+            {
+                subject.OnNext(new EventData<T>(eventType, eventData));
+            }
+        }
+
+        /// <summary>
+        /// 获取泛型事件的可观测序列（零装箱，支持 LINQ 操作符）。
+        /// </summary>
+        public Observable<EventData<T>> AsObservableTyped<T>(EventMessageType type)
+        {
+            return GetOrCreateTypedSubject<T>(type);
         }
 
         #endregion

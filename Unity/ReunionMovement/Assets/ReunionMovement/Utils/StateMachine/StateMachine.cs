@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using Newtonsoft.Json;
 
@@ -265,15 +262,18 @@ namespace ReunionMovement.Common.Util.StateMachine
         }
 
         /// <summary>
-        /// 并行状态的移除方法
+        /// 并行状态的移除方法（手动遍历避免 LINQ FirstOrDefault 的委托分配）
         /// </summary>
         /// <param name="label"></param>
         public void RemoveParallelState(TLabel label)
         {
-            var state = parallelStates.FirstOrDefault(s => s.label.Equals(label));
-            if (state != null)
+            for (int i = 0; i < parallelStates.Count; i++)
             {
-                parallelStates.Remove(state);
+                if (EqualityComparer<TLabel>.Default.Equals(parallelStates[i].label, label))
+                {
+                    parallelStates.RemoveAt(i);
+                    return;
+                }
             }
         }
 
