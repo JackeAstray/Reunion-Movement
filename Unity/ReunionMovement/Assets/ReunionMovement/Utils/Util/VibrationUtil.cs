@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using UnityEngine;
 using System.Runtime.InteropServices;
 
@@ -27,7 +26,9 @@ namespace ReunionMovement.Common.Util
         private static readonly int[] failurePatternAmplitude = { 0, MediumAmplitude, 0, MediumAmplitude, 0, HeavyAmplitude, 0, LightAmplitude };
 
 
+#if UNITY_ANDROID
         private static int sdkVersion = -1;
+#endif
         private static bool iOSHapticsInitialized = false;
 
         protected override void Awake()
@@ -178,21 +179,13 @@ namespace ReunionMovement.Common.Util
         // INTERFACE END ---------------------------------------------------------------------------------------------------------
 
         // Android ---------------------------------------------------------------------------------------------------------
-#if UNITY_ANDROID && !UNITY_EDITOR
-		private static AndroidJavaClass UnityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
-		private static AndroidJavaObject CurrentActivity = UnityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
-		private static AndroidJavaObject AndroidVibrator = CurrentActivity.Call<AndroidJavaObject>("getSystemService", "vibrator");
-		private static AndroidJavaClass VibrationEffectClass;
-		private static AndroidJavaObject VibrationEffect;
-		private static int DefaultAmplitude;
-#else
-        private static AndroidJavaClass UnityPlayer;
-        private static AndroidJavaObject CurrentActivity;
-        private static AndroidJavaObject AndroidVibrator = null;
-        private static AndroidJavaClass VibrationEffectClass = null;
+#if UNITY_ANDROID
+        private static AndroidJavaClass UnityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+        private static AndroidJavaObject CurrentActivity = UnityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+        private static AndroidJavaObject AndroidVibrator = CurrentActivity.Call<AndroidJavaObject>("getSystemService", "vibrator");
+        private static AndroidJavaClass VibrationEffectClass;
         private static AndroidJavaObject VibrationEffect;
         private static int DefaultAmplitude;
-#endif
 
         /// <summary>
         /// 请求 Android 上的默认振动持续指定的持续时间（以毫秒为单位）
@@ -200,11 +193,6 @@ namespace ReunionMovement.Common.Util
         /// <param name="milliseconds"></param>
         private static void AndroidVibrate(long milliseconds)
         {
-            if (!IsAndroid())
-            {
-                return;
-            }
-
             AndroidVibrator.Call("vibrate", milliseconds);
         }
 
@@ -215,11 +203,6 @@ namespace ReunionMovement.Common.Util
         /// <param name="amplitude"></param>
         private static void AndroidVibrate(long milliseconds, int amplitude)
         {
-            if (!IsAndroid())
-            {
-                return;
-            }
-
             // 仅支持振幅
             if ((AndroidSDKVersion() < 26))
             {
@@ -240,11 +223,6 @@ namespace ReunionMovement.Common.Util
         /// <param name="repeat"></param>
         private static void AndroidVibrate(long[] pattern, int repeat)
         {
-            if (!IsAndroid())
-            {
-                return;
-            }
-
             if ((AndroidSDKVersion() < 26))
             {
                 AndroidVibrator.Call("vibrate", pattern, repeat);
@@ -265,11 +243,6 @@ namespace ReunionMovement.Common.Util
         /// <param name="repeat"></param>
         private static void AndroidVibrate(long[] pattern, int[] amplitudes, int repeat)
         {
-            if (!IsAndroid())
-            {
-                return;
-            }
-
             if ((AndroidSDKVersion() < 26))
             {
                 AndroidVibrator.Call("vibrate", pattern, repeat);
@@ -287,11 +260,6 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         private static void AndroidCancelVibrations()
         {
-            if (!IsAndroid())
-            {
-                return;
-            }
-
             AndroidVibrator.Call("cancel");
         }
 
@@ -330,8 +298,14 @@ namespace ReunionMovement.Common.Util
                     if (dashIndex >= 0)
                     {
                         string apiStr = osString.Substring(dashIndex + 1);
-                        // 提取连续数字部分（兼容 "API-29"、"API-32" 等格式）
-                        string numStr = new string(apiStr.TakeWhile(char.IsDigit).ToArray());
+                        // 手动提取连续数字部分（避免 LINQ TakeWhile 的委托分配）
+                        int digitCount = 0;
+                        for (int i = 0; i < apiStr.Length; i++)
+                        {
+                            if (char.IsDigit(apiStr[i])) digitCount++;
+                            else break;
+                        }
+                        string numStr = apiStr.Substring(0, digitCount);
                         if (int.TryParse(numStr, out int apiLevel))
                         {
                             sdkVersion = apiLevel;
@@ -346,6 +320,15 @@ namespace ReunionMovement.Common.Util
             }
             return sdkVersion;
         }
+#else
+        // 非 Android 平台桩方法（编译所需，运行时不会被调用）
+        private static void AndroidVibrate(long milliseconds) { }
+        private static void AndroidVibrate(long milliseconds, int amplitude) { }
+        private static void AndroidVibrate(long[] pattern, int repeat) { }
+        private static void AndroidVibrate(long[] pattern, int[] amplitudes, int repeat) { }
+        private static void AndroidCancelVibrations() { }
+#endif
+        // Android End ---------------------------------------------------------------------------------------------------------
         // Android End ---------------------------------------------------------------------------------------------------------
 
         // iOS ----------------------------------------------------------------------------------------------------------------

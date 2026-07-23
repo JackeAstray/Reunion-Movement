@@ -55,6 +55,9 @@ namespace ReunionMovement.Core
         {
             Log.Debug("[StartGame] 初始化前执行");
 
+            // 预加载配置（后续日志等模块访问 Config 属性时无需再走 Resources.Load）
+            ReunionMovement.Config.EnsureLoaded();
+
             if (Application.platform != RuntimePlatform.WebGLPlayer)
             {
                 GameOption.LoadOptions();
@@ -76,12 +79,16 @@ namespace ReunionMovement.Core
                 GameOption.ResetOptions();
             }
 
+            // 测试/调试场景：跳过自动场景跳转，保留当前场景用于调试
+            if (Bootstrap.IsTestScene)
+            {
+                Log.Debug("[StartGame] 测试场景模式，跳过自动场景加载，保留当前场景");
+                return;
+            }
+
             // 打开启动 UI 并注册为场景切换时不隐藏
             UISystem.Instance.OpenWindow(UINames.StartGame);
             SceneSystem.Instance.ExcludeWindowFromSceneHide(UINames.StartGame);
-
-            // 打开启动 UI Toolkit 面板
-            // UIToolkitSystem.Instance.OpenPanel<StartGameUIPanel>("StartGame");
 
             // 加载初始场景
             await SceneSystem.Instance.LoadScene("Temp", true);

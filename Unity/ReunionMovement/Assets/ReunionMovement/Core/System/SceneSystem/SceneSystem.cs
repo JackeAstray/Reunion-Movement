@@ -53,6 +53,21 @@ namespace ReunionMovement.Core.Scene
         // 场景切换时不隐藏的窗口名称集合（由 LoadScene 调用方在切换前注册）
         private readonly HashSet<string> excludeFromSceneHide = new HashSet<string>();
 
+        // UI 窗口注册表（UIWindowAsset.OnEnable/OnDisable 自动维护，避免 FindObjectsByType 全遍历）
+        private readonly HashSet<UI.UIWindowAsset> registeredUIWindows = new HashSet<UI.UIWindowAsset>();
+
+        /// <summary>注册 UI 窗口（由 UIWindowAsset.OnEnable 调用）</summary>
+        public void RegisterUIWindow(UI.UIWindowAsset window)
+        {
+            if (window != null) registeredUIWindows.Add(window);
+        }
+
+        /// <summary>注销 UI 窗口（由 UIWindowAsset.OnDisable 调用）</summary>
+        public void UnregisterUIWindow(UI.UIWindowAsset window)
+        {
+            if (window != null) registeredUIWindows.Remove(window);
+        }
+
         #region R3 响应式属性（推荐新代码使用）
 
         /// <summary>场景加载进度（0~1）</summary>
@@ -132,6 +147,7 @@ namespace ReunionMovement.Core.Scene
             SceneLoadedSubject?.Dispose();
             SceneLoadedSubject = null;
             excludeFromSceneHide.Clear();
+            registeredUIWindows.Clear();
         }
 
         #region Load
@@ -356,14 +372,14 @@ namespace ReunionMovement.Core.Scene
         }
 
         /// <summary>
-        /// 在场景切换时隐藏UI窗口（跳过 excludeFromSceneHide 中注册的窗口）
+        /// 在场景切换时隐藏UI窗口（跳过 excludeFromSceneHide 中注册的窗口）。
+        /// 使用注册表（O(活跃窗口数)）替代 FindObjectsByType（O(场景所有对象)）。
         /// </summary>
         private void HideUIWindowsOnSceneChange()
         {
-            var windows = UnityEngine.Object.FindObjectsByType<UIWindowAsset>(FindObjectsSortMode.None);
-
-            foreach (var window in windows)
+            foreach (var window in registeredUIWindows)
             {
+                if (window == null) continue;
                 if (!window.isHiddenWhenLeaveScene) continue;
                 if (excludeFromSceneHide.Contains(window.name)) continue;
 

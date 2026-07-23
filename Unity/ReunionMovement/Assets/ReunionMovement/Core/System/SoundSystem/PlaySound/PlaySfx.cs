@@ -24,15 +24,20 @@ namespace ReunionMovement.Core.Sound
         {
             if (playOnAwake)
             {
-                PlaySfxClip().Forget();
+                PlaySfxClipAsync().Forget();
             }
         }
 
         /// <summary>
-        /// 播放指定ID的音效
+        /// 播放指定ID的音效（Button 可绑定）
         /// </summary>
         /// <param name="id"></param>
-        public async UniTaskVoid PlaySfxById(int id)
+        public void PlaySfxById(int id)
+        {
+            PlaySfxByIdAsync(id).Forget();
+        }
+
+        private async UniTask PlaySfxByIdAsync(int id)
         {
             try
             {
@@ -45,9 +50,14 @@ namespace ReunionMovement.Core.Sound
         }
 
         /// <summary>
-        /// 播放音效剪辑
+        /// 播放音效（Button 可绑定）
         /// </summary>
-        public async UniTaskVoid PlaySfxClip()
+        public void PlaySfxClip()
+        {
+            PlaySfxClipAsync().Forget();
+        }
+
+        private async UniTask PlaySfxClipAsync()
         {
             try
             {

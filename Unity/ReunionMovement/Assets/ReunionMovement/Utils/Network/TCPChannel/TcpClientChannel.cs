@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using Telepathy;
 
 namespace ReunionMovement.Common.Util
@@ -80,11 +81,20 @@ namespace ReunionMovement.Common.Util
             onAbort?.Invoke();
             onAbort = null;
         }
+        /// <summary>
+        /// 接收数据回调 —— 使用 ArrayPool&lt;byte&gt; 池化缓冲区，消除每次接收的堆分配。
+        /// ⚠️ 消费者（OnDataReceived 订阅者）不得持有 data 引用超出回调范围；
+        /// 如需持久化数据，请在回调内自行复制。
+        /// </summary>
         void OnReceiveDataHandler(ArraySegment<byte> arrSeg)
         {
-            byte[] data = new byte[arrSeg.Count];
-            Buffer.BlockCopy(arrSeg.Array, arrSeg.Offset, data, 0, arrSeg.Count);
+            int length = arrSeg.Count;
+            if (length == 0) return;
+
+            byte[] data = ArrayPool<byte>.Shared.Rent(length);
+            Buffer.BlockCopy(arrSeg.Array, arrSeg.Offset, data, 0, length);
             onDataReceived?.Invoke(data);
+            ArrayPool<byte>.Shared.Return(data);
         }
     }
 }

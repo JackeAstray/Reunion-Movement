@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.InputSystem.UI;
 
 namespace ReunionMovement.Core.UI
 {
@@ -32,16 +31,16 @@ namespace ReunionMovement.Core.UI
         #region R3 响应式事件（推荐新代码使用）
 
         /// <summary>UI 初始化完成事件</summary>
-        public readonly Subject<UIController> OnInitSubject = new Subject<UIController>();
+        public Subject<UIController> OnInitSubject = new Subject<UIController>();
 
         /// <summary>UI 打开事件</summary>
-        public readonly Subject<UIController> OnOpenSubject = new Subject<UIController>();
+        public Subject<UIController> OnOpenSubject = new Subject<UIController>();
 
         /// <summary>UI 设置事件</summary>
-        public readonly Subject<UIController> OnSetSubject = new Subject<UIController>();
+        public Subject<UIController> OnSetSubject = new Subject<UIController>();
 
         /// <summary>UI 关闭事件</summary>
-        public readonly Subject<UIController> OnCloseSubject = new Subject<UIController>();
+        public Subject<UIController> OnCloseSubject = new Subject<UIController>();
 
         #endregion
 
@@ -55,6 +54,12 @@ namespace ReunionMovement.Core.UI
         public async UniTask Init()
         {
             initProgress = 0;
+
+            // 重建可能已被 Clear() 释放的 R3 Subject（支持模块重初始化）
+            OnInitSubject ??= new Subject<UIController>();
+            OnOpenSubject ??= new Subject<UIController>();
+            OnSetSubject ??= new Subject<UIController>();
+            OnCloseSubject ??= new Subject<UIController>();
 
             await CreateRoot();
 
@@ -74,11 +79,15 @@ namespace ReunionMovement.Core.UI
             isInited = false;
             uiStateCache.Clear();
             uiControllerTypeCache.Clear();
-            // 释放 R3 Subject（自动断开所有订阅）
+            // 释放 R3 Subject（自动断开所有订阅）并置 null 以支持重初始化
             OnInitSubject?.Dispose();
+            OnInitSubject = null;
             OnOpenSubject?.Dispose();
+            OnOpenSubject = null;
             OnSetSubject?.Dispose();
+            OnSetSubject = null;
             OnCloseSubject?.Dispose();
+            OnCloseSubject = null;
         }
 
         /// <summary>
@@ -95,7 +104,7 @@ namespace ReunionMovement.Core.UI
         /// <summary>
         /// 创建根节点
         /// </summary>
-        private UniTask CreateRoot()
+        private async UniTask CreateRoot()
         {
             uiRoot = new GameObject("UIRoot");
             mainUIRoot = new GameObject("MainUIRoot");
@@ -109,21 +118,101 @@ namespace ReunionMovement.Core.UI
 
             GameObject.DontDestroyOnLoad(uiRoot);
 
-            EventSystem = new GameObject("EventSystem").AddComponent<EventSystem>();
-            var inputModule = EventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
+            // 延迟一帧创建 EventSystem：RuntimeInitializeLoadType.BeforeSceneLoad 阶段
+            // Input System 包可能尚未初始化完毕，此时 Instantiate 预制体上的
+            // InputSystemUIInputModule.OnEnable() 会静默失败。
+            // 等一帧后 Input System 就绪，再创建即可正常工作。
+            await UniTask.Yield(PlayerLoopTiming.Update);
 
-            // 通过 ResourcesSystem 加载 InputSystem_Actions 资产（需放在 Resources 文件夹下）
-            var inputActions = ResourcesSystem.Instance.Load<UnityEngine.InputSystem.InputActionAsset>("InputSystem_Actions");
-            if (inputActions != null)
+            // 销毁已有的 EventSystem，从预制体加载干净的实例
+            var existingES = UnityEngine.Object.FindFirstObjectByType<EventSystem>();
+            if (existingES != null)
             {
-                inputModule.actionsAsset = inputActions;
+                UnityEngine.Object.DestroyImmediate(existingES.gameObject);
             }
 
-            GameObject.DontDestroyOnLoad(EventSystem);
+            var esPrefab = ResourcesSystem.Instance.Load<GameObject>("Prefabs/EventSystem/EventSystem");
+            if (esPrefab != null)
+            {
+                var esGo = UnityEngine.Object.Instantiate(esPrefab);
+                esGo.name = "EventSystem";
+                EventSystem = esGo.GetComponent<EventSystem>();
+                GameObject.DontDestroyOnLoad(esGo);
+
+                // ============================================================
+                // 关键修复：InputSystemUIInputModule 在 Instantiate 时 OnEnable
+                // 可能因 InputSystem 未完全就绪而静默失败。
+                // 单纯 toggle enabled 不可靠（Unity 可能在同一帧内合并 enable 操作），
+                // 这里采用"销毁旧组件 + AddComponent 新建"的方式，与 CreateUIPlane.cs
+                // 中已验证可行的方案一致。
+                // ============================================================
+                var oldModule = esGo.GetComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                if (oldModule != null)
+                {
+                    // 记录预制体上的配置值
+                    var savedActionsAsset = oldModule.actionsAsset;
+                    var savedDeselectOnBgClick = oldModule.deselectOnBackgroundClick;
+                    var savedPointerBehavior = oldModule.pointerBehavior;
+                    var savedMoveRepeatDelay = oldModule.moveRepeatDelay;
+                    var savedMoveRepeatRate = oldModule.moveRepeatRate;
+                    var savedScrollDeltaPerTick = oldModule.scrollDeltaPerTick;
+
+                    // 销毁预制体上初始化失败的旧模块
+                    UnityEngine.Object.DestroyImmediate(oldModule);
+
+                    // 等待一帧，确保 DestroyImmediate 完全生效且 InputSystem 进一步就绪
+                    await UniTask.Yield(PlayerLoopTiming.Update);
+
+                    // 用 AddComponent 创建全新模块 —— 此时 OnEnable 会正常注册到 InputSystem
+                    var newModule = esGo.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                    newModule.deselectOnBackgroundClick = savedDeselectOnBgClick;
+                    newModule.pointerBehavior = savedPointerBehavior;
+                    newModule.moveRepeatDelay = savedMoveRepeatDelay;
+                    newModule.moveRepeatRate = savedMoveRepeatRate;
+                    newModule.scrollDeltaPerTick = savedScrollDeltaPerTick;
+
+                    // 还原 actionsAsset；若为空则从 Resources 加载独立副本
+                    if (savedActionsAsset != null)
+                    {
+                        newModule.actionsAsset = UnityEngine.Object.Instantiate(savedActionsAsset);
+                    }
+                    else
+                    {
+                        var inputActions = UnityEngine.Resources.Load<UnityEngine.InputSystem.InputActionAsset>("InputSystem_Actions");
+                        if (inputActions != null)
+                        {
+                            newModule.actionsAsset = UnityEngine.Object.Instantiate(inputActions);
+                        }
+                        else
+                        {
+                            Log.Warning("[UISystem] 未找到 InputSystem_Actions.inputactions，InputSystemUIInputModule 可能无法处理鼠标/触屏输入");
+                        }
+                    }
+
+                    // 关键：Instantiate 克隆出的 InputActionAsset 所有 ActionMap 默认禁用！
+                    // InputSystemUIInputModule 不会自动 Enable，必须手动启用，否则鼠标/触屏/键盘事件全部无法接收。
+                    // 这就是"手动拖入场景可用，代码加载不可用"的最终根因。
+                    if (newModule.actionsAsset != null)
+                    {
+                        newModule.actionsAsset.Enable();
+                    }
+
+                    newModule.enabled = true;
+                    Log.Debug("[UISystem] EventSystem 预制体加载完成（已重建 InputSystemUIInputModule），enabled={0}, actionsAsset={1}",
+                        newModule.enabled,
+                        newModule.actionsAsset != null ? newModule.actionsAsset.name : "NULL");
+                }
+                else
+                {
+                    Log.Warning("[UISystem] EventSystem 预制体上未找到 InputSystemUIInputModule 组件，鼠标/触屏 UI 交互可能不可用");
+                }
+            }
+            else
+            {
+                Log.Error("[UISystem] 未找到 EventSystem 预制体: Resources/Prefabs/EventSystem/EventSystem.prefab");
+            }
 
             initProgress = 50;
-
-            return UniTask.CompletedTask;
         }
 
 

@@ -1,4 +1,5 @@
 using UnityEngine;
+using ReunionMovement.Core.Scene;
 
 namespace ReunionMovement.Core.UI
 {
@@ -25,5 +26,18 @@ namespace ReunionMovement.Core.UI
         /// 界面分组名称
         /// </summary>
         public string groupName = "";
+
+        private void OnEnable()
+        {
+            // 向 SceneSystem 注册自身，避免场景切换时使用 FindObjectsByType 全场景遍历
+            if (SceneSystem.Instance.isInited)
+                SceneSystem.Instance.RegisterUIWindow(this);
+        }
+
+        private void OnDisable()
+        {
+            if (SceneSystem.Instance.isInited)
+                SceneSystem.Instance.UnregisterUIWindow(this);
+        }
     }
 }

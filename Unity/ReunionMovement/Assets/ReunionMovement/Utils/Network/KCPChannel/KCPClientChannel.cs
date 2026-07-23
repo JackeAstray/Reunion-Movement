@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Buffers;
 using kcp2k;
+using R3;
 
 namespace ReunionMovement.Common.Util
 {
@@ -28,10 +30,22 @@ namespace ReunionMovement.Common.Util
 
         KcpClient client;
 
+        // ---- C# 事件（向后兼容）----
         Action onConnected;
         Action onDisconnected;
         Action<byte[]> onDataReceived;
         Action<string> onError;
+
+        // ---- R3 Subject（推荐使用，支持操作符组合和自动取消订阅）----
+        /// <summary>连接成功（R3 Subject）</summary>
+        public Subject<Unit> OnConnectedSubject { get; } = new Subject<Unit>();
+        /// <summary>断开连接（R3 Subject）</summary>
+        public Subject<Unit> OnDisconnectedSubject { get; } = new Subject<Unit>();
+        /// <summary>收到数据（R3 Subject）</summary>
+        public Subject<byte[]> OnDataReceivedSubject { get; } = new Subject<byte[]>();
+        /// <summary>发生错误（R3 Subject）</summary>
+        public Subject<string> OnErrorSubject { get; } = new Subject<string>();
+
         public event Action OnConnected
         {
             add { onConnected += value; }
@@ -142,30 +156,52 @@ namespace ReunionMovement.Common.Util
         public void Close()
         {
             client.Disconnect();
-            // 清理事件处理器，避免 GC 无法回收订阅者
+            // 清理 C# 事件处理器，避免 GC 无法回收订阅者
             onConnected = null;
             onDisconnected = null;
             onDataReceived = null;
             onError = null;
+
+            // 完成 R3 Subject（通知订阅者流已结束，释放资源）
+            OnConnectedSubject.OnCompleted();
+            OnDisconnectedSubject.OnCompleted();
+            OnDataReceivedSubject.OnCompleted();
+            OnErrorSubject.OnCompleted();
+            OnConnectedSubject.Dispose();
+            OnDisconnectedSubject.Dispose();
+            OnDataReceivedSubject.Dispose();
+            OnErrorSubject.Dispose();
         }
         void OnDisconnectHandler()
         {
             onDisconnected?.Invoke();
+            OnDisconnectedSubject.OnNext(Unit.Default);
         }
         void OnConnectHandler()
         {
             onConnected?.Invoke();
+            OnConnectedSubject.OnNext(Unit.Default);
         }
+        /// <summary>
+        /// 接收数据回调 —— 使用 ArrayPool&lt;byte&gt; 池化缓冲区，消除每次接收的堆分配。
+        /// ⚠️ 消费者（OnDataReceived 订阅者）不得持有 data 引用超出回调范围。
+        /// </summary>
         void OnReceiveDataHandler(ArraySegment<byte> arrSeg, KcpChannel channel)
         {
             var rcvLen = arrSeg.Count;
-            var rcvData = new byte[rcvLen];
+            if (rcvLen == 0) return;
+
+            var rcvData = ArrayPool<byte>.Shared.Rent(rcvLen);
             Array.Copy(arrSeg.Array, arrSeg.Offset, rcvData, 0, rcvLen);
             onDataReceived?.Invoke(rcvData);
+            OnDataReceivedSubject.OnNext(rcvData);
+            ArrayPool<byte>.Shared.Return(rcvData);
         }
         void OnErrorHandler(ErrorCode error, string reason)
         {
-            onError?.Invoke($"{error}-{reason}");
+            var msg = $"{error}-{reason}";
+            onError?.Invoke(msg);
+            OnErrorSubject.OnNext(msg);
         }
     }
 }
