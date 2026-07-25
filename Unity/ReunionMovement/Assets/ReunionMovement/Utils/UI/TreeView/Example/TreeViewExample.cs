@@ -20,12 +20,12 @@ namespace ReunionMovement.Example
                         new TreeViewData("四级结构 1",new List<TreeViewData>()
                         {
                         },
-                        new System.Action(() => Log.Debug("四级结构 1 测试"))),
+                        TextAction)
                     },
-                    new System.Action(() => Log.Debug("三级结构 1 测试")))
+                    TextAction)
                     },
-                null),
-            }, null);
+                TextAction),
+            }, TextAction);
             rootData.Add(data);
             data = new TreeViewData("一级结构 2", new List<TreeViewData>()
             {
@@ -36,12 +36,12 @@ namespace ReunionMovement.Example
                         new TreeViewData("四级结构 2",new List<TreeViewData>()
                         {
                         },
-                        new System.Action(() => Log.Debug("四级结构 2 测试"))),
+                        TextAction)
                     },
-                    new System.Action(() => Log.Debug("三级结构 2 测试")))
-                    },
-                null),
-            }, null, 0, false, true);
+                    TextAction)
+                },
+                TextAction),
+            }, TextAction, 0, false, true);
             rootData.Add(data);
 
             UITree.Insert(rootData);
@@ -57,6 +57,11 @@ namespace ReunionMovement.Example
                     node.SetDisplayDecorateRecursive(displayDecorate);
                 }
             }
+        }
+
+        public void TextAction(TreeViewData data)
+        {
+            Log.Debug($"点击了 {data.name}");
         }
     }
 }
