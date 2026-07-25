@@ -42,7 +42,9 @@ namespace ReunionMovement
             treeRootNodes.Clear();
             foreach (var item in rootData)
             {
-                TreeViewNode treeView = Instantiate(tvObj, container);
+                TreeViewNode treeView = Instantiate(tvObj);
+                treeView.transform.SetParent(container, false);
+                treeView.transform.localScale = Vector3.one;
                 treeView.Insert(item);
                 treeRootNodes.Add(treeView);
             }
@@ -148,7 +150,8 @@ namespace ReunionMovement
             {
                 treeNode = CloneTreeNode();
             }
-            treeNode.transform.SetParent(container);
+            treeNode.transform.SetParent(container, false);
+            treeNode.transform.localScale = Vector3.one;
             treeNode.SetActive(true);
             treeNode.GetComponent<TreeViewNode>().Insert(data);
             treeNode.transform.SetSiblingIndex(siblingIndex + 1);
@@ -175,7 +178,8 @@ namespace ReunionMovement
             {
                 poolParent = new GameObject("CachePool").transform;
             }
-            treeNode.transform.SetParent(poolParent);
+            treeNode.transform.SetParent(poolParent, false);
+            treeNode.transform.localScale = Vector3.one;
             treeNode.SetActive(false);
             pool.Add(treeNode);
         }
@@ -186,7 +190,8 @@ namespace ReunionMovement
         private GameObject CloneTreeNode()
         {
             GameObject result = Instantiate(NodePrefab);
-            result.transform.SetParent(container);
+            result.transform.SetParent(container, false);
+            result.transform.localScale = Vector3.one;
             return result;
         }
 
