@@ -44,7 +44,8 @@ namespace ReunionMovement.Common.Util
             }
 
             // LRU 淘汰：超出容量时移除最久未使用的条目
-            while (cache.Count >= MaxCapacity && lruOrder.First != null)
+            int safeCapacity = Mathf.Max(1, MaxCapacity); // 至少保留 1，防止无限循环
+            while (cache.Count >= safeCapacity && lruOrder.First != null)
             {
                 string oldestKey = lruOrder.First.Value;
                 lruOrder.RemoveFirst();

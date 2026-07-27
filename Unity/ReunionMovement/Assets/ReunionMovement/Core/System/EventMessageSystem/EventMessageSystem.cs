@@ -46,7 +46,7 @@ namespace ReunionMovement.Core.EventMessage
     /// <summary>
     /// 事件消息系统 —— 基于 R3 Subject&lt;T&gt; 的类型安全事件总线
     /// </summary>
-    public class EventMessageSystem : ICustomSystem
+    public class EventMessageSystem : ICustomSystem, ISystemDisposable
     {
         #region 单例与初始化
         private static readonly Lazy<EventMessageSystem> instance = new(() => new EventMessageSystem());
@@ -83,11 +83,6 @@ namespace ReunionMovement.Core.EventMessage
             return UniTask.CompletedTask;
         }
 
-        public void Update(float logicTime, float realTime)
-        {
-            // 这里可以添加定时任务或其他逻辑
-        }
-
         public void Clear()
         {
             Log.Debug("EventMessageSystem 清除数据");
@@ -104,9 +99,18 @@ namespace ReunionMovement.Core.EventMessage
             subscriptionTrackers.Clear();
 
             // 释放泛型零装箱通道的订阅追踪
+            // typedTrackers 的 value 是 Dictionary<Action<EventData<T>>, IDisposable>，
+            // 必须遍历内层字典的 Values 逐一 Dispose，不能直接将 Dictionary 当作 IDisposable。
             foreach (var obj in typedTrackers.Values)
             {
-                if (obj is IDisposable disp) disp.Dispose();
+                if (obj is System.Collections.IDictionary dict)
+                {
+                    foreach (var disposable in dict.Values)
+                    {
+                        if (disposable is IDisposable disp) disp.Dispose();
+                    }
+                    dict.Clear();
+                }
             }
             typedTrackers.Clear();
 

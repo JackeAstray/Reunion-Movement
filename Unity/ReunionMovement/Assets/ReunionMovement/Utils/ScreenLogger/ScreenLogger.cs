@@ -50,6 +50,7 @@ namespace ReunionMovement
         public bool stackTraceErrors = true;
 
         static Queue<LogMessage> queue = new Queue<LogMessage>();
+        private static readonly HashSet<ScreenLogger> activeInstances = new HashSet<ScreenLogger>();
 
         GUIStyle styleContainer, styleText;
         int padding = 5;
@@ -78,6 +79,11 @@ namespace ReunionMovement
 
         void OnDestroy()
         {
+            // 从活跃实例列表中移除
+            lock (activeInstances)
+            {
+                activeInstances.Remove(this);
+            }
             if (backgroundTex != null)
             {
                 Destroy(backgroundTex);
@@ -89,7 +95,18 @@ namespace ReunionMovement
         {
             if (!showInEditor && Application.isEditor) return;
 
-            queue = new Queue<LogMessage>();
+            lock (activeInstances)
+            {
+                activeInstances.Add(this);
+            }
+            // 只由第一个启用的实例清空队列，避免多实例互相覆盖
+            if (activeInstances.Count == 1)
+            {
+                lock (queue)
+                {
+                    queue.Clear();
+                }
+            }
 
             Application.logMessageReceived += HandleLog;
         }
@@ -99,6 +116,11 @@ namespace ReunionMovement
             if (!showInEditor && Application.isEditor) return;
 
             Application.logMessageReceived -= HandleLog;
+
+            lock (activeInstances)
+            {
+                activeInstances.Remove(this);
+            }
         }
 
         void Update()

@@ -3,11 +3,35 @@
 namespace ReunionMovement.Common.Util
 {
     /// <summary>
-    /// 随机工具类
+    /// 随机工具类 —— 线程安全。
+    /// 使用 [ThreadStatic] + lock 双重保障，避免 System.Random 多线程并发损坏。
     /// </summary>
     public static class RandomUtil
     {
-        public static readonly Random random = new Random();
+        [ThreadStatic]
+        private static Random threadRandom;
+
+        private static readonly object globalLock = new object();
+        private static Random globalRandom = new Random();
+
+        /// <summary>
+        /// 获取当前线程的 Random 实例（线程安全）。
+        /// 优先使用 [ThreadStatic] 每线程实例；回退到全局 lock。
+        /// </summary>
+        private static Random GetRandom()
+        {
+            if (threadRandom == null)
+            {
+                // 用全局锁种子化每线程实例，避免多线程同时创建相同种子
+                int seed;
+                lock (globalLock)
+                {
+                    seed = globalRandom.Next();
+                }
+                threadRandom = new Random(seed);
+            }
+            return threadRandom;
+        }
 
         /// <summary>
         /// 根据给定的概率（百分比）判断某个事件是否“发生”  float （0-100）
@@ -19,7 +43,7 @@ namespace ReunionMovement.Common.Util
             // 限制概率在0~100之间（手动 Clamp 以兼容 .NET Standard 2.0）
             if (chancePercent < 0f) chancePercent = 0f;
             if (chancePercent > 100f) chancePercent = 100f;
-            return random.NextDouble() * 100.0 <= chancePercent;
+            return GetRandom().NextDouble() * 100.0 <= chancePercent;
         }
 
         /// <summary>
@@ -34,7 +58,7 @@ namespace ReunionMovement.Common.Util
             {
                 return true;
             }
-            return random.Next(0, 256) < chancePercent;
+            return GetRandom().Next(0, 256) < chancePercent;
         }
 
         /// <summary>
@@ -43,7 +67,7 @@ namespace ReunionMovement.Common.Util
         /// <returns> </returns>
         public static double RandomDouble()
         {
-            return random.NextDouble();
+            return GetRandom().NextDouble();
         }
 
         /// <summary>
@@ -52,7 +76,15 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static int OneOrMinusOne()
         {
-            return random.Next(0, 2) * 2 - 1;
+            return GetRandom().Next(0, 2) * 2 - 1;
+        }
+
+        /// <summary>
+        /// 生成随机整数 [0, maxValue)（线程安全），供外部代码直接使用。
+        /// </summary>
+        public static int Next(int maxValue)
+        {
+            return GetRandom().Next(maxValue);
         }
 
         /// <summary>
@@ -67,7 +99,7 @@ namespace ReunionMovement.Common.Util
                 Log.Error("RandomRange(int): 非法的 maxValue={0}，返回0", maxValue);
                 return 0;
             }
-            return random.Next(maxValue);
+            return GetRandom().Next(maxValue);
         }
 
         /// <summary>
@@ -82,7 +114,7 @@ namespace ReunionMovement.Common.Util
                 Log.Error("RandomRange(double): 非法的 maxValue={0}，返回0", maxValue);
                 return 0.0;
             }
-            return random.NextDouble() * maxValue;
+            return GetRandom().NextDouble() * maxValue;
         }
 
         /// <summary>
@@ -98,7 +130,7 @@ namespace ReunionMovement.Common.Util
                 Log.Error("RandomRange : minValue 大于或等于 maxValue，返回 minValue");
                 return minValue;
             }
-            return random.Next(minValue, maxValue);
+            return GetRandom().Next(minValue, maxValue);
         }
 
         /// <summary>
@@ -116,7 +148,7 @@ namespace ReunionMovement.Common.Util
                 return minValue;
             }
 
-            return (random.NextDouble() * (maxValue - minValue) + minValue);
+            return (GetRandom().NextDouble() * (maxValue - minValue) + minValue);
         }
 
         /// <summary>
@@ -132,7 +164,7 @@ namespace ReunionMovement.Common.Util
                 Log.Error("RandomOffset: 传入的 range 为负值 ({0})，使用其绝对值", range);
                 range = Math.Abs(range);
             }
-            var offset = random.NextDouble() * range - range / 2.0;
+            var offset = GetRandom().NextDouble() * range - range / 2.0;
             return (float)(value + offset);
         }
 
@@ -171,10 +203,10 @@ namespace ReunionMovement.Common.Util
                 double u1;
                 do
                 {
-                    u1 = random.NextDouble();
+                    u1 = GetRandom().NextDouble();
                 } while (u1 <= double.Epsilon);
 
-                double u2 = random.NextDouble();
+                double u2 = GetRandom().NextDouble();
                 double z0 = Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Cos(2.0 * Math.PI * u2);
                 value = miu + sigma * z0;
 

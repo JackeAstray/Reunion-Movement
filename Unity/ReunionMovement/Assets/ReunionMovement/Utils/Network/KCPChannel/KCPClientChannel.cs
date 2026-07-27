@@ -183,19 +183,28 @@ namespace ReunionMovement.Common.Util
             OnConnectedSubject.OnNext(Unit.Default);
         }
         /// <summary>
-        /// 接收数据回调 —— 使用 ArrayPool&lt;byte&gt; 池化缓冲区，消除每次接收的堆分配。
-        /// ⚠️ 消费者（OnDataReceived 订阅者）不得持有 data 引用超出回调范围。
+        /// 接收数据回调 —— 池化缓冲区用于内部拷贝，分发前复制到独立数组。
+        /// 订阅者可安全持有 data 引用，无需担心 Use-After-Free。
         /// </summary>
         void OnReceiveDataHandler(ArraySegment<byte> arrSeg, KcpChannel channel)
         {
             var rcvLen = arrSeg.Count;
             if (rcvLen == 0) return;
 
-            var rcvData = ArrayPool<byte>.Shared.Rent(rcvLen);
-            Array.Copy(arrSeg.Array, arrSeg.Offset, rcvData, 0, rcvLen);
-            onDataReceived?.Invoke(rcvData);
-            OnDataReceivedSubject.OnNext(rcvData);
-            ArrayPool<byte>.Shared.Return(rcvData);
+            var pooled = ArrayPool<byte>.Shared.Rent(rcvLen);
+            try
+            {
+                Array.Copy(arrSeg.Array, arrSeg.Offset, pooled, 0, rcvLen);
+                // 复制到精确大小的独立数组，安全分发给所有订阅者
+                byte[] result = new byte[rcvLen];
+                Buffer.BlockCopy(pooled, 0, result, 0, rcvLen);
+                onDataReceived?.Invoke(result);
+                OnDataReceivedSubject.OnNext(result);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(pooled);
+            }
         }
         void OnErrorHandler(ErrorCode error, string reason)
         {

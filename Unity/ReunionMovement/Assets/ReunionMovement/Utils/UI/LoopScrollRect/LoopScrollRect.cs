@@ -130,14 +130,18 @@ namespace ReunionMovement.Common.Util
             }
             if (scrollRect == null)
             {
-                throw new Exception("LoopScrollRect: 需要ScrollRect引用。");
+                Debug.LogError("LoopScrollRect: 需要 ScrollRect 引用，组件已禁用。", this);
+                enabled = false;
+                return;
             }
             content = scrollRect.content;
             viewport = scrollRect.viewport != null ? scrollRect.viewport : scrollRect.GetComponent<RectTransform>();
 
             if (itemPrefab == null)
             {
-                throw new Exception("LoopScrollRect: 需要Item预制体。");
+                Debug.LogError("LoopScrollRect: 需要 Item 预制体，组件已禁用。", this);
+                enabled = false;
+                return;
             }
             itemPrefab.gameObject.SetActive(false);
         }

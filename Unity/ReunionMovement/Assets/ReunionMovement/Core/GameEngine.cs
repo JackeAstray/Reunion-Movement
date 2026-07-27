@@ -34,21 +34,63 @@ namespace ReunionMovement.Core
         public static Subject<string> OnInitFailedSubject { get; private set; } = new Subject<string>();
 
         // ---- 向后兼容的 C# 事件（已废弃，转发到 R3 Subject）----
+        // 使用字典追踪每个订阅的 IDisposable，确保 remove 能正确取消订阅，避免内存泄漏。
+
+        private static readonly Dictionary<Delegate, IDisposable> obsoleteSubscriptions
+            = new Dictionary<Delegate, IDisposable>();
 
         /// <summary>[已废弃] 初始化完成事件。请使用 OnInitializedSubject.Subscribe()</summary>
         [Obsolete("请使用 GameEngine.OnInitializedSubject.Subscribe()", false)]
         public static event Action OnInitialized
         {
-            add { OnInitializedSubject.Subscribe(_ => value()); }
-            remove { /* R3 Subject 不支持移除单个订阅者；请使用 IDisposable.Dispose() */ }
+            add
+            {
+                if (value == null) return;
+                lock (obsoleteSubscriptions)
+                {
+                    if (!obsoleteSubscriptions.ContainsKey(value))
+                        obsoleteSubscriptions[value] = OnInitializedSubject.Subscribe(_ => value());
+                }
+            }
+            remove
+            {
+                if (value == null) return;
+                lock (obsoleteSubscriptions)
+                {
+                    if (obsoleteSubscriptions.TryGetValue(value, out var d))
+                    {
+                        d.Dispose();
+                        obsoleteSubscriptions.Remove(value);
+                    }
+                }
+            }
         }
 
         /// <summary>[已废弃] 初始化失败事件。请使用 GameEngine.OnInitFailedSubject.Subscribe()</summary>
         [Obsolete("请使用 GameEngine.OnInitFailedSubject.Subscribe()", false)]
         public static event Action<string> OnInitFailed
         {
-            add { OnInitFailedSubject.Subscribe(value); }
-            remove { /* R3 Subject 不支持移除单个订阅者；请使用 IDisposable.Dispose() */ }
+            add
+            {
+                if (value == null) return;
+                lock (obsoleteSubscriptions)
+                {
+                    if (!obsoleteSubscriptions.ContainsKey(value))
+                        obsoleteSubscriptions[value] = OnInitFailedSubject.Subscribe(value);
+                }
+            }
+            remove
+            {
+                if (value == null) return;
+                lock (obsoleteSubscriptions)
+                {
+                    if (obsoleteSubscriptions.TryGetValue(value, out var d))
+                    {
+                        d.Dispose();
+                        obsoleteSubscriptions.Remove(value);
+                    }
+                }
+            }
         }
         #endregion
 
@@ -91,24 +133,81 @@ namespace ReunionMovement.Core
         [Obsolete("请使用 GameEngine.UpdateSubject.Subscribe()", false)]
         public static event Action UpdateEvent
         {
-            add { UpdateSubject.Subscribe(_ => value()); }
-            remove { /* R3 Subject 不支持移除单个订阅者；请使用 IDisposable.Dispose() */ }
+            add
+            {
+                if (value == null) return;
+                lock (obsoleteSubscriptions)
+                {
+                    if (!obsoleteSubscriptions.ContainsKey(value))
+                        obsoleteSubscriptions[value] = UpdateSubject.Subscribe(_ => value());
+                }
+            }
+            remove
+            {
+                if (value == null) return;
+                lock (obsoleteSubscriptions)
+                {
+                    if (obsoleteSubscriptions.TryGetValue(value, out var d))
+                    {
+                        d.Dispose();
+                        obsoleteSubscriptions.Remove(value);
+                    }
+                }
+            }
         }
 
         /// <summary>[已废弃] 每 300ms 更新事件。请使用 UpdatePer300msSubject.Subscribe()</summary>
         [Obsolete("请使用 GameEngine.UpdatePer300msSubject.Subscribe()", false)]
         public static event Action UpdatePer300msEvent
         {
-            add { UpdatePer300msSubject.Subscribe(_ => value()); }
-            remove { /* R3 Subject 不支持移除单个订阅者；请使用 IDisposable.Dispose() */ }
+            add
+            {
+                if (value == null) return;
+                lock (obsoleteSubscriptions)
+                {
+                    if (!obsoleteSubscriptions.ContainsKey(value))
+                        obsoleteSubscriptions[value] = UpdatePer300msSubject.Subscribe(_ => value());
+                }
+            }
+            remove
+            {
+                if (value == null) return;
+                lock (obsoleteSubscriptions)
+                {
+                    if (obsoleteSubscriptions.TryGetValue(value, out var d))
+                    {
+                        d.Dispose();
+                        obsoleteSubscriptions.Remove(value);
+                    }
+                }
+            }
         }
 
         /// <summary>[已废弃] 每 1s 更新事件。请使用 UpdatePer1sSubject.Subscribe()</summary>
         [Obsolete("请使用 GameEngine.UpdatePer1sSubject.Subscribe()", false)]
         public static event Action UpdatePer1sEvent
         {
-            add { UpdatePer1sSubject.Subscribe(_ => value()); }
-            remove { /* R3 Subject 不支持移除单个订阅者；请使用 IDisposable.Dispose() */ }
+            add
+            {
+                if (value == null) return;
+                lock (obsoleteSubscriptions)
+                {
+                    if (!obsoleteSubscriptions.ContainsKey(value))
+                        obsoleteSubscriptions[value] = UpdatePer1sSubject.Subscribe(_ => value());
+                }
+            }
+            remove
+            {
+                if (value == null) return;
+                lock (obsoleteSubscriptions)
+                {
+                    if (obsoleteSubscriptions.TryGetValue(value, out var d))
+                    {
+                        d.Dispose();
+                        obsoleteSubscriptions.Remove(value);
+                    }
+                }
+            }
         }
         #endregion
 
@@ -310,7 +409,9 @@ namespace ReunionMovement.Core
             if (modules == null) return;
             foreach (var module in modules)
             {
-                module?.Clear();
+                // 仅清理实现了 ISystemDisposable 的模块（避免空调用）
+                if (module is ISystemDisposable disposable)
+                    disposable.Clear();
             }
         }
 
@@ -326,6 +427,14 @@ namespace ReunionMovement.Core
             modules = null;
             GameEntry = null;
             Current = null;
+
+            // 释放所有废弃事件的订阅追踪，防止内存泄漏
+            lock (obsoleteSubscriptions)
+            {
+                foreach (var d in obsoleteSubscriptions.Values)
+                    d?.Dispose();
+                obsoleteSubscriptions.Clear();
+            }
 
             // 完成并释放 R3 Subject：
             // 1) OnCompleted 通知所有订阅者流已结束（允许 Dispose 清理订阅）

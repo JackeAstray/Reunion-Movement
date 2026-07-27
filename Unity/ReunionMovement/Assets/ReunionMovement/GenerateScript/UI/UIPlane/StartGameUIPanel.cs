@@ -78,7 +78,15 @@ namespace ReunionMovement.Core.UI
             if (animationPlaying) return;
             animationPlaying = true;
 
-            await PlayLogoAnimation();
+            try
+            {
+                await PlayLogoAnimation();
+            }
+            catch (System.Exception ex)
+            {
+                Log.Error("[StartGameUIPanel] OnOpen 动画异常: {0}", ex);
+                animationPlaying = false;
+            }
         }
 
         public override void OnClose()

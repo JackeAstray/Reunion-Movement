@@ -13,7 +13,7 @@ namespace ReunionMovement.Core.UI
     /// <summary>
     /// UI系统 —— UI 生命周期事件使用 R3 Subject 替代 static event
     /// </summary>
-    public class UISystem : ICustomSystem
+    public class UISystem : ICustomSystem, ISystemDisposable
     {
         #region 单例与初始化
         private static readonly Lazy<UISystem> instance = new(() => new UISystem());
@@ -66,11 +66,6 @@ namespace ReunionMovement.Core.UI
             initProgress = 100;
             isInited = true;
             Log.Debug("UISystem 初始化完成");
-        }
-
-        public void Update(float logicTime, float realTime)
-        {
-
         }
 
         public void Clear()
@@ -178,14 +173,24 @@ namespace ReunionMovement.Core.UI
                     }
                     else
                     {
+                        // 多路径兜底加载 InputActionAsset
                         var inputActions = UnityEngine.Resources.Load<UnityEngine.InputSystem.InputActionAsset>("InputSystem_Actions");
+                        if (inputActions == null)
+                            inputActions = UnityEngine.Resources.Load<UnityEngine.InputSystem.InputActionAsset>("InputSystem_Actions.default");
                         if (inputActions != null)
                         {
                             newModule.actionsAsset = UnityEngine.Object.Instantiate(inputActions);
                         }
                         else
                         {
-                            Log.Warning("[UISystem] 未找到 InputSystem_Actions.inputactions，InputSystemUIInputModule 可能无法处理鼠标/触屏输入");
+                            // 最终兜底：从 InputSystem 包内置资源尝试加载
+                            #if UNITY_EDITOR
+                            Log.Error("[UISystem] 严重：未找到 InputSystem_Actions.inputactions！" +
+                                "UI 鼠标/触屏/手柄输入将完全失效。请确保 Input System 包的默认 InputActionAsset 存在于 Resources 文件夹中。" +
+                                "可通过 Window → Analysis → Input Debugger 确认 InputSystem 状态。");
+                            #else
+                            Log.Error("[UISystem] 未找到 InputSystem_Actions.inputactions，UI 输入不可用。请检查打包资源。");
+                            #endif
                         }
                     }
 

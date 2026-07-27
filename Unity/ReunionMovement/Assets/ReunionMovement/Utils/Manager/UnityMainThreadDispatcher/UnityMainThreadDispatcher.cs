@@ -8,7 +8,8 @@ using UnityEngine;
 namespace ReunionMovement.Common.Util.Manager
 {
     /// <summary>
-    /// Unity主线程调度器
+    /// Unity主线程调度器 —— 线程安全地将 Action 从任意线程投递到 Unity 主线程执行。
+    /// 消费端先快照队列后释放锁再执行，避免在锁内调用外部代码导致死锁。
     /// </summary>
     public class UnityMainThreadDispatcher : SingletonMgr<UnityMainThreadDispatcher>
     {
@@ -16,11 +17,32 @@ namespace ReunionMovement.Common.Util.Manager
 
         private void Update()
         {
+            // 先快照队列（持有锁），再释放锁执行，防止外部 Action 回调时递归 Enqueue 导致死锁
+            List<Action> snapshot = null;
             lock (executionQueue)
             {
-                while (executionQueue.Count > 0)
+                if (executionQueue.Count > 0)
                 {
-                    executionQueue.Dequeue().Invoke();
+                    snapshot = new List<Action>(executionQueue.Count);
+                    while (executionQueue.Count > 0)
+                    {
+                        snapshot.Add(executionQueue.Dequeue());
+                    }
+                }
+            }
+
+            if (snapshot != null)
+            {
+                for (int i = 0; i < snapshot.Count; i++)
+                {
+                    try
+                    {
+                        snapshot[i]?.Invoke();
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError($"[UnityMainThreadDispatcher] 执行 Action 时发生异常: {ex}");
+                    }
                 }
             }
         }
