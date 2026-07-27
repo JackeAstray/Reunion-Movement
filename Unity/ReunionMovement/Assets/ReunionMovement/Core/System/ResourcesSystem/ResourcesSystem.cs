@@ -18,7 +18,7 @@ namespace ReunionMovement.Core.Resources
     /// <summary>
     /// 资源系统
     /// </summary>
-    public class ResourcesSystem : ICustomSystem
+    public class ResourcesSystem : ICustomSystem, ISystemDisposable
     {
         #region 单例与初始化
         private static readonly Lazy<ResourcesSystem> instance = new(() => new ResourcesSystem());
@@ -43,11 +43,6 @@ namespace ReunionMovement.Core.Resources
             return UniTask.CompletedTask;
         }
 
-        public void Update(float logicTime, float realTime)
-        {
-
-        }
-
         public void Clear()
         {
             Log.Debug("ResourcesSystem 清除数据");
@@ -69,9 +64,15 @@ namespace ReunionMovement.Core.Resources
         {
             if (resourceTable.TryGetValue(assetPath, out var asset))
             {
-                // 增加引用计数
-                IncrementRefCount(assetPath);
-                return asset as T;
+                // 验证缓存资源未被 Unity 销毁（fake null 检查）
+                if (asset != null && asset)
+                {
+                    SafeIncrementRefCount(assetPath);
+                    return asset as T;
+                }
+                // 资源已被销毁，清理脏缓存条目
+                resourceTable.Remove(assetPath);
+                resourceRefCount.Remove(assetPath);
             }
 
             var assets = UnityEngine.Resources.Load<T>(assetPath);
@@ -101,10 +102,17 @@ namespace ReunionMovement.Core.Resources
         {
             if (resourceTable.TryGetValue(assetPath, out var cachedAsset))
             {
-                // 增加引用计数
-                IncrementRefCount(assetPath);
-                callback?.Invoke(cachedAsset as T);
-                return cachedAsset as T;
+                // 验证缓存资源未被 Unity 销毁（fake null 检查）
+                if (cachedAsset != null && cachedAsset)
+                {
+                    // 安全增加引用计数（即使 key 不在 refCount 字典中也不会崩溃）
+                    SafeIncrementRefCount(assetPath);
+                    callback?.Invoke(cachedAsset as T);
+                    return cachedAsset as T;
+                }
+                // 资源已被销毁，清理脏缓存条目
+                resourceTable.Remove(assetPath);
+                resourceRefCount.Remove(assetPath);
             }
 
             var assets = await ResourcesUtil.LoadAsync<T>(assetPath, callback);
@@ -124,7 +132,7 @@ namespace ReunionMovement.Core.Resources
                 else
                 {
                     // 解决并发await时同一个path的重复缓存覆盖导致的引用计数丢失问题
-                    IncrementRefCount(assetPath);
+                    SafeIncrementRefCount(assetPath);
                 }
             }
             return assets;
@@ -211,6 +219,22 @@ namespace ReunionMovement.Core.Resources
             resourceRefCount.Clear();
         }
 
+        /// <summary>
+        /// 安全增加引用计数（不抛出异常，key 不存在时自动初始化为 1）。
+        /// 相比 IncrementRefCount，此方法额外验证 resourceTable 中对应条目存在，防止悬垂引用计数。
+        /// </summary>
+        private void SafeIncrementRefCount(string path)
+        {
+            if (!resourceTable.ContainsKey(path)) return; // 资源条目不存在，不增加引用计数
+            if (resourceRefCount.TryGetValue(path, out var count))
+            {
+                resourceRefCount[path] = count + 1;
+            }
+            else
+            {
+                resourceRefCount[path] = 1;
+            }
+        }
         /// <summary>
         /// 增加引用计数
         /// </summary>

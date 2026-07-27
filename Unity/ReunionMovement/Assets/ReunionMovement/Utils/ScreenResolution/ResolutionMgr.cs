@@ -79,6 +79,7 @@ namespace ReunionMovement.Common.Util
 
         /// <summary>
         /// 异步初始化分辨率（UniTask 零 GC）
+        /// 使用 Screen.fullScreenMode 替代已弃用的 Screen.fullScreen
         /// </summary>
         private async UniTaskVoid InitRoutineAsync()
         {
@@ -88,14 +89,15 @@ namespace ReunionMovement.Common.Util
             }
             else
             {
-                if (Screen.fullScreen)
+                bool isFullScreen = Screen.fullScreenMode != FullScreenMode.Windowed;
+                if (isFullScreen)
                 {
                     var r = Screen.currentResolution;
-                    Screen.fullScreen = false;
+                    Screen.fullScreenMode = FullScreenMode.Windowed;
                     await UniTask.Yield(PlayerLoopTiming.Update);
                     await UniTask.Yield(PlayerLoopTiming.Update);
                     displayResolution = Screen.currentResolution;
-                    Screen.SetResolution(r.width, r.height, true);
+                    Screen.SetResolution(r.width, r.height, FullScreenMode.FullScreenWindow);
                     await UniTask.Yield(PlayerLoopTiming.Update);
                 }
                 else
@@ -134,7 +136,7 @@ namespace ReunionMovement.Common.Util
             fullscreenResolutions = fullscreenResolutions.OrderBy(r => r.x).ToList();
 
             bool found = false;
-            if (Screen.fullScreen)
+            if (Screen.fullScreenMode != FullScreenMode.Windowed)
             {
                 currWindowedRes = windowedResolutions.Count - 1;
                 for (int i = 0; i < fullscreenResolutions.Count; i++)
@@ -206,7 +208,7 @@ namespace ReunionMovement.Common.Util
                 ? fullscreenResolutions[currFullscreenRes = index]
                 : windowedResolutions[currWindowedRes = index];
 
-            bool fullscreen2windowed = Screen.fullScreen && !fullscreen;
+            bool fullscreen2windowed = Screen.fullScreenMode != FullScreenMode.Windowed && !fullscreen;
             Screen.SetResolution((int)r.x, (int)r.y, fullscreen);
 
             if (Application.platform == RuntimePlatform.OSXPlayer)
@@ -232,7 +234,7 @@ namespace ReunionMovement.Common.Util
             {
                 if (lastW != Screen.width || lastH != Screen.height)
                 {
-                    Screen.SetResolution((int)r.x, (int)r.y, Screen.fullScreen);
+                    Screen.SetResolution((int)r.x, (int)r.y, Screen.fullScreenMode);
                     return;
                 }
                 await UniTask.Yield(PlayerLoopTiming.Update);
@@ -244,7 +246,7 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         public void ToggleFullscreen()
         {
-            SetResolution(Screen.fullScreen ? currWindowedRes : currFullscreenRes, !Screen.fullScreen);
+            SetResolution(Screen.fullScreenMode != FullScreenMode.Windowed ? currWindowedRes : currFullscreenRes, Screen.fullScreenMode == FullScreenMode.Windowed);
         }
 
         /// <summary>

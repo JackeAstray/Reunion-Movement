@@ -14,7 +14,7 @@ namespace ReunionMovement.Core.UIToolkit
     /// UI Toolkit 系统 —— 基于 UIDocument + UXML/USS 的声明式 UI 模块。
     /// 与现有 UISystem (uGUI/Canvas) 并存，可按界面粒度混用两种 UI 方案。
     /// </summary>
-    public class UIToolkitSystem : ICustomSystem
+    public class UIToolkitSystem : ICustomSystem, ISystemDisposable
     {
         #region 单例与初始化
 
@@ -110,12 +110,6 @@ namespace ReunionMovement.Core.UIToolkit
             initProgress = 100;
             isInited = true;
             Log.Debug("[UIToolkitSystem] 初始化完成");
-        }
-
-        public void Update(float logicTime, float realTime)
-        {
-            // UI Toolkit 的更新由 Unity 内部处理
-            // 此处可添加自定义逻辑（如 UI 动画 Tick、过渡效果等）
         }
 
         public void Clear()

@@ -13,7 +13,7 @@ namespace ReunionMovement.Core.Languages
     /// <summary>
     /// 语言系统 —— 使用 R3 ReactiveProperty 管理语言切换通知
     /// </summary>
-    public class LanguagesSystem : ICustomSystem
+    public class LanguagesSystem : ICustomSystem, ISystemDisposable
     {
         #region 单例与初始化
         private static readonly Lazy<LanguagesSystem> instance = new(() => new LanguagesSystem());
@@ -72,11 +72,6 @@ namespace ReunionMovement.Core.Languages
             isInited = true;
             Log.Debug("LanguagesSystem 初始化完成");
             return UniTask.CompletedTask;
-        }
-
-        public void Update(float logicTime, float realTime)
-        {
-
         }
 
         public void Clear()

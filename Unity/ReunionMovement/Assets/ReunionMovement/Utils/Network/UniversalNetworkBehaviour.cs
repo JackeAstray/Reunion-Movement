@@ -135,7 +135,7 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 停止所有客户端和服务器
+        /// 停止所有客户端和服务器，清理所有事件订阅和通道引用。
         /// </summary>
         public void StopAll()
         {
@@ -150,14 +150,44 @@ namespace ReunionMovement.Common.Util
             heartbeatCts = null;
             reconnectAttempts = 0;
 
-            // 客户端关闭
-            try { tcpClient?.Close(); } catch (System.Exception ex) { Log.Warning("TCP客户端关闭异常: {0}", ex.Message); }
-            try { kcpClient?.Close(); } catch (System.Exception ex) { Log.Warning("KCP客户端关闭异常: {0}", ex.Message); }
-            try { swtClient?.Disconnect(); } catch (System.Exception ex) { Log.Warning("WS客户端断开异常: {0}", ex.Message); }
-            // 服务端关闭
-            try { tcpServer?.Close(); } catch (System.Exception ex) { Log.Warning("TCP服务端关闭异常: {0}", ex.Message); }
-            try { kcpServer?.Close(); } catch (System.Exception ex) { Log.Warning("KCP服务端关闭异常: {0}", ex.Message); }
-            try { swtServer?.Stop(); } catch (System.Exception ex) { Log.Warning("WS服务端停止异常: {0}", ex.Message); }
+            // 客户端关闭并从 NetworkMgr 移除通道
+            if (tcpClient != null)
+            {
+                try { NetworkMgr.Instance?.ScheduleRemove(tcpClient); } catch { }
+                try { tcpClient.Close(); } catch (System.Exception ex) { Log.Warning("TCP客户端关闭异常: {0}", ex.Message); }
+                tcpClient = null;
+            }
+            if (kcpClient != null)
+            {
+                try { NetworkMgr.Instance?.ScheduleRemove(kcpClient); } catch { }
+                try { kcpClient.Close(); } catch (System.Exception ex) { Log.Warning("KCP客户端关闭异常: {0}", ex.Message); }
+                kcpClient = null;
+            }
+            if (swtClient != null)
+            {
+                try { swtClient.Disconnect(); } catch (System.Exception ex) { Log.Warning("WS客户端断开异常: {0}", ex.Message); }
+                swtClient = null;
+            }
+
+            // 服务端关闭并从 NetworkMgr 移除通道
+            if (tcpServer != null)
+            {
+                try { NetworkMgr.Instance?.ScheduleRemove(tcpServer); } catch { }
+                try { tcpServer.Close(); } catch (System.Exception ex) { Log.Warning("TCP服务端关闭异常: {0}", ex.Message); }
+                tcpServer = null;
+            }
+            if (kcpServer != null)
+            {
+                try { NetworkMgr.Instance?.ScheduleRemove(kcpServer); } catch { }
+                try { kcpServer.Close(); } catch (System.Exception ex) { Log.Warning("KCP服务端关闭异常: {0}", ex.Message); }
+                kcpServer = null;
+            }
+            if (swtServer != null)
+            {
+                try { swtServer.Stop(); } catch (System.Exception ex) { Log.Warning("WS服务端停止异常: {0}", ex.Message); }
+                swtServer = null;
+            }
+
             clientIds.Clear();
         }
 

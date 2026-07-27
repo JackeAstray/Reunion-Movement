@@ -15,7 +15,7 @@ namespace ReunionMovement.Core.Sound
     /// <summary>
     /// 声音系统
     /// </summary>
-    public class SoundSystem : ICustomSystem
+    public class SoundSystem : ICustomSystem, ISystemUpdatable, ISystemDisposable
     {
         #region 单例与初始化
         private static readonly Lazy<SoundSystem> instance = new(() => new SoundSystem());

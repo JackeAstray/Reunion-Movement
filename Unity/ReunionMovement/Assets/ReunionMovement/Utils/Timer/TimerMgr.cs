@@ -10,7 +10,7 @@ namespace ReunionMovement.Common.Util.Timer
     /// <summary>
     /// 通用计时器管理器 —— 同时作为 MonoBehaviour 单例（独立场景）和 ICustomSystem（GameEngine 驱动）。
     /// </summary>
-    public class TimerMgr : SingletonMgr<TimerMgr>, ICustomSystem
+    public class TimerMgr : SingletonMgr<TimerMgr>, ICustomSystem, ISystemUpdatable, ISystemDisposable
     {
         private readonly List<Timer> timers = new List<Timer>();
 

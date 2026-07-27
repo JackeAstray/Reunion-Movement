@@ -109,9 +109,10 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 缓存的字节数组队列，用于重用字节数组以减少内存分配
+        /// 缓存的字节数组队列（线程安全），用于重用字节数组以减少内存分配
         /// </summary>
         private static Queue<byte[]> cachedBytesQueue = new Queue<byte[]>();
+        private static readonly object cachedBytesLock = new object();
         private const int MaxCachedBytesQueueSize = 16;
 
         /// <summary>
@@ -121,35 +122,41 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         private static byte[] GetCachedBytes(int length)
         {
-            if (cachedBytesQueue.Count == 0)
+            lock (cachedBytesLock)
             {
-                return new byte[length];
-            }
-
-            // 取出队列首项并检查其大小。如果太小，则分配新的缓冲区。
-            byte[] bytes = cachedBytesQueue.Dequeue();
-
-            if (bytes.Length < length)
-            {
-                // 将小缓冲区归还队列（如果队列未满），然后分配合适大小的新缓冲区
-                if (cachedBytesQueue.Count < MaxCachedBytesQueueSize)
+                if (cachedBytesQueue.Count == 0)
                 {
-                    cachedBytesQueue.Enqueue(bytes);
+                    return new byte[length];
                 }
-                return new byte[length];
-            }
 
-            return bytes;
+                // 取出队列首项并检查其大小。如果太小，则分配新的缓冲区。
+                byte[] bytes = cachedBytesQueue.Dequeue();
+
+                if (bytes.Length < length)
+                {
+                    // 将小缓冲区归还队列（如果队列未满），然后分配合适大小的新缓冲区
+                    if (cachedBytesQueue.Count < MaxCachedBytesQueueSize)
+                    {
+                        cachedBytesQueue.Enqueue(bytes);
+                    }
+                    return new byte[length];
+                }
+
+                return bytes;
+            }
         }
         /// <summary>
-        /// 释放缓存的字节数组（队列上限 16，防止无限增长）
+        /// 释放缓存的字节数组（线程安全，队列上限 16，防止无限增长）
         /// </summary>
         /// <param name="bytes"></param>
         private static void ReleaseCachedBytes(byte[] bytes)
         {
             if (bytes == null) return;
-            if (cachedBytesQueue.Count >= MaxCachedBytesQueueSize) return;
-            cachedBytesQueue.Enqueue(bytes);
+            lock (cachedBytesLock)
+            {
+                if (cachedBytesQueue.Count >= MaxCachedBytesQueueSize) return;
+                cachedBytesQueue.Enqueue(bytes);
+            }
         }
 
         /// <summary>

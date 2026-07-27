@@ -8,7 +8,7 @@ using UnityEngine;
 namespace ReunionMovement.Common.Util
 {
     /// <summary>
-    /// 屏幕安全区域适配
+    /// 屏幕安全区域适配 —— 每 10 帧检查一次变化（安全区域极少变化，无需每帧轮询）。
     /// </summary>
     [RequireComponent(typeof(RectTransform))]
     public class SafeArea : MonoBehaviour
@@ -16,6 +16,7 @@ namespace ReunionMovement.Common.Util
         private RectTransform rectTf;
         private Rect lastSafeArea = Rect.zero;
         private Vector2 lastScreenSize = Vector2.zero;
+        private int frameSkipCounter;
 
         private void Awake()
         {
@@ -25,6 +26,9 @@ namespace ReunionMovement.Common.Util
 
         private void Update()
         {
+            // 每 10 帧检查一次（安全区域只在屏幕旋转/折叠屏展开时变化）
+            if (++frameSkipCounter < 10) return;
+            frameSkipCounter = 0;
             ApplyIfChanged();
         }
 

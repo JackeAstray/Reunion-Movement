@@ -63,7 +63,9 @@ namespace ReunionMovement.Common.Util
             if (origin == null)
                 return;
             Vector2 originPosOnScreen = origin.position;
-            myRect.anchoredPosition = origin.GetComponent<RectTransform>().anchoredPosition;
+            var originRect = origin.GetComponent<RectTransform>();
+            if (originRect != null)
+                myRect.anchoredPosition = originRect.anchoredPosition;
             Vector2 differenceToMouse = Pointer.current != null ? Pointer.current.position.ReadValue() - originPosOnScreen : Vector2.zero;
             differenceToMouse.Scale(new Vector2(1f / myRect.localScale.x, 1f / myRect.localScale.y));
             transform.up = differenceToMouse;

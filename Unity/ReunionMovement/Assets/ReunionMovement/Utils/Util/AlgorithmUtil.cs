@@ -953,7 +953,7 @@ namespace ReunionMovement.Common.Util
                 {
                     return default;
                 }
-                return list[RandomUtil.random.Next(list.Count)];
+                return list[RandomUtil.Next(list.Count)];
             }
 
             // 其它 IEnumerable，使用蓄水池抽样算法
@@ -962,7 +962,7 @@ namespace ReunionMovement.Common.Util
             foreach (var item in source)
             {
                 count++;
-                if (RandomUtil.random.Next(count) == 0)
+                if (RandomUtil.Next(count) == 0)
                     selected = item;
             }
             return count == 0 ? default : selected;

@@ -74,10 +74,10 @@ namespace ReunionMovement.EditorTools
             switch (Application.platform)
             {
                 case RuntimePlatform.WindowsEditor:
-                    Process.Start("Explorer.exe", folder.Replace('/', '\\'));
+                    using (Process.Start("Explorer.exe", folder.Replace('/', '\\'))) { }
                     break;
                 case RuntimePlatform.OSXEditor:
-                    Process.Start("open", folder);
+                    using (Process.Start("open", folder)) { }
                     break;
                 default:
                     Log.Error(string.Format($"不支持在\"{0}\"平台上打开文件夹。", Application.platform));

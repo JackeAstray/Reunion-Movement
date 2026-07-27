@@ -82,19 +82,30 @@ namespace ReunionMovement.Common.Util
             onAbort = null;
         }
         /// <summary>
-        /// 接收数据回调 —— 使用 ArrayPool&lt;byte&gt; 池化缓冲区，消除每次接收的堆分配。
-        /// ⚠️ 消费者（OnDataReceived 订阅者）不得持有 data 引用超出回调范围；
-        /// 如需持久化数据，请在回调内自行复制。
+        /// 接收数据回调 —— 使用 ArrayPool&lt;byte&gt; 池化缓冲区用于内部拷贝，
+        /// 然后复制到精确大小的数组后再分发给订阅者，避免 Use-After-Free。
+        /// ⚠️ 消费者（OnDataReceived 订阅者）持有 data 引用安全，
+        /// 数据已是独立副本。
         /// </summary>
         void OnReceiveDataHandler(ArraySegment<byte> arrSeg)
         {
             int length = arrSeg.Count;
             if (length == 0) return;
 
-            byte[] data = ArrayPool<byte>.Shared.Rent(length);
-            Buffer.BlockCopy(arrSeg.Array, arrSeg.Offset, data, 0, length);
-            onDataReceived?.Invoke(data);
-            ArrayPool<byte>.Shared.Return(data);
+            // 使用池化缓冲区做临时拷贝，然后创建精确大小的结果数组
+            byte[] pooled = ArrayPool<byte>.Shared.Rent(length);
+            try
+            {
+                Buffer.BlockCopy(arrSeg.Array, arrSeg.Offset, pooled, 0, length);
+                // 复制到精确大小的数组，订阅者可安全持有引用
+                byte[] result = new byte[length];
+                Buffer.BlockCopy(pooled, 0, result, 0, length);
+                onDataReceived?.Invoke(result);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(pooled);
+            }
         }
     }
 }

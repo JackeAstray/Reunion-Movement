@@ -29,7 +29,7 @@ namespace ReunionMovement.Core.Scene
     /// <summary>
     /// 场景系统 —— 使用 R3 Subject/ReactiveProperty 管理场景加载状态与进度
     /// </summary>
-    public class SceneSystem : ICustomSystem
+    public class SceneSystem : ICustomSystem, ISystemDisposable
     {
         #region 单例与初始化
         private static readonly Lazy<SceneSystem> instance = new(() => new SceneSystem());
@@ -90,9 +90,33 @@ namespace ReunionMovement.Core.Scene
         [Obsolete("请使用 SceneSystem.Instance.ProgressSubject.Subscribe()", false)]
         public event Action<float> getProgress
         {
-            add { Instance.ProgressSubject.Subscribe(value); }
-            remove { }
+            add
+            {
+                if (value == null) return;
+                var sub = Instance.ProgressSubject.Subscribe(value);
+                _obsoleteProgressSubs ??= new System.Collections.Generic.Dictionary<Delegate, IDisposable>();
+                lock (_obsoleteProgressSubs)
+                {
+                    if (!_obsoleteProgressSubs.ContainsKey(value))
+                        _obsoleteProgressSubs[value] = sub;
+                    else
+                        sub.Dispose(); // 重复订阅，释放多余的
+                }
+            }
+            remove
+            {
+                if (value == null || _obsoleteProgressSubs == null) return;
+                lock (_obsoleteProgressSubs)
+                {
+                    if (_obsoleteProgressSubs.TryGetValue(value, out var d))
+                    {
+                        d.Dispose();
+                        _obsoleteProgressSubs.Remove(value);
+                    }
+                }
+            }
         }
+        private System.Collections.Generic.Dictionary<Delegate, IDisposable> _obsoleteProgressSubs;
 
         #endregion
 
@@ -122,11 +146,6 @@ namespace ReunionMovement.Core.Scene
             return UniTask.CompletedTask;
         }
 
-        public void Update(float logicTime, float realTime)
-        {
-
-        }
-
         public void Clear()
         {
             Log.Debug("SceneSystem 清除数据");
@@ -148,6 +167,16 @@ namespace ReunionMovement.Core.Scene
             SceneLoadedSubject = null;
             excludeFromSceneHide.Clear();
             registeredUIWindows.Clear();
+
+            // 释放废弃事件追踪的订阅
+            if (_obsoleteProgressSubs != null)
+            {
+                lock (_obsoleteProgressSubs)
+                {
+                    foreach (var d in _obsoleteProgressSubs.Values) d?.Dispose();
+                    _obsoleteProgressSubs.Clear();
+                }
+            }
         }
 
         #region Load
@@ -224,10 +253,18 @@ namespace ReunionMovement.Core.Scene
                 // 确保异常情况下回调也被触发、状态被重置
                 ExecuteBslcc();
                 ExecuteSlcc();
-
+            }
+            finally
+            {
+                // 确保无论成功、失败还是异常，都能重置加载锁，防止后续加载被永久阻塞
                 System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
-                targetSceneName = null;
-                currentSceneName = previousSceneName;
+                // 若提前返回（async==null）或异常，targetSceneName 和 currentSceneName 需回滚
+                if (LoadState.Value != SceneLoadState.Loaded)
+                {
+                    targetSceneName = null;
+                    if (currentSceneName == loadSceneName)
+                        currentSceneName = previousSceneName;
+                }
             }
         }
 
@@ -266,6 +303,7 @@ namespace ReunionMovement.Core.Scene
             if (async == null)
             {
                 Log.Error("加载场景失败：{0} 为 null", nameof(AsyncOperation));
+                LoadState.Value = SceneLoadState.Failed;
                 // 触发并清空所有回调，避免泄漏
                 ExecuteBslcc();
                 ExecuteSlcc();
@@ -295,7 +333,7 @@ namespace ReunionMovement.Core.Scene
                     CallbackProgress(async.progress);
                     frameCounter = 0;
                 }
-                await UniTask.Delay(16);
+                await UniTask.Yield(PlayerLoopTiming.Update);
             }
 
             await UniTask.Delay((int)(endProgressWaitingTime * 1000));
@@ -309,7 +347,7 @@ namespace ReunionMovement.Core.Scene
 
             while (!async.isDone)
             {
-                await UniTask.Delay(16);
+                await UniTask.Yield(PlayerLoopTiming.Update);
             }
 
             if (!openLoad)

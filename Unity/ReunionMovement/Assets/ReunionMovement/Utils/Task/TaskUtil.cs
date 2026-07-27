@@ -8,7 +8,13 @@ using System.Threading.Tasks;
 namespace ReunionMovement.Common.Util
 {
     /// <summary>
-    /// 任务程序
+    /// 任务工具类 —— 基于 System.Threading.Tasks 的异步任务封装。
+    ///
+    /// ⚠️ 重要警告：所有回调（callback / onError）在 ThreadPool 线程上执行，
+    /// 不能直接调用任何 Unity API（GameObject、Transform、Resources 等）。
+    /// 如需在回调中操作 Unity 对象，请使用：
+    ///   UnityMainThreadDispatcher.RunOnMainThread(() => { /* Unity API */ });
+    /// 或改用 UniTask 方案（推荐）：await UniTask.SwitchToMainThread()
     /// </summary>
     public static class TaskUtil
     {
@@ -25,7 +31,7 @@ namespace ReunionMovement.Common.Util
             try
             {
                 await ExecuteTask(() => { action?.Invoke(); return true; }, timeout, cancellationToken).ConfigureAwait(false);
-                callback?.Invoke();
+                InvokeCallbackSafe(callback);
             }
             catch (Exception ex)
             {
@@ -36,24 +42,39 @@ namespace ReunionMovement.Common.Util
         /// <summary>
         /// 开始一个返回指定类型值的任务。
         /// </summary>
-        /// <typeparam name="T">任务返回值的类型。</typeparam>
-        /// <param name="func">要执行的函数。</param>
-        /// <param name="callback">任务成功完成时的回调，接收任务结果。</param>
-        /// <param name="onError">任务发生异常时的回调。</param>
-        /// <param name="timeout">任务超时时间。</param>
-        /// <param name="cancellationToken">用于取消任务的 CancellationToken。</param>
         public static async Task StartTask<T>(Func<T> func, Action<T> callback = null, Action<Exception> onError = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
         {
             try
             {
                 T result = await ExecuteTask(func, timeout, cancellationToken).ConfigureAwait(false);
-                callback?.Invoke(result);
+                InvokeCallbackSafe(() => callback?.Invoke(result));
             }
             catch (Exception ex)
             {
                 HandleException(ex, onError);
             }
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private static readonly int mainThreadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
+
+        /// <summary>
+        /// 在 Editor/Development Build 中检测回调是否在非主线程执行（可能误用 Unity API）。
+        /// </summary>
+        private static void InvokeCallbackSafe(Action callback)
+        {
+            if (callback == null) return;
+            if (System.Threading.Thread.CurrentThread.ManagedThreadId != mainThreadId)
+            {
+                UnityEngine.Debug.LogWarning(
+                    "[TaskUtil] 回调在非主线程执行！若回调中使用了 Unity API（GameObject/Transform 等），将导致崩溃。" +
+                    "请使用 UnityMainThreadDispatcher.RunOnMainThread() 或 UniTask.SwitchToMainThread() 封送回调。");
+            }
+            callback();
+        }
+#else
+        private static void InvokeCallbackSafe(Action callback) => callback?.Invoke();
+#endif
 
         /// <summary>
         /// 在前一个任务成功完成后继续执行新的无返回值的任务。
