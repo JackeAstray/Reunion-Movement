@@ -52,6 +52,8 @@ namespace ReunionMovement.Common
         // ============================================================
         private static string s_logFilePath;
         private static bool s_fileLogInitialized;
+        // 文件日志锁：网络线程等多线程日志并发写同一文件会抛 IOException，必须串行化
+        private static readonly object s_fileLogLock = new object();
 
         /// <summary>
         /// 是否启用文件日志输出。
@@ -63,17 +65,20 @@ namespace ReunionMovement.Common
         /// </summary>
         private static void EnsureFileLogReady()
         {
-            if (s_fileLogInitialized) return;
-            s_fileLogInitialized = true;
+            lock (s_fileLogLock)
+            {
+                if (s_fileLogInitialized) return;
+                s_fileLogInitialized = true;
 
-            try
-            {
-                s_logFilePath = Path.Combine(Application.persistentDataPath,
-                    $"game_log_{DateTime.Now:yyyyMMdd_HHmmss}.log");
-            }
-            catch
-            {
-                EnableFileLog = false;
+                try
+                {
+                    s_logFilePath = Path.Combine(Application.persistentDataPath,
+                        $"game_log_{DateTime.Now:yyyyMMdd_HHmmss}.log");
+                }
+                catch
+                {
+                    EnableFileLog = false;
+                }
             }
         }
 
@@ -162,7 +167,11 @@ namespace ReunionMovement.Common
                     : "";
                 string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
                     DateTime.Now, levelName, channelStr, message, Environment.NewLine);
-                File.AppendAllText(s_logFilePath, line);
+                // 加锁串行化写入，避免多线程并发 File.AppendAllText 抛 IOException
+                lock (s_fileLogLock)
+                {
+                    File.AppendAllText(s_logFilePath, line);
+                }
             }
             catch
             {

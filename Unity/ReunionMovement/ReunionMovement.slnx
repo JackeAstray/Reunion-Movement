@@ -10,4 +10,6 @@
   <Project Path="UniTask.Editor.csproj" />
   <Project Path="UniTask.Addressables.csproj" />
   <Project Path="UniTask.DOTween.csproj" />
+  <Project Path="Tools/GeneratorSmokeTest/GeneratorSmokeTest.csproj" />
+  <Project Path="Tools/ReunionMovement.SourceGenerator/ReunionMovement.SourceGenerator.csproj" />
 </Solution>

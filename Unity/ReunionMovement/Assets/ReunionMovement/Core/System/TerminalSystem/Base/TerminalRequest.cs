@@ -120,62 +120,13 @@ namespace ReunionMovement.Core.Terminal
         }
 
         /// <summary>
-        /// 注册命令
+        /// 注册命令 —— 使用源码生成器生成的注册表（编译期扫描，替代运行时全程序集反射）。
+        /// 生成器在每个编译目标下基于实际源码生成：条件编译（#if UNITY_EDITOR 等）
+        /// 裁剪掉的方法不会出现在生成表中，与旧反射逻辑结果一致。
         /// </summary>
         public void RegisterCommands()
         {
-            var rejected_commands = new Dictionary<string, CommandInfo>();
-            var method_flags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
-
-            foreach (var type in AssemblyUtil.GetExecutingAssemblyTypes())
-            {
-                foreach (var method in type.GetMethods(method_flags))
-                {
-                    var attribute = Attribute.GetCustomAttribute(method, typeof(RegisterCommandAttribute)) as RegisterCommandAttribute;
-
-                    if (attribute == null)
-                    {
-                        if (method.Name.StartsWith("FRONTCOMMAND", StringComparison.CurrentCultureIgnoreCase))
-                        {
-                            // 前端命令方法不实现RegisterCommand，使用默认属性
-                            attribute = new RegisterCommandAttribute();
-                        }
-                        else
-                        {
-                            continue;
-                        }
-                    }
-
-                    var methods_params = method.GetParameters();
-
-                    string command_name = InferFrontCommandName(method.Name);
-                    Action<CommandArg[]> proc;
-
-                    if (attribute.Name == null)
-                    {
-                        // 使用方法的名称作为命令的名称
-                        command_name = InferCommandName(command_name == null ? method.Name : command_name);
-                    }
-                    else
-                    {
-                        command_name = attribute.Name;
-                    }
-
-                    if (methods_params.Length != 1 || methods_params[0].ParameterType != typeof(CommandArg[]))
-                    {
-                        // 方法与预期的Action签名不匹配，这可能是一个具有FrontCommand方法来处理其参数的命令。
-                        rejected_commands.Add(command_name.ToUpper(), CommandFromParamInfo(methods_params, attribute.Help));
-                        continue;
-                    }
-
-                    //将MethodInfo转换为Action。
-                    //这本质上允许我们存储对该方法的引用，这使得调用该方法的性能明显高于使用MethodInfo.Invoke().
-                    proc = (Action<CommandArg[]>)Delegate.CreateDelegate(typeof(Action<CommandArg[]>), method);
-                    AddCommand(command_name, proc, attribute.MinArgCount, attribute.MaxArgCount, attribute.Help, attribute.Hint);
-                }
-            }
-
-            HandleRejectedCommands(rejected_commands);
+            TerminalCommandRegistry.RegisterAll(this);
         }
 
         /// <summary>
