@@ -8,7 +8,7 @@ using UnityEngine.Networking;
 namespace ReunionMovement.Common.Util.Download
 {
     /// <summary>
-    /// Unity�ļ�������
+    /// Unity 文件下载器，负责调度并下载一组 URL 到本地。
     /// </summary>
     public class FileDownloader : IDownloader
     {
@@ -51,7 +51,7 @@ namespace ReunionMovement.Common.Util.Download
         internal bool downloadToRoot;
         internal bool isMd5Name;
         internal string[] pendingUris = null;
-        // ��������� FIFO ���ѵ�ƫ��������� Skip().ToArray()��
+        // 待处理 URI 的 FIFO 取队偏移量，代替每次 Skip().ToArray()。
         private int pendingOffset = 0;
 
         #region Events/Actions
@@ -69,7 +69,7 @@ namespace ReunionMovement.Common.Util.Download
         public override long EndTime => endTime;
 
         /// <summary>
-        /// �����������ÿ�봦�����ļ���
+        /// 每秒处理的文件数（下载速度指标）。
         /// </summary>
         /// <value></value>
         public override float NumFilesPerSecond
@@ -164,14 +164,14 @@ namespace ReunionMovement.Common.Util.Download
         internal int n = 0;
 
         /// <summary>
-        /// ��������URI������ʱ������Ĭ�ϳ�ʱ�� Timeout ���� �� �ļ������������� 30 �룩
+        /// 下载所有 URI 并等待完成，超过最大等待时间（默认 = Timeout × 文件数量，最低 30 秒）则强制取消。
         /// </summary>
         /// <returns></returns>
         public override async UniTask<bool> Download()
         {
             if (Downloading || Uris == null || Uris.Length == 0)
             {
-                Log.Error("{0}.Download() ����������Uris����Ϊnull��empty������µ���", GetType().FullName);
+                Log.Error("{0}.Download() 调用失败：Uris 为 null 或为空，已取消下载", GetType().FullName);
                 return false;
             }
             OnDownloadInvoked?.Invoke();
@@ -185,7 +185,7 @@ namespace ReunionMovement.Common.Util.Download
             int threadCount = Math.Min(MaxConcurrency, numFilesRemaining);
             if (threadCount <= 0)
             {
-                Log.Error("{0}.����Ҫ��MaxConcurrencyΪ�Ǹ�������", GetType().FullName);
+                Log.Error("{0}.错误：MaxConcurrency 需要大于 0", GetType().FullName);
                 return false;
             }
             var tasks = new List<UniTask<bool>>(threadCount);
@@ -196,7 +196,7 @@ namespace ReunionMovement.Common.Util.Download
 
             await UniTask.WhenAll(tasks);
 
-            // ����ʱ�ĵȴ�ѭ�������ȴ� (Timeout * �ļ��� * 2) �룬���� 30 ��
+            // 超时等待循环：最多等待 (Timeout * 文件数 * 2) 秒，最低 30 秒
             int maxWaitSeconds = Math.Max(30, Timeout * Uris.Length * 2);
             float waited = 0f;
             const float pollInterval = 0.1f;
@@ -205,7 +205,7 @@ namespace ReunionMovement.Common.Util.Download
             {
                 if (waited >= maxWaitSeconds)
                 {
-                    Log.Error("���س�ʱ���ѵȴ� {0} �룬���� {1} ���ļ�δ��ɡ�ǿ��ȡ����", maxWaitSeconds, NumFilesRemaining);
+                    Log.Error("下载超时：已等待 {0} 秒，仍有 {1} 个文件未完成，强制取消下载", maxWaitSeconds, NumFilesRemaining);
                     await Cancel();
                     break;
                 }
@@ -217,7 +217,7 @@ namespace ReunionMovement.Common.Util.Download
         }
 
         /// <summary>
-        /// ���ص���URI
+        /// 下载单个 URI。
         /// </summary>
         /// <param name="uri"></param>
         /// <returns></returns>
@@ -257,13 +257,13 @@ namespace ReunionMovement.Common.Util.Download
         }
 
         /// <summary>
-        /// ����false���첽����
+        /// 返回 false 的异步结果。
         /// </summary>
         /// <returns></returns>
         internal UniTask<bool> ReturnFalseAsync() => UniTask.FromResult(false);
 
         /// <summary>
-        /// ��ǲ��������ʹ��ƫ��������� Skip+ToArray������ÿ�ε��ȷ������飩
+        /// 分发下一个任务，使用偏移量代替 Skip+ToArray（避免每次重新分配数组）。
         /// </summary>
         internal UniTask<bool> Dispatch()
         {
@@ -272,10 +272,10 @@ namespace ReunionMovement.Common.Util.Download
                 return ReturnFalseAsync();
             }
 
-            // executors ����������첽�ص��� pendingUris ��ͬ������Խ�籣��
+            // executors 与异步回调访问 pendingUris 不同步，需越界保护
             if (executors == null || executors.Length == 0)
             {
-                Log.Error("Dispatch: executors ����Ϊ�գ��޷���������");
+                Log.Error("Dispatch: executors 列表为空，无法分发任务");
                 return ReturnFalseAsync();
             }
 
@@ -310,8 +310,8 @@ namespace ReunionMovement.Common.Util.Download
                         }
                         else
                         {
-                            Log.Warning("Download for {0} returned null��δ�����������̣�", idf.Uri);
-                            // ������д����ص� URI�����������
+                            Log.Warning("Download for {0} returned null，未启动下载流程", idf.Uri);
+                            // 继续分发下一个待下载的 URI，维持任务队列
                             if (pendingUris != null && pendingOffset < pendingUris.Length)
                             {
                                 _ = Dispatch();
@@ -321,8 +321,8 @@ namespace ReunionMovement.Common.Util.Download
                 }
                 else
                 {
-                    // HeadRequest ���� null����Ϊ�� URI ���ɷֿ飬����������һ��
-                    Log.Warning("HeadRequest for {0} returned null�������� URI", idf.Uri);
+                    // HeadRequest 返回 null，说明该 URI 不可分块，直接进入下一步
+                    Log.Warning("HeadRequest for {0} returned null，跳过该 URI", idf.Uri);
                     _ = DispatchCompletion(idf);
                 }
 
@@ -345,7 +345,7 @@ namespace ReunionMovement.Common.Util.Download
         }
 
         /// <summary>
-        /// ����ָ����IDF, ���ڷֿ�����.
+        /// 下载指定的 IDF，用于分块下载。
         /// </summary>
         /// <param name="idf"></param>
         /// <returns></returns>
@@ -389,7 +389,7 @@ namespace ReunionMovement.Common.Util.Download
         }
 
         /// <summary>
-        /// ��ͬ����ʽ����������ɣ������ȴ���
+        /// 异步方式处理单个下载完成，不阻塞等待。
         /// </summary>
         /// <param name="idf"></param>
         /// <returns></returns>
@@ -436,7 +436,7 @@ namespace ReunionMovement.Common.Util.Download
         }
 
         /// <summary>
-        /// ��ȡ��Ӧ��ִ����
+        /// 获取对应的执行器。
         /// </summary>
         /// <param name="uri"></param>
         /// <returns></returns>
@@ -451,7 +451,7 @@ namespace ReunionMovement.Common.Util.Download
         }
 
         /// <summary>
-        /// ȡ����������
+        /// 取消所有下载。
         /// </summary>
         /// <returns></returns>
         public override UniTask<bool> Cancel()
@@ -473,7 +473,7 @@ namespace ReunionMovement.Common.Util.Download
         }
 
         /// <summary>
-        /// ȡ����������
+        /// 取消单个 URI 的下载。
         /// </summary>
         /// <param name="uri"></param>
         /// <returns></returns>
@@ -490,18 +490,18 @@ namespace ReunionMovement.Common.Util.Download
             }
             else if (!executorsOld.Any(idf => idf.Uri == uri))
             {
-                Log.Error("�Դ�δ���ù���URI����ȡ�� {0}", uri);
+                Log.Error("从未下载过该 URI，无法取消 {0}", uri);
                 return UniTask.FromResult(false);
             }
             else
             {
-                Log.Error("������ɵ�URI����ȡ��");
+                Log.Error("已完成的 URI 无法取消");
             }
             return UniTask.FromResult(true);
         }
 
         /// <summary>
-        /// ���ʧ��ʱ����Ϊ�棬��ɾ�������ļ���
+        /// 若 AbandonOnFailure 为真，失败时取消并清理已下载的文件。
         /// </summary>
         internal void HandleAbandonOnFailure()
         {
@@ -515,13 +515,13 @@ namespace ReunionMovement.Common.Util.Download
         }
 
         /// <summary>
-        /// ���������������ص���������
+        /// 重置下载器为初始下载状态。
         /// </summary>
         public override void Reset()
         {
             if (Downloading)
             {
-                Log.Error("����ʱ�޷��������ã���Ҫ��ȡ�����ء�");
+                Log.Error("下载中无法执行重置，请先取消下载。");
                 return;
             }
             downloading = false;

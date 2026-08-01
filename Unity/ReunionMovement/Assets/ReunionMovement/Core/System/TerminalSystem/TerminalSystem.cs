@@ -92,7 +92,8 @@ namespace ReunionMovement.Core.Terminal
         #region 打开指定UI
         //测试指令： OpenWindow PopupUIPlane 提示 测试 Ok No 
         [RegisterCommand(Help = "OpenWindow 1-16 String", MinArgCount = 1, MaxArgCount = 16)]
-        static void OpenWindow(CommandArg[] args)
+        // internal 以便源码生成器生成的 TerminalCommandRegistry 能直接引用
+        internal static void OpenWindow(CommandArg[] args)
         {
             if (args.Length == 0)
             {
@@ -127,7 +128,8 @@ namespace ReunionMovement.Core.Terminal
         #region 例子
         [RegisterCommand(Help = "TestTerminal 2 String", MinArgCount = 2, MaxArgCount = 2)]
         //测试指令： TestTerminal 测试1 测试2
-        static void TestTerminal(CommandArg[] args)
+        // internal 以便源码生成器生成的 TerminalCommandRegistry 能直接引用
+        internal static void TestTerminal(CommandArg[] args)
         {
             if (args.Length >= 2)
             {

@@ -1,0 +1,11 @@
+E:\Github\Reunion-Movement\Unity\ReunionMovement\Tools\ReunionMovement.SourceGenerator\bin\Release\netstandard2.0\ReunionMovement.SourceGenerator.deps.json
+E:\Github\Reunion-Movement\Unity\ReunionMovement\Tools\ReunionMovement.SourceGenerator\bin\Release\netstandard2.0\ReunionMovement.SourceGenerator.dll
+E:\Github\Reunion-Movement\Unity\ReunionMovement\Tools\ReunionMovement.SourceGenerator\bin\Release\netstandard2.0\ReunionMovement.SourceGenerator.pdb
+E:\Github\Reunion-Movement\Unity\ReunionMovement\Tools\ReunionMovement.SourceGenerator\obj\Release\netstandard2.0\ReunionMovement.SourceGenerator.csproj.AssemblyReference.cache
+E:\Github\Reunion-Movement\Unity\ReunionMovement\Tools\ReunionMovement.SourceGenerator\obj\Release\netstandard2.0\ReunionMovement.SourceGenerator.GeneratedMSBuildEditorConfig.editorconfig
+E:\Github\Reunion-Movement\Unity\ReunionMovement\Tools\ReunionMovement.SourceGenerator\obj\Release\netstandard2.0\ReunionMovement.SourceGenerator.AssemblyInfoInputs.cache
+E:\Github\Reunion-Movement\Unity\ReunionMovement\Tools\ReunionMovement.SourceGenerator\obj\Release\netstandard2.0\ReunionMovement.SourceGenerator.AssemblyInfo.cs
+E:\Github\Reunion-Movement\Unity\ReunionMovement\Tools\ReunionMovement.SourceGenerator\obj\Release\netstandard2.0\ReunionMovement.SourceGenerator.csproj.CoreCompileInputs.cache
+E:\Github\Reunion-Movement\Unity\ReunionMovement\Tools\ReunionMovement.SourceGenerator\obj\Release\netstandard2.0\ReunionMovement.SourceGenerator.sourcelink.json
+E:\Github\Reunion-Movement\Unity\ReunionMovement\Tools\ReunionMovement.SourceGenerator\obj\Release\netstandard2.0\ReunionMovement.SourceGenerator.dll
+E:\Github\Reunion-Movement\Unity\ReunionMovement\Tools\ReunionMovement.SourceGenerator\obj\Release\netstandard2.0\ReunionMovement.SourceGenerator.pdb

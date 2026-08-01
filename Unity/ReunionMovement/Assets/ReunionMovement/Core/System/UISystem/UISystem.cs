@@ -860,7 +860,14 @@ namespace ReunionMovement.Core.UI
 
         public virtual UIController CreateUIController(GameObject uiObj, string uiTemplateName)
         {
-            if (!uiControllerTypeCache.TryGetValue(uiTemplateName, out Type type))
+            // 优先使用源码生成器生成的注册表（编译期扫描，零运行时反射）
+            if (UIControllerRegistry.TryGet(uiTemplateName, out Type type))
+            {
+                return uiObj.AddComponent(type) as UIController;
+            }
+
+            // 后备：反射查找（覆盖生成器未覆盖的动态/外部类型）
+            if (!uiControllerTypeCache.TryGetValue(uiTemplateName, out type))
             {
                 // 在所有已加载程序集中查找类型（兼容多程序集项目）
                 string fullName = "ReunionMovement.Core.UI." + uiTemplateName;
