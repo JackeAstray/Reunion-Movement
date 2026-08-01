@@ -311,9 +311,9 @@ namespace ReunionMovement.Core.Sound
                     if (source == null) return;
 
                     source.clip = audioClip;
-                    source.volume = volume ?? GameOption.currentOption.musicVolume;
+                    source.volume = volume ?? GameOption.CurrentOption.musicVolume;
                     source.loop = true;
-                    source.mute = GameOption.currentOption.musicMuted;
+                    source.mute = GameOption.CurrentOption.musicMuted;
                     source.Play();
                 }
             }
@@ -369,7 +369,7 @@ namespace ReunionMovement.Core.Sound
                 source.clip = newClip;
                 source.volume = 0f;
                 source.loop = true;
-                source.mute = GameOption.currentOption.musicMuted;
+                source.mute = GameOption.CurrentOption.musicMuted;
                 source.Play();
                 currentMusicIndex = index;
             }
@@ -388,7 +388,7 @@ namespace ReunionMovement.Core.Sound
             fadeTcs?.TrySetResult(false);
 
             fadeStartVolume = 0f;
-            fadeTargetVolume = GameOption.currentOption.musicVolume;
+            fadeTargetVolume = GameOption.CurrentOption.musicVolume;
             fadeTimer = 0f;
             fadeState = FadeState.FadingIn;
             fadeTcs = new UniTaskCompletionSource<bool>();
@@ -441,8 +441,8 @@ namespace ReunionMovement.Core.Sound
                             SoundItem soundObj = go.GetComponent<SoundItem>();
                             if (soundObj != null)
                             {
-                                float effectiveVolume = volume ?? GameOption.currentOption.sfxVolume;
-                                soundObj.Processing(clip, emitter, loop, effectiveVolume, GameOption.currentOption.sfxMuted, pitch);
+                                float effectiveVolume = volume ?? GameOption.CurrentOption.sfxVolume;
+                                soundObj.Processing(clip, emitter, loop, effectiveVolume, GameOption.CurrentOption.sfxMuted, pitch);
                             }
                             else
                             {

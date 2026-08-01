@@ -90,8 +90,15 @@ namespace ReunionMovement
             // Toggle 中的箭头图标
             toggleTransform = toggle.transform.Find("Icon");
 
-            // 向上三级查找 TreeView 控制器：Self → Viewport → Content → TreeView
-            uiTree = myTransform.parent.parent.parent.GetComponent<TreeView>();
+            // 向上逐级查找 TreeView 控制器（替代硬编码三级查找，层级结构变化时仍可靠）
+            uiTree = null;
+            var search = myTransform.parent;
+            while (search != null)
+            {
+                uiTree = search.GetComponent<TreeView>();
+                if (uiTree != null) break;
+                search = search.parent;
+            }
         }
 
         /// <summary>
@@ -372,6 +379,7 @@ namespace ReunionMovement
                 {
                     foreach (var go in children)
                     {
+                        if (go == null) continue;
                         var node = go.GetComponent<TreeViewNode>();
                         if (node != null && node.treeData == child)
                             return node;
@@ -383,6 +391,7 @@ namespace ReunionMovement
                 // 当前层级未匹配，递归进入每个已展开的子节点继续查找
                 foreach (var go in children)
                 {
+                    if (go == null) continue;
                     var node = go.GetComponent<TreeViewNode>();
                     var found = node?.FindChildNode(name);
                     if (found != null) return found;

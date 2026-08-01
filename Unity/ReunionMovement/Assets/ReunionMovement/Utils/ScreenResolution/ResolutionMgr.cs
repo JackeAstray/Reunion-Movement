@@ -11,6 +11,9 @@ namespace ReunionMovement.Common.Util
     /// </summary>
     public class ResolutionMgr : SingletonMgr<ResolutionMgr>
     {
+        /// <summary>分辨率/纵横比为设备级全局设置，保持跨场景存活</summary>
+        protected override bool IsPersistentAcrossScenes => true;
+
         public enum AspectRatio
         {
             AspectRatio_2_1,    // 2:1

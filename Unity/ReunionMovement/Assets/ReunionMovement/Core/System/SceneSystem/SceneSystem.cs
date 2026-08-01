@@ -415,7 +415,11 @@ namespace ReunionMovement.Core.Scene
         /// </summary>
         private void HideUIWindowsOnSceneChange()
         {
-            foreach (var window in registeredUIWindows)
+            // 拷贝快照再遍历：SetActive(false) 会同步触发 UIWindowAsset.OnDisable
+            // → UnregisterUIWindow → 修改 registeredUIWindows，
+            // 在 foreach 迭代期间修改 HashSet 会抛 InvalidOperationException。
+            var snapshot = new List<UI.UIWindowAsset>(registeredUIWindows);
+            foreach (var window in snapshot)
             {
                 if (window == null) continue;
                 if (!window.isHiddenWhenLeaveScene) continue;

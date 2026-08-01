@@ -60,7 +60,8 @@ namespace ReunionMovement.Common.Util.StateMachine
 
         public TLabel CurrentState
         {
-            get => currentState.label;
+            // 未进入任何状态时返回 default，避免 NRE
+            get => currentState == null ? default : currentState.label;
             set => ChangeState(value);
         }
 
@@ -102,17 +103,31 @@ namespace ReunionMovement.Common.Util.StateMachine
                 return;
             }
 
-            currentState?.OnUpdate?.Invoke();
-            currentState.elapsedTime += Time.deltaTime;
+            // 用局部快照：OnUpdate 回调内可能调用 ChangeState/Reset 修改 currentState，
+            // 后续基于快照并判空，避免 NRE
+            var state = currentState;
+            state?.OnUpdate?.Invoke();
+            if (state == null) return;
 
-            if (currentState.elapsedTime >= currentState.timeout)
+            state.elapsedTime += Time.deltaTime;
+
+            if (state.elapsedTime >= state.timeout)
             {
-                HandleStateTimeout();
+                HandleStateTimeout(state);
             }
 
-            foreach (var state in parallelStates)
+            // 并行状态更新（倒序遍历以支持超时移除）
+            for (int i = parallelStates.Count - 1; i >= 0; i--)
             {
-                state.OnUpdate?.Invoke();
+                var parallelState = parallelStates[i];
+                parallelState.elapsedTime += Time.deltaTime;
+                if (parallelState.elapsedTime >= parallelState.timeout)
+                {
+                    parallelState.OnStop?.Invoke();
+                    parallelStates.RemoveAt(i);
+                    continue;
+                }
+                parallelState.OnUpdate?.Invoke();
             }
         }
 
@@ -152,14 +167,23 @@ namespace ReunionMovement.Common.Util.StateMachine
         }
 
         /// <summary>
-        /// 添加并行状态
+        /// 添加并行状态。
+        /// 若已存在同名并行状态，先调用旧状态的 onStop 并移除。
+        /// 加入后立即调用 onStart；超时后自动调用 onStop 并移除。
         /// </summary>
-        /// <param name="label"></param>
-        /// <param name="onStart"></param>
-        /// <param name="onUpdate"></param>
-        /// <param name="onStop"></param>
         public void AddParallelState(TLabel label, Action onStart = null, Action onUpdate = null, Action onStop = null, float timeout = float.MaxValue, int priority = 0)
         {
+            // 若已存在同名并行状态，先移除旧的（避免重复实例）
+            for (int i = 0; i < parallelStates.Count; i++)
+            {
+                if (EqualityComparer<TLabel>.Default.Equals(parallelStates[i].label, label))
+                {
+                    parallelStates[i].OnStop?.Invoke();
+                    parallelStates.RemoveAt(i);
+                    break;
+                }
+            }
+
             var newState = new State(label, onStart, onUpdate, onStop, timeout, priority);
             // 按优先级降序线性插入（避免 OrderByDescending + ToList 产生的 GC 分配）
             int insertIndex = 0;
@@ -168,28 +192,33 @@ namespace ReunionMovement.Common.Util.StateMachine
                 if (priority > parallelStates[insertIndex].priority) break;
             }
             parallelStates.Insert(insertIndex, newState);
+
+            // 进入时触发 onStart（与主状态行为一致）
+            newState.OnStart?.Invoke();
         }
 
         /// <summary>
         /// 改变状态
         /// </summary>
         /// <param name="newState"></param>
-        private void ChangeState(TLabel newState)
+        /// <returns>切换是否成功（条件不满足或目标未注册时返回 false）</returns>
+        private bool ChangeState(TLabel newState)
         {
             if (currentState != null && !IsTransitionConditionsMet(newState))
             {
                 Log.Error("无法从状态 {0} 转换到 {1}，条件未满足。", currentState.label, newState);
-                return;
+                return false;
             }
 
-            PerformStateChange(newState);
+            return PerformStateChange(newState);
         }
 
         /// <summary>
         /// 执行状态切换。若目标状态未注册，则记录错误并保持当前状态。
         /// </summary>
         /// <param name="newState"></param>
-        private void PerformStateChange(TLabel newState)
+        /// <returns>切换是否成功</returns>
+        private bool PerformStateChange(TLabel newState)
         {
             try
             {
@@ -197,7 +226,7 @@ namespace ReunionMovement.Common.Util.StateMachine
                 if (!stateDictionary.TryGetValue(newState, out State targetState))
                 {
                     Log.Error("状态切换失败：目标状态 {0} 未注册。保持当前状态。", newState);
-                    return;
+                    return false;
                 }
 
                 TLabel oldLabel = default(TLabel);
@@ -213,25 +242,32 @@ namespace ReunionMovement.Common.Util.StateMachine
                 currentState?.OnStart?.Invoke();
                 OnStateEnter?.Invoke(newState);
                 OnStateChanged?.Invoke(oldLabel, newState);
+                return true;
             }
             catch (Exception ex)
             {
                 Log.Error("状态转换时发生异常: {0}", ex.Message);
+                return false;
             }
         }
 
         /// <summary>
         /// 处理状态超时
         /// </summary>
-        private void HandleStateTimeout()
+        private void HandleStateTimeout(State state)
         {
             // 超时后的状态转换逻辑
-            Log.Debug("状态 {0} 超时，切换到默认状态", currentState.label);
+            Log.Debug("状态 {0} 超时，切换到默认状态", state.label);
 
             // 只有当 defaultStateLabel 被设置为有效状态时，才允许切换到默认状态
             if (!EqualityComparer<TLabel>.Default.Equals(defaultStateLabel, default(TLabel)))
             {
-                ChangeState(defaultStateLabel);
+                if (!ChangeState(defaultStateLabel))
+                {
+                    // 切换失败（默认状态未注册或转换条件不满足）：
+                    // 重置计时，避免 elapsedTime 持续增长导致每帧重复触发超时并刷错误日志
+                    state.elapsedTime = 0f;
+                }
             }
         }
 
@@ -278,15 +314,20 @@ namespace ReunionMovement.Common.Util.StateMachine
         }
 
         /// <summary>
-        /// 回退到上一个状态
+        /// 回退到上一个状态（触发与 ChangeState 一致的事件流）
         /// </summary>
         public void RevertToPreviousState()
         {
             if (stateHistory.Count > 0)
             {
+                TLabel oldLabel = currentState != null ? currentState.label : default;
                 currentState?.OnStop?.Invoke();
+                if (currentState != null) OnStateExit?.Invoke(currentState.label);
+
                 currentState = stateHistory.Pop();
                 currentState?.OnStart?.Invoke();
+                OnStateEnter?.Invoke(currentState.label);
+                OnStateChanged?.Invoke(oldLabel, currentState.label);
             }
         }
 

@@ -146,6 +146,33 @@ namespace ReunionMovement.Common.Util
         public static async UniTask SaveFile(string fullpath, string content) => await SaveFileAsync(fullpath, Encoding.UTF8.GetBytes(content));
 
         /// <summary>
+        /// 同步保存文件（Editor 工具等无异步上下文的场景使用，
+        /// 避免 fire-and-forget 异步写盘与 AssetDatabase.Refresh 的竞态）
+        /// </summary>
+        /// <param name="fullpath"></param>
+        /// <param name="content"></param>
+        /// <returns>写入字节数，失败返回 -1</returns>
+        public static int SaveFileSync(string fullpath, string content)
+        {
+            try
+            {
+                content ??= string.Empty;
+                var dir = Path.GetDirectoryName(fullpath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+                File.WriteAllText(fullpath, content, Encoding.UTF8);
+                return content.Length;
+            }
+            catch (Exception e)
+            {
+                Log.Error("SaveFileSync() 路径:{0}, 错误:{1}", fullpath, e.Message);
+                return -1;
+            }
+        }
+
+        /// <summary>
         /// 保存文件
         /// </summary>
         /// <param name="fullpath"></param>

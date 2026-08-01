@@ -214,6 +214,8 @@ namespace ReunionMovement.EditorTools
                         }
 
                         field.fieldType = field.fieldType == FieldTypes.UnknownList ? FieldTypes.CustomTypeList : FieldTypes.CustomType;
+                        // 同步更新剥离括号后的类型名，否则 GetFieldTypeString(CustomTypeList, "[Item]") 会生成 List<[Item]> 非法 C#
+                        field.fieldTypeName = fieldTypeStr;
                     }
 
                     sheet.fields.Add(field);
@@ -235,7 +237,7 @@ namespace ReunionMovement.EditorTools
         /// 生成脚本
         /// </summary>
         /// <param name="sheet"></param>
-        static async UniTask GenerateScript(SheetData sheet)
+        static UniTask GenerateScript(SheetData sheet)
         {
             string scriptTemplate = @"//此脚本为工具生成，请勿手动创建 {_CREATE_TIME_} <ExcelTo>
 using System;
@@ -284,9 +286,12 @@ namespace ReunionMovement
 ";
             var dataName = sheet.itemClassName;
             var str = GenerateDataScript(scriptTemplate, dataName, sheet.fields);
-            await FileOperationUtil.SaveFile(scriptOutPutPath + dataName + ".cs", str);
+            // 使用同步写盘：fire-and-forget 异步写盘时，AssetDatabase.Refresh()
+            // 可能在文件未落盘时执行，导致资源未导入、需手动刷新
+            FileOperationUtil.SaveFileSync(scriptOutPutPath + dataName + ".cs", str);
 
             AssetDatabase.Refresh();
+            return UniTask.CompletedTask;
         }
 
         /// <summary>
@@ -364,7 +369,7 @@ namespace ReunionMovement
         /// </summary>
         /// <param name="sheet"></param>
         /// <param name="order"></param>
-        static async UniTask GenerateScriptList(SheetData sheet, int order)
+        static UniTask GenerateScriptList(SheetData sheet, int order)
         {
             string ScriptTemplate = @"//此脚本为工具生成，请勿手动创建 {_CREATE_TIME_} <ExcelTo>
 using System;
@@ -384,9 +389,11 @@ namespace ReunionMovement
 ";
             var dataName = sheet.itemClassName;
             var str = GenerateDataScriptList(ScriptTemplate, dataName, sheet.fields, order);
-            await FileOperationUtil.SaveFile(scriptOutPutPath + dataName + "Container.cs", str);
+            // 使用同步写盘，避免 fire-and-forget 异步写盘与 Refresh 的竞态
+            FileOperationUtil.SaveFileSync(scriptOutPutPath + dataName + "Container.cs", str);
 
             AssetDatabase.Refresh();
+            return UniTask.CompletedTask;
         }
 
         /// <summary>
@@ -424,6 +431,13 @@ namespace ReunionMovement
         public static void ExcelToScriptableObject()
         {
             List<string> xlsxFiles = GetAllConfigFiles(toDirSO);
+
+            // GetAllConfigFiles 在编译中/目录不存在时可能返回 null
+            if (xlsxFiles == null || xlsxFiles.Count == 0)
+            {
+                Log.Warning("没有找到可处理的表格文件。");
+                return;
+            }
 
             foreach (var path in xlsxFiles)
             {
@@ -478,14 +492,19 @@ namespace ReunionMovement
                     return;
                 }
 
+                // 兼容旧命名：运行时 LanguagesSystem 加载的是 ScriptableObjects/LanguagesContainer，
+                // 而新表名 LanguagesConfig 生成的容器是 LanguagesConfigContainer，两者断裂会导致
+                // 重新生成后语言系统静默失效。这里将 LanguagesConfig 映射回 Languages。
+                string containerName = tableName == "LanguagesConfig" ? "Languages" : tableName;
+
                 // 动态生成 ScriptableObject 文件路径
-                string assetPath = scriptableOutPutPath + tableName + "Container.asset";
+                string assetPath = scriptableOutPutPath + containerName + "Container.asset";
 
                 // 动态获取容器类类型
-                Type containerType = Type.GetType($"ReunionMovement.{tableName}Container, Assembly-CSharp");
+                Type containerType = Type.GetType($"ReunionMovement.{containerName}Container, Assembly-CSharp");
                 if (containerType == null)
                 {
-                    Log.Error($"无法获取类型：ReunionMovement.{tableName}Container, Assembly-CSharp");
+                    Log.Error($"无法获取类型：ReunionMovement.{containerName}Container, Assembly-CSharp");
                     continue;
                 }
 
@@ -583,7 +602,11 @@ namespace ReunionMovement
                     Log.Error($"字段 'configs' 未找到：{tableName}Container");
                 }
 
-                // 保存 ScriptableObject
+                // 保存 ScriptableObject（目标资产已存在时先删除，支持迭代更新）
+                if (AssetDatabase.LoadAssetAtPath<ScriptableObject>(assetPath) != null)
+                {
+                    AssetDatabase.DeleteAsset(assetPath);
+                }
                 AssetDatabase.CreateAsset(asset, assetPath);
             }
 
@@ -598,7 +621,8 @@ namespace ReunionMovement
         {
             List<string> xlsxFiles = GetAllConfigFiles(toDirSO);
 
-            if (xlsxFiles.Count <= 0)
+            // GetAllConfigFiles 在编译中/目录不存在时可能返回 null
+            if (xlsxFiles == null || xlsxFiles.Count <= 0)
             {
                 Log.Error("未找到任何表格！");
                 return;
@@ -644,7 +668,14 @@ namespace ReunionMovement
             //获取Excel文件的绝对路径
             string output = jsonOutPutPath + Path.GetFileName(path);
             output = output.Replace(".xlsx", ".json");
-            _ = excel.ConvertToJson(output);
+
+            // 同步写盘：fire-and-forget 异步写盘与立即 Refresh() 存在竞态
+            // （文件未落盘时 Refresh 会导致 JSON 资源未导入）
+            string json = excel.GetJson();
+            if (!string.IsNullOrEmpty(json))
+            {
+                FileOperationUtil.SaveFileSync(output, json);
+            }
 
             //刷新本地资源
             AssetDatabase.Refresh();

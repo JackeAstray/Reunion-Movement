@@ -14,6 +14,9 @@ namespace ReunionMovement.Common.Util.HttpService
     /// </summary>
     public class HttpMgr : SingletonMgr<HttpMgr>
     {
+        /// <summary>HTTP 请求可能在切场景期间仍在途，保持跨场景存活</summary>
+        protected override bool IsPersistentAcrossScenes => true;
+
         private IHttpService service;
         private Dictionary<string, string> superHeaders;
         private Dictionary<IHttpRequest, CancellationTokenSource> httpRequests;
@@ -249,9 +252,19 @@ namespace ReunionMovement.Common.Util.HttpService
         private async UniTaskVoid SendAsync(IHttpRequest request, Action<HttpResponse> onSuccess = null,
             Action<HttpResponse> onError = null, Action<HttpResponse> onNetworkError = null, CancellationToken ct = default)
         {
-            bool canceled = await service.Send(request, onSuccess, onError, onNetworkError).ToUniTask(cancellationToken: ct).SuppressCancellationThrow();
-            if (!canceled)
+            try
+            {
+                bool canceled = await service.Send(request, onSuccess, onError, onNetworkError).ToUniTask(cancellationToken: ct).SuppressCancellationThrow();
+                if (!canceled)
+                    httpRequests.Remove(request);
+            }
+            catch (Exception ex)
+            {
+                // service.Send 同步抛异常（如类型强转失败）时，
+                // 必须移除 httpRequests 条目，避免泄漏
                 httpRequests.Remove(request);
+                Debug.LogError("HttpMgr.SendAsync 异常: " + ex);
+            }
         }
 
         /// <summary>

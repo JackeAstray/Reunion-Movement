@@ -13,6 +13,12 @@ namespace ReunionMovement.Common.Util
     /// </summary>
     public class DeadlineMgr : SingletonMgr<DeadlineMgr>
     {
+        /// <summary>
+        /// 截止日期校验按场景执行（每次进入新场景都会重新校验），无需跨场景存活；
+        /// 违规时 PurgeActiveScene 会连同自身一起销毁，场景卸载后 instance 由 OnDestroy 自动清空。
+        /// </summary>
+        protected override bool IsPersistentAcrossScenes => false;
+
         [Tooltip("起始日期，格式建议：yyyy-MM-dd（也兼容yyyy-M-d）")]
         public string startDate = "2025-9-20";
         [Tooltip("截止日期，格式建议：yyyy-MM-dd（也兼容yyyy-M-d）")]

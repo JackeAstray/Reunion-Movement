@@ -208,18 +208,16 @@ namespace ReunionMovement
 
         /// <summary>
         /// 获取当前节点的哈希码。
-        /// 基于 parent、childNodes、layer、name 组合计算，
-        /// 以支持在字典或哈希集合中使用。
+        /// 仅基于 name 与 layer 计算（与 <see cref="Equals"/> 保持一致），
+        /// 否则两个 Equals 相等的对象哈希不同，放入 Dictionary/HashSet 后查找会失效。
         /// </summary>
         /// <returns>哈希码</returns>
         public override int GetHashCode()
         {
             unchecked
             {
-                var hashCode = (parent != null ? parent.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (childNodes != null ? childNodes.GetHashCode() : 0);
+                int hashCode = name != null ? name.GetHashCode() : 0;
                 hashCode = (hashCode * 397) ^ layer;
-                hashCode = (hashCode * 397) ^ (name != null ? name.GetHashCode() : 0);
                 return hashCode;
             }
         }

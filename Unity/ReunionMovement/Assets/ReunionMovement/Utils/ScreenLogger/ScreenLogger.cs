@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 namespace ReunionMovement
 {
@@ -8,6 +9,8 @@ namespace ReunionMovement
     /// </summary>
     public class ScreenLogger : MonoBehaviour
     {
+        /// <summary>日志队列最大容量（超出时丢弃最旧消息，防止无界增长）</summary>
+        private const int MaxQueueSize = 500;
         public enum LogAnchor
         {
             TopLeft,
@@ -49,7 +52,9 @@ namespace ReunionMovement
         public bool stackTraceWarnings = false;
         public bool stackTraceErrors = true;
 
-        static Queue<LogMessage> queue = new Queue<LogMessage>();
+        // 线程安全队列：Application.logMessageReceived 可能在后台线程触发，
+        // 与主线程 Update/OnGUI 的读写必须并发安全
+        static readonly ConcurrentQueue<LogMessage> queue = new ConcurrentQueue<LogMessage>();
         private static readonly HashSet<ScreenLogger> activeInstances = new HashSet<ScreenLogger>();
 
         GUIStyle styleContainer, styleText;
@@ -59,8 +64,10 @@ namespace ReunionMovement
         public void Awake()
         {
             backgroundTex = new Texture2D(1, 1);
-            backgroundColor.a = backgroundOpacity;
-            backgroundTex.SetPixel(0, 0, backgroundColor);
+            // 用局部变量设置 alpha，避免直接修改公共字段 backgroundColor 的透明度分量
+            var bgColor = backgroundColor;
+            bgColor.a = backgroundOpacity;
+            backgroundTex.SetPixel(0, 0, bgColor);
             backgroundTex.Apply();
 
             styleContainer = new GUIStyle();
@@ -102,10 +109,7 @@ namespace ReunionMovement
             // 只由第一个启用的实例清空队列，避免多实例互相覆盖
             if (activeInstances.Count == 1)
             {
-                lock (queue)
-                {
-                    queue.Clear();
-                }
+                while (queue.TryDequeue(out _)) { }
             }
 
             Application.logMessageReceived += HandleLog;
@@ -131,7 +135,7 @@ namespace ReunionMovement
             float lineH = styleText.lineHeight > 0 ? styleText.lineHeight : Mathf.Max(fontSize, 1);
             while (queue.Count > ((Screen.height - 2 * margin) * height - 2 * padding) / lineH)
             {
-                queue.Dequeue();
+                queue.TryDequeue(out _);
             }
         }
 
@@ -198,6 +202,12 @@ namespace ReunionMovement
         void HandleLog(string message, string stackTrace, LogType type)
         {
             if (!ShouldLog(type)) return;
+
+            // 容量上限：超出时丢弃最旧消息，防止单帧大量报错导致队列无界膨胀
+            while (queue.Count >= MaxQueueSize)
+            {
+                queue.TryDequeue(out _);
+            }
 
             queue.Enqueue(new LogMessage(message, type));
 

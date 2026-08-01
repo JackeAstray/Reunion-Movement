@@ -65,10 +65,10 @@ namespace ReunionMovement.Core.UIToolkit
         #region R3 响应式事件
 
         /// <summary>面板打开事件</summary>
-        public readonly Subject<UIToolkitPanel> OnPanelOpenSubject = new Subject<UIToolkitPanel>();
+        public Subject<UIToolkitPanel> OnPanelOpenSubject = new Subject<UIToolkitPanel>();
 
         /// <summary>面板关闭事件</summary>
-        public readonly Subject<UIToolkitPanel> OnPanelCloseSubject = new Subject<UIToolkitPanel>();
+        public Subject<UIToolkitPanel> OnPanelCloseSubject = new Subject<UIToolkitPanel>();
         #endregion
 
         #region 资源路径常量
@@ -94,6 +94,11 @@ namespace ReunionMovement.Core.UIToolkit
         public async UniTask Init()
         {
             initProgress = 0;
+
+            // 重建 R3 Subject（Clear() 已 Dispose，重初始化时必须重建，
+            // 否则 OpenPanel 中的 OnNext 会抛 ObjectDisposedException）
+            OnPanelOpenSubject ??= new Subject<UIToolkitPanel>();
+            OnPanelCloseSubject ??= new Subject<UIToolkitPanel>();
 
             // 1. 创建全局 UIDocument
             CreateGlobalDocument();
@@ -126,9 +131,11 @@ namespace ReunionMovement.Core.UIToolkit
             panelAssetCache.Clear();
             panelStyleCache.Clear();
 
-            // 释放 R3 Subject
+            // 释放 R3 Subject（置 null 以便 Init() 中 ??= 重建）
             OnPanelOpenSubject?.Dispose();
+            OnPanelOpenSubject = null;
             OnPanelCloseSubject?.Dispose();
+            OnPanelCloseSubject = null;
 
             // 销毁全局 UIDocument
             if (GlobalDocument != null)

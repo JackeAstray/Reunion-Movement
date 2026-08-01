@@ -10,6 +10,12 @@ namespace ReunionMovement.Common.Util.HttpService
 {
     public class UnityHttpService : IHttpService
     {
+        /// <summary>
+        /// 默认请求超时（秒）。UnityWebRequest.timeout 默认为 0（永不超时），
+        /// 服务器无响应时请求会永久挂起，故未显式设置超时时使用此默认值。
+        /// </summary>
+        public const int DefaultTimeoutSeconds = 15;
+
         public IHttpRequest Get(string uri)
         {
             return new UnityHttpRequest(UnityWebRequest.Get(uri));
@@ -88,9 +94,18 @@ namespace ReunionMovement.Common.Util.HttpService
         public IEnumerator Send(IHttpRequest request, Action<HttpResponse> onSuccess = null,
             Action<HttpResponse> onError = null, Action<HttpResponse> onNetworkError = null)
         {
-            var unityHttpRequest = (UnityHttpRequest)request;
+            var unityHttpRequest = request as UnityHttpRequest;
+            if (unityHttpRequest == null)
+            {
+                throw new ArgumentException("UnityHttpService 仅支持 UnityHttpRequest，实际类型: " + request?.GetType().Name);
+            }
+
             using (UnityWebRequest unityWebRequest = unityHttpRequest.UnityWebRequest)
             {
+                // 默认超时：若调用方未显式设置，则使用默认值，避免请求永久挂起
+                if (unityWebRequest.timeout <= 0)
+                    unityWebRequest.timeout = DefaultTimeoutSeconds;
+
                 yield return unityWebRequest.SendWebRequest();
 
                 var response = new HttpResponse

@@ -156,13 +156,16 @@ namespace ReunionMovement.Core.Resources
                     atlasCache[atlasName] = atlas;
                 }
             }
-            if (atlas is null)
+            // 注意：这里必须用 Unity 重载的 == （fake-null 检查），
+            // 不能用 is null —— 它无法识别 Unity 已销毁对象，
+            // 缓存中指向被销毁的 SpriteAtlas 时会抛 MissingReferenceException。
+            if (atlas == null)
             {
                 Log.Error("图集：{0}不存在，请检查！", atlasName);
                 return null;
             }
             var sprite = atlas.GetSprite(spriteName);
-            if (sprite is null)
+            if (sprite == null)
             {
                 Log.Error("{0} 图集中Sprite:{1} 不存在，请检查！", atlasName, spriteName);
             }
@@ -373,42 +376,10 @@ namespace ReunionMovement.Core.Resources
     }
 
     /// <summary>
-    /// 资源请求等待器
-    /// </summary>
-    public class ResourceRequestAwaiter : INotifyCompletion
-    {
-        private Action continuation;
-        private readonly ResourceRequest resourceRequest;
-        public bool IsCompleted => resourceRequest.isDone;
-
-        public ResourceRequestAwaiter(ResourceRequest resourceRequest)
-        {
-            this.resourceRequest = resourceRequest;
-            this.resourceRequest.completed += Accomplish;
-        }
-
-        public void OnCompleted(Action continuation)
-        {
-            this.continuation = continuation;
-        }
-
-        private void Accomplish(AsyncOperation asyncOperation)
-        {
-            continuation?.Invoke();
-            // 移除委托，避免内存泄漏
-            resourceRequest.completed -= Accomplish;
-        }
-
-        public void GetResult() { /* 无需返回值 */ }
-    }
-
-    /// <summary>
     /// 资源扩展
     /// </summary>
     public static class ResourcesUtil
     {
-        public static ResourceRequestAwaiter GetAwaiter(this ResourceRequest request) => new ResourceRequestAwaiter(request);
-
         public static async UniTask<T> LoadAsync<T>(string assetPath, UnityAction<T> callback = null) where T : Object
         {
             try

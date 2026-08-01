@@ -74,22 +74,22 @@ namespace ReunionMovement.Core.UIInput
         #region R3 响应式事件（推荐新代码使用）
 
         /// <summary>焦点变更事件</summary>
-        public readonly Subject<GameObject> SelectionChangedSubject = new Subject<GameObject>();
+        public Subject<GameObject> SelectionChangedSubject = new Subject<GameObject>();
 
         /// <summary>按键绑定变更事件</summary>
-        public readonly Subject<UIInputBinding> BindingChangedSubject = new Subject<UIInputBinding>();
+        public Subject<UIInputBinding> BindingChangedSubject = new Subject<UIInputBinding>();
 
         /// <summary>输入模式切换事件</summary>
-        public readonly Subject<UIControlMode> UIControlModeChangedSubject = new Subject<UIControlMode>();
+        public Subject<UIControlMode> UIControlModeChangedSubject = new Subject<UIControlMode>();
 
         /// <summary>导航操作事件（方向向量）</summary>
-        public readonly Subject<Vector2> NavigateSubject = new Subject<Vector2>();
+        public Subject<Vector2> NavigateSubject = new Subject<Vector2>();
 
         /// <summary>提交操作事件</summary>
-        public readonly Subject<Unit> SubmitSubject = new Subject<Unit>();
+        public Subject<Unit> SubmitSubject = new Subject<Unit>();
 
         /// <summary>取消操作事件</summary>
-        public readonly Subject<Unit> CancelSubject = new Subject<Unit>();
+        public Subject<Unit> CancelSubject = new Subject<Unit>();
 
         #endregion
 
@@ -97,6 +97,14 @@ namespace ReunionMovement.Core.UIInput
         public async UniTask Init()
         {
             initProgress = 0;
+
+            // 重建 R3 Subject（Clear() 已 Dispose 并置 null，重初始化时必须重建）
+            SelectionChangedSubject ??= new Subject<GameObject>();
+            BindingChangedSubject ??= new Subject<UIInputBinding>();
+            UIControlModeChangedSubject ??= new Subject<UIControlMode>();
+            NavigateSubject ??= new Subject<Vector2>();
+            SubmitSubject ??= new Subject<Unit>();
+            CancelSubject ??= new Subject<Unit>();
 
             // 1. 加载按键绑定配置
             LoadBindings();
@@ -172,13 +180,19 @@ namespace ReunionMovement.Core.UIInput
             CurrentSelected = null;
             LastSelected = null;
 
-            // 释放 R3 Subject（自动断开所有订阅）
+            // 释放 R3 Subject（自动断开所有订阅），并置 null 以便 Init 中 ??= 重建
             SelectionChangedSubject?.Dispose();
+            SelectionChangedSubject = null;
             BindingChangedSubject?.Dispose();
+            BindingChangedSubject = null;
             UIControlModeChangedSubject?.Dispose();
+            UIControlModeChangedSubject = null;
             NavigateSubject?.Dispose();
+            NavigateSubject = null;
             SubmitSubject?.Dispose();
+            SubmitSubject = null;
             CancelSubject?.Dispose();
+            CancelSubject = null;
 
             isInited = false;
         }

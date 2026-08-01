@@ -63,9 +63,11 @@ namespace ReunionMovement.Core.Sound
             double scheduleTime = AudioSettings.dspTime + ScheduledOffset;
             source.PlayScheduled(scheduleTime);
 
-            // 取消旧的回收任务
+            // 取消旧的回收任务（置 null 防止 loop 路径下复用已 Dispose 的 CTS，
+            // 否则下一次 Processing 的 Cancel() 会抛 ObjectDisposedException）
             recycleCts?.Cancel();
             recycleCts?.Dispose();
+            recycleCts = null;
 
             // 如果不是循环播放，则在播放结束后自动回收
             if (!loop)
