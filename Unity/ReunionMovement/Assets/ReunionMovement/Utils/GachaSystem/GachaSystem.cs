@@ -25,15 +25,11 @@ namespace ReunionMovement.Common.Util
             return (float)(randomUint / (uint.MaxValue + 1.0));
         }
 
-        /// <summary>生成 [min, max) 范围的加密随机整数</summary>
+        /// <summary>生成 [min, max) 范围的加密随机整数（GetInt32 内部无模偏差）</summary>
         private static int CryptoRandomRange(int min, int max)
         {
             if (min >= max) return min;
-            uint range = (uint)(max - min);
-            byte[] bytes = new byte[4];
-            RandomNumberGenerator.Fill(bytes);
-            uint randomUint = BitConverter.ToUInt32(bytes, 0);
-            return min + (int)(randomUint % range);
+            return RandomNumberGenerator.GetInt32(min, max);
         }
         // ===== 数据结构 =====
         [System.Serializable]

@@ -18,6 +18,24 @@ namespace ReunionMovement.Core
         /// <summary>防止编辑器 Domain Reload 时重复初始化</summary>
         private static bool isInitialized;
 
+        /// <summary>承载 GameEngineDriver 的持久化 GameObject（启动失败时必须销毁，避免残留多个 Driver）</summary>
+        private static GameObject driverGo;
+
+        /// <summary>
+        /// 启动失败/异常时的统一清理：销毁 Driver、Dispose 引擎、复位状态。
+        /// 防止重试时残留多个 GameEngineDriver 导致每帧事件重复触发。
+        /// </summary>
+        private static void CleanupFailedStartup()
+        {
+            isInitialized = false;
+            GameEngine.Current?.Dispose();
+            if (driverGo != null)
+            {
+                UnityEngine.Object.Destroy(driverGo);
+                driverGo = null;
+            }
+        }
+
         /// <summary>
         /// 强制禁用自动启动（设置为 true 后，所有场景都不会触发 Bootstrap）。
         /// 适用于测试场景或需要在 Play Mode 中手动控制初始化流程的情况。
@@ -86,9 +104,8 @@ namespace ReunionMovement.Core
             InitializeEngineAsync().Forget(ex =>
             {
                 Log.Error("[Bootstrap] 启动过程发生未处理异常: {0}\n{1}", ex.Message, ex.StackTrace);
-                isInitialized = false;
-                // 清理可能已部分初始化的引擎，避免状态残留与 GameObject 泄漏
-                GameEngine.Current?.Dispose();
+                // 统一清理：销毁 Driver、Dispose 引擎、复位状态
+                CleanupFailedStartup();
             });
         }
 
@@ -97,11 +114,19 @@ namespace ReunionMovement.Core
         /// </summary>
         private static async UniTask InitializeEngineAsync()
         {
+            // 若上次失败残留了 driver，先清理，避免重复 Driver
+            if (driverGo != null)
+            {
+                UnityEngine.Object.Destroy(driverGo);
+                driverGo = null;
+            }
+
             // 创建持久化 GameObject 承载 GameEngineDriver
-            var driverGo = new GameObject("[GameEngineDriver]");
-            driverGo.AddComponent<AudioListener>(); // 兼容旧版场景，避免缺少 AudioListener 报错
-            UnityEngine.Object.DontDestroyOnLoad(driverGo);
-            var driver = driverGo.AddComponent<GameEngineDriver>();
+            var go = new GameObject("[GameEngineDriver]");
+            driverGo = go;
+            go.AddComponent<AudioListener>(); // 兼容旧版场景，避免缺少 AudioListener 报错
+            UnityEngine.Object.DontDestroyOnLoad(go);
+            var driver = go.AddComponent<GameEngineDriver>();
 
             // 创建引擎
             var engine = GameEngine.Create();
@@ -119,8 +144,9 @@ namespace ReunionMovement.Core
             if (!result.IsSuccess)
             {
                 Log.Error("[Bootstrap] 游戏启动失败: {0}", result.ErrorMessage);
-                isInitialized = false;
-                // 失败时不阻塞，GameEngine.State == Failed 可供 UI 层查询
+                // 失败时统一清理：销毁 Driver、Dispose 引擎（含已初始化模块），
+                // 避免 GameEngine.State == Failed 与残留 GameObject
+                CleanupFailedStartup();
             }
         }
     }

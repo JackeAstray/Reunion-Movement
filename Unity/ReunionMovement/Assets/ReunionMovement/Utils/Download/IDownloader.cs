@@ -140,7 +140,11 @@ namespace ReunionMovement.Common.Util.Download
                     idf.DownloadToRoot = DownloadToRoot;
                     idf.AbandonOnFailure = AbandonOnFailure;
                     idf.Timeout = Timeout;
-                    idf.RequestHeaders = requestHeaders;
+                    // 深拷贝 RequestHeaders：多个并发分块 executor 共享同一字典时，
+                    // 各自的 Remove/Add("Range") 会互相覆盖导致 Range 头错乱、文件损坏
+                    idf.RequestHeaders = requestHeaders != null
+                        ? new Dictionary<string, string>(requestHeaders)
+                        : null;
                     idf.TryMultipartDownload = tryMultipartDownload;
                     idf.InitialChunkSize = MultipartChunkSize;
                     newExecutors.Add(idf);

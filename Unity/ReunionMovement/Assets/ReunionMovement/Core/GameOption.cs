@@ -68,7 +68,14 @@ namespace ReunionMovement.Core
             #endregion
         }
 
-        public static Option currentOption = new Option();
+        /// <summary>当前选项（私有：外部只能读取引用、修改字段值，无法整体替换，防止状态被意外重置）</summary>
+        private static Option currentOption = new Option();
+
+        /// <summary>
+        /// 当前选项（只读访问器）。返回的 Option 实例字段仍可读写，
+        /// 但外部代码无法替换整个实例。
+        /// </summary>
+        public static Option CurrentOption => currentOption;
 
         private static bool isLoaded = false;
 

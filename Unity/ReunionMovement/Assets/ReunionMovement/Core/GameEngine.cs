@@ -321,6 +321,9 @@ namespace ReunionMovement.Core
                 State = EngineState.Failed;
                 string errorMsg = ex.InnerException?.Message ?? ex.Message;
                 Log.Error("[GameEngine] 初始化失败: {0}\n{1}", errorMsg, ex.StackTrace);
+                // 清理已成功初始化的模块（资源/UI/音效等），
+                // 避免初始化失败后模块资源全部泄漏
+                ClearModuleData();
                 OnInitFailedSubject.OnNext(errorMsg);
                 return InitResult.Failure(errorMsg, ex);
             }
@@ -369,14 +372,15 @@ namespace ReunionMovement.Core
             accumTime1s += deltaTime;
             accumTime300ms += deltaTime;
 
+            // 保留余数（-= 而非 =0），避免低帧率下周期持续漂移
             if (accumTime1s >= 1.0f)
             {
-                accumTime1s = 0f;
+                accumTime1s -= 1.0f;
                 UpdatePer1sSubject.OnNext(Unit.Default);
             }
             if (accumTime300ms >= 0.3f)
             {
-                accumTime300ms = 0f;
+                accumTime300ms -= 0.3f;
                 UpdatePer300msSubject.OnNext(Unit.Default);
             }
 

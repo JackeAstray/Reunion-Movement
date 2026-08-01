@@ -52,6 +52,9 @@ namespace ReunionMovement.Core.Languages
         {
             initProgress = 0;
 
+            // 重建 R3 ReactiveProperty（Clear() 已 Dispose 并置 null，重初始化时必须重建）
+            CurrentLanguage ??= new ReactiveProperty<Multilingual>(Multilingual.ZH_CN);
+
             // 从ScriptableObjects中获取文本
             languagesContainer = ResourcesSystem.Instance.Load<LanguagesContainer>("ScriptableObjects/LanguagesContainer");
             if (languagesContainer == null || languagesContainer.configs == null)

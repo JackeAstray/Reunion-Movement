@@ -255,10 +255,10 @@ namespace ReunionMovement.Core.Sound
         /// </summary>
         public void ToggleMute()
         {
-            GameOption.currentOption.musicMuted = !GameOption.currentOption.musicMuted;
+            GameOption.CurrentOption.musicMuted = !GameOption.CurrentOption.musicMuted;
             // 立即应用到当前AudioSource
             var audio = GetAudioSource();
-            if (audio != null) audio.mute = GameOption.currentOption.musicMuted;
+            if (audio != null) audio.mute = GameOption.CurrentOption.musicMuted;
         }
 
         /// <summary>
@@ -268,7 +268,7 @@ namespace ReunionMovement.Core.Sound
         public void SetVolume(float v)
         {
             // 0-1 范围
-            GameOption.currentOption.musicVolume = v;
+            GameOption.CurrentOption.musicVolume = v;
             // 立即应用到当前AudioSource
             var audio = GetAudioSource();
             if (audio != null) audio.volume = v;

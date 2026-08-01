@@ -157,6 +157,11 @@ namespace ReunionMovement.Common.Util
                     cancellationToken.ThrowIfCancellationRequested();
                     return await func(cancellationToken).ConfigureAwait(false);
                 }
+                catch (OperationCanceledException)
+                {
+                    // 取消不是失败：直接抛出，不重试（否则已取消的任务还会反复执行）
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     attempts++;

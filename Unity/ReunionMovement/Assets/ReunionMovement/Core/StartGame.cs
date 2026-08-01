@@ -74,10 +74,10 @@ namespace ReunionMovement.Core
         {
             Log.Debug("[StartGame] 游戏启动");
 
-            if (Application.platform != RuntimePlatform.WebGLPlayer)
-            {
-                GameOption.ResetOptions();
-            }
+            // 注意：这里不再调用 GameOption.ResetOptions()。
+            // OnBeforeInitAsync 已用 GameOption.LoadOptions() 读回玩家存档，
+            // 此处若再 ResetOptions() 会把 PlayerPrefs 覆盖成默认值，导致设置无法持久化。
+            // 重置逻辑仅保留给“恢复默认设置”的 UI 按钮。
 
             // 测试/调试场景：跳过自动场景跳转，保留当前场景用于调试
             if (Bootstrap.IsTestScene)

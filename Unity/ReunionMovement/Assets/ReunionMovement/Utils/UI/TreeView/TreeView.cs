@@ -59,29 +59,9 @@ namespace ReunionMovement
         {
             foreach (var node in treeRootNodes)
             {
-                var found = FindNodeRecursive(node, name);
+                if (node.GetTreeData() != null && node.GetTreeData().name == name) return node;
+                var found = node.FindChildNode(name);
                 if (found != null) return found;
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// 递归查找节点
-        /// </summary>
-        /// <param name="node"></param>
-        /// <param name="name"></param>
-        /// <returns></returns>
-        private TreeViewNode FindNodeRecursive(TreeViewNode node, string name)
-        {
-            if (node.GetTreeData().name == name) return node;
-            var data = node.GetTreeData();
-            if (data.childNodes != null)
-            {
-                foreach (var child in data.childNodes)
-                {
-                    var childNode = FindNodeByName(child.name);
-                    if (childNode != null) return childNode;
-                }
             }
             return null;
         }

@@ -204,7 +204,30 @@ namespace ReunionMovement.Common.Util
             heartbeatCts?.Cancel();
             heartbeatCts?.Dispose();
             heartbeatCts = null;
-            reconnectAttempts = 0;
+
+            // 注意：不要在此处清零 reconnectAttempts。
+            // StopAll()（主动启动前调用）与 ReconnectRoutineAsync 开头负责清零；
+            // 若在此清零，重连循环内每次调用 StartClient() 都会重置计数，
+            // 导致 maxReconnectAttempts 失效、无限重连。
+
+            // 先关闭旧的客户端通道，避免重连时泄漏连接/线程
+            if (tcpClient != null)
+            {
+                try { NetworkMgr.Instance?.ScheduleRemove(tcpClient); } catch { }
+                try { tcpClient.Close(); } catch (System.Exception ex) { Log.Warning("TCP客户端关闭异常: {0}", ex.Message); }
+                tcpClient = null;
+            }
+            if (kcpClient != null)
+            {
+                try { NetworkMgr.Instance?.ScheduleRemove(kcpClient); } catch { }
+                try { kcpClient.Close(); } catch (System.Exception ex) { Log.Warning("KCP客户端关闭异常: {0}", ex.Message); }
+                kcpClient = null;
+            }
+            if (swtClient != null)
+            {
+                try { swtClient.Disconnect(); } catch (System.Exception ex) { Log.Warning("WS客户端断开异常: {0}", ex.Message); }
+                swtClient = null;
+            }
 
             switch (transport)
             {

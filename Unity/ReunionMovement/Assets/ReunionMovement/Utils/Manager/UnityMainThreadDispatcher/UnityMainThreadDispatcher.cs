@@ -13,6 +13,9 @@ namespace ReunionMovement.Common.Util.Manager
     /// </summary>
     public class UnityMainThreadDispatcher : SingletonMgr<UnityMainThreadDispatcher>
     {
+        /// <summary>跨线程投递的队列/回调需跨场景存活，避免切场景时丢失在途回调</summary>
+        protected override bool IsPersistentAcrossScenes => true;
+
         private static readonly Queue<Action> executionQueue = new Queue<Action>();
 
         private void Update()

@@ -380,8 +380,19 @@ namespace ReunionMovement.Core.UI
 
             if (uiBase.gameObject.activeSelf)
             {
-                uiBase.OnClose();
-                OnCloseSubject.OnNext(uiBase);
+                // 窗口已激活：重复打开不应先广播"关闭"事件（语义矛盾，
+                // 会导致 UIInputSystem.OnUIClosed 误触发 RestorePreviousFocus 弹出焦点）。
+                // 直接走 OnOpen 刷新数据即可。
+                uiBase.BeforeOpen(args, () =>
+                {
+                    LogElapsedTime(() =>
+                    {
+                        uiBase.OnOpen(args);
+                    }, $"OnOpen UI {uiBase.gameObject.name}");
+
+                    OnOpenSubject.OnNext(uiBase);
+                });
+                return;
             }
 
             // 在 BeforeOpen 之前激活，确保 UI 可见（不论子类 BeforeOpen 行为如何）

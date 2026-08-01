@@ -12,7 +12,17 @@ namespace ReunionMovement.Common.Util.Timer
     /// </summary>
     public class TimerMgr : SingletonMgr<TimerMgr>, ICustomSystem, ISystemUpdatable, ISystemDisposable
     {
+        /// <summary>
+        /// 已注册为 GameEngine 模块（StartGame.CreateModules），由持久化的引擎每帧驱动；
+        /// 必须跨场景存活，否则引擎持有的引用会失效（fake null）。
+        /// </summary>
+        protected override bool IsPersistentAcrossScenes => true;
+
         private readonly List<Timer> timers = new List<Timer>();
+        // 复用快照/待移除缓冲：防止 Tick 回调内调用 RemoveTimer/CancelAllTimers
+        // 重入修改 timers 导致遍历越界（同时保持零分配）
+        private readonly List<Timer> tickSnapshot = new List<Timer>();
+        private readonly List<Timer> toRemove = new List<Timer>();
 
         #region ICustomSystem 实现（GameEngine 驱动时使用）
 
@@ -90,16 +100,35 @@ namespace ReunionMovement.Common.Util.Timer
         /// <summary>
         /// 更新所有计时器（倒序遍历，安全移除且零分配）。
         /// 同时被 MonoBehaviour Update 和 ICustomSystem.Update 调用。
+        ///
+        /// 使用快照遍历：回调（OnCompleted/OnTick）内可能调用 RemoveTimer/CancelAllTimers
+        /// 重入修改 timers，直接遍历会越界或删错元素。
         /// </summary>
         private void TickTimers(float deltaTime)
         {
-            for (int i = timers.Count - 1; i >= 0; i--)
+            if (timers.Count == 0) return;
+
+            // 复用快照缓冲（零分配）
+            tickSnapshot.Clear();
+            tickSnapshot.AddRange(timers);
+            toRemove.Clear();
+
+            for (int i = 0; i < tickSnapshot.Count; i++)
             {
-                var timer = timers[i];
+                var timer = tickSnapshot[i];
                 timer.Update(deltaTime);
                 if (timer.state == Timer.TimerState.Finished || timer.state == Timer.TimerState.Cancelled)
                 {
-                    timers.RemoveAt(i);
+                    toRemove.Add(timer);
+                }
+            }
+
+            // 遍历结束后统一移除（引用移除，快照外新增的计时器不受影响）
+            if (toRemove.Count > 0)
+            {
+                for (int i = 0; i < toRemove.Count; i++)
+                {
+                    timers.Remove(toRemove[i]);
                 }
             }
         }
@@ -115,9 +144,10 @@ namespace ReunionMovement.Common.Util.Timer
             }
         }
 
-        private void OnDestroy()
+        protected override void OnDestroy()
         {
             CancelAllTimers();
+            base.OnDestroy();
         }
     }
 }

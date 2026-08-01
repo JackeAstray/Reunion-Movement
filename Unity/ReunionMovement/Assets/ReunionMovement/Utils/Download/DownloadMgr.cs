@@ -12,6 +12,9 @@ namespace ReunionMovement.Common.Util.Download
     /// </summary>
     public class DownloadMgr : SingletonMgr<DownloadMgr>
     {
+        /// <summary>下载任务跨场景进行（含图片缓存 LRU），保持跨场景存活</summary>
+        protected override bool IsPersistentAcrossScenes => true;
+
         private readonly Dictionary<string, Texture2D> imageCache = new Dictionary<string, Texture2D>();
         private readonly LinkedList<string> imageCacheOrder = new LinkedList<string>(); // LRU 访问顺序
         private readonly object imageCacheLock = new object();
@@ -84,7 +87,7 @@ namespace ReunionMovement.Common.Util.Download
             Log.Debug("DownloadManagerModule 清除数据");
         }
 
-        private void OnDestroy()
+        protected override void OnDestroy()
         {
             // 使用反射方式检查是否为当前活跃单例，避免访问 Instance 属性触发意外 CreateInstance
             // SingletonMgr<T>.IsInitialized 为静态属性，不会触发懒加载
@@ -101,6 +104,8 @@ namespace ReunionMovement.Common.Util.Download
 
             // 清除 MIME 类型映射
             mimeTypeToExtension.Clear();
+
+            base.OnDestroy();
         }
 
         /// <summary>

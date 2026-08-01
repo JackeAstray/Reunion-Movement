@@ -91,15 +91,26 @@ namespace ReunionMovement.Common.Util.Download
             set => didError = value;
         }
 
+        /// <summary>当前在途的 UnityWebRequest（用于 Cancel 时 Abort，完成后 Dispose 防泄漏）</summary>
+        internal UnityWebRequest currentRequest;
+
         public override int StartTime => startTime;
         public override int EndTime => endTime;
 
         /// <summary>
-        /// 取消
+        /// 取消：中止在途请求并删除未完成文件
         /// </summary>
         /// <returns></returns>
         public override bool Cancel()
         {
+            // 中止在途的 UWR，避免取消后网络 IO 继续运行、文件被重新写回
+            if (currentRequest != null && !currentRequest.isDone)
+            {
+                currentRequest.Abort();
+            }
+            currentRequest?.Dispose();
+            currentRequest = null;
+
             OnCancel?.Invoke();
             if (abandonOnFailure && !string.IsNullOrEmpty(DownloadResultPath) && File.Exists(DownloadResultPath))
             {
@@ -184,6 +195,7 @@ namespace ReunionMovement.Common.Util.Download
             if (!MultipartDownload)
             {
                 resp = HTTPHelper.Download(ref uwr, Uri, DownloadPath, isMd5Name, DownloadToRoot, AbandonOnFailure, false, RequestHeaders, Timeout);
+                currentRequest = uwr;
                 resp.completed += (obj) =>
                 {
                     if (!File.Exists(DownloadResultPath))
@@ -230,6 +242,7 @@ namespace ReunionMovement.Common.Util.Download
                     RequestHeaders.Add("Range", $"bytes={fileSize}-{fileSize + reqChunkSize - 1}");
 
                     resp = HTTPHelper.Download(ref uwr, Uri, DownloadPath, isMd5Name, DownloadToRoot, AbandonOnFailure, true, RequestHeaders, Timeout);
+                    currentRequest = uwr;
                     resp.completed -= OnCompleteMulti;
                     resp.completed += OnCompleteMulti;
                 }
@@ -243,11 +256,20 @@ namespace ReunionMovement.Common.Util.Download
             {
                 resp.completed += (obj) =>
                 {
-                    if (uwr.result != UnityWebRequest.Result.Success)
+                    try
                     {
-                        DidError = true;
-                        OnDownloadError?.Invoke(0, uwr.error);
-                        Cancel();
+                        if (uwr.result != UnityWebRequest.Result.Success)
+                        {
+                            DidError = true;
+                            OnDownloadError?.Invoke(0, uwr.error);
+                            Cancel();
+                        }
+                    }
+                    finally
+                    {
+                        // 请求结束：释放 UWR 原生资源，避免每个文件/分块泄漏
+                        uwr?.Dispose();
+                        if (currentRequest == uwr) currentRequest = null;
                     }
                 };
             }

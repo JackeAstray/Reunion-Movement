@@ -194,13 +194,22 @@ namespace ReunionMovement.Core.UI
             canvasGroup.alpha = 0;
             gameObject.SetActive(true);
             float elapsed = 0;
-            while (elapsed < duration)
+            // 绑定销毁令牌：组件/窗口销毁时取消淡入，避免循环继续访问已销毁对象
+            var ct = this.GetCancellationTokenOnDestroy();
+            try
             {
-                elapsed += Time.deltaTime;
-                canvasGroup.alpha = Mathf.Clamp01(elapsed / duration);
-                await UniTask.Yield(PlayerLoopTiming.Update); // UniTask.Yield 零 GC，替代 Task.Delay
+                while (elapsed < duration)
+                {
+                    elapsed += Time.deltaTime;
+                    canvasGroup.alpha = Mathf.Clamp01(elapsed / duration);
+                    await UniTask.Yield(PlayerLoopTiming.Update, ct); // UniTask.Yield 零 GC，替代 Task.Delay
+                }
+                canvasGroup.alpha = 1;
             }
-            canvasGroup.alpha = 1;
+            catch (OperationCanceledException)
+            {
+                // 窗口已销毁，静默退出
+            }
         }
 
         /// <summary>
@@ -215,14 +224,23 @@ namespace ReunionMovement.Core.UI
                 canvasGroup = gameObject.AddComponent<CanvasGroup>();
             }
             float elapsed = 0;
-            while (elapsed < duration)
+            // 绑定销毁令牌：组件/窗口销毁时取消淡出，避免循环继续访问已销毁对象
+            var ct = this.GetCancellationTokenOnDestroy();
+            try
             {
-                elapsed += Time.deltaTime;
-                canvasGroup.alpha = Mathf.Clamp01(1f - elapsed / duration);
-                await UniTask.Yield(PlayerLoopTiming.Update);
+                while (elapsed < duration)
+                {
+                    elapsed += Time.deltaTime;
+                    canvasGroup.alpha = Mathf.Clamp01(1f - elapsed / duration);
+                    await UniTask.Yield(PlayerLoopTiming.Update, ct);
+                }
+                canvasGroup.alpha = 0;
+                gameObject.SetActive(false);
             }
-            canvasGroup.alpha = 0;
-            gameObject.SetActive(false);
+            catch (OperationCanceledException)
+            {
+                // 窗口已销毁，静默退出
+            }
         }
         #endregion
     }

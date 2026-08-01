@@ -8,7 +8,7 @@ using UnityEngine.Networking;
 namespace ReunionMovement.Common.Util.Download
 {
     /// <summary>
-    /// UnityÎÄ¼şÏÂÔØÆ÷
+    /// Unityï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     /// </summary>
     public class FileDownloader : IDownloader
     {
@@ -51,7 +51,7 @@ namespace ReunionMovement.Common.Util.Download
         internal bool downloadToRoot;
         internal bool isMd5Name;
         internal string[] pendingUris = null;
-        // ÓÃÓÚÁã·ÖÅä FIFO Ïû·ÑµÄÆ«ÒÆÁ¿£¨Ìæ´ú Skip().ToArray()£©
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ FIFO ï¿½ï¿½ï¿½Ñµï¿½Æ«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Skip().ToArray()ï¿½ï¿½
         private int pendingOffset = 0;
 
         #region Events/Actions
@@ -69,7 +69,7 @@ namespace ReunionMovement.Common.Util.Download
         public override long EndTime => endTime;
 
         /// <summary>
-        /// ¼ÆËã´ËÏÂÔØÆ÷Ã¿Ãë´¦ÀíµÄÎÄ¼şÁ¿
+        /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ë´¦ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½
         /// </summary>
         /// <value></value>
         public override float NumFilesPerSecond
@@ -164,14 +164,14 @@ namespace ReunionMovement.Common.Util.Download
         internal int n = 0;
 
         /// <summary>
-        /// ÏÂÔØÆ÷µÄURI£¨´ø³¬Ê±±£»¤£¬Ä¬ÈÏ³¬Ê±ÓÉ Timeout ÊôĞÔ ¡Á ÎÄ¼şÊı¾ö¶¨£¬×îÉÙ 30 Ãë£©
+        /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½URIï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¬ï¿½Ï³ï¿½Ê±ï¿½ï¿½ Timeout ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 30 ï¿½ë£©
         /// </summary>
         /// <returns></returns>
         public override async UniTask<bool> Download()
         {
             if (Downloading || Uris == null || Uris.Length == 0)
             {
-                Log.Error("{0}.Download() ²»ÄÜÔÚÊôĞÔUrisÉèÖÃÎªnull»òemptyµÄÇé¿öÏÂµ÷ÓÃ", GetType().FullName);
+                Log.Error("{0}.Download() ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Urisï¿½ï¿½ï¿½ï¿½Îªnullï¿½ï¿½emptyï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Âµï¿½ï¿½ï¿½", GetType().FullName);
                 return false;
             }
             OnDownloadInvoked?.Invoke();
@@ -185,7 +185,7 @@ namespace ReunionMovement.Common.Util.Download
             int threadCount = Math.Min(MaxConcurrency, numFilesRemaining);
             if (threadCount <= 0)
             {
-                Log.Error("{0}.ÏÂÔØÒªÇóMaxConcurrencyÎª·Ç¸ºÕûÊı¡£", GetType().FullName);
+                Log.Error("{0}.ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½MaxConcurrencyÎªï¿½Ç¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½", GetType().FullName);
                 return false;
             }
             var tasks = new List<UniTask<bool>>(threadCount);
@@ -196,7 +196,7 @@ namespace ReunionMovement.Common.Util.Download
 
             await UniTask.WhenAll(tasks);
 
-            // ´ø³¬Ê±µÄµÈ´ıÑ­»·£º×î¶àµÈ´ı (Timeout * ÎÄ¼şÊı * 2) Ãë£¬×îÉÙ 30 Ãë
+            // ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ÄµÈ´ï¿½Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È´ï¿½ (Timeout * ï¿½Ä¼ï¿½ï¿½ï¿½ * 2) ï¿½ë£¬ï¿½ï¿½ï¿½ï¿½ 30 ï¿½ï¿½
             int maxWaitSeconds = Math.Max(30, Timeout * Uris.Length * 2);
             float waited = 0f;
             const float pollInterval = 0.1f;
@@ -205,7 +205,7 @@ namespace ReunionMovement.Common.Util.Download
             {
                 if (waited >= maxWaitSeconds)
                 {
-                    Log.Error("ÏÂÔØ³¬Ê±£ºÒÑµÈ´ı {0} Ãë£¬ÉĞÓĞ {1} ¸öÎÄ¼şÎ´Íê³É¡£Ç¿ÖÆÈ¡Ïû¡£", maxWaitSeconds, NumFilesRemaining);
+                    Log.Error("ï¿½ï¿½ï¿½Ø³ï¿½Ê±ï¿½ï¿½ï¿½ÑµÈ´ï¿½ {0} ï¿½ë£¬ï¿½ï¿½ï¿½ï¿½ {1} ï¿½ï¿½ï¿½Ä¼ï¿½Î´ï¿½ï¿½É¡ï¿½Ç¿ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½", maxWaitSeconds, NumFilesRemaining);
                     await Cancel();
                     break;
                 }
@@ -217,7 +217,7 @@ namespace ReunionMovement.Common.Util.Download
         }
 
         /// <summary>
-        /// ÏÂÔØµ¥¸öURI
+        /// ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½URI
         /// </summary>
         /// <param name="uri"></param>
         /// <returns></returns>
@@ -239,7 +239,8 @@ namespace ReunionMovement.Common.Util.Download
                 idf.DownloadToRoot = DownloadToRoot;
                 idf.AbandonOnFailure = AbandonOnFailure;
                 idf.Timeout = Timeout;
-                pendingUris = pendingUris.Append(uri).ToArray();
+                // pendingUris å¯èƒ½ä¸º nullï¼ˆæœªå…ˆè°ƒç”¨æ— å‚ Download()ï¼‰ï¼Œéœ€åˆ¤ç©ºåå† Append
+                pendingUris = (pendingUris ?? Array.Empty<string>()).Append(uri).ToArray();
                 executors = executors.Append(idf).ToArray();
                 numFilesRemaining++;
             }
@@ -247,7 +248,7 @@ namespace ReunionMovement.Common.Util.Download
             {
                 var idf = executorsOld.First(idf => idf.Uri == uri);
                 executorsOld = executorsOld.Where(x => x != idf).ToArray();
-                pendingUris = pendingUris.Append(uri).ToArray();
+                pendingUris = (pendingUris ?? Array.Empty<string>()).Append(uri).ToArray();
                 executors = executors.Append(idf).ToArray();
             }
 
@@ -256,13 +257,13 @@ namespace ReunionMovement.Common.Util.Download
         }
 
         /// <summary>
-        /// ·µ»ØfalseµÄÒì²½·½·¨
+        /// ï¿½ï¿½ï¿½ï¿½falseï¿½ï¿½ï¿½ì²½ï¿½ï¿½ï¿½ï¿½
         /// </summary>
         /// <returns></returns>
         internal UniTask<bool> ReturnFalseAsync() => UniTask.FromResult(false);
 
         /// <summary>
-        /// ÅÉÇ²ÏÂÔØÆ÷£¨Ê¹ÓÃÆ«ÒÆË÷ÒıÌæ´ú Skip+ToArray£¬±ÜÃâÃ¿´Îµ÷¶È·ÖÅäÊı×é£©
+        /// ï¿½ï¿½Ç²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½Æ«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Skip+ToArrayï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½Îµï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½é£©
         /// </summary>
         internal UniTask<bool> Dispatch()
         {
@@ -271,10 +272,10 @@ namespace ReunionMovement.Common.Util.Download
                 return ReturnFalseAsync();
             }
 
-            // executors Êı×é¿ÉÄÜÒòÒì²½»Øµ÷Óë pendingUris ²»Í¬²½£¬×öÔ½½ç±£»¤
+            // executors ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ì²½ï¿½Øµï¿½ï¿½ï¿½ pendingUris ï¿½ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô½ï¿½ç±£ï¿½ï¿½
             if (executors == null || executors.Length == 0)
             {
-                Log.Error("Dispatch: executors Êı×éÎª¿Õ£¬ÎŞ·¨µ÷¶ÈÏÂÔØ");
+                Log.Error("Dispatch: executors ï¿½ï¿½ï¿½ï¿½Îªï¿½Õ£ï¿½ï¿½Ş·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½");
                 return ReturnFalseAsync();
             }
 
@@ -309,8 +310,8 @@ namespace ReunionMovement.Common.Util.Download
                         }
                         else
                         {
-                            Log.Warning("Download for {0} returned null£¨Î´½øÈëÏÂÔØÁ÷³Ì£©", idf.Uri);
-                            // Èç¹û»¹ÓĞ´ıÏÂÔØµÄ URI£¬Ôò¼ÌĞøµ÷¶È
+                            Log.Warning("Download for {0} returned nullï¿½ï¿½Î´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì£ï¿½", idf.Uri);
+                            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ğ´ï¿½ï¿½ï¿½ï¿½Øµï¿½ URIï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                             if (pendingUris != null && pendingOffset < pendingUris.Length)
                             {
                                 _ = Dispatch();
@@ -320,8 +321,8 @@ namespace ReunionMovement.Common.Util.Download
                 }
                 else
                 {
-                    // HeadRequest ·µ»Ø null£¬ÊÓÎª¸Ã URI ²»¿É·Ö¿é£¬¼ÌĞø´¦ÀíÏÂÒ»¸ö
-                    Log.Warning("HeadRequest for {0} returned null£¬Ìø¹ı¸Ã URI", idf.Uri);
+                    // HeadRequest ï¿½ï¿½ï¿½ï¿½ nullï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ URI ï¿½ï¿½ï¿½É·Ö¿é£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
+                    Log.Warning("HeadRequest for {0} returned nullï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ URI", idf.Uri);
                     _ = DispatchCompletion(idf);
                 }
 
@@ -344,7 +345,7 @@ namespace ReunionMovement.Common.Util.Download
         }
 
         /// <summary>
-        /// ·¢ËÍÖ¸¶¨µÄIDF, ÓÃÓÚ·Ö¿ìÏÂÔØ.
+        /// ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½IDF, ï¿½ï¿½ï¿½Ú·Ö¿ï¿½ï¿½ï¿½ï¿½ï¿½.
         /// </summary>
         /// <param name="idf"></param>
         /// <returns></returns>
@@ -388,7 +389,7 @@ namespace ReunionMovement.Common.Util.Download
         }
 
         /// <summary>
-        /// ÒÔÍ¬²½·½Ê½´¦Àíµ÷¶ÈÍê³É£¨ÔÊĞíµÈ´ı£©
+        /// ï¿½ï¿½Í¬ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È´ï¿½ï¿½ï¿½
         /// </summary>
         /// <param name="idf"></param>
         /// <returns></returns>
@@ -435,7 +436,7 @@ namespace ReunionMovement.Common.Util.Download
         }
 
         /// <summary>
-        /// »ñÈ¡¶ÔÓ¦µÄÖ´ĞĞÆ÷
+        /// ï¿½ï¿½È¡ï¿½ï¿½Ó¦ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½
         /// </summary>
         /// <param name="uri"></param>
         /// <returns></returns>
@@ -450,7 +451,7 @@ namespace ReunionMovement.Common.Util.Download
         }
 
         /// <summary>
-        /// È¡ÏûËùÓĞÏÂÔØ
+        /// È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         /// </summary>
         /// <returns></returns>
         public override UniTask<bool> Cancel()
@@ -459,12 +460,20 @@ namespace ReunionMovement.Common.Util.Download
             OnCancel?.Invoke();
             OnCancelInvoked?.Invoke();
             endTime = Environment.TickCount;
-            HandleAbandonOnFailure();
+
+            // æ€»æ˜¯ä¸­æ­¢æ‰€æœ‰åœ¨é€” executorï¼ˆæ— è®º AbandonOnFailure é…ç½®ï¼‰ï¼Œ
+            // é¿å…å–æ¶ˆåç½‘ç»œ IO ç»§ç»­è¿è¡Œã€æ–‡ä»¶è¢«é‡æ–°å†™å›ã€å›è°ƒä»è§¦å‘ã€‚
+            // UWRExecutor.Cancel å†…éƒ¨ä¼š Abort åœ¨é€” UWRï¼Œå¹¶è§† abandonOnFailure åˆ é™¤æœªå®Œæˆæ–‡ä»¶ã€‚
+            foreach (var idf in executors.Concat(executorsOld))
+            {
+                try { idf.Cancel(); } catch (Exception ex) { Log.Error("Cancel executor å¼‚å¸¸: {0}", ex.Message); }
+            }
+
             return UniTask.FromResult(true);
         }
 
         /// <summary>
-        /// È¡Ïûµ¥¸öÏÂÔØ
+        /// È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         /// </summary>
         /// <param name="uri"></param>
         /// <returns></returns>
@@ -481,18 +490,18 @@ namespace ReunionMovement.Common.Util.Download
             }
             else if (!executorsOld.Any(idf => idf.Uri == uri))
             {
-                Log.Error("¶Ô´ÓÎ´µ÷ÓÃ¹ıµÄURIµ÷ÓÃÈ¡Ïû {0}", uri);
+                Log.Error("ï¿½Ô´ï¿½Î´ï¿½ï¿½ï¿½Ã¹ï¿½ï¿½ï¿½URIï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½ {0}", uri);
                 return UniTask.FromResult(false);
             }
             else
             {
-                Log.Error("¶ÔÒÑÍê³ÉµÄURIµ÷ÓÃÈ¡Ïû");
+                Log.Error("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Éµï¿½URIï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½");
             }
             return UniTask.FromResult(true);
         }
 
         /// <summary>
-        /// Èç¹ûÊ§°ÜÊ±·ÅÆúÎªÕæ£¬ÔòÉ¾³ıËùÓĞÎÄ¼ş¡£
+        /// ï¿½ï¿½ï¿½Ê§ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Îªï¿½æ£¬ï¿½ï¿½É¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½
         /// </summary>
         internal void HandleAbandonOnFailure()
         {
@@ -506,13 +515,13 @@ namespace ReunionMovement.Common.Util.Download
         }
 
         /// <summary>
-        /// ÖØÖÃÓë´ËÏÂÔØÆ÷Ïà¹ØµÄËùÓĞÊôĞÔ
+        /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         /// </summary>
         public override void Reset()
         {
             if (Downloading)
             {
-                Log.Error("ÏÂÔØÊ±ÎŞ·¨µ÷ÓÃÖØÖÃ£¬ĞèÒªÏÈÈ¡ÏûÏÂÔØ¡£");
+                Log.Error("ï¿½ï¿½ï¿½ï¿½Ê±ï¿½Ş·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½ï¿½ï¿½Òªï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½Ø¡ï¿½");
                 return;
             }
             downloading = false;

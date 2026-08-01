@@ -68,12 +68,13 @@ namespace ReunionMovement.Core.EventMessage
 
         // ============================================================
         //  泛型零装箱通道（推荐新代码使用）
-        //  使用 object 作为字典值存储不同类型的 Subject，运行时强转
+        //  使用复合键 (EventMessageType, Type)：同一事件类型可绑定不同数据类型而不会互相覆盖，
+        //  避免静默丢弃旧 Subject 导致事件丢失
         // ============================================================
-        private readonly Dictionary<EventMessageType, object> typedSubjects
-            = new Dictionary<EventMessageType, object>();
-        private readonly Dictionary<EventMessageType, object> typedTrackers
-            = new Dictionary<EventMessageType, object>();
+        private readonly Dictionary<(EventMessageType, System.Type), object> typedSubjects
+            = new Dictionary<(EventMessageType, System.Type), object>();
+        private readonly Dictionary<(EventMessageType, System.Type), object> typedTrackers
+            = new Dictionary<(EventMessageType, System.Type), object>();
 
         public UniTask Init()
         {
@@ -227,6 +228,7 @@ namespace ReunionMovement.Core.EventMessage
         /// <param name="type">事件类型</param>
         public void ClearEventTypeListeners(EventMessageType type)
         {
+            bool removedAny = false;
             if (subscriptionTrackers.TryGetValue(type, out var tracker))
             {
                 foreach (var disposable in tracker.Values)
@@ -235,6 +237,7 @@ namespace ReunionMovement.Core.EventMessage
                 }
                 tracker.Clear();
                 subscriptionTrackers.Remove(type);
+                removedAny = true;
             }
 
             if (eventSubjects.TryGetValue(type, out var subject))
@@ -242,8 +245,11 @@ namespace ReunionMovement.Core.EventMessage
                 subject?.Dispose();
                 eventSubjects.Remove(type);
                 Log.Debug("清除事件类型 {0} 的所有监听器", type);
+                removedAny = true;
             }
-            else
+
+            // 仅当两个字典都不存在该类型时才告警（避免误报）
+            if (!removedAny)
             {
                 Log.Warning("尝试清除不存在的事件类型 {0} 的监听器", type);
             }
@@ -286,12 +292,13 @@ namespace ReunionMovement.Core.EventMessage
         /// </summary>
         private Subject<EventData<T>> GetOrCreateTypedSubject<T>(EventMessageType type)
         {
-            if (typedSubjects.TryGetValue(type, out var obj) && obj is Subject<EventData<T>> existing)
+            var key = (type, typeof(T));
+            if (typedSubjects.TryGetValue(key, out var obj) && obj is Subject<EventData<T>> existing)
             {
                 return existing;
             }
             var subject = new Subject<EventData<T>>();
-            typedSubjects[type] = subject;
+            typedSubjects[key] = subject;
             return subject;
         }
 
@@ -300,12 +307,13 @@ namespace ReunionMovement.Core.EventMessage
         /// </summary>
         private Dictionary<Action<EventData<T>>, IDisposable> GetOrCreateTypedTracker<T>(EventMessageType type)
         {
-            if (typedTrackers.TryGetValue(type, out var obj) && obj is Dictionary<Action<EventData<T>>, IDisposable> existing)
+            var key = (type, typeof(T));
+            if (typedTrackers.TryGetValue(key, out var obj) && obj is Dictionary<Action<EventData<T>>, IDisposable> existing)
             {
                 return existing;
             }
             var tracker = new Dictionary<Action<EventData<T>>, IDisposable>(4);
-            typedTrackers[type] = tracker;
+            typedTrackers[key] = tracker;
             return tracker;
         }
 
@@ -335,7 +343,8 @@ namespace ReunionMovement.Core.EventMessage
         {
             if (listenerFunc == null) return;
 
-            if (typedTrackers.TryGetValue(type, out var obj)
+            var key = (type, typeof(T));
+            if (typedTrackers.TryGetValue(key, out var obj)
                 && obj is Dictionary<Action<EventData<T>>, IDisposable> tracker
                 && tracker.TryGetValue(listenerFunc, out var disposable))
             {
@@ -352,7 +361,8 @@ namespace ReunionMovement.Core.EventMessage
         /// <param name="eventData">事件数据</param>
         public void DispatchEventTyped<T>(EventMessageType eventType, T eventData)
         {
-            if (typedSubjects.TryGetValue(eventType, out var obj)
+            var key = (eventType, typeof(T));
+            if (typedSubjects.TryGetValue(key, out var obj)
                 && obj is Subject<EventData<T>> subject)
             {
                 subject.OnNext(new EventData<T>(eventType, eventData));

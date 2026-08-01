@@ -5,6 +5,9 @@ namespace ReunionMovement.Common.Util
 {
     public sealed class NetworkMgr : SingletonMgr<NetworkMgr>
     {
+        /// <summary>网络通道（KCP/Telepathy 的线程与连接）跨场景保持，避免切场景断开连接</summary>
+        protected override bool IsPersistentAcrossScenes => true;
+
         // 主通道列表（用于 Tick 迭代，List 遍历比 Dictionary 快）
         List<INetworkChannel> channelList = new List<INetworkChannel>();
         // 按名称索引（O(1) 查找，与 channelList 并行维护）
@@ -38,13 +41,15 @@ namespace ReunionMovement.Common.Util
         public void AddChannel(INetworkChannel channel)
         {
             if (channel == null) return;
+            INetworkChannel toClose = null;
             lock (syncRoot)
             {
-                // 如果同名通道已存在，先移除旧的
+                // 如果同名通道已存在，先移除旧的（锁外 Close，避免持锁执行网络操作）
                 if (!string.IsNullOrEmpty(channel.ChannelName) && channelIndex.TryGetValue(channel.ChannelName, out var existing))
                 {
                     channelList.Remove(existing);
                     channelIndex.Remove(channel.ChannelName);
+                    toClose = existing;
                 }
                 channelList.Add(channel);
                 if (!string.IsNullOrEmpty(channel.ChannelName))
@@ -52,6 +57,9 @@ namespace ReunionMovement.Common.Util
                     channelIndex[channel.ChannelName] = channel;
                 }
             }
+
+            // 关闭被替换的旧通道（Telepathy/KCP 的线程、socket、事件订阅），防止连接泄漏
+            toClose?.Close();
         }
 
         /// <summary>
@@ -235,12 +243,11 @@ namespace ReunionMovement.Common.Util
                 channelDictRemove.Clear();
 
                 // 复用 tick 快照列表（仅在扩容时分配）
-                if (channelList.Count > 0)
-                {
-                    if (tickSnapshot == null) tickSnapshot = new List<INetworkChannel>(channelList.Count);
-                    tickSnapshot.Clear();
-                    tickSnapshot.AddRange(channelList);
-                }
+                // 无论 channelList 是否为空都刷新快照：否则所有通道移除后，
+                // tickSnapshot 残留已移除通道，它们仍会被 TickRefresh 持续驱动
+                if (tickSnapshot == null) tickSnapshot = new List<INetworkChannel>(channelList.Count);
+                tickSnapshot.Clear();
+                tickSnapshot.AddRange(channelList);
             }
 
             if (tickSnapshot != null && tickSnapshot.Count > 0)
@@ -293,9 +300,10 @@ namespace ReunionMovement.Common.Util
             }
         }
 
-        private void OnDestroy()
+        protected override void OnDestroy()
         {
             OnTermination();
+            base.OnDestroy();
         }
     }
 }

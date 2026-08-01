@@ -37,11 +37,12 @@ namespace ReunionMovement.Core.UI
 
         #region 图片路径（对应原版 Prefab 上拖拽赋值的 logo1/logo2）
 
+        // 注意：Unity Resources.Load 区分大小写，磁盘文件名为 Logo1.png / Logo2.png
         /// <summary>logo1 图片路径（相对于 Resources 目录，不含扩展名）</summary>
-        private const string LOGO1_PATH = "UI/UIToolkit/Textures/logo1";
+        private const string LOGO1_PATH = "UI/UIToolkit/Textures/Logo1";
 
         /// <summary>logo2 图片路径</summary>
-        private const string LOGO2_PATH = "UI/UIToolkit/Textures/logo2";
+        private const string LOGO2_PATH = "UI/UIToolkit/Textures/Logo2";
 
         #endregion
 
