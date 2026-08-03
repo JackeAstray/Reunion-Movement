@@ -18,8 +18,8 @@ void ComputeSdfData(v2f IN, out float sdfData, out float pixelScale)
         sdfData = hexagonScene(IN.shapeData);
     #elif CHAMFERBOX
         sdfData = chamferBoxScene(IN.shapeData);
-    #elif PARALLELOGRAM
-        sdfData = parallelogramScene(IN.shapeData);
+    #elif QUADRILATERAL
+        sdfData = quadrilateralScene(IN.shapeData);
     #elif NSTAR_POLYGON
         sdfData = nStarPolygonScene(IN.shapeData);
     #elif HEART

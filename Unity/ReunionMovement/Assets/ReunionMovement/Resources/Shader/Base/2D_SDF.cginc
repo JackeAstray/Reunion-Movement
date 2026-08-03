@@ -111,6 +111,53 @@ float sdParallelogram(float2 p, float wi, float he, float sk)
     }
 }
 
+// 任意凸四边形（四点按逆时针 CCW 排列：BL -> BR -> TR -> TL，内部为负、外部为正）
+// 实现参考 iq 的 sdPolygon（射线法判定内外，凸/凹多边形均可用）
+float sdQuad(float2 p, float2 v0, float2 v1, float2 v2, float2 v3)
+{
+    float d = dot(p - v0, p - v0);
+    float s = 1.0;
+
+    // 边 0-3
+    {
+        float2 e = v3 - v0;
+        float2 w = p - v0;
+        float2 b = w - e * clamp(dot(w, e) / dot(e, e), 0.0, 1.0);
+        d = min(d, dot(b, b));
+        bool3 c = bool3(p.y >= v0.y, p.y < v3.y, e.x * w.y > e.y * w.x);
+        if (all(c) || all(!c)) s = -s;
+    }
+    // 边 1-0
+    {
+        float2 e = v0 - v1;
+        float2 w = p - v1;
+        float2 b = w - e * clamp(dot(w, e) / dot(e, e), 0.0, 1.0);
+        d = min(d, dot(b, b));
+        bool3 c = bool3(p.y >= v1.y, p.y < v0.y, e.x * w.y > e.y * w.x);
+        if (all(c) || all(!c)) s = -s;
+    }
+    // 边 2-1
+    {
+        float2 e = v1 - v2;
+        float2 w = p - v2;
+        float2 b = w - e * clamp(dot(w, e) / dot(e, e), 0.0, 1.0);
+        d = min(d, dot(b, b));
+        bool3 c = bool3(p.y >= v2.y, p.y < v1.y, e.x * w.y > e.y * w.x);
+        if (all(c) || all(!c)) s = -s;
+    }
+    // 边 3-2
+    {
+        float2 e = v2 - v3;
+        float2 w = p - v3;
+        float2 b = w - e * clamp(dot(w, e) / dot(e, e), 0.0, 1.0);
+        d = min(d, dot(b, b));
+        bool3 c = bool3(p.y >= v3.y, p.y < v2.y, e.x * w.y > e.y * w.x);
+        if (all(c) || all(!c)) s = -s;
+    }
+
+    return s * sqrt(d);
+}
+
 // 菱形
 float sdRhombus(float2 p, float2 b)
 {

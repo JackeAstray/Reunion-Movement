@@ -216,7 +216,7 @@ namespace ReunionMovement.UI.ImageExtensions
         [SerializeField] private PentagonImg pentagon = new PentagonImg();
         [SerializeField] private HexagonImg hexagon = new HexagonImg();
         [SerializeField] private ChamferBoxImg chamferBox = new ChamferBoxImg();
-        [SerializeField] private ParallelogramImg parallelogram = new ParallelogramImg();
+        [SerializeField] private QuadrilateralImg quadrilateral = new QuadrilateralImg();
         [SerializeField] private NStarPolygonImg nStarPolygon = new NStarPolygonImg();
         [SerializeField] private HeartImg heart = new HeartImg();
         [SerializeField] private BlobbyCrossImg blobbyCross = new BlobbyCrossImg();
@@ -897,14 +897,14 @@ namespace ReunionMovement.UI.ImageExtensions
         }
 
         /// <summary>
-        /// 平行四边形
+        /// 四边形（梯形 / 平行四边形 / 风筝形等）
         /// </summary>
-        public ParallelogramImg Parallelogram
+        public QuadrilateralImg Quadrilateral
         {
-            get => parallelogram;
+            get => quadrilateral;
             set
             {
-                parallelogram = value;
+                quadrilateral = value;
                 SetMaterialDirty();
             }
         }
@@ -1933,7 +1933,7 @@ namespace ReunionMovement.UI.ImageExtensions
             pentagon.OnValidate();
             hexagon.OnValidate();
             chamferBox.OnValidate();
-            parallelogram.OnValidate();
+            quadrilateral.OnValidate();
             nStarPolygon.OnValidate();
             heart.OnValidate();
             blobbyCross.OnValidate();
@@ -2060,7 +2060,7 @@ namespace ReunionMovement.UI.ImageExtensions
             pentagon.Init(m_Material, material, rectTransform);
             hexagon.Init(m_Material, material, rectTransform);
             chamferBox.Init(m_Material, material, rectTransform);
-            parallelogram.Init(m_Material, material, rectTransform);
+            quadrilateral.Init(m_Material, material, rectTransform);
             nStarPolygon.Init(m_Material, material, rectTransform);
             heart.Init(m_Material, material, rectTransform);
             blobbyCross.Init(m_Material, material, rectTransform);
@@ -2135,7 +2135,7 @@ namespace ReunionMovement.UI.ImageExtensions
                 pentagon.onComponentSettingsChanged += OnComponentSettingsChanged;
                 hexagon.onComponentSettingsChanged += OnComponentSettingsChanged;
                 chamferBox.onComponentSettingsChanged += OnComponentSettingsChanged;
-                parallelogram.onComponentSettingsChanged += OnComponentSettingsChanged;
+                quadrilateral.onComponentSettingsChanged += OnComponentSettingsChanged;
                 nStarPolygon.onComponentSettingsChanged += OnComponentSettingsChanged;
                 heart.onComponentSettingsChanged += OnComponentSettingsChanged;
                 blobbyCross.onComponentSettingsChanged += OnComponentSettingsChanged;
@@ -2151,7 +2151,7 @@ namespace ReunionMovement.UI.ImageExtensions
                 pentagon.onComponentSettingsChanged -= OnComponentSettingsChanged;
                 hexagon.onComponentSettingsChanged -= OnComponentSettingsChanged;
                 chamferBox.onComponentSettingsChanged -= OnComponentSettingsChanged;
-                parallelogram.onComponentSettingsChanged -= OnComponentSettingsChanged;
+                quadrilateral.onComponentSettingsChanged -= OnComponentSettingsChanged;
                 nStarPolygon.onComponentSettingsChanged -= OnComponentSettingsChanged;
                 heart.onComponentSettingsChanged -= OnComponentSettingsChanged;
                 blobbyCross.onComponentSettingsChanged -= OnComponentSettingsChanged;
@@ -2453,7 +2453,7 @@ namespace ReunionMovement.UI.ImageExtensions
             pentagon.ModifyMaterial(ref mat);
             hexagon.ModifyMaterial(ref mat);
             chamferBox.ModifyMaterial(ref mat);
-            parallelogram.ModifyMaterial(ref mat);
+            quadrilateral.ModifyMaterial(ref mat);
             nStarPolygon.ModifyMaterial(ref mat);
             heart.ModifyMaterial(ref mat);
             blobbyCross.ModifyMaterial(ref mat);
@@ -2472,7 +2472,7 @@ namespace ReunionMovement.UI.ImageExtensions
                     mat.DisableKeyword("PENTAGON");
                     mat.DisableKeyword("HEXAGON");
                     mat.DisableKeyword("CHAMFERBOX");
-                    mat.DisableKeyword("PARALLELOGRAM");
+                    mat.DisableKeyword("QUADRILATERAL");
                     mat.DisableKeyword("NSTAR_POLYGON");
                     mat.DisableKeyword("HEART");
                     mat.DisableKeyword("BLOBBYCROSS");
@@ -2500,8 +2500,8 @@ namespace ReunionMovement.UI.ImageExtensions
                 case DrawShape.ChamferBox:
                     mat.EnableKeyword("CHAMFERBOX");
                     break;
-                case DrawShape.Parallelogram:
-                    mat.EnableKeyword("PARALLELOGRAM");
+                case DrawShape.Quadrilateral:
+                    mat.EnableKeyword("QUADRILATERAL");
                     break;
                 case DrawShape.Heart:
                     mat.EnableKeyword("HEART");
@@ -2672,7 +2672,7 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.DisableKeyword("PENTAGON");
             mat.DisableKeyword("HEXAGON");
             mat.DisableKeyword("CHAMFERBOX");
-            mat.DisableKeyword("PARALLELOGRAM");
+            mat.DisableKeyword("QUADRILATERAL");
             mat.DisableKeyword("NSTAR_POLYGON");
             mat.DisableKeyword("HEART");
             mat.DisableKeyword("BLOBBYCROSS");
@@ -2805,7 +2805,7 @@ namespace ReunionMovement.UI.ImageExtensions
             pentagon.InitValuesFromMaterial(ref mat);
             hexagon.InitValuesFromMaterial(ref mat);
             chamferBox.InitValuesFromMaterial(ref mat);
-            parallelogram.InitValuesFromMaterial(ref mat);
+            quadrilateral.InitValuesFromMaterial(ref mat);
             nStarPolygon.InitValuesFromMaterial(ref mat);
             heart.InitValuesFromMaterial(ref mat);
             blobbyCross.InitValuesFromMaterial(ref mat);

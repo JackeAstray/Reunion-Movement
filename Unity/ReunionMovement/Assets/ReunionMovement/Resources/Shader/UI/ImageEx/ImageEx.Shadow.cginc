@@ -49,7 +49,7 @@ half4 RenderShadow(v2f IN, half2 texcoord, float transAlpha, float2 transitionFi
     float shadowMask = baseSample.a;
 
     // 阴影复用 ImageEx 现有的衰减逻辑：仍使用相同 sampleSdf 曲线，但由阴影参数驱动距离
-    #if RECTANGLE || CIRCLE || PENTAGON || TRIANGLE || HEXAGON || CHAMFERBOX || PARALLELOGRAM || NSTAR_POLYGON || HEART || BLOBBYCROSS || SQUIRCLE || NTRIANGLE_ROUNDED
+    #if RECTANGLE || CIRCLE || PENTAGON || TRIANGLE || HEXAGON || CHAMFERBOX || QUADRILATERAL || NSTAR_POLYGON || HEART || BLOBBYCROSS || SQUIRCLE || NTRIANGLE_ROUNDED
         float sdfDataShadow = 0;
         float shadowFalloffDistance = max(_ShadowBlurIntensity, 0.0001);
         float pixelScaleShadow = clamp(1.0 / shadowFalloffDistance, 1.0 / 2048.0, 2048.0);
@@ -67,8 +67,8 @@ half4 RenderShadow(v2f IN, half2 texcoord, float transAlpha, float2 transitionFi
             sdfDataShadow = hexagonScene(IN.shapeData);
         #elif CHAMFERBOX
             sdfDataShadow = chamferBoxScene(IN.shapeData);
-        #elif PARALLELOGRAM
-            sdfDataShadow = parallelogramScene(IN.shapeData);
+        #elif QUADRILATERAL
+            sdfDataShadow = quadrilateralScene(IN.shapeData);
         #elif NSTAR_POLYGON
             sdfDataShadow = nStarPolygonScene(IN.shapeData);
         #elif HEART
