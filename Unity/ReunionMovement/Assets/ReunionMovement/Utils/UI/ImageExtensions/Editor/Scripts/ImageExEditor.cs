@@ -15,7 +15,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
         private SerializedProperty spCameraTexture;
         private SerializedProperty spAppendShadow;
         private SerializedProperty spShadowOffsetLocal;
-        private SerializedProperty spCircle, spTriangle, spRectangle, spPentagon, spHexagon, spChamferBox, spParallelogram, spNStarPolygon, spHeart, spBlobbyCross, spSquircle, spNTriangleRounded;
+        private SerializedProperty spCircle, spTriangle, spRectangle, spPentagon, spHexagon, spChamferBox, spQuadrilateral, spNStarPolygon, spHeart, spBlobbyCross, spSquircle, spNTriangleRounded;
         private SerializedProperty spPreserveAspect;
         private SerializedProperty spFillMethod, spFillOrigin, spFillAmount, spFillClockwise;
         private SerializedProperty spAlphaThreshold;
@@ -117,7 +117,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             spPentagon = serializedObject.FindProperty("pentagon");
             spHexagon = serializedObject.FindProperty("hexagon");
             spChamferBox = serializedObject.FindProperty("chamferBox");
-            spParallelogram = serializedObject.FindProperty("parallelogram");
+            spQuadrilateral = serializedObject.FindProperty("quadrilateral");
             spNStarPolygon = serializedObject.FindProperty("nStarPolygon");
             spHeart = serializedObject.FindProperty("heart");
             spBlobbyCross = serializedObject.FindProperty("blobbyCross");
@@ -238,8 +238,8 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                         case DrawShape.ChamferBox:
                             EditorGUILayout.PropertyField(spChamferBox);
                             break;
-                        case DrawShape.Parallelogram:
-                            EditorGUILayout.PropertyField(spParallelogram);
+                        case DrawShape.Quadrilateral:
+                            EditorGUILayout.PropertyField(spQuadrilateral);
                             break;
                         case DrawShape.NStarPolygon:
                             EditorGUILayout.PropertyField(spNStarPolygon);

@@ -95,7 +95,7 @@ half4 RM_RenderShadow(
     float shadowMask = baseSample.a;
 
     // SDF 形状遮罩
-    #if RECTANGLE || CIRCLE || PENTAGON || TRIANGLE || HEXAGON || CHAMFERBOX || PARALLELOGRAM || NSTAR_POLYGON || HEART || BLOBBYCROSS || SQUIRCLE || NTRIANGLE_ROUNDED
+    #if RECTANGLE || CIRCLE || PENTAGON || TRIANGLE || HEXAGON || CHAMFERBOX || QUADRILATERAL || NSTAR_POLYGON || HEART || BLOBBYCROSS || SQUIRCLE || NTRIANGLE_ROUNDED
         float sdfDataShadow = 0;
         float shadowFalloffDistance = max(_ShadowBlurIntensity, 0.0001);
         float pixelScaleShadow = clamp(1.0 / shadowFalloffDistance, 1.0 / 2048.0, 2048.0);

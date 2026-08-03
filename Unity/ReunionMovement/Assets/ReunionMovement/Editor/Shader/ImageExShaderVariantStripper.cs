@@ -24,7 +24,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             "PENTAGON",
             "HEXAGON",
             "CHAMFERBOX",
-            "PARALLELOGRAM",
+            "QUADRILATERAL",
             "NSTAR_POLYGON",
             "HEART",
             "BLOBBYCROSS",

@@ -29,7 +29,10 @@ Shader "ReunionMovement/UI/ImageEx"
         _HexagonCornerRadius ("六边形六个角的圆角半径", Vector) = (0, 0, 0, 0)
         _ChamferBoxSize ("倒角盒子尺寸", Vector) = (0.8, 0.4, 0, 0)
         _ChamferBoxRadius ("倒角半径", Vector) = (0.15, 0.15, 0.15, 0.15)
-        _ParallelogramValue ("平行四边形值", Float) = 0
+        _QuadTopLeft ("四边形左上偏移", Vector) = (0, 0, 0, 0)
+        _QuadTopRight ("四边形右上偏移", Vector) = (0, 0, 0, 0)
+        _QuadBottomLeft ("四边形左下偏移", Vector) = (0, 0, 0, 0)
+        _QuadBottomRight ("四边形右下偏移", Vector) = (0, 0, 0, 0)
         _NStarPolygonSideCount ("星形多边形的边数", float) = 3
         _NStarPolygonInset ("星形多边形的内凹程度", float) = 2
         _NStarPolygonCornerRadius ("星形多边形角的圆角半径", float) = 0
@@ -217,7 +220,7 @@ Shader "ReunionMovement/UI/ImageEx"
             #pragma multi_compile_local _ UNITY_UI_CLIP_RECT
             #pragma multi_compile_local _ UNITY_UI_ALPHACLIP
             
-            #pragma multi_compile_local _ CIRCLE TRIANGLE RECTANGLE PENTAGON HEXAGON CHAMFERBOX PARALLELOGRAM NSTAR_POLYGON HEART BLOBBYCROSS SQUIRCLE NTRIANGLE_ROUNDED
+            #pragma multi_compile_local _ CIRCLE TRIANGLE RECTANGLE PENTAGON HEXAGON CHAMFERBOX QUADRILATERAL NSTAR_POLYGON HEART BLOBBYCROSS SQUIRCLE NTRIANGLE_ROUNDED
 
             #pragma multi_compile_local _ STROKE OUTLINED OUTLINED_STROKE
             #pragma shader_feature_local _ GRADIENT_LINEAR GRADIENT_RADIAL GRADIENT_CORNER
@@ -283,7 +286,7 @@ Shader "ReunionMovement/UI/ImageEx"
             #define pentagonScene        RM_PentagonScene
             #define hexagonScene         RM_HexagonScene
             #define chamferBoxScene      RM_ChamferBoxScene
-            #define parallelogramScene   RM_ParallelogramScene
+            #define quadrilateralScene  RM_QuadrilateralScene
             #define nStarPolygonScene    RM_NStarPolygonScene
             #define heartScene           RM_HeartScene
             #define blobbyCrossScene     RM_BlobbyCrossScene
@@ -435,7 +438,7 @@ Shader "ReunionMovement/UI/ImageEx"
                 // 应用色调滤镜（Tone Filter）：灰度化 / 怀旧 / 负片 / 复古 / 色调分离
                 color = RM_ApplyToneFilter(color);
                 
-                #if RECTANGLE || CIRCLE || PENTAGON || TRIANGLE || HEXAGON || CHAMFERBOX || PARALLELOGRAM || NSTAR_POLYGON || HEART || BLOBBYCROSS || SQUIRCLE || NTRIANGLE_ROUNDED
+                #if RECTANGLE || CIRCLE || PENTAGON || TRIANGLE || HEXAGON || CHAMFERBOX || QUADRILATERAL || NSTAR_POLYGON || HEART || BLOBBYCROSS || SQUIRCLE || NTRIANGLE_ROUNDED
                     float sdfData;
                     float pixelScale;
                     ComputeSdfData(IN, sdfData, pixelScale);
@@ -467,7 +470,7 @@ Shader "ReunionMovement/UI/ImageEx"
                     color = apply_transition_filter(color, transAlpha, transitionFilterUv, edgeFactor);
                 #endif
 
-                #if !RECTANGLE && !CIRCLE && !PENTAGON && !TRIANGLE && !HEXAGON && !CHAMFERBOX && !PARALLELOGRAM && !NSTAR_POLYGON && !HEART && !BLOBBYCROSS && !SQUIRCLE && !NTRIANGLE_ROUNDED
+                #if !RECTANGLE && !CIRCLE && !PENTAGON && !TRIANGLE && !HEXAGON && !CHAMFERBOX && !QUADRILATERAL && !NSTAR_POLYGON && !HEART && !BLOBBYCROSS && !SQUIRCLE && !NTRIANGLE_ROUNDED
                     #if OUTLINED || STROKE || OUTLINED_STROKE
                         float width = _OutlineWidth;
 

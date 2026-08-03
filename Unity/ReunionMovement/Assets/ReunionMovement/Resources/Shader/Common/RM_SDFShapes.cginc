@@ -42,8 +42,11 @@
     uniform float4 _ChamferBoxRadius;
 #endif
 
-#if PARALLELOGRAM
-    uniform float _ParallelogramValue; 
+#if QUADRILATERAL
+    uniform float2 _QuadTopLeft;
+    uniform float2 _QuadTopRight;
+    uniform float2 _QuadBottomLeft;
+    uniform float2 _QuadBottomRight;
 #endif
 
 #if NSTAR_POLYGON
@@ -327,17 +330,28 @@ half RM_ChamferBoxScene(float4 additionalData)
 }
 #endif
 
-#if PARALLELOGRAM
-half RM_ParallelogramScene(float4 additionalData)
+#if QUADRILATERAL
+// 四边形（梯形 / 平行四边形等）：四个角可独立偏移。
+// 偏移值为矩形宽/高比例（-0.5 ~ 0.5），正值朝矩形内部收缩。
+// 四个角（像素空间，y 向上）按逆时针排列：BL -> BR -> TR -> TL。
+half RM_QuadrilateralScene(float4 additionalData)
 {
     float2 texcoord = additionalData.xy;
     float2 size = float2(additionalData.z, additionalData.w);
-    float2 p = (2.0 * texcoord - size) / size.y;
-    float sk = 0.5 * sin(_ParallelogramValue);
-    float wi = (size.x / size.y) * 0.58;
-    float he = 1;
-    float d = sdParallelogram(p, wi, he, sk);
-    return d * 80.0;
+
+    // 偏移（-0.5 ~ 0.5 比例）乘以矩形尺寸得到像素偏移；
+    // clamp 保证角点不会越过中线，保持四边形凸性、避免自交
+    float2 oBl = clamp(_QuadBottomLeft, -0.5, 0.5) * size;
+    float2 oBr = clamp(_QuadBottomRight, -0.5, 0.5) * size;
+    float2 oTr = clamp(_QuadTopRight, -0.5, 0.5) * size;
+    float2 oTl = clamp(_QuadTopLeft, -0.5, 0.5) * size;
+
+    float2 bl = float2(0.0, 0.0) + oBl;
+    float2 br = float2(size.x, 0.0) + oBr;
+    float2 tr = float2(size.x, size.y) + oTr;
+    float2 tl = float2(0.0, size.y) + oTl;
+
+    return sdQuad(texcoord, bl, br, tr, tl);
 }
 #endif
 
@@ -437,8 +451,8 @@ void RM_ComputeSdfData(float4 shapeData, float falloffDistance, out float sdfDat
         sdfData = RM_HexagonScene(shapeData);
     #elif CHAMFERBOX
         sdfData = RM_ChamferBoxScene(shapeData);
-    #elif PARALLELOGRAM
-        sdfData = RM_ParallelogramScene(shapeData);
+    #elif QUADRILATERAL
+        sdfData = RM_QuadrilateralScene(shapeData);
     #elif NSTAR_POLYGON
         sdfData = RM_NStarPolygonScene(shapeData);
     #elif HEART
