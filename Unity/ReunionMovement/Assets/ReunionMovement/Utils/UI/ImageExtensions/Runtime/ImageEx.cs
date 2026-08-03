@@ -276,6 +276,9 @@ namespace ReunionMovement.UI.ImageExtensions
 
         // -------------------- 混合模式（BLEND TYPE） --------------------
         [SerializeField] private BlendType m_BlendType = BlendType.AlphaBlend;
+
+        // -------------------- 相机画面（CAMERA FEED） --------------------
+        [SerializeField] private Texture cameraTexture;
         #endregion
 
         #region Material PropertyIds
@@ -382,6 +385,32 @@ namespace ReunionMovement.UI.ImageExtensions
         #endregion
 
         #region 公共属性
+
+        #region 相机画面（Camera Feed）
+
+        /// <summary>
+        /// 动态画面纹理（RenderTexture / WebCamTexture / 视频纹理等）。
+        /// 赋值后 ImageEx 的 _MainTex 将采样该纹理，形状 SDF、模糊、过渡等特效仍然生效，
+        /// 即“变形的 Image 显示相机画面”。
+        /// </summary>
+        public Texture CameraTexture
+        {
+            get => cameraTexture;
+            set
+            {
+                if (cameraTexture == value) return;
+                cameraTexture = value;
+                base.SetMaterialDirty();
+            }
+        }
+
+        /// <summary>
+        /// 重写 mainTexture：把动态画面作为主纹理绑定到 _MainTex，
+        /// CanvasRenderer 会把该纹理传给 ImageEx 着色器采样。
+        /// </summary>
+        public override Texture mainTexture => cameraTexture != null ? cameraTexture : base.mainTexture;
+
+        #endregion
 
         #region 绘图设置
 
@@ -1896,6 +1925,7 @@ namespace ReunionMovement.UI.ImageExtensions
             FlipHorizontal = flipHorizontal;
             FlipVertical = flipVertical;
             AlphaThreshold = alphaThreshold;
+            CameraTexture = cameraTexture;
 
             triangle.OnValidate();
             circle.OnValidate();

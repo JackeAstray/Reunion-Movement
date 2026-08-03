@@ -12,6 +12,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
     public class ImageExEditor : ImageEditor
     {
         private SerializedProperty spSprite;
+        private SerializedProperty spCameraTexture;
         private SerializedProperty spAppendShadow;
         private SerializedProperty spShadowOffsetLocal;
         private SerializedProperty spCircle, spTriangle, spRectangle, spPentagon, spHexagon, spChamferBox, spParallelogram, spNStarPolygon, spHeart, spBlobbyCross, spSquircle, spNTriangleRounded;
@@ -75,6 +76,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             spShadowOffsetLocal = serializedObject.FindProperty("shadowOffsetLocal");
 
             spSprite = serializedObject.FindProperty("m_Sprite");
+            spCameraTexture = serializedObject.FindProperty("cameraTexture");
 
             spShape = serializedObject.FindProperty("drawShape");
 
@@ -204,6 +206,10 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
 
             RaycastControlsGUI();
             EditorGUILayout.PropertyField(m_Color);
+            EditorGUILayout.Space();
+
+            CameraTextureGUI();
+
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(spShape, new GUIContent("绘制形状"));
 
@@ -599,6 +605,23 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             serializedObject.ApplyModifiedProperties();
             serializedObject.Update();
             Repaint();
+        }
+
+        private void CameraTextureGUI()
+        {
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spCameraTexture,
+                    new GUIContent("相机画面", "RenderTexture / WebCamTexture 等动态纹理，作为 _MainTex 显示，形状与特效仍然生效。"));
+
+                if (spCameraTexture.objectReferenceValue == null)
+                {
+                    EditorGUILayout.HelpBox(
+                        "留空则显示 Sprite 纹理。\n挂载 CameraToImageEx 可自动把相机画面赋给此字段。",
+                        MessageType.Info);
+                }
+            }
+            EditorGUILayout.EndVertical();
         }
 
         private void AdditionalShapeDataGUI()
