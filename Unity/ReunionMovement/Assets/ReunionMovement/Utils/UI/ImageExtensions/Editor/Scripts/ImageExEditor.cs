@@ -620,6 +620,14 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                         "留空则显示 Sprite 纹理。\n挂载 CameraToImageEx 可自动把相机画面赋给此字段。",
                         MessageType.Info);
                 }
+                else
+                {
+                    EditorGUILayout.HelpBox(
+                        "警告：此字段已设置，它会完全覆盖下方的 Sprite 纹理。\n" +
+                        "若该 RenderTexture 从未渲染/内容透明，ImageEx 会整体半透明不可见，且改颜色、赋精灵都无效。\n" +
+                        "如果不需要相机画面，请清空此字段。",
+                        MessageType.Warning);
+                }
             }
             EditorGUILayout.EndVertical();
         }
