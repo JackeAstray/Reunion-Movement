@@ -243,18 +243,18 @@ namespace ReunionMovement.Common.Util.HttpService
         {
             var cts = new CancellationTokenSource();
             httpRequests[request] = cts;
-            SendAsync(request, onSuccess, onError, onNetworkError, cts.Token).Forget();
+            SendAsync(request, cts, onSuccess, onError, onNetworkError).Forget();
         }
 
         /// <summary>
         /// 异步发送请求并处理响应（UniTask 零 GC）
         /// </summary>
-        private async UniTaskVoid SendAsync(IHttpRequest request, Action<HttpResponse> onSuccess = null,
-            Action<HttpResponse> onError = null, Action<HttpResponse> onNetworkError = null, CancellationToken ct = default)
+        private async UniTaskVoid SendAsync(IHttpRequest request, CancellationTokenSource cts, Action<HttpResponse> onSuccess = null,
+            Action<HttpResponse> onError = null, Action<HttpResponse> onNetworkError = null)
         {
             try
             {
-                bool canceled = await service.Send(request, onSuccess, onError, onNetworkError).ToUniTask(cancellationToken: ct).SuppressCancellationThrow();
+                bool canceled = await service.Send(request, onSuccess, onError, onNetworkError).ToUniTask(cancellationToken: cts.Token).SuppressCancellationThrow();
                 if (!canceled)
                     httpRequests.Remove(request);
             }
@@ -264,6 +264,11 @@ namespace ReunionMovement.Common.Util.HttpService
                 // 必须移除 httpRequests 条目，避免泄漏
                 httpRequests.Remove(request);
                 Debug.LogError("HttpMgr.SendAsync 异常: " + ex);
+            }
+            finally
+            {
+                // 请求完成：释放 CTS（Abort 路径的 Cancel+Dispose 与这里幂等，可重复调用）
+                cts.Dispose();
             }
         }
 

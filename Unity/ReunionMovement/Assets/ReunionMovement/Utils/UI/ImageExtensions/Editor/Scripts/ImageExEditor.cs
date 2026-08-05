@@ -36,7 +36,9 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
         private SerializedProperty spShadowMode;
         private SerializedProperty spTransitionMode, spTransitionTex, spTransitionRate, spTransitionColor, spTransitionWidth, spTransitionSoftness, spTransitionReverse;
         private SerializedProperty spTransitionTexScale, spTransitionTexOffset, spTransitionTexRotation, spTransitionKeepAspectRatio;
-        private SerializedProperty spTransitionSpeed, spTransitionPatternReverse, spTransitionAutoPlaySpeed, spTransitionColorFilter, spTransitionColorGlow, spTransitionGradient, spTransitionGradientValue, spTransitionRange;
+        private SerializedProperty spTransitionSpeed, spTransitionPatternReverse, spTransitionAutoPlaySpeed, spTransitionColorFilter, spTransitionColorGlow, spTransitionGradientValue, spTransitionRange;
+        // 过渡高级参数（此前遗漏的序列化字段，补充 Inspector 入口）
+        private SerializedProperty spTransitionClamp, spTransitionTexClampPadding, spTransitionUseUv0;
 
         // Phase 1: 色调滤镜
         private SerializedProperty spToneFilter, spToneIntensity;
@@ -61,7 +63,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
         // Phase 3: 混合模式
         private SerializedProperty spBlendType;
 
-        private bool gsInitialized, shaderChannelsNeedUpdate;
+        private bool shaderChannelsNeedUpdate;
 
         protected override void OnEnable()
         {
@@ -71,6 +73,10 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             }
 
             base.OnEnable();
+
+            // 检查父 Canvas 是否缺少 ImageEx 着色器所需的附加通道（TexCoord1/TexCoord2/Tangent），
+            // 缺失时 FixShaderChannelGUI 显示修复提示（运行时 OnValidate 会自动补，这里作可见安全网）
+            DetectMissingShaderChannels();
 
             spAppendShadow = serializedObject.FindProperty("appendShadow");
             spShadowOffsetLocal = serializedObject.FindProperty("shadowOffsetLocal");
@@ -147,9 +153,14 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             spTransitionAutoPlaySpeed = serializedObject.FindProperty("transitionAutoPlaySpeed");
             spTransitionColorFilter = serializedObject.FindProperty("transitionColorFilter");
             spTransitionColorGlow = serializedObject.FindProperty("transitionColorGlow");
-            spTransitionGradient = serializedObject.FindProperty("transitionGradient");
+            // 注意：transitionGradient 为运行时从 transitionGradientValue 生成，不在 Inspector 直接编辑
             spTransitionGradientValue = serializedObject.FindProperty("transitionGradientValue");
             spTransitionRange = serializedObject.FindProperty("transitionRange");
+
+            // 过渡高级参数（手动绘制编辑器必须显式声明+FindProperty，否则 Inspector 不显示）
+            spTransitionClamp = serializedObject.FindProperty("transitionClamp");
+            spTransitionTexClampPadding = serializedObject.FindProperty("transitionTexClampPadding");
+            spTransitionUseUv0 = serializedObject.FindProperty("transitionUseUv0");
 
             // Phase 1: 色调滤镜
             spToneFilter = serializedObject.FindProperty("m_ToneFilter");
@@ -431,6 +442,11 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
                         EditorGUILayout.PropertyField(spTransitionTexRotation, new GUIContent("旋转"));
                         EditorGUILayout.PropertyField(spTransitionKeepAspectRatio, new GUIContent("保持纵横比"));
                         EditorGUILayout.PropertyField(spTransitionReverse, new GUIContent("反向"));
+
+                        // 过渡高级参数
+                        EditorGUILayout.PropertyField(spTransitionClamp, new GUIContent("强制钳制", "对过渡 UV 做钳制，防止纹理采样越界"));
+                        EditorGUILayout.PropertyField(spTransitionTexClampPadding, new GUIContent("钳制边距", "纹理钳制的额外边距（0~4）"));
+                        EditorGUILayout.PropertyField(spTransitionUseUv0, new GUIContent("使用 UV0", "过渡采样使用 UV0 通道"));
                         EditorGUI.indentLevel--;
                     }
 
@@ -827,10 +843,38 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
 
         }
 
+        /// <summary>
+        /// 检测父 Canvas 是否缺少 ImageEx 着色器所需的附加着色器通道（TexCoord1/TexCoord2/Tangent）。
+        /// 与运行时 FixAdditionalShaderChannelsInCanvas 保持同一判定逻辑。
+        /// </summary>
+        private void DetectMissingShaderChannels()
+        {
+            shaderChannelsNeedUpdate = false;
+            foreach (Object obj in targets)
+            {
+                if (obj == null) continue;
+                var img = obj as ImageEx;
+                if (img == null) continue;
+                var canvas = img.canvas != null ? img.canvas : img.GetComponentInParent<Canvas>();
+                if (canvas == null) continue;
+
+                AdditionalCanvasShaderChannels channels = canvas.additionalShaderChannels;
+                AdditionalCanvasShaderChannels needed = channels
+                    | AdditionalCanvasShaderChannels.TexCoord1
+                    | AdditionalCanvasShaderChannels.TexCoord2
+                    | AdditionalCanvasShaderChannels.Tangent;
+                if (channels != needed)
+                {
+                    shaderChannelsNeedUpdate = true;
+                    break;
+                }
+            }
+        }
+
         private void FixShaderChannelGUI()
         {
             if (!shaderChannelsNeedUpdate) return;
-            EditorGUILayout.HelpBox("父画布需要具有以下附加着色器通道：Texcord1、Texcord2", MessageType.Error);
+            EditorGUILayout.HelpBox("父画布需要具有以下附加着色器通道：Texcoord1、Texcoord2、Tangent（缺失时主图可能透明/异常）", MessageType.Error);
             EditorGUILayout.BeginHorizontal();
             {
                 GUILayout.FlexibleSpace();

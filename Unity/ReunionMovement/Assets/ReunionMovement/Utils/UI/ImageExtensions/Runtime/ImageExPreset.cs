@@ -244,5 +244,77 @@ namespace ReunionMovement.UI.ImageExtensions
             shadowColorFilter = source.ShadowColorFilter;
             shadowColorGlow = source.ShadowColorGlow;
         }
+
+        /// <summary>
+        /// 逐字段比较与另一预设是否内容相同（带容差），用于变化检测：
+        /// 相同则跳过 Apply，避免每帧 SetMaterialDirty 触发 Canvas 重建。
+        /// </summary>
+        public bool SameAs(ImageExPreset other)
+        {
+            if (other == null) return false;
+            return enableGradientTex == other.enableGradientTex
+                && gradientTex == other.gradientTex
+                && Near(gradientOffset, other.gradientOffset)
+                && Near(gradientScale, other.gradientScale)
+                && blurType == other.blurType
+                && Near(blurIntensity, other.blurIntensity)
+                && samplingMode == other.samplingMode
+                && Near(samplingIntensity, other.samplingIntensity)
+                && targetMode == other.targetMode
+                && Near(targetColor, other.targetColor)
+                && Near(targetRange, other.targetRange)
+                && Near(targetSoftness, other.targetSoftness)
+                && toneFilter == other.toneFilter
+                && Near(toneIntensity, other.toneIntensity)
+                && colorFilterMode == other.colorFilterMode
+                && Near(colorValue, other.colorValue)
+                && Near(colorIntensity, other.colorIntensity)
+                && colorGlow == other.colorGlow
+                && transitionMode == other.transitionMode
+                && transitionTexture == other.transitionTexture
+                && Near(transitionTexScale, other.transitionTexScale)
+                && Near(transitionTexOffset, other.transitionTexOffset)
+                && Near(transitionTexRotation, other.transitionTexRotation)
+                && transitionKeepAspectRatio == other.transitionKeepAspectRatio
+                && Near(transitionRate, other.transitionRate)
+                && Near(transitionColor, other.transitionColor)
+                && Near(transitionWidth, other.transitionWidth)
+                && Near(transitionSoftness, other.transitionSoftness)
+                && transitionReverse == other.transitionReverse
+                && Near(transitionSpeed, other.transitionSpeed)
+                && transitionPatternReverse == other.transitionPatternReverse
+                && Near(transitionAutoPlaySpeed, other.transitionAutoPlaySpeed)
+                && transitionColorFilter == other.transitionColorFilter
+                && transitionColorGlow == other.transitionColorGlow
+                && Near(transitionRange, other.transitionRange)
+                && patternArea == other.patternArea
+                && edgeMode == other.edgeMode
+                && Near(edgeWidth, other.edgeWidth)
+                && edgeColorFilterMode == other.edgeColorFilterMode
+                && Near(edgeColor, other.edgeColor)
+                && edgeColorGlow == other.edgeColorGlow
+                && Near(edgeShinyRate, other.edgeShinyRate)
+                && Near(edgeShinyWidth, other.edgeShinyWidth)
+                && Near(edgeShinyAutoPlaySpeed, other.edgeShinyAutoPlaySpeed)
+                && detailMode == other.detailMode
+                && detailTex == other.detailTex
+                && Near(detailTexScale, other.detailTexScale)
+                && Near(detailTexOffset, other.detailTexOffset)
+                && Near(detailTexSpeed, other.detailTexSpeed)
+                && Near(detailIntensity, other.detailIntensity)
+                && Near(detailThreshold, other.detailThreshold)
+                && Near(detailColor, other.detailColor)
+                && blendType == other.blendType
+                && shadowMode == other.shadowMode
+                && shadowColorFilter == other.shadowColorFilter
+                && shadowColorGlow == other.shadowColorGlow;
+        }
+
+        private static bool Near(float a, float b) => Mathf.Abs(a - b) < 1e-4f;
+        private static bool Near(Color a, Color b) =>
+            Mathf.Abs(a.r - b.r) < 1e-4f && Mathf.Abs(a.g - b.g) < 1e-4f &&
+            Mathf.Abs(a.b - b.b) < 1e-4f && Mathf.Abs(a.a - b.a) < 1e-4f;
+        private static bool Near(Vector2 a, Vector2 b) =>
+            Mathf.Abs(a.x - b.x) < 1e-4f && Mathf.Abs(a.y - b.y) < 1e-4f;
     }
 }

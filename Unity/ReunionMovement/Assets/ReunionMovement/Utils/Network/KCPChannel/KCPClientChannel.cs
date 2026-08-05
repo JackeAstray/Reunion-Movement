@@ -191,20 +191,12 @@ namespace ReunionMovement.Common.Util
             var rcvLen = arrSeg.Count;
             if (rcvLen == 0) return;
 
-            var pooled = ArrayPool<byte>.Shared.Rent(rcvLen);
-            try
-            {
-                Array.Copy(arrSeg.Array, arrSeg.Offset, pooled, 0, rcvLen);
-                // 复制到精确大小的独立数组，安全分发给所有订阅者
-                byte[] result = new byte[rcvLen];
-                Buffer.BlockCopy(pooled, 0, result, 0, rcvLen);
-                onDataReceived?.Invoke(result);
-                OnDataReceivedSubject.OnNext(result);
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(pooled);
-            }
+            // 直接从源段复制到精确大小的独立数组（订阅者可安全持有引用）。
+            // 移除多余的 ArrayPool 双重拷贝：池化缓冲区复制后即弃，纯属浪费。
+            byte[] result = new byte[rcvLen];
+            Buffer.BlockCopy(arrSeg.Array, arrSeg.Offset, result, 0, rcvLen);
+            onDataReceived?.Invoke(result);
+            OnDataReceivedSubject.OnNext(result);
         }
         void OnErrorHandler(ErrorCode error, string reason)
         {

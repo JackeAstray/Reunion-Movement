@@ -25,6 +25,8 @@ namespace ReunionMovement.Common.Util
         private Canvas canvas;
         private Camera mainCamera;
         private bool isActive;
+        private float cameraRetryTimer;
+        private const float CameraRetryInterval = 2f;
 
         private void Awake()
         {
@@ -40,9 +42,16 @@ namespace ReunionMovement.Common.Util
             {
                 return;
             }
-            // 如果相机引用丢失，重新获取
+            // 相机引用丢失时每帧 Camera.main 很慢（内部 FindGameObjectsWithTag），限流重试
             if (mainCamera == null)
-                mainCamera = Camera.main;
+            {
+                cameraRetryTimer += Time.deltaTime;
+                if (cameraRetryTimer >= CameraRetryInterval)
+                {
+                    cameraRetryTimer = 0f;
+                    mainCamera = Camera.main;
+                }
+            }
             Setup();
         }
 
@@ -60,7 +69,7 @@ namespace ReunionMovement.Common.Util
 
         public void SetupUI()
         {
-            if (origin == null)
+            if (origin == null || canvas == null || baseRect == null)
                 return;
             Vector2 originPosOnScreen = origin.position;
             var originRect = origin.GetComponent<RectTransform>();
@@ -68,20 +77,30 @@ namespace ReunionMovement.Common.Util
                 myRect.anchoredPosition = originRect.anchoredPosition;
             Vector2 differenceToMouse = Pointer.current != null ? Pointer.current.position.ReadValue() - originPosOnScreen : Vector2.zero;
             differenceToMouse.Scale(new Vector2(1f / myRect.localScale.x, 1f / myRect.localScale.y));
+
+            // 鼠标恰好位于箭头上方时方向向量为零，跳过旋转/长度设置，避免 NaN 与除零
+            if (differenceToMouse.sqrMagnitude < 0.0001f)
+                return;
+
             transform.up = differenceToMouse;
-            baseRect.anchorMax = new Vector2(baseRect.anchorMax.x, differenceToMouse.magnitude / canvas.scaleFactor / baseHeight);
+            baseRect.anchorMax = new Vector2(baseRect.anchorMax.x, differenceToMouse.magnitude / canvas.scaleFactor / Mathf.Max(baseHeight, 0.01f));
         }
 
         public void SetupWorld()
         {
-            if (origin == null || mainCamera == null)
+            if (origin == null || mainCamera == null || canvas == null || baseRect == null)
                 return;
             Vector2 originPosOnScreen = mainCamera.WorldToScreenPoint(origin.position);
             myRect.anchoredPosition = new Vector2(originPosOnScreen.x - Screen.width / 2, originPosOnScreen.y - Screen.height / 2) / canvas.scaleFactor;
             Vector2 differenceToMouse = Pointer.current != null ? Pointer.current.position.ReadValue() - originPosOnScreen : Vector2.zero;
             differenceToMouse.Scale(new Vector2(1f / myRect.localScale.x, 1f / myRect.localScale.y));
+
+            // 鼠标恰好位于箭头上方时方向向量为零，跳过旋转/长度设置，避免 NaN 与除零
+            if (differenceToMouse.sqrMagnitude < 0.0001f)
+                return;
+
             transform.up = differenceToMouse;
-            baseRect.anchorMax = new Vector2(baseRect.anchorMax.x, differenceToMouse.magnitude / canvas.scaleFactor / baseHeight);
+            baseRect.anchorMax = new Vector2(baseRect.anchorMax.x, differenceToMouse.magnitude / canvas.scaleFactor / Mathf.Max(baseHeight, 0.01f));
         }
 
         private void SetActive(bool b)
@@ -89,7 +108,8 @@ namespace ReunionMovement.Common.Util
             isActive = b;
             if (b)
                 Setup();
-            baseRect.gameObject.SetActive(b);
+            if (baseRect != null)
+                baseRect.gameObject.SetActive(b);
         }
 
         public void Activate() => SetActive(true);

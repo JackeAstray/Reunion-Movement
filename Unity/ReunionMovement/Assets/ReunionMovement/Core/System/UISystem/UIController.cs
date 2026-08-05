@@ -91,7 +91,14 @@ namespace ReunionMovement.Core.UI
         /// <param name="uiName"></param>
         protected void CloseWindow(string uiName = null)
         {
-            UISystem.Instance.CloseWindow(uiName ?? this.uiName);
+            // 用 IsNullOrEmpty 替代 ??：空字符串不应原样传入 UISystem（会刷“未加载的UIWindow”错误）
+            string target = string.IsNullOrEmpty(uiName) ? this.uiName : uiName;
+            if (string.IsNullOrEmpty(target))
+            {
+                Log.Error("UIController.CloseWindow: uiName 与 this.uiName 均为空，无法关闭窗口");
+                return;
+            }
+            UISystem.Instance.CloseWindow(target);
         }
 
         /// <summary>

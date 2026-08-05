@@ -92,20 +92,11 @@ namespace ReunionMovement.Common.Util
             int length = arrSeg.Count;
             if (length == 0) return;
 
-            // 使用池化缓冲区做临时拷贝，然后创建精确大小的结果数组
-            byte[] pooled = ArrayPool<byte>.Shared.Rent(length);
-            try
-            {
-                Buffer.BlockCopy(arrSeg.Array, arrSeg.Offset, pooled, 0, length);
-                // 复制到精确大小的数组，订阅者可安全持有引用
-                byte[] result = new byte[length];
-                Buffer.BlockCopy(pooled, 0, result, 0, length);
-                onDataReceived?.Invoke(result);
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(pooled);
-            }
+            // 直接从源段复制到精确大小的结果数组（订阅者可安全持有引用）。
+            // 移除多余的 ArrayPool 双重拷贝：池化缓冲区复制后即弃，纯属浪费。
+            byte[] result = new byte[length];
+            Buffer.BlockCopy(arrSeg.Array, arrSeg.Offset, result, 0, length);
+            onDataReceived?.Invoke(result);
         }
     }
 }

@@ -366,8 +366,8 @@ namespace ReunionMovement.Core.UI
 {
     public class {_0_} : UIController
     {
-        string openWindow;
-        string closeWindow;
+        string openWindow = ""{_0_}"";
+        string closeWindow = ""{_0_}"";
 
         public override void OnInit()
         {

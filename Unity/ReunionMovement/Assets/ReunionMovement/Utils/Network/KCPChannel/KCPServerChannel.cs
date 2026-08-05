@@ -104,8 +104,18 @@ namespace ReunionMovement.Common.Util
         {
             if (Active)
                 return false;
-            server.Start((ushort)Port);
-            return true;
+            try
+            {
+                // kcp2k KcpServer.Start 返回 void，绑定失败会抛 SocketException，必须捕获
+                server.Start((ushort)Port);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error("KCP 服务端启动失败（端口可能被占用）: {0}", ex.Message);
+                onError?.Invoke(-1, $"KCP服务端启动失败: {ex.Message}");
+                return false;
+            }
         }
 
         public void TickRefresh()
@@ -142,7 +152,9 @@ namespace ReunionMovement.Common.Util
 
         public string GetConnectionAddress(int connectionId)
         {
-            return server.GetClientEndPoint(connectionId).Address.ToString();
+            // 连接不存在时 GetClientEndPoint 返回 null，需判空避免 NRE
+            var endPoint = server.GetClientEndPoint(connectionId);
+            return endPoint == null ? string.Empty : endPoint.Address.ToString();
         }
 
         public void Close()

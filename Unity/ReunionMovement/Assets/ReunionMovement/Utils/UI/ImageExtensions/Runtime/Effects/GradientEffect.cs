@@ -32,6 +32,10 @@ namespace ReunionMovement.UI.ImageExtensions
         private static readonly int enableGradient_Sp = Shader.PropertyToID("_EnableGradient");
         private static readonly int gradientRotation_Sp = Shader.PropertyToID("_GradientRotation");
 
+        // 复用的临时缓冲：ModifyMaterial 是 GetModifiedMaterial 热路径的一部分，避免每次调用分配
+        private static readonly Color[] TempGradientColors = new Color[8];
+        private static readonly Color[] TempGradientAlphas = new Color[8];
+
         /// <summary>
         /// 启用/禁用渐变覆盖
         /// </summary>
@@ -135,7 +139,7 @@ namespace ReunionMovement.UI.ImageExtensions
                         Alphas.Add(Vector4.zero);
                     }
                     sharedMat.SetColorArray(gradientColors_Sp, Colors);
-                    sharedMat.GetColorArray(gradientAlphas_Sp, Alphas);
+                    sharedMat.SetColorArray(gradientAlphas_Sp, Alphas);
                     sharedMat.SetInt(gradientInterpolationType_Sp, (int)gradient.mode);
                 }
                 onComponentSettingsChanged?.Invoke(this, EventArgs.Empty);
@@ -283,8 +287,11 @@ namespace ReunionMovement.UI.ImageExtensions
             }
             else
             {
-                Color[] colors = new Color[8];
-                Color[] alphas = new Color[8];
+                // 复用静态缓冲并清空上次残留，避免热路径分配与脏数据泄漏
+                Color[] colors = TempGradientColors;
+                Color[] alphas = TempGradientAlphas;
+                Array.Clear(colors, 0, colors.Length);
+                Array.Clear(alphas, 0, alphas.Length);
                 for (int i = 0; i < gradient.colorKeys.Length; i++)
                 {
                     Color col = gradient.colorKeys[i].color;

@@ -37,6 +37,11 @@ namespace ReunionMovement
             {
                 configLoaded = true;
                 cachedConfig = Resources.Load<GameConfig>("ScriptableObjects/GameConfig");
+                // 加载失败时不永久缓存 null：下次访问会重试，避免配置静默失效
+                if (cachedConfig == null)
+                {
+                    configLoaded = false;
+                }
             }
         }
 

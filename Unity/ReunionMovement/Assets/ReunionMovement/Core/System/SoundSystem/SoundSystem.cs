@@ -61,6 +61,9 @@ namespace ReunionMovement.Core.Sound
         private readonly LinkedList<string> audioClipCacheOrder = new LinkedList<string>();
         private readonly Dictionary<string, LinkedListNode<string>> audioClipCacheNodes
             = new Dictionary<string, LinkedListNode<string>>();
+        // 并发加载去重：同一路径加载在途时复用同一个 TCS（防止重复加载同一 clip）
+        private readonly Dictionary<string, UniTaskCompletionSource<AudioClip>> audioClipLoading
+            = new Dictionary<string, UniTaskCompletionSource<AudioClip>>();
 
         // 启动时预设对象池
         public List<StartupPool> startupPools = new List<StartupPool>();
@@ -238,6 +241,7 @@ namespace ReunionMovement.Core.Sound
             audioClipCache?.Clear();
             audioClipCacheOrder?.Clear();
             audioClipCacheNodes?.Clear();
+            audioClipLoading?.Clear();
             soundConfigDict?.Clear();
             soundConfigContainer = null;
 
@@ -1008,26 +1012,58 @@ namespace ReunionMovement.Core.Sound
                 return clip;
             }
 
-            clip = await ResourcesSystem.Instance.LoadAsync<AudioClip>(fullPath);
-            if (clip != null)
+            // 并发去重：同一路径的加载在途时复用同一个 TCS，多个调用方 await 各自的 Task
+            if (audioClipLoading.TryGetValue(fullPath, out var pendingTcs))
             {
-                // LRU 驱逐：缓存满时移除最久未使用的条目（链表头部）
-                if (audioClipCache.Count >= MaxAudioClipCacheSize && audioClipCacheOrder.First != null)
+                return await pendingTcs.Task;
+            }
+
+            var tcs = new UniTaskCompletionSource<AudioClip>();
+            audioClipLoading[fullPath] = tcs;
+            try
+            {
+                _ = LoadAudioClipAndCacheAsync(fullPath, tcs);
+                return await tcs.Task;
+            }
+            finally
+            {
+                audioClipLoading.Remove(fullPath);
+            }
+        }
+
+        /// <summary>
+        /// 加载 AudioClip 并写入 LRU 缓存，完成后设置 TCS（供并发去重复用）。
+        /// </summary>
+        private async UniTaskVoid LoadAudioClipAndCacheAsync(string fullPath, UniTaskCompletionSource<AudioClip> tcs)
+        {
+            try
+            {
+                var clip = await ResourcesSystem.Instance.LoadAsync<AudioClip>(fullPath);
+                if (clip != null)
                 {
-                    var oldestNode = audioClipCacheOrder.First;
-                    audioClipCache.Remove(oldestNode.Value);
-                    audioClipCacheNodes.Remove(oldestNode.Value);
-                    audioClipCacheOrder.RemoveFirst();
+                    // LRU 驱逐：缓存满时移除最久未使用的条目（链表头部）
+                    if (audioClipCache.Count >= MaxAudioClipCacheSize && audioClipCacheOrder.First != null)
+                    {
+                        var oldestNode = audioClipCacheOrder.First;
+                        audioClipCache.Remove(oldestNode.Value);
+                        audioClipCacheNodes.Remove(oldestNode.Value);
+                        audioClipCacheOrder.RemoveFirst();
+                    }
+                    audioClipCache[fullPath] = clip;
+                    var node = audioClipCacheOrder.AddLast(fullPath);
+                    audioClipCacheNodes[fullPath] = node;
                 }
-                audioClipCache[fullPath] = clip;
-                var node = audioClipCacheOrder.AddLast(fullPath);
-                audioClipCacheNodes[fullPath] = node;
+                else
+                {
+                    Log.Error("加载AudioClip失败: {0}", fullPath);
+                }
+                tcs.TrySetResult(clip);
             }
-            else
+            catch (Exception ex)
             {
-                Log.Error("加载AudioClip失败: {0}", fullPath);
+                Log.Error("加载AudioClip异常: {0} {1}", fullPath, ex.Message);
+                tcs.TrySetResult(null);
             }
-            return clip;
         }
     }
 

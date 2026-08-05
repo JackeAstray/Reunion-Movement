@@ -311,6 +311,9 @@ namespace ReunionMovement.Common.Util.Download
                         else
                         {
                             Log.Warning("Download for {0} returned null，未启动下载流程", idf.Uri);
+                            // 本分支已完成一次 Head 请求（n++ 已配对），若不递减 n，
+                            // NumThreads 永不归零 → OnDownloadsSuccess 永不触发
+                            n--;
                             // 继续分发下一个待下载的 URI，维持任务队列
                             if (pendingUris != null && pendingOffset < pendingUris.Length)
                             {
@@ -375,7 +378,10 @@ namespace ReunionMovement.Common.Util.Download
                     return;
                 }
 
-                if (pendingUris.Length > 0)
+                // 该 URI 未启动下载（Download 返回 null），视为已处理
+                numFilesRemaining = Math.Max(0, numFilesRemaining - 1);
+                // pendingUris 数组永不收缩，必须用 offset 判断是否还有待分发任务
+                if (pendingOffset < pendingUris.Length)
                 {
                     await Dispatch();
                 }
@@ -405,7 +411,8 @@ namespace ReunionMovement.Common.Util.Download
 
                 if (idf.DidError)
                 {
-                    if (ContinueAfterFailure && pendingUris.Length > 0)
+                    numFilesRemaining = Math.Max(0, numFilesRemaining - 1);
+                    if (ContinueAfterFailure && pendingOffset < pendingUris.Length)
                     {
                         _ = Dispatch();
                     }
@@ -421,7 +428,8 @@ namespace ReunionMovement.Common.Util.Download
                         _ = Dispatch(idf);
                         return;
                     }
-                    if (pendingUris.Length > 0)
+                    numFilesRemaining = Math.Max(0, numFilesRemaining - 1);
+                    if (pendingOffset < pendingUris.Length)
                     {
                         _ = Dispatch();
                     }

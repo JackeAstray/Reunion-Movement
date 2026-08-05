@@ -31,16 +31,16 @@ namespace ReunionMovement.Core.UI
         #region R3 响应式事件（推荐新代码使用）
 
         /// <summary>UI 初始化完成事件</summary>
-        public Subject<UIController> OnInitSubject = new Subject<UIController>();
+        public Subject<UIController> OnInitSubject { get; private set; } = new Subject<UIController>();
 
         /// <summary>UI 打开事件</summary>
-        public Subject<UIController> OnOpenSubject = new Subject<UIController>();
+        public Subject<UIController> OnOpenSubject { get; private set; } = new Subject<UIController>();
 
         /// <summary>UI 设置事件</summary>
-        public Subject<UIController> OnSetSubject = new Subject<UIController>();
+        public Subject<UIController> OnSetSubject { get; private set; } = new Subject<UIController>();
 
         /// <summary>UI 关闭事件</summary>
-        public Subject<UIController> OnCloseSubject = new Subject<UIController>();
+        public Subject<UIController> OnCloseSubject { get; private set; } = new Subject<UIController>();
 
         #endregion
 
@@ -83,6 +83,33 @@ namespace ReunionMovement.Core.UI
             OnSetSubject = null;
             OnCloseSubject?.Dispose();
             OnCloseSubject = null;
+
+            // 销毁 UI 根节点（与 SoundSystem/UIToolkitSystem 的 Clear 保持一致），
+            // 避免引擎重初始化时残留一套孤儿 UI 与重复根节点（UIRoot/EventSystem 均为 DontDestroyOnLoad）
+            DestroyRoot();
+        }
+
+        /// <summary>
+        /// 销毁所有 UI 根节点与 EventSystem（均为 DontDestroyOnLoad 常驻对象，必须显式销毁）
+        /// </summary>
+        private void DestroyRoot()
+        {
+            if (uiRoot != null)
+            {
+                UnityEngine.Object.Destroy(uiRoot);
+                uiRoot = null;
+            }
+            // 子根节点随 UIRoot 一起销毁，这里仅清空引用
+            mainUIRoot = null;
+            normalUIRoot = null;
+            headInfoUIRoot = null;
+            tipsUIRoot = null;
+
+            if (EventSystem != null && EventSystem.gameObject != null)
+            {
+                UnityEngine.Object.Destroy(EventSystem.gameObject);
+                EventSystem = null;
+            }
         }
 
         /// <summary>

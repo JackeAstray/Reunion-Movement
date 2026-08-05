@@ -242,8 +242,10 @@ namespace ReunionMovement.UI.ButtonClick
             if (!firstTime.Equals(default(DateTime)) && !secondTime.Equals(default(DateTime)))
             {
                 var intervalTime = secondTime - firstTime;
-                float milliSeconds = intervalTime.Seconds * 1000 + intervalTime.Milliseconds;
-                Log.Debug($"[DoubleClickButton] 两次点击间隔：{milliSeconds} 毫秒");
+                // TotalMilliseconds 包含分/小时等全部跨度，避免 TimeSpan.Seconds 只含 0-59 部分
+                // 导致超过 59 秒的间隔被误判为合法双击
+                double milliSeconds = intervalTime.TotalMilliseconds;
+                Log.Debug($"[DoubleClickButton] 两次点击间隔：{milliSeconds:F0} 毫秒");
                 if (milliSeconds < 400)
                 {
                     Press();

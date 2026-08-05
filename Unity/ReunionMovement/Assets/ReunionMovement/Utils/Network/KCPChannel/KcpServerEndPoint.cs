@@ -10,6 +10,20 @@ namespace ReunionMovement.Common.Util
             : base(OnConnected, OnData, OnDisconnected, OnError, config)
         {
         }
-        public string IPAddress { get { return socket.LocalEndPoint.ToString(); } }
+        public string IPAddress
+        {
+            get
+            {
+                // Start 之前 socket 为 null，访问 LocalEndPoint 会 NRE
+                try
+                {
+                    return socket?.LocalEndPoint?.ToString() ?? string.Empty;
+                }
+                catch
+                {
+                    return string.Empty;
+                }
+            }
+        }
     }
 }

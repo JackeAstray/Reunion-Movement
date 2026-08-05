@@ -210,6 +210,12 @@ namespace ReunionMovement.Common.Util
 
             mesh.Clear();
 
+            // 空结果防护：CSG 运算（如不相交的 Intersect）可能产生空顶点集，直接返回空网格而非越界
+            if (vertices.Count == 0)
+            {
+                return;
+            }
+
             Vertex first = vertices[0];
 
             if (first.HasPosition) mesh.vertices = positions;

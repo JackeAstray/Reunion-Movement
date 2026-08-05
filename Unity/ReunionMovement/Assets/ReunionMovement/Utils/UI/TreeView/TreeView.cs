@@ -21,7 +21,15 @@ namespace ReunionMovement
         private GameObject nodePrefab;
         public GameObject NodePrefab
         {
-            get { return nodePrefab ?? (nodePrefab = container.GetChild(0).gameObject); }
+            get
+            {
+                // container 可能为 null（Find("Viewport/Content") 未命中）或没有子节点，需防越界
+                if (nodePrefab == null && container != null && container.childCount > 0)
+                {
+                    nodePrefab = container.GetChild(0).gameObject;
+                }
+                return nodePrefab;
+            }
             set { nodePrefab = value; }
         }
 
@@ -134,8 +142,29 @@ namespace ReunionMovement
             treeNode.transform.localScale = Vector3.one;
             treeNode.SetActive(true);
             treeNode.GetComponent<TreeViewNode>().Insert(data);
-            treeNode.transform.SetSiblingIndex(siblingIndex + 1);
+            treeNode.transform.SetSiblingIndex(GetInsertSiblingIndex(siblingIndex));
             return treeNode;
+        }
+
+        /// <summary>
+        /// 计算插入位置：不再假设模板节点恒在 index 0，
+        /// 基于模板当前实际位置动态计算（容器布局改动后仍正确）。
+        /// </summary>
+        private int GetInsertSiblingIndex(int siblingIndex)
+        {
+            int templateIndex = 0;
+            if (nodePrefab != null && container != null)
+            {
+                for (int i = 0; i < container.childCount; i++)
+                {
+                    if (container.GetChild(i).gameObject == nodePrefab)
+                    {
+                        templateIndex = i;
+                        break;
+                    }
+                }
+            }
+            return templateIndex + 1 + siblingIndex;
         }
         /// <summary>
         /// 批量回收节点

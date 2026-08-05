@@ -5,6 +5,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -593,21 +594,26 @@ namespace ReunionMovement
 
                 // 将列表赋值给容器
                 FieldInfo configsField = containerType.GetField("configs", BindingFlags.Public | BindingFlags.Instance);
-                if (configsField != null)
+                if (configsField == null)
                 {
-                    configsField.SetValue(asset, configs);
+                    Log.Error($"字段 'configs' 未找到：{tableName}Container");
+                    continue;
+                }
+
+                // 保存 ScriptableObject：
+                // - 已存在时【复用实例】覆盖字段并 SetDirty（保持 GUID，场景/预制体引用不因删除重建而断裂）
+                // - 不存在时才创建新资产
+                ScriptableObject existing = AssetDatabase.LoadAssetAtPath<ScriptableObject>(assetPath);
+                if (existing != null)
+                {
+                    configsField.SetValue(existing, configs);
+                    EditorUtility.SetDirty(existing);
                 }
                 else
                 {
-                    Log.Error($"字段 'configs' 未找到：{tableName}Container");
+                    configsField.SetValue(asset, configs);
+                    AssetDatabase.CreateAsset(asset, assetPath);
                 }
-
-                // 保存 ScriptableObject（目标资产已存在时先删除，支持迭代更新）
-                if (AssetDatabase.LoadAssetAtPath<ScriptableObject>(assetPath) != null)
-                {
-                    AssetDatabase.DeleteAsset(assetPath);
-                }
-                AssetDatabase.CreateAsset(asset, assetPath);
             }
 
             AssetDatabase.SaveAssets();
@@ -771,12 +777,13 @@ namespace ReunionMovement
                 fieldType == FieldTypes.Vector2 || fieldType == FieldTypes.Vector3 || fieldType == FieldTypes.Vector4)
             {
                 string[] parts = value.Trim('(', ')').Split(',');
+                // 使用 InvariantCulture：避免小数点为逗号的系统区域设置下解析失败/变 0
                 if ((type == typeof(Vector2) || fieldType == FieldTypes.Vector2) && parts.Length == 2)
-                    return new Vector2(float.Parse(parts[0]), float.Parse(parts[1]));
+                    return new Vector2(float.Parse(parts[0], CultureInfo.InvariantCulture), float.Parse(parts[1], CultureInfo.InvariantCulture));
                 if ((type == typeof(Vector3) || fieldType == FieldTypes.Vector3) && parts.Length == 3)
-                    return new Vector3(float.Parse(parts[0]), float.Parse(parts[1]), float.Parse(parts[2]));
+                    return new Vector3(float.Parse(parts[0], CultureInfo.InvariantCulture), float.Parse(parts[1], CultureInfo.InvariantCulture), float.Parse(parts[2], CultureInfo.InvariantCulture));
                 if ((type == typeof(Vector4) || fieldType == FieldTypes.Vector4) && parts.Length == 4)
-                    return new Vector4(float.Parse(parts[0]), float.Parse(parts[1]), float.Parse(parts[2]), float.Parse(parts[3]));
+                    return new Vector4(float.Parse(parts[0], CultureInfo.InvariantCulture), float.Parse(parts[1], CultureInfo.InvariantCulture), float.Parse(parts[2], CultureInfo.InvariantCulture), float.Parse(parts[3], CultureInfo.InvariantCulture));
             }
 
             // Rect类型
@@ -784,7 +791,7 @@ namespace ReunionMovement
             {
                 string[] parts = value.Trim('(', ')').Split(',');
                 if (parts.Length == 4)
-                    return new Rect(float.Parse(parts[0]), float.Parse(parts[1]), float.Parse(parts[2]), float.Parse(parts[3]));
+                    return new Rect(float.Parse(parts[0], CultureInfo.InvariantCulture), float.Parse(parts[1], CultureInfo.InvariantCulture), float.Parse(parts[2], CultureInfo.InvariantCulture), float.Parse(parts[3], CultureInfo.InvariantCulture));
             }
 
             // Color类型
@@ -803,7 +810,7 @@ namespace ReunionMovement
             }
 
             // 基础类型
-            return Convert.ChangeType(value, type);
+            return Convert.ChangeType(value, type, CultureInfo.InvariantCulture);
         }
 
         /// <summary>

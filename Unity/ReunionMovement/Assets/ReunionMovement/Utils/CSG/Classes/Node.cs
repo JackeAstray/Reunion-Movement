@@ -51,7 +51,8 @@ namespace ReunionMovement.Common.Util
                     clone.polygons.Add(this.polygons[i].Clone());
             }
 
-            clone.plane = new Plane(this.plane);
+            // 空节点（未 Build）时 plane 可能为 null，需防护避免 Clone 时 NRE
+            clone.plane = this.plane != null ? new Plane(this.plane) : null;
             clone.front = this.front?.Clone();
             clone.back = this.back?.Clone();
 
@@ -114,12 +115,13 @@ namespace ReunionMovement.Common.Util
             if (BuildDepth > 1024)
             {
                 Debug.LogWarning($"CSG Node.Build 递归深度超过 1024 层，强制终止。" +
-                    $"当前多边形数: {list.Count}, epsilon: {CSG.Epsilon}。请增大 CSG.Epsilon 或检查网格是否包含退化面。");
+                    $"当前多边形数: {list?.Count ?? 0}, epsilon: {CSG.Epsilon}。请增大 CSG.Epsilon 或检查网格是否包含退化面。");
                 BuildDepth--;
                 return;
             }
 
-            if (list.Count < 1)
+            // 空输入防护（Build(null) / 空列表）：直接返回，不构造平面与子树
+            if (list == null || list.Count < 1)
             {
                 BuildDepth--;
                 return;
@@ -175,7 +177,10 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public List<Polygon> ClipPolygons(List<Polygon> list)
         {
-            if (!this.plane.Valid())
+            if (list == null || list.Count == 0) return list;
+
+            // 空节点没有分割面时直接透传，避免 plane 为 null 时 NRE
+            if (this.plane == null || !this.plane.Valid())
             {
                 return list;
             }
@@ -215,6 +220,10 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public List<Polygon> AllPolygons()
         {
+            // 空节点时 polygons 可能为 null，初始化为空列表避免 NRE
+            if (this.polygons == null)
+                this.polygons = new List<Polygon>();
+
             List<Polygon> list = this.polygons;
 
             if (this.front != null)

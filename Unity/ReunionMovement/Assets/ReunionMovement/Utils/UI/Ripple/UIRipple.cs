@@ -60,6 +60,10 @@ namespace ReunionMovement.UI.RippleAnimation
         /// </summary>
         public bool StartAtCenter = false;
 
+        // 波纹对象池（复用避免每次点击 new GameObject + AddComponent 的 GC 压力）
+        private readonly List<GameObject> ripplePool = new List<GameObject>();
+        private const int MaxPoolSize = 16;
+
         void Awake()
         {
             //根据需要自动设置 MaxSize
@@ -96,12 +100,29 @@ namespace ReunionMovement.UI.RippleAnimation
         /// <param name="Position"></param>
         public void CreateRipple(Vector2 Position)
         {
-            //创建游戏对象并添加组件
-            var ThisRipple = new GameObject();
-            ThisRipple.AddComponent<Ripple>();
-            ThisRipple.AddComponent<Image>();
+            // 优先从对象池复用
+            GameObject ThisRipple = null;
+            for (int i = 0; i < ripplePool.Count; i++)
+            {
+                if (ripplePool[i] != null && !ripplePool[i].activeInHierarchy)
+                {
+                    ThisRipple = ripplePool[i];
+                    break;
+                }
+            }
+
+            if (ThisRipple == null)
+            {
+                //创建游戏对象并添加组件
+                ThisRipple = new GameObject();
+                ThisRipple.AddComponent<Ripple>();
+                ThisRipple.AddComponent<Image>();
+                ThisRipple.name = "Ripple";
+                ThisRipple.GetComponent<Ripple>().OnFinished = RecycleRipple;
+            }
+
+            ThisRipple.SetActive(true);
             ThisRipple.GetComponent<Image>().sprite = ShapeSprite;
-            ThisRipple.name = "Ripple";
 
             //设置父对象
             ThisRipple.transform.SetParent(gameObject.transform);
@@ -116,12 +137,30 @@ namespace ReunionMovement.UI.RippleAnimation
             else
             { ThisRipple.transform.position = Position; }
 
-            //在Ripple中设置参数
+            //在Ripple中设置参数并重置视觉状态（对象池复用后 Start 不会再次执行）
             var ripple = ThisRipple.GetComponent<Ripple>();
             ripple.Speed = Speed;
             ripple.MaxSize = MaxSize;
             ripple.StartColor = StartColor;
             ripple.EndColor = EndColor;
+            ripple.InitVisuals();
+        }
+
+        /// <summary>
+        /// 回收波纹到对象池（超出上限或已被销毁则直接销毁）
+        /// </summary>
+        private void RecycleRipple(GameObject go)
+        {
+            if (go == null) return;
+            go.SetActive(false);
+            if (ripplePool.Count < MaxPoolSize && !ripplePool.Contains(go))
+            {
+                ripplePool.Add(go);
+            }
+            else
+            {
+                Destroy(go);
+            }
         }
 
 
@@ -132,11 +171,25 @@ namespace ReunionMovement.UI.RippleAnimation
         /// <returns></returns>
         public bool IsOnUIElement(Vector2 Position)
         {
-            //如果该点位于 UIElement 的范围内
-            return gameObject.transform.position.x + (GetComponent<RectTransform>().rect.width / 2f) >= Position.x
-                && gameObject.transform.position.x - (GetComponent<RectTransform>().rect.width / 2f) <= Position.x
-                && gameObject.transform.position.y + (GetComponent<RectTransform>().rect.height / 2f) >= Position.y
-                && gameObject.transform.position.y - (GetComponent<RectTransform>().rect.height / 2f) <= Position.y;
+            RectTransform rt = GetComponent<RectTransform>();
+            if (rt == null) return false;
+
+            // 屏幕坐标 → 本地坐标，兼容 CanvasScaler 缩放、pivot 与渲染相机；
+            // 原实现用世界坐标与屏幕像素直接比较，在非 1:1 缩放画布下会误判
+            Camera cam = null;
+            var canvas = rt.GetComponentInParent<Canvas>();
+            if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+            {
+                cam = canvas.worldCamera;
+            }
+
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(rt, Position, cam, out Vector2 localPoint))
+            {
+                return false;
+            }
+
+            // rect 为相对 pivot 的局部矩形，localPoint 同为本地坐标，直接包含判断（自动兼容 pivot）
+            return rt.rect.Contains(localPoint);
         }
     }
 }
