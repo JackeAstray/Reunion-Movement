@@ -144,6 +144,10 @@ namespace ReunionMovement.Core.UI
             if (confirmBtn != null) confirmBtn.onClick.RemoveAllListeners();
             if (closeBtn != null) closeBtn.onClick.RemoveAllListeners();
 
+            // 清理回调引用，防止重新打开（未传 Action）时触发过期回调
+            cancelAction = null;
+            confirmAction = null;
+
             base.OnClose();
         }
 

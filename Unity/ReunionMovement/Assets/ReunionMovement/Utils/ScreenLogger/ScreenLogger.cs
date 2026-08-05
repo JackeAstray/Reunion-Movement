@@ -91,6 +91,9 @@ namespace ReunionMovement
             {
                 activeInstances.Remove(this);
             }
+            // 确保退订日志事件：若组件在 disabled 状态下被销毁，OnDisable 不会执行，
+            // 不退订会永久泄漏（被销毁实例继续接收全项目日志）
+            Application.logMessageReceived -= HandleLog;
             if (backgroundTex != null)
             {
                 Destroy(backgroundTex);

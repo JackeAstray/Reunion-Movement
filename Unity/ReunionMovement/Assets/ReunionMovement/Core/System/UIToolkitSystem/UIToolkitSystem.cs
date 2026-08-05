@@ -65,10 +65,10 @@ namespace ReunionMovement.Core.UIToolkit
         #region R3 响应式事件
 
         /// <summary>面板打开事件</summary>
-        public Subject<UIToolkitPanel> OnPanelOpenSubject = new Subject<UIToolkitPanel>();
+        public Subject<UIToolkitPanel> OnPanelOpenSubject { get; private set; } = new Subject<UIToolkitPanel>();
 
         /// <summary>面板关闭事件</summary>
-        public Subject<UIToolkitPanel> OnPanelCloseSubject = new Subject<UIToolkitPanel>();
+        public Subject<UIToolkitPanel> OnPanelCloseSubject { get; private set; } = new Subject<UIToolkitPanel>();
         #endregion
 
         #region 资源路径常量

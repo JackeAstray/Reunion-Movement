@@ -193,7 +193,7 @@ namespace ReunionMovement.Common.Util
 
         #region Client
         /// <summary>
-        /// 启动客户端
+        /// 启动客户端（外部主动调用：先取消进行中的重连/心跳任务，再全新启动）
         /// </summary>
         public void StartClient()
         {
@@ -204,6 +204,27 @@ namespace ReunionMovement.Common.Util
             heartbeatCts?.Cancel();
             heartbeatCts?.Dispose();
             heartbeatCts = null;
+
+            StartClientCore();
+        }
+
+        /// <summary>
+        /// 重连循环专用启动：不清除 reconnectCts。
+        /// 注意：ReconnectRoutineAsync 由 reconnectCts 驱动，若在循环内调用 StartClient()
+        /// 会取消驱动自身的令牌，导致自动重连永远只尝试一次。
+        /// </summary>
+        private void StartClientForReconnect()
+        {
+            heartbeatCts?.Cancel();
+            heartbeatCts?.Dispose();
+            heartbeatCts = null;
+
+            StartClientCore();
+        }
+
+        /// <summary>客户端连接核心流程（关闭旧通道并建立新连接）</summary>
+        private void StartClientCore()
+        {
 
             // 注意：不要在此处清零 reconnectAttempts。
             // StopAll()（主动启动前调用）与 ReconnectRoutineAsync 开头负责清零；
@@ -381,7 +402,7 @@ namespace ReunionMovement.Common.Util
                 Log.Info("尝试第 {0} 次重连...", reconnectAttempts);
                 try
                 {
-                    StartClient();
+                    StartClientForReconnect();
                 }
                 catch (Exception ex)
                 {

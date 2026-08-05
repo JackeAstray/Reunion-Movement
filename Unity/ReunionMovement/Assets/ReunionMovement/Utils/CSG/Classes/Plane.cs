@@ -126,7 +126,15 @@ namespace ReunionMovement.Common.Util
 
                             if ((ti | tj) == EPolygonType.Spanning)
                             {
-                                float t = (this.w - Vector3.Dot(this.normal, vi.Position)) / Vector3.Dot(this.normal, vj.Position - vi.Position);
+                                // 平行边防护：分母趋近 0 时跳过插值，避免 ±∞/NaN 顶点污染网格
+                                Vector3 edge = vj.Position - vi.Position;
+                                float denom = Vector3.Dot(this.normal, edge);
+                                if (Mathf.Abs(denom) < (float)CSG.Epsilon)
+                                    continue;
+
+                                float t = (this.w - Vector3.Dot(this.normal, vi.Position)) / denom;
+                                // 将 t 钳制在 [0,1]，防止浮点误差产生越界插值点
+                                t = Mathf.Clamp01(t);
 
                                 Vertex v = VertexUtility.Mix(vi, vj, t);
 

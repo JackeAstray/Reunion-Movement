@@ -14,6 +14,18 @@ namespace ReunionMovement.Common
             logHelper = helper;
         }
 
+        /// <summary>
+        /// 刷新文件日志缓冲区（应用退出/崩溃前调用，避免丢失批量 flush 的日志）。
+        /// </summary>
+        public static void FlushFileLog()
+        {
+            // FlushFileLog 是静态方法，不能通过实例引用调用
+            if (logHelper is LogHelper)
+            {
+                LogHelper.FlushFileLog();
+            }
+        }
+
         // ============================================================
         //  Debug
         // ============================================================

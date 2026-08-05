@@ -86,12 +86,15 @@ namespace ReunionMovement.Core
                 return;
             }
 
-            // 打开启动 UI 并注册为场景切换时不隐藏
-            UISystem.Instance.OpenWindow(UINames.StartGame);
-            SceneSystem.Instance.ExcludeWindowFromSceneHide(UINames.StartGame);
+            // 游戏启动时，排除启动界面不随场景切换而隐藏
+            // SceneSystem.Instance.ExcludeWindowFromSceneHide(UINames.StartGame);
 
             // 加载初始场景
-            await SceneSystem.Instance.LoadScene("Temp", true);
+            await SceneSystem.Instance.LoadScene("Temp", true, null, ()=>
+            {
+                // 打开启动界面
+                UISystem.Instance.OpenWindow(UINames.StartGame);
+            });
         }
     }
 }

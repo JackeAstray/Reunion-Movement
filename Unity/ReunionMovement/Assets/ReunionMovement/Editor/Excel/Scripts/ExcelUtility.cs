@@ -6,6 +6,7 @@ using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -45,23 +46,29 @@ namespace ReunionMovement.EditorTools
                 return;
             }
 
-            //拷贝一份文件
+            //拷贝一份文件（File.Copy 需放入 try：Excel 占用文件时会抛异常，必须在 try 内捕获，
+            //否则菜单命令直接崩溃且临时文件残留）
             int indexOfDot = path.LastIndexOf('.');
             string tempExcel = string.Concat(path.Substring(0, indexOfDot), "_temp_", DateTime.Now.Ticks.ToString(), path.Substring(indexOfDot, path.Length - indexOfDot));
-            File.Copy(path, tempExcel);
+            string extension = Path.GetExtension(path).ToLowerInvariant();
 
             //读取拷贝的文件（try-finally 确保临时文件一定被清理）
             Stream stream = null;
             IExcelDataReader reader = null;
             try
             {
+                File.Copy(path, tempExcel);
                 stream = File.OpenRead(tempExcel);
-                reader = ExcelReaderFactory.CreateOpenXmlReader(stream);
+                // .xls 走二进制读取器，.xlsx 走 OpenXml 读取器（CreateOpenXmlReader 读 .xls 必然抛异常）
+                if (extension == ".xls")
+                    reader = ExcelReaderFactory.CreateBinaryReader(stream);
+                else
+                    reader = ExcelReaderFactory.CreateOpenXmlReader(stream);
                 mResultSet = reader.AsDataSet();
             }
             catch (Exception ex)
             {
-                string msg = string.Format("由于共享冲突，无法打开\u201C{0}\u201D。也许您应该先关闭Excel应用程序！错误: {1}", path, ex.Message);
+                string msg = string.Format("无法打开\u201C{0}\u201D。也许您应该先关闭Excel应用程序（文件被占用或格式不支持）！错误: {1}", path, ex.Message);
                 Log.Error(msg);
                 return;
             }
@@ -273,92 +280,53 @@ namespace ReunionMovement.EditorTools
                         {
                             row[field] = false;
                         }
-                        else if (fieldType.Contains("[]")) //空数组
+                        else if (IsArrayType(fieldType)) //空数组 → 产出真正的空 JSON 数组
                         {
-                            row[field] = "[]";
+                            row[field] = new List<object>();
                         }
                     }
                     else
                     {
-                        //string数组，对单个元素加上""
-                        if (fieldType == "string[]")
+                        // 数组字段：解析为真正的 List，JsonConvert 直接输出合法的 JSON 数组，
+                        // 无需任何全局字符串替换（避免破坏含引号/方括号的合法字符串）
+                        if (IsArrayType(fieldType))
                         {
-                            var value = rowdata.ToString();
-                            if (value != "[]" && !value.Contains("\"")) //不是空数组,且没有""
+                            row[field] = ParseArrayField(rowdata.ToString(), fieldType);
+                        }
+                        else if (fieldType == "int" || fieldType == "int32")
+                        {
+                            if (int.TryParse(rowdata.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
                             {
-                                var sb = new StringBuilder(value);
-                                if (value.StartsWith("\"["))
-                                {
-                                    sb.Replace("\"[", "[\"");
-                                    sb.Replace("]\"", "\"]");
-                                }
-                                else
-                                {
-                                    sb.Replace("[", "[\"");
-                                    sb.Replace("]", "\"]");
-                                }
-                                sb.Replace(",", "\",\"");
-                                row[field] = sb.ToString();
+                                row[field] = value;
                             }
                             else
                             {
-                                row[field] = rowdata;
+                                row[field] = 0;
+                                Log.Error(string.Format("表格数据出错：{0}-{1}，值：{2}", i, j, rowdata));
                             }
                         }
-                        //其他数组 会被处理成string
-                        else if (fieldType.Contains("["))
+                        else if (fieldType == "float")
                         {
-                            var value = rowdata.ToString();
-                            var sb = new StringBuilder(value);
-                            sb.Replace("\"[", "[");
-                            sb.Replace("]\"", "]");
-                            row[field] = sb.ToString();
+                            if (float.TryParse(rowdata.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
+                            {
+                                row[field] = value;
+                            }
+                            else
+                            {
+                                row[field] = 0f;
+                                Log.Error(string.Format("表格数据出错：{0}-{1}，值：{2}", i, j, rowdata));
+                            }
                         }
-
-                        else if (fieldType == "int" || fieldType == "float" || fieldType == "double")
+                        else if (fieldType == "double")
                         {
-                            var oldValue = rowdata.ToString();
-                            if (fieldType == "int")
+                            if (double.TryParse(rowdata.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
                             {
-                                int value = 0;
-                                if (int.TryParse(oldValue, out value))
-                                {
-                                    row[field] = value;
-                                }
-                                else
-                                {
-                                    row[field] = 0;
-                                    string msg = string.Format("表格数据出错：{0}-{1}", i, j);
-                                    Log.Error(msg);
-                                }
+                                row[field] = value;
                             }
-                            else if (fieldType == "float")
+                            else
                             {
-                                float value = 0;
-                                if (float.TryParse(oldValue, out value))
-                                {
-                                    row[field] = value;
-                                }
-                                else
-                                {
-                                    row[field] = 0;
-                                    string msg = string.Format("表格数据出错：{0}-{1}", i, j);
-                                    Log.Error(msg);
-                                }
-                            }
-                            else if (fieldType == "double")
-                            {
-                                double value = 0;
-                                if (double.TryParse(oldValue, out value))
-                                {
-                                    row[field] = value;
-                                }
-                                else
-                                {
-                                    row[field] = 0;
-                                    string msg = string.Format("表格数据出错：{0}-{1}", i, j);
-                                    Log.Error(msg);
-                                }
+                                row[field] = 0d;
+                                Log.Error(string.Format("表格数据出错：{0}-{1}，值：{2}", i, j, rowdata));
                             }
                         }
                         else if (fieldType == "string")
@@ -378,13 +346,72 @@ namespace ReunionMovement.EditorTools
                     table.Add(row);
                 }
             }
-            //生成Json字符串
-            string json = JsonConvert.SerializeObject(table);
-            //把当字符串的数组 重新处理成数组
-            json = json.Replace("\"[", "[").Replace("]\"", "]");
-            json = json.Replace("\\\"", "\"");
-            json = json.Replace("\"\"\"\"", "\"\"");
-            return json;
+            // 直接序列化：数组字段已解析为真正的 List，输出即为合法的 JSON 数组，
+            // 无需任何字符串后处理（避免全局 Replace 破坏含引号/方括号的合法字符串）
+            return JsonConvert.SerializeObject(table);
+        }
+
+        /// <summary>
+        /// 判断字段类型是否为数组类型（兼容 [int] / int[] / string[] 等写法）
+        /// </summary>
+        private static bool IsArrayType(string fieldType)
+        {
+            return fieldType.Contains("[") || fieldType == "string[]";
+        }
+
+        /// <summary>
+        /// 将数组字段字符串解析为真正的 List（产出 JSON 数组）。
+        /// 支持 [a,b,c] / a,b,c / a;b;c 分隔，元素按列类型转换；
+        /// 未知数组类型保留字符串元素。
+        /// </summary>
+        private static object ParseArrayField(string raw, string fieldType)
+        {
+            var result = new List<object>();
+            if (string.IsNullOrEmpty(raw)) return result;
+
+            var value = raw.Trim();
+            // 兼容外层带引号写法："[a,b]"
+            if (value.Length >= 2 && value[0] == '"' && value[value.Length - 1] == '"')
+                value = value.Substring(1, value.Length - 2).Trim();
+            if (value.StartsWith("[") && value.EndsWith("]"))
+                value = value.Substring(1, value.Length - 2);
+            if (string.IsNullOrWhiteSpace(value)) return result;
+
+            var items = value.Split(new[] { ';', '；', ',', '，' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var item in items)
+            {
+                var t = item.Trim().Trim('"');
+                if (fieldType == "string[]" || fieldType == "[string]")
+                {
+                    result.Add(t);
+                }
+                else if (fieldType == "int[]" || fieldType == "[int]" || fieldType == "int32[]")
+                {
+                    result.Add(int.TryParse(t, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : 0);
+                }
+                else if (fieldType == "float[]" || fieldType == "[float]")
+                {
+                    result.Add(float.TryParse(t, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0f);
+                }
+                else if (fieldType == "double[]" || fieldType == "[double]")
+                {
+                    result.Add(double.TryParse(t, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0d);
+                }
+                else if (fieldType == "long[]" || fieldType == "[long]")
+                {
+                    result.Add(long.TryParse(t, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : 0L);
+                }
+                else if (fieldType == "bool[]" || fieldType == "[bool]")
+                {
+                    result.Add(bool.TryParse(t, out var v) && v);
+                }
+                else
+                {
+                    // 未知数组类型：保留字符串元素
+                    result.Add(t);
+                }
+            }
+            return result;
         }
 
         /// <summary>

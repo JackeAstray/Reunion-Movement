@@ -298,7 +298,13 @@ namespace ReunionMovement.Common.Util
                 return 0;
             }
 
-            return (int)(Math.Pow(2, Math.Ceiling(Math.Log(num) / Math.Log(2))));
+            // 位运算代替浮点对数，避免 double 精度误差（如 Math.Log(16)/Math.Log(2) 可能得 4.000000001）
+            int result = 1;
+            while (result < num)
+            {
+                result <<= 1;
+            }
+            return result;
         }
 
         /// <summary>
@@ -309,19 +315,20 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static int CalculateMaximumCommonDivisor(int a, int b)
         {
-            a = Math.Abs(a);
-            b = Math.Abs(b);
+            // 用 long 求绝对值，避免 Math.Abs(int.MinValue) 抛 OverflowException
+            long la = Math.Abs((long)a);
+            long lb = Math.Abs((long)b);
 
-            if (a == 0 && b == 0)
+            if (la == 0 && lb == 0)
             {
                 return 0;
             }
 
-            while (b != 0)
+            while (lb != 0)
             {
-                (a, b) = (b, a % b);
+                (la, lb) = (lb, la % lb);
             }
-            return a;
+            return (int)la;
         }
 
         /// <summary>
@@ -337,7 +344,11 @@ namespace ReunionMovement.Common.Util
                 return 0;
             }
 
-            return Math.Abs(a * b) / CalculateMaximumCommonDivisor(a, b);
+            // 用 long 中间计算，避免 a*b 在 int 阶段溢出（如 50000*50000 > int.MaxValue）
+            long la = Math.Abs((long)a);
+            long lb = Math.Abs((long)b);
+            long gcd = CalculateMaximumCommonDivisor(a, b);
+            return (int)(la / gcd * lb);
         }
 
         /// <summary>

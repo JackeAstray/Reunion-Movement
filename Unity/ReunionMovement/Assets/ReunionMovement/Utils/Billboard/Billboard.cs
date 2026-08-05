@@ -63,9 +63,16 @@ namespace ReunionMovement.Common.Util
                     transform.rotation = targetTF.rotation * originalRotation;
                     break;
                 case BillboardType.Mode2:
+                    // 只保留 Y 轴分量做"垂直朝向"：目标点 = 自身位置 + (0, 相对高度, 0)。
+                    // 相机与物体同高度时方向向量趋近零向量，需防护避免 LookAt 产生 NaN 旋转
                     Vector3 v = targetTF.position - transform.position;
                     v.x = v.z = 0.0f;
-                    transform.LookAt(targetTF.position - v);
+                    if (v.sqrMagnitude < 0.0001f)
+                    {
+                        // 同高度：保持当前旋转（无需翻转）
+                        break;
+                    }
+                    transform.LookAt(transform.position + v);
                     break;
                 case BillboardType.Mode3:
                     transform.LookAt(targetTF.position);

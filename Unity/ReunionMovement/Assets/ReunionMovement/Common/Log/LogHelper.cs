@@ -47,13 +47,16 @@ namespace ReunionMovement.Common
         };
 
         // ============================================================
-        //  文件日志（同步写入：由于日志通常较短，同步 IO 开销可控；
-        //  如需极高吞吐可改为后台线程写入）
+        //  文件日志（缓存 StreamWriter，按批次 flush，避免每条日志都打开/关闭文件）
         // ============================================================
         private static string s_logFilePath;
         private static bool s_fileLogInitialized;
         // 文件日志锁：网络线程等多线程日志并发写同一文件会抛 IOException，必须串行化
         private static readonly object s_fileLogLock = new object();
+        private static StreamWriter s_fileWriter;
+        private static int s_pendingWrites;
+        /// <summary>每 N 条日志 flush 一次（平衡同步 IO 开销与日志丢失风险）</summary>
+        private const int FileLogFlushInterval = 50;
 
         /// <summary>
         /// 是否启用文件日志输出。
@@ -61,7 +64,18 @@ namespace ReunionMovement.Common
         public static bool EnableFileLog { get; set; } = true;
 
         /// <summary>
-        /// 初始化文件日志路径（首次调用时自动执行）。
+        /// 立即将缓冲的日志写入磁盘（应用退出/崩溃前调用，避免丢失日志）。
+        /// </summary>
+        public static void FlushFileLog()
+        {
+            lock (s_fileLogLock)
+            {
+                try { s_fileWriter?.Flush(); } catch { }
+            }
+        }
+
+        /// <summary>
+        /// 初始化文件日志路径与写入器（首次调用时自动执行）。
         /// </summary>
         private static void EnsureFileLogReady()
         {
@@ -70,15 +84,46 @@ namespace ReunionMovement.Common
                 if (s_fileLogInitialized) return;
                 s_fileLogInitialized = true;
 
+                // WebGL 无文件系统，直接禁用文件日志
+                if (Application.platform == RuntimePlatform.WebGLPlayer)
+                {
+                    EnableFileLog = false;
+                    return;
+                }
+
                 try
                 {
                     s_logFilePath = Path.Combine(Application.persistentDataPath,
                         $"game_log_{DateTime.Now:yyyyMMdd_HHmmss}.log");
+                    s_fileWriter = new StreamWriter(s_logFilePath, append: true) { AutoFlush = false };
                 }
                 catch
                 {
                     EnableFileLog = false;
+                    s_fileWriter = null;
                 }
+            }
+        }
+
+        /// <summary>
+        /// 写入一行到日志文件（缓存写入器 + 批量 flush）。
+        /// </summary>
+        private static void WriteLineToFile(string line)
+        {
+            if (!EnableFileLog || s_fileWriter == null) return;
+            lock (s_fileLogLock)
+            {
+                try
+                {
+                    s_fileWriter.Write(line);
+                    // 周期性 flush：避免每条日志同步落盘，也防止缓冲区无限增长
+                    if (++s_pendingWrites >= FileLogFlushInterval)
+                    {
+                        s_pendingWrites = 0;
+                        s_fileWriter.Flush();
+                    }
+                }
+                catch { }
             }
         }
 
@@ -158,25 +203,14 @@ namespace ReunionMovement.Common
         {
             if (!EnableFileLog) return;
             EnsureFileLogReady();
-            if (string.IsNullOrEmpty(s_logFilePath)) return;
+            if (s_fileWriter == null) return;
 
-            try
-            {
-                string channelStr = channel != LogChannel.General
-                    ? ZString.Format("[{0}] ", channel)
-                    : "";
-                string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
-                    DateTime.Now, levelName, channelStr, message, Environment.NewLine);
-                // 加锁串行化写入，避免多线程并发 File.AppendAllText 抛 IOException
-                lock (s_fileLogLock)
-                {
-                    File.AppendAllText(s_logFilePath, line);
-                }
-            }
-            catch
-            {
-                // 文件写入失败不应影响游戏运行
-            }
+            string channelStr = channel != LogChannel.General
+                ? ZString.Format("[{0}] ", channel)
+                : "";
+            string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
+                DateTime.Now, levelName, channelStr, message, Environment.NewLine);
+            WriteLineToFile(line);
         }
 
         // ============================================================
@@ -360,16 +394,12 @@ namespace ReunionMovement.Common
         {
             if (!EnableFileLog) return;
             EnsureFileLogReady();
-            if (string.IsNullOrEmpty(s_logFilePath)) return;
-            try
-            {
-                string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
-                string msg = ZString.Format(format, arg0);
-                string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
-                    DateTime.Now, level, channelStr, msg, Environment.NewLine);
-                File.AppendAllText(s_logFilePath, line);
-            }
-            catch { }
+            if (s_fileWriter == null) return;
+            string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
+            string msg = ZString.Format(format, arg0);
+            string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
+                DateTime.Now, level, channelStr, msg, Environment.NewLine);
+            WriteLineToFile(line);
         }
 
         private static void WriteToFileFormatted(LogLevel level, LogChannel channel,
@@ -377,16 +407,12 @@ namespace ReunionMovement.Common
         {
             if (!EnableFileLog) return;
             EnsureFileLogReady();
-            if (string.IsNullOrEmpty(s_logFilePath)) return;
-            try
-            {
-                string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
-                string msg = ZString.Format(format, arg0, arg1);
-                string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
-                    DateTime.Now, level, channelStr, msg, Environment.NewLine);
-                File.AppendAllText(s_logFilePath, line);
-            }
-            catch { }
+            if (s_fileWriter == null) return;
+            string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
+            string msg = ZString.Format(format, arg0, arg1);
+            string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
+                DateTime.Now, level, channelStr, msg, Environment.NewLine);
+            WriteLineToFile(line);
         }
 
         private static void WriteToFileFormatted(LogLevel level, LogChannel channel,
@@ -394,16 +420,12 @@ namespace ReunionMovement.Common
         {
             if (!EnableFileLog) return;
             EnsureFileLogReady();
-            if (string.IsNullOrEmpty(s_logFilePath)) return;
-            try
-            {
-                string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
-                string msg = ZString.Format(format, arg0, arg1, arg2);
-                string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
-                    DateTime.Now, level, channelStr, msg, Environment.NewLine);
-                File.AppendAllText(s_logFilePath, line);
-            }
-            catch { }
+            if (s_fileWriter == null) return;
+            string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
+            string msg = ZString.Format(format, arg0, arg1, arg2);
+            string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
+                DateTime.Now, level, channelStr, msg, Environment.NewLine);
+            WriteLineToFile(line);
         }
 
         private static void WriteToFileFormatted(LogLevel level, LogChannel channel,
@@ -411,16 +433,12 @@ namespace ReunionMovement.Common
         {
             if (!EnableFileLog) return;
             EnsureFileLogReady();
-            if (string.IsNullOrEmpty(s_logFilePath)) return;
-            try
-            {
-                string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
-                string msg = ZString.Format(format, arg0, arg1, arg2, arg3);
-                string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
-                    DateTime.Now, level, channelStr, msg, Environment.NewLine);
-                File.AppendAllText(s_logFilePath, line);
-            }
-            catch { }
+            if (s_fileWriter == null) return;
+            string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
+            string msg = ZString.Format(format, arg0, arg1, arg2, arg3);
+            string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
+                DateTime.Now, level, channelStr, msg, Environment.NewLine);
+            WriteLineToFile(line);
         }
 
         private static void WriteToFileFormatted(LogLevel level, LogChannel channel,
@@ -428,16 +446,12 @@ namespace ReunionMovement.Common
         {
             if (!EnableFileLog) return;
             EnsureFileLogReady();
-            if (string.IsNullOrEmpty(s_logFilePath)) return;
-            try
-            {
-                string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
-                string msg = ZString.Format(format, args);
-                string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
-                    DateTime.Now, level, channelStr, msg, Environment.NewLine);
-                File.AppendAllText(s_logFilePath, line);
-            }
-            catch { }
+            if (s_fileWriter == null) return;
+            string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
+            string msg = ZString.Format(format, args);
+            string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
+                DateTime.Now, level, channelStr, msg, Environment.NewLine);
+            WriteLineToFile(line);
         }
     }
 }

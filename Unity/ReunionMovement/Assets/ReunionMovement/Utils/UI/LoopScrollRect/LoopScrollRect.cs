@@ -96,6 +96,9 @@ namespace ReunionMovement.Common.Util
         float itemSize;
         int visibleCount;
         List<RectTransform> pooledItems = new List<RectTransform>();
+        // 与 pooledItems 平行的缓存（避免滚动热路径 GetComponent 与重复 BindItem）
+        List<LoopItemBase> pooledItemComps = new List<LoopItemBase>();
+        List<int> pooledDataIndices = new List<int>();
         // 当前第一个可见项对应的虚拟索引（可跨 cycle）
         int currentFirstIndex = -1;
 
@@ -182,6 +185,8 @@ namespace ReunionMovement.Common.Util
                 }
             }
             pooledItems.Clear();
+            pooledItemComps.Clear();
+            pooledDataIndices.Clear();
             currentFirstIndex = -1;
             currentPage = -1;
 
@@ -253,6 +258,8 @@ namespace ReunionMovement.Common.Util
                 }
 
                 pooledItems.Add(rt);
+                pooledItemComps.Add(rt.GetComponent<LoopItemBase>());
+                pooledDataIndices.Add(-1);
             }
 
             // 如果启用了循环并且有数据，初始定位到中间 cycle 的起点，避免立刻到达边缘
@@ -446,15 +453,24 @@ namespace ReunionMovement.Common.Util
             {
                 int virtualIndex = currentFirstIndex + i;
                 var item = pooledItems[i];
+                var loopItemComp = i < pooledItemComps.Count ? pooledItemComps[i] : null;
                 if (virtualIndex >= 0 && totalCount > 0)
                 {
                     int dataIndex = ((virtualIndex % totalCount) + totalCount) % totalCount; // modulo
                     item.gameObject.SetActive(true);
-                    // 绑定数据
-                    dataSource?.BindItem(item, dataIndex);
+
+                    // 数据索引未变化时跳过 BindItem（非循环模式滚动一步时大部分项数据不变），
+                    // 组件引用已缓存，避免每次滚动 GetComponent
+                    if (i >= pooledDataIndices.Count || pooledDataIndices[i] != dataIndex)
+                    {
+                        dataSource?.BindItem(item, dataIndex);
+                        if (i < pooledDataIndices.Count)
+                        {
+                            pooledDataIndices[i] = dataIndex;
+                        }
+                    }
 
                     // 绑定点击/选中回调（如果 Item 上有 LoopItemBase）
-                    var loopItemComp = item.GetComponent<LoopItemBase>();
                     if (loopItemComp != null)
                     {
                         loopItemComp.onClick = OnItemClicked;
@@ -478,11 +494,14 @@ namespace ReunionMovement.Common.Util
                 else
                 {
                     // 若不可见，确保移除回调并隐藏
-                    var loopItemComp = item.GetComponent<LoopItemBase>();
                     if (loopItemComp != null)
                     {
                         loopItemComp.onClick = null;
                         loopItemComp.SetSelected(false);
+                    }
+                    if (i < pooledDataIndices.Count)
+                    {
+                        pooledDataIndices[i] = -1;
                     }
                     item.gameObject.SetActive(false);
                 }
@@ -909,46 +928,60 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         private async UniTaskVoid SmoothScrollToAsync(Vector2 targetAnchoredPos, int finalFirstIndex, float duration)
         {
-            scrollCts = new CancellationTokenSource();
-            var ct = scrollCts.Token;
-            Vector2 start = content.anchoredPosition;
-            float elapsed = 0f;
-
-            // 停止惯性
-            if (scrollRect != null)
+            var cts = new CancellationTokenSource();
+            scrollCts = cts;
+            var ct = cts.Token;
+            try
             {
-                scrollRect.velocity = Vector2.zero;
-            }
+                Vector2 start = content.anchoredPosition;
+                float elapsed = 0f;
 
-            while (elapsed < duration && !ct.IsCancellationRequested)
-            {
-                elapsed += Time.deltaTime;
-                float t = Mathf.Clamp01(elapsed / duration);
-                float eased = Mathf.SmoothStep(0f, 1f, t);
-                content.anchoredPosition = Vector2.Lerp(start, targetAnchoredPos, eased);
-                await UniTask.Yield(PlayerLoopTiming.Update);
-            }
-
-            if (ct.IsCancellationRequested) return;
-
-            // 最终确定位置
-            // 在程序化设置位置时忽略 OnScroll 回调
-            isRecentering = true;
-            content.anchoredPosition = targetAnchoredPos;
-            currentFirstIndex = finalFirstIndex;
-            RefreshVisible();
-            // 更新指示器位置（若存在）
-            UpdatePullIndicatorPositions();
-            isRecentering = false;
-
-            // 更新 page 并通知
-            if (enablePaging && itemsPerPage > 0 && !enableLooping)
-            {
-                int page = currentFirstIndex / Mathf.Max(1, itemsPerPage);
-                if (page != currentPage)
+                // 停止惯性
+                if (scrollRect != null)
                 {
-                    currentPage = page;
-                    onPageChanged?.Invoke(currentPage);
+                    scrollRect.velocity = Vector2.zero;
+                }
+
+                while (elapsed < duration && !ct.IsCancellationRequested)
+                {
+                    elapsed += Time.deltaTime;
+                    float t = Mathf.Clamp01(elapsed / duration);
+                    float eased = Mathf.SmoothStep(0f, 1f, t);
+                    content.anchoredPosition = Vector2.Lerp(start, targetAnchoredPos, eased);
+                    await UniTask.Yield(PlayerLoopTiming.Update);
+                }
+
+                if (ct.IsCancellationRequested) return;
+
+                // 最终确定位置
+                // 在程序化设置位置时忽略 OnScroll 回调
+                isRecentering = true;
+                content.anchoredPosition = targetAnchoredPos;
+                currentFirstIndex = finalFirstIndex;
+                RefreshVisible();
+                // 更新指示器位置（若存在）
+                UpdatePullIndicatorPositions();
+                isRecentering = false;
+
+                // 更新 page 并通知
+                if (enablePaging && itemsPerPage > 0 && !enableLooping)
+                {
+                    int page = currentFirstIndex / Mathf.Max(1, itemsPerPage);
+                    if (page != currentPage)
+                    {
+                        currentPage = page;
+                        onPageChanged?.Invoke(currentPage);
+                    }
+                }
+            }
+            finally
+            {
+                // 正常完成也释放本协程创建的 CTS（此前只在取消时由 StopScrollCoroutineIfAny 释放）。
+                // 若已被新的 StopScrollCoroutineIfAny/新协程接管，则不再重复 Dispose。
+                if (scrollCts == cts)
+                {
+                    scrollCts.Dispose();
+                    scrollCts = null;
                 }
             }
         }

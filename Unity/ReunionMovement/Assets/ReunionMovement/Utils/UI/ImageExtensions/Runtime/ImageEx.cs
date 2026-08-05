@@ -184,6 +184,9 @@ namespace ReunionMovement.UI.ImageExtensions
         [SerializeField] private bool transitionColorGlow;
         [SerializeField] private Texture transitionGradient;
         [SerializeField][GradientUsage(true)] private Gradient transitionGradientValue;
+
+        /// <summary>过渡渐变纹理是否为运行时生成（替换时仅销毁运行时纹理，避免误删用户资产）</summary>
+        private bool transitionGradientIsRuntime;
         [SerializeField] private Vector2 transitionRange;
         [SerializeField] private bool transitionClamp = true;
         [SerializeField][Range(0, 4)] private float transitionTexClampPadding = 1f;
@@ -489,8 +492,8 @@ namespace ReunionMovement.UI.ImageExtensions
                     m_Material.SetInt(drawShape_Sp, (int)drawShape);
                 }
 
+                // 形状完全由 shader SDF 决定，网格不依赖 drawShape，无需重建顶点
                 base.SetMaterialDirty();
-                base.SetVerticesDirty();
             }
         }
 
@@ -711,7 +714,7 @@ namespace ReunionMovement.UI.ImageExtensions
                     shapeRotation = ConstrainRotationValue(shapeRotation);
                 }
 
-                base.SetVerticesDirty();
+                // 约束旋转由 shader 处理，网格不依赖，无需重建顶点
                 base.SetMaterialDirty();
             }
         }
@@ -790,7 +793,10 @@ namespace ReunionMovement.UI.ImageExtensions
                 {
                     alphaHitTestMinimumThreshold = alphaThreshold;
                 }
-                catch (InvalidOperationException) { }
+                catch (InvalidOperationException)
+                {
+                    // Unity 文档化行为：当前材质/精灵不支持 alpha 命中测试时抛出，属预期，静默忽略
+                }
             }
         }
 
@@ -854,27 +860,39 @@ namespace ReunionMovement.UI.ImageExtensions
         /// <summary>
         /// 图像的类型。仅支持两种类型。简单和填充。
         /// 默认值和回退值为“简单”。
+        /// 注意：Image.type 在 Unity 中非 virtual，只能 new 隐藏；
+        /// 渲染统一以 imageType 为准，OnPopulateMesh 的 case Type.Sliced 与 Simple 同路径。
         /// </summary>
         public new Type type
         {
             get => imageType;
             set
             {
-                if (imageType == value) return;
+                // 不支持的类型（Tiled/Sliced）归一化为 Simple，避免被静默接受后
+                // imageType 与 base.type 不一致造成双态
+                Type newType = value;
                 switch (value)
                 {
                     case Type.Simple:
                     case Type.Filled:
-                        imageType = value;
                         break;
                     case Type.Tiled:
                     case Type.Sliced:
+                        newType = Type.Simple;
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(value.ToString(), value, null);
                 }
 
-                base.type = imageType;
+                if (imageType != newType)
+                {
+                    imageType = newType;
+                }
+                // 始终同步基类字段，消除双态
+                if (base.type != newType)
+                {
+                    base.type = newType;
+                }
             }
         }
 
@@ -1911,6 +1929,11 @@ namespace ReunionMovement.UI.ImageExtensions
 
         private Material dynamicMaterial;
 
+        /// <summary>Shared 模式是否已回读共享材质（避免每帧回读）</summary>
+        private bool m_sharedValuesLoaded;
+        /// <summary>上次回读的共享材质引用（引用变化时重新回读）</summary>
+        private Material m_loadedSharedMaterial;
+
         private Material DynamicMaterial
         {
             get
@@ -2091,12 +2114,22 @@ namespace ReunionMovement.UI.ImageExtensions
 
             if (transitionGradient == null || transitionGradient.width != width || transitionGradient.height != height)
             {
+                // 替换前先销毁旧的运行时生成纹理（用户资产不销毁），避免尺寸变化时累积泄漏
+                if (transitionGradient != null && transitionGradientIsRuntime)
+                {
+                    if (Application.isPlaying)
+                        UnityEngine.Object.Destroy(transitionGradient);
+                    else
+                        UnityEngine.Object.DestroyImmediate(transitionGradient);
+                }
+
                 transitionGradient = new Texture2D(width, height, TextureFormat.RGBA32, false)
                 {
                     name = "Transition Gradient",
                     wrapMode = TextureWrapMode.Clamp,
                     filterMode = FilterMode.Bilinear
                 };
+                transitionGradientIsRuntime = true;
             }
 
             Texture2D tex = transitionGradient as Texture2D;
@@ -2189,6 +2222,17 @@ namespace ReunionMovement.UI.ImageExtensions
         protected override void OnDestroy()
         {
             ListenToComponentChanges(false);
+
+            // 销毁运行时创建的动态材质，避免长时间运行/切场景时材质泄漏
+            if (dynamicMaterial != null)
+            {
+                if (Application.isPlaying)
+                    UnityEngine.Object.Destroy(dynamicMaterial);
+                else
+                    UnityEngine.Object.DestroyImmediate(dynamicMaterial);
+                dynamicMaterial = null;
+            }
+
             base.OnDestroy();
         }
 
@@ -2257,6 +2301,15 @@ namespace ReunionMovement.UI.ImageExtensions
             base.SetMaterialDirty();
         }
 
+        /// <summary>8 方向轮廓阴影的方向常量（避免每次网格重建分配数组）</summary>
+        private static readonly Vector2[] Outline8Directions = new Vector2[]
+        {
+            new Vector2(1, 0), new Vector2(0.707f, 0.707f), new Vector2(0, 1),
+            new Vector2(-0.707f, 0.707f), new Vector2(-1, 0),
+            new Vector2(-0.707f, -0.707f), new Vector2(0, -1),
+            new Vector2(0.707f, -0.707f)
+        };
+
         /// <summary>
         /// 生成网格
         /// </summary>
@@ -2309,13 +2362,7 @@ namespace ReunionMovement.UI.ImageExtensions
 
                             case ShadowMode.Outline8:
                                 // 8方向轮廓阴影
-                                Vector2[] dirs = new Vector2[]
-                                {
-                                    new Vector2(1, 0), new Vector2(0.707f, 0.707f), new Vector2(0, 1),
-                                    new Vector2(-0.707f, 0.707f), new Vector2(-1, 0),
-                                    new Vector2(-0.707f, -0.707f), new Vector2(0, -1),
-                                    new Vector2(0.707f, -0.707f)
-                                };
+                                Vector2[] dirs = Outline8Directions;
                                 for (int i = 0; i < 8; i++)
                                 {
                                     Vector2 outlineOffset = dirs[i] * dist;
@@ -2335,6 +2382,39 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        // 关键字掩码缓存（Dynamic 模式性能优化）：掩码与材质未变化时跳过 ~60 次 DisableKeyword 调用
+        private int appliedKeywordMask = -1;
+        private Material appliedKeywordMaterial;
+
+        /// <summary>
+        /// 计算当前期望的关键字掩码。
+        /// 必须覆盖 GetModifiedMaterial 中所有会被 Enable 的关键字来源；
+        /// 掩码不变 ⇒ 关键字状态必然不变（可安全跳过 DisableAllMaterialKeywords）。
+        /// </summary>
+        private int ComputeKeywordMask()
+        {
+            int mask = (int)transitionMode;                                 // bits 0-3  TRANSITION_*
+            mask |= ((int)blurType & 0x3) << 4;                             // bits 4-5  BLUR_*
+            int strokeState;
+            if (strokeWidth > 0 && outlineWidth > 0) strokeState = 1;       // OUTLINED_STROKE
+            else if (strokeWidth > 0) strokeState = 2;                      // STROKE
+            else if (outlineWidth > 0) strokeState = 3;                     // OUTLINED
+            else strokeState = 0;
+            mask |= strokeState << 6;                                       // bits 6-7
+            mask |= ((int)DrawShape & 0xF) << 8;                            // bits 8-11 形状关键字
+            mask |= ((int)m_ToneFilter & 0x7) << 12;                        // bits 12-14 TONE_*
+            mask |= (m_ColorFilterMode != ColorMode.None ? 1 : 0) << 15;    // bit 15    COLOR_FILTER
+            mask |= ((int)m_EdgeMode & 0x3) << 16;                          // bits 16-17 EDGE_*
+            mask |= ((int)m_SamplingMode & 0x7) << 18;                      // bits 18-20 SAMPLING_*
+            mask |= ((int)m_TargetMode & 0x3) << 21;                        // bits 21-22 TARGET_*
+            mask |= (m_EnableGradientTex && m_GradientTex != null ? 1 : 0) << 23; // bit 23 GRADIENT_TEXTURE
+            mask |= ((int)m_DetailMode & 0x7) << 24;                        // bits 24-26 DETAIL_*
+            // 渐变效果关键字（gradientEffect.ModifyMaterial 负责 Enable/Disable，纳入掩码）
+            int gradState = gradientEffect.Enabled ? ((int)gradientEffect.GradientType + 1) : 0;
+            mask |= (gradState & 0x3) << 27;                                // bits 27-28 GRADIENT_LINEAR/CORNER/RADIAL
+            return mask;
+        }
+
         /// <summary>
         /// 获取修改后的材质
         /// </summary>
@@ -2346,13 +2426,24 @@ namespace ReunionMovement.UI.ImageExtensions
 
             Material mat = base.GetModifiedMaterial(baseMaterial);
 
-
-            if (m_Material && MaterialMode == MaterialMode.Shared)
+            // Shared 模式：仅在材质引用变化或首次启用时回读共享材质字段，
+            // 避免每次 GetModifiedMaterial（动画期间可能每帧调用）都执行 ~100 次 Get* 回读
+            if (m_Material && MaterialMode == MaterialMode.Shared && (!m_sharedValuesLoaded || m_loadedSharedMaterial != m_Material))
             {
+                m_sharedValuesLoaded = true;
+                m_loadedSharedMaterial = m_Material;
                 InitValuesFromSharedMaterial();
             }
 
-            DisableAllMaterialKeywords(mat);
+            // 关键字掩码缓存：掩码与材质未变化时跳过 ~60 次 DisableKeyword 调用。
+            // 仅 Dynamic 模式生效——共享材质由多个实例共同写入，不做缓存以保持原语义。
+            int keywordMask = ComputeKeywordMask();
+            if (m_Material != null || appliedKeywordMaterial != mat || appliedKeywordMask != keywordMask)
+            {
+                DisableAllMaterialKeywords(mat);
+                appliedKeywordMask = keywordMask;
+                appliedKeywordMaterial = mat;
+            }
 
             RectTransform rt = rectTransform;
 
@@ -2514,7 +2605,8 @@ namespace ReunionMovement.UI.ImageExtensions
 
             if (DrawShape != DrawShape.None)
             {
-                float pixelSize = 1 / Mathf.Max(0, FalloffDistance);
+                // 下限钳到 0.001 避免 FalloffDistance=0 时除零得 +∞
+                float pixelSize = 1 / Mathf.Max(0.001f, FalloffDistance);
                 mat.SetFloat(pixelWorldScale_Sp, Mathf.Clamp(pixelSize, 0f, 999999f));
             }
 

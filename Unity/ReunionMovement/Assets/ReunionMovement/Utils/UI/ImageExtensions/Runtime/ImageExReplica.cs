@@ -20,7 +20,8 @@ namespace ReunionMovement.UI.ImageExtensions
         [SerializeField] private bool m_SyncInEditMode = true;
 
         private ImageEx m_Target;
-        private ImageExPreset m_CachedPreset; // 用于检测预设变化
+        private ImageExPreset m_TransferPreset; // 复用的中转预设（避免每帧 CreateInstance/DestroyImmediate）
+        private ImageExPreset m_LastApplied;    // 上次应用状态快照（内容级变化检测，无变化则跳过 Apply）
 
         public SourceType Source
         {
@@ -37,7 +38,7 @@ namespace ReunionMovement.UI.ImageExtensions
         public ImageExPreset SourcePreset
         {
             get => m_SourcePreset;
-            set { m_SourcePreset = value; m_CachedPreset = value; Apply(); }
+            set { m_SourcePreset = value; Apply(); }
         }
 
         public bool AutoSync
@@ -57,26 +58,35 @@ namespace ReunionMovement.UI.ImageExtensions
             Apply();
         }
 
+        private void OnDestroy()
+        {
+            // 清理运行时创建的辅助预设
+            if (m_TransferPreset != null)
+            {
+                if (Application.isPlaying) Destroy(m_TransferPreset);
+                else DestroyImmediate(m_TransferPreset);
+                m_TransferPreset = null;
+            }
+            if (m_LastApplied != null)
+            {
+                if (Application.isPlaying) Destroy(m_LastApplied);
+                else DestroyImmediate(m_LastApplied);
+                m_LastApplied = null;
+            }
+        }
+
         private void Update()
         {
             if (!m_AutoSync) return;
 #if UNITY_EDITOR
             if (!m_SyncInEditMode && !Application.isPlaying) return;
 #endif
-            // 仅在预设引用变化时重新应用（避免每帧 SetMaterialDirty）
-            if (m_SourceType == SourceType.Preset && m_SourcePreset != m_CachedPreset)
-            {
-                m_CachedPreset = m_SourcePreset;
-                Apply();
-            }
-            else if (m_SourceType == SourceType.ImageEx)
-            {
-                Apply();
-            }
+            // Apply 内部做内容级变化检测：源未变化时不触发 SetMaterialDirty，零开销
+            Apply();
         }
 
         /// <summary>
-        /// 立即将源效果复制到自身 ImageEx。
+        /// 立即将源效果复制到自身 ImageEx（含内容级变化检测，无变化时跳过）。
         /// </summary>
         [ContextMenu("Apply")]
         public void Apply()
@@ -84,19 +94,26 @@ namespace ReunionMovement.UI.ImageExtensions
             if (m_Target == null) m_Target = GetComponent<ImageEx>();
             if (m_Target == null) return;
 
+            // 复用辅助预设（创建一次，长期使用）
+            if (m_TransferPreset == null) m_TransferPreset = ScriptableObject.CreateInstance<ImageExPreset>();
+            if (m_LastApplied == null) m_LastApplied = ScriptableObject.CreateInstance<ImageExPreset>();
+
             if (m_SourceType == SourceType.Preset && m_SourcePreset != null)
             {
+                // 预设内容未变化则跳过，避免每帧 SetMaterialDirty 重建 Canvas
+                if (m_SourcePreset.SameAs(m_LastApplied)) return;
                 m_SourcePreset.ApplyTo(m_Target);
+                m_LastApplied.ReadFrom(m_Target);
             }
             else if (m_SourceType == SourceType.ImageEx && m_SourceImageEx != null)
             {
-                // 使用临时预设作为中转
                 if (m_SourceImageEx == m_Target) return; // 防止自引用
 
-                var temp = ScriptableObject.CreateInstance<ImageExPreset>();
-                temp.ReadFrom(m_SourceImageEx);
-                temp.ApplyTo(m_Target);
-                DestroyImmediate(temp);
+                // 读取源 → 中转预设，与上次应用快照对比，无变化则跳过
+                m_TransferPreset.ReadFrom(m_SourceImageEx);
+                if (m_TransferPreset.SameAs(m_LastApplied)) return;
+                m_TransferPreset.ApplyTo(m_Target);
+                m_LastApplied.ReadFrom(m_Target);
             }
         }
     }

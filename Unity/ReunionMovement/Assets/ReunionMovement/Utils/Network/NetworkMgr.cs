@@ -231,17 +231,10 @@ namespace ReunionMovement.Common.Util
 
         private void TickUpdate()
         {
+            DrainRemoveQueue();
+
             lock (syncRoot)
             {
-                // 处理延迟删除队列 —— 同步清理 List 和 Index
-                for (int i = channelDictRemove.Count - 1; i >= 0; i--)
-                {
-                    var ch = channelDictRemove[i];
-                    channelList.Remove(ch);
-                    channelIndex.Remove(ch.ChannelName);
-                }
-                channelDictRemove.Clear();
-
                 // 复用 tick 快照列表（仅在扩容时分配）
                 // 无论 channelList 是否为空都刷新快照：否则所有通道移除后，
                 // tickSnapshot 残留已移除通道，它们仍会被 TickRefresh 持续驱动
@@ -264,6 +257,36 @@ namespace ReunionMovement.Common.Util
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// 消费延迟删除队列（ScheduleRemove 入队），同步清理 List 和 Index。
+        /// 本项目通道由 UniversalNetworkBehaviour.Update 直接驱动 TickRefresh，
+        /// 因此这里只清理移除队列，不重复 Tick。
+        /// </summary>
+        private void DrainRemoveQueue()
+        {
+            if (channelDictRemove.Count == 0) return;
+            lock (syncRoot)
+            {
+                if (channelDictRemove.Count == 0) return;
+                for (int i = channelDictRemove.Count - 1; i >= 0; i--)
+                {
+                    var ch = channelDictRemove[i];
+                    channelList.Remove(ch);
+                    channelIndex.Remove(ch.ChannelName);
+                }
+                channelDictRemove.Clear();
+            }
+        }
+
+        /// <summary>
+        /// 每帧消费延迟删除队列，防止 ScheduleRemove 的通道跨场景累积泄漏。
+        /// 注意：不在此处调用 TickUpdate()，避免与 UniversalNetworkBehaviour.Update 重复驱动 Tick。
+        /// </summary>
+        void Update()
+        {
+            DrainRemoveQueue();
         }
 
         public void OnLateUpdate()

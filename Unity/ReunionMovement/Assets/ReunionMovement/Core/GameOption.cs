@@ -205,6 +205,8 @@ namespace ReunionMovement.Core
                 int i => (T)(object)PlayerPrefs.GetInt(key, i),
                 float f => (T)(object)PlayerPrefs.GetFloat(key, f),
                 string s => (T)(object)PlayerPrefs.GetString(key, s),
+                // 枚举：按字符串持久化（与 SetOption 的 Enum 分支配对）
+                _ when typeof(T).IsEnum => (T)Enum.Parse(typeof(T), PlayerPrefs.GetString(key, defaultValue.ToString())),
                 _ => throw new NotSupportedException($"不支持的类型: {typeof(T)}")
             };
         }
@@ -224,6 +226,8 @@ namespace ReunionMovement.Core
                 case int i: PlayerPrefs.SetInt(key, i); break;
                 case float f: PlayerPrefs.SetFloat(key, f); break;
                 case string s: PlayerPrefs.SetString(key, s); break;
+                // 枚举按字符串持久化，避免抛 NotSupportedException 导致整批设置丢失
+                case Enum e: PlayerPrefs.SetString(key, e.ToString()); break;
                 default: throw new NotSupportedException($"不支持的类型: {typeof(T)}");
             }
         }
@@ -255,7 +259,8 @@ namespace ReunionMovement.Core
                     case "sfxMuted": currentOption.sfxMuted = Convert.ToBoolean(value); break;
                     case "sfxVolume": currentOption.sfxVolume = Convert.ToSingle(value); break;
                     case "language":
-                        if (value is string s && Enum.TryParse<Multilingual>(s, out var le)) currentOption.language = le;
+                        if (value is Multilingual ml) currentOption.language = ml;
+                        else if (value is string s && Enum.TryParse<Multilingual>(s, out var le)) currentOption.language = le;
                         break;
                     default:
                         // 对于不在上面列表的 key，不在此重复 SetOption（下方统一调用一次）

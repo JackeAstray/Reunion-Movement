@@ -137,41 +137,49 @@ namespace ReunionMovement.Common.Util.Download
             DidHeadReq = true;
             hreq.completed += (resp) =>
             {
-                // 防止 UWR 已被释放或回调时对象已销毁
-                if (uwr == null)
+                try
                 {
-                    MultipartDownload = false;
-                    return;
-                }
+                    // 防止 UWR 已被释放或回调时对象已销毁
+                    if (uwr == null)
+                    {
+                        MultipartDownload = false;
+                        return;
+                    }
 
-                if (uwr.result != UnityWebRequest.Result.Success)
+                    if (uwr.result != UnityWebRequest.Result.Success)
+                    {
+                        Log.Debug("URI {0} 不支持HEAD请求，因此不支持分块下载。 错误: {1}", Uri, uwr.error);
+                        MultipartDownload = false;
+                        return;
+                    }
+
+                    var headers = uwr.GetResponseHeaders();
+
+                    if (headers == null ||
+                        !headers.ContainsKey("Content-Length") ||
+                        !headers.TryGetValue("Accept-Ranges", out var acceptRanges) ||
+                        !string.Equals(acceptRanges, "bytes", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Log.Debug("URI {0} 不支持分块下载。", Uri);
+                        MultipartDownload = false;
+                        return;
+                    }
+
+                    if (!int.TryParse(headers["Content-Length"], out expectedSize))
+                    {
+                        Log.Debug("URI {0} 不支持分块下载。Content-Length 解析失败。", Uri);
+                        MultipartDownload = false;
+                        return;
+                    }
+
+                    chunkSize = InitialChunkSize;
+                    MultipartDownload = expectedSize > chunkSize;
+                }
+                finally
                 {
-                    Log.Debug("URI {0} 不支持HEAD请求，因此不支持分块下载。 错误: {1}", Uri, uwr.error);
-                    MultipartDownload = false;
-                    return;
+                    // 释放 HEAD 请求的 UWR 原生资源，避免每个文件泄漏
+                    uwr?.Dispose();
                 }
-
-                var headers = uwr.GetResponseHeaders();
-
-                if (headers == null ||
-                    !headers.ContainsKey("Content-Length") ||
-                    !headers.TryGetValue("Accept-Ranges", out var acceptRanges) ||
-                    !string.Equals(acceptRanges, "bytes", StringComparison.OrdinalIgnoreCase))
-                {
-                    Log.Debug("URI {0} 不支持分块下载。", Uri);
-                    MultipartDownload = false;
-                    return;
-                }
-
-                if (!int.TryParse(headers["Content-Length"], out expectedSize))
-                {
-                    Log.Debug("URI {0} 不支持分块下载。Content-Length 解析失败。", Uri);
-                    MultipartDownload = false;
-                    return;
-                }
-
-                chunkSize = InitialChunkSize;
-                MultipartDownload = expectedSize > chunkSize;
             };
             return hreq;
         }
@@ -198,6 +206,12 @@ namespace ReunionMovement.Common.Util.Download
                 currentRequest = uwr;
                 resp.completed += (obj) =>
                 {
+                    // 必须校验 UWR 结果：失败时不能仅凭文件存在就误报成功
+                    // （下方通用回调会处理失败分支：OnDownloadError + Cancel）
+                    if (uwr == null || uwr.result != UnityWebRequest.Result.Success)
+                    {
+                        return;
+                    }
                     if (!File.Exists(DownloadResultPath))
                     {
                         return;

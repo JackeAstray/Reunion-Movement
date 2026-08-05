@@ -174,6 +174,12 @@ namespace ReunionMovement.Common.Util.Download
                     Log.Error("下载图片失败: {0}", error);
                     onComplete?.Invoke(null);
                 })
+                .OnNetworkError(response =>
+                {
+                    // 断网时 onNetworkError 是唯一回调，必须兜底完成，否则调用方永久挂起
+                    Log.Error("下载图片网络错误: {0}", response?.error ?? "未知网络错误");
+                    onComplete?.Invoke(null);
+                })
                 .Send();
         }
 

@@ -256,18 +256,22 @@ namespace ReunionMovement.Common.Util.StateMachine
         /// </summary>
         private void HandleStateTimeout(State state)
         {
-            // 超时后的状态转换逻辑
-            Log.Debug("状态 {0} 超时，切换到默认状态", state.label);
-
             // 只有当 defaultStateLabel 被设置为有效状态时，才允许切换到默认状态
             if (!EqualityComparer<TLabel>.Default.Equals(defaultStateLabel, default(TLabel)))
             {
+                Log.Debug("状态 {0} 超时，切换到默认状态", state.label);
+
                 if (!ChangeState(defaultStateLabel))
                 {
                     // 切换失败（默认状态未注册或转换条件不满足）：
                     // 重置计时，避免 elapsedTime 持续增长导致每帧重复触发超时并刷错误日志
                     state.elapsedTime = 0f;
                 }
+            }
+            else
+            {
+                // 未配置默认状态：同样重置计时，避免每帧重复进入超时分支刷日志
+                state.elapsedTime = 0f;
             }
         }
 
@@ -307,6 +311,8 @@ namespace ReunionMovement.Common.Util.StateMachine
             {
                 if (EqualityComparer<TLabel>.Default.Equals(parallelStates[i].label, label))
                 {
+                    // 与超时移除、AddParallelState 的旧状态移除保持一致：先触发 OnStop 再移除
+                    parallelStates[i].OnStop?.Invoke();
                     parallelStates.RemoveAt(i);
                     return;
                 }
@@ -354,6 +360,12 @@ namespace ReunionMovement.Common.Util.StateMachine
         {
             currentState?.OnStop?.Invoke();
             currentState = null;
+            // 并行状态也需停止并清空，否则 Reset 后仍在 Update 中运行（泄漏）
+            for (int i = 0; i < parallelStates.Count; i++)
+            {
+                parallelStates[i].OnStop?.Invoke();
+            }
+            parallelStates.Clear();
             stateHistory.Clear();
         }
 

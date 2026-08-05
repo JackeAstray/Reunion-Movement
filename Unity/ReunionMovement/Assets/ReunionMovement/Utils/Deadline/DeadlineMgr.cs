@@ -19,6 +19,9 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         protected override bool IsPersistentAcrossScenes => false;
 
+        [Tooltip("是否启用日期限制（默认关闭：未配置日期时不会启动即清空场景；开启后请务必配置下方起止日期）")]
+        public bool enableDateRestriction = false;
+
         [Tooltip("起始日期，格式建议：yyyy-MM-dd（也兼容yyyy-M-d）")]
         public string startDate = "2025-9-20";
         [Tooltip("截止日期，格式建议：yyyy-MM-dd（也兼容yyyy-M-d）")]
@@ -37,6 +40,12 @@ namespace ReunionMovement.Common.Util
 
         void Start()
         {
+            // 未启用日期限制时直接放行，避免默认日期过期导致启动即清空场景
+            if (!enableDateRestriction)
+            {
+                Log.Debug("DeadlineMgr: 日期限制未启用（enableDateRestriction=false），跳过检查。");
+                return;
+            }
             EnforceDateRestriction();
         }
 

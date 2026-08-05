@@ -47,6 +47,21 @@ namespace ReunionMovement.Core
         public static bool IsTestScene { get; private set; }
 
         /// <summary>
+        /// 关闭 Domain Reload（Enter Play Mode Options → Disable Domain Reload）时，
+        /// 静态字段不会自动重置。SubsystemRegistration 在每次进入 Play Mode 时都会执行，
+        /// 在此复位所有静态启动状态，避免跨 Play 会话污染（引擎漏启动/误判测试场景等）。
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticStateOnPlay()
+        {
+            isInitialized = false;
+            ForceDisable = false;
+            IsTestScene = false;
+            driverGo = null;
+            GameEngine.ResetStaticState();
+        }
+
+        /// <summary>
         /// 在第一个场景加载前自动执行，初始化游戏引擎。
         /// 使用 UniTask.Forget() 替代 async void，确保异常能被 UniTask 调度器正确捕获。
         /// </summary>

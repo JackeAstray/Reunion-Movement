@@ -188,6 +188,9 @@ namespace ReunionMovement.UI.ImageExtensions
             float duration = Mathf.Max(0.01f, m_Duration);
             float rawT = Mathf.Clamp01(m_Time / duration);
 
+            // 由 PingPong 反向段置位（switch 内计算，下方合并进 isReversed）
+            bool pingPongReversed = false;
+
             // WrapMode
             switch (m_WrapMode)
             {
@@ -198,8 +201,24 @@ namespace ReunionMovement.UI.ImageExtensions
                     rawT = rawT % 1f;
                     break;
                 case WrapMode.PingPong:
-                    if (rawT >= 1f) { rawT = 1f; m_Playing = false; m_Completed = true; OnCompleted?.Invoke(); }
+                {
+                    // 前向 0→1，到达后反向 1→0，反向回到起点后停止（区别于 PingPongLoop 的循环往返）
+                    float loop = m_Time / duration;
+                    if (loop >= 2f)
+                    {
+                        rawT = 0f;
+                        m_Playing = false;
+                        m_Completed = true;
+                        OnCompleted?.Invoke();
+                    }
+                    else
+                    {
+                        pingPongReversed = loop > 1f;
+                        rawT = loop % 2f;
+                        rawT = pingPongReversed ? 2f - rawT : rawT;
+                    }
                     break;
+                }
                 case WrapMode.PingPongLoop:
                 {
                     float loop = rawT % 2f;
@@ -210,7 +229,11 @@ namespace ReunionMovement.UI.ImageExtensions
 
             // Direction + reverse curve
             bool isReversed = m_Direction == Direction.Reverse;
-            if (m_WrapMode == WrapMode.PingPong && rawT >= 1f) isReversed = !isReversed;
+            if (m_WrapMode == WrapMode.PingPong)
+            {
+                // PingPong 自带往返方向，直接取相位标记
+                isReversed = pingPongReversed;
+            }
 
             if (isReversed)
             {

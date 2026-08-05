@@ -57,6 +57,9 @@ namespace ReunionMovement.Core.UIInput
         /// <summary>重绑定进行中标记</summary>
         private bool isRebinding = false;
 
+        /// <summary>进行中的重绑定操作（持有引用以便 CancelRebind 能真正取消底层监听）</summary>
+        private InputActionRebindingExtensions.RebindingOperation activeRebindOperation;
+
         /// <summary>当前 UI 控制模式</summary>
         private UIControlMode currentMode = UIControlMode.Gameplay;
 
@@ -68,28 +71,36 @@ namespace ReunionMovement.Core.UIInput
 
         /// <summary>UI 模式下的 Cancel 是否已被本帧处理（防止与切换键冲突）</summary>
         private bool cancelHandledThisFrame = false;
+        /// <summary>本帧 Cancel 是否已被打开的窗口消费（防止同帧 PollToggleKeys 再退出 UI 模式）</summary>
+        private bool cancelConsumedByWindowThisFrame = false;
+
+        // ---- 切换键解析缓存（避免每帧字符串分配）----
+        private string cachedToggleToUIStr;
+        private Key cachedToggleToUIKey = Key.None;
+        private string cachedToggleToGameplayStr;
+        private Key cachedToggleToGameplayKey = Key.None;
 
         #endregion
 
         #region R3 响应式事件（推荐新代码使用）
 
         /// <summary>焦点变更事件</summary>
-        public Subject<GameObject> SelectionChangedSubject = new Subject<GameObject>();
+        public Subject<GameObject> SelectionChangedSubject { get; private set; } = new Subject<GameObject>();
 
         /// <summary>按键绑定变更事件</summary>
-        public Subject<UIInputBinding> BindingChangedSubject = new Subject<UIInputBinding>();
+        public Subject<UIInputBinding> BindingChangedSubject { get; private set; } = new Subject<UIInputBinding>();
 
         /// <summary>输入模式切换事件</summary>
-        public Subject<UIControlMode> UIControlModeChangedSubject = new Subject<UIControlMode>();
+        public Subject<UIControlMode> UIControlModeChangedSubject { get; private set; } = new Subject<UIControlMode>();
 
         /// <summary>导航操作事件（方向向量）</summary>
-        public Subject<Vector2> NavigateSubject = new Subject<Vector2>();
+        public Subject<Vector2> NavigateSubject { get; private set; } = new Subject<Vector2>();
 
         /// <summary>提交操作事件</summary>
-        public Subject<Unit> SubmitSubject = new Subject<Unit>();
+        public Subject<Unit> SubmitSubject { get; private set; } = new Subject<Unit>();
 
         /// <summary>取消操作事件</summary>
-        public Subject<Unit> CancelSubject = new Subject<Unit>();
+        public Subject<Unit> CancelSubject { get; private set; } = new Subject<Unit>();
 
         #endregion
 
@@ -139,10 +150,14 @@ namespace ReunionMovement.Core.UIInput
         {
             if (!isInited) return;
 
-            cancelHandledThisFrame = false;
-
             // 轮询检测切换键
             PollToggleKeys();
+
+            // 复位“本帧 Cancel 已处理”标记。
+            // 必须在 PollToggleKeys 之后复位：输入回调阶段（早于 Update 执行）可能已置位，
+            // 若提前复位会抹掉标记，导致同一次 Esc 既关闭窗口又退出 UI 模式。
+            cancelHandledThisFrame = false;
+            cancelConsumedByWindowThisFrame = false;
 
             // 仅在 UI 模式下轮询焦点变化
             if (currentMode != UIControlMode.UIControl) return;
@@ -179,6 +194,10 @@ namespace ReunionMovement.Core.UIInput
             firstSelectedRegistry.Clear();
             CurrentSelected = null;
             LastSelected = null;
+
+            // 复位重绑定状态：取消进行中的操作并复位标记，避免重初始化后 StartRebind 被永久拒绝
+            CancelRebind();
+            isRebinding = false;
 
             // 释放 R3 Subject（自动断开所有订阅），并置 null 以便 Init 中 ??= 重建
             SelectionChangedSubject?.Dispose();
@@ -256,24 +275,48 @@ namespace ReunionMovement.Core.UIInput
 
         /// <summary>
         /// 确保 Navigate action 同时支持 WASD 和方向键
-        /// 默认 .inputactions 的 composite 已包含全部，仅在自定义键时追加快捷键
+        /// 默认 .inputactions 的 composite 已包含全部，仅在自定义键时覆盖对应方向 part
         /// </summary>
         private void EnsureNavigateBindings()
         {
             var action = inputActions.FindAction("UI/Navigate");
             if (action == null) return;
 
-            // 检查当前 composite 中是否已包含自定义键，没有则追加
-            EnsureKeyInAction(action, CurrentBinding.navigateUp);
-            EnsureKeyInAction(action, CurrentBinding.navigateDown);
-            EnsureKeyInAction(action, CurrentBinding.navigateLeft);
-            EnsureKeyInAction(action, CurrentBinding.navigateRight);
+            // 修复：Vector2 复合动作不能通过追加独立绑定来添加方向（单键无法解析出方向向量，
+            // 原 EnsureKeyInAction 的追加实际无效）。自定义方向键必须覆盖 2DVector composite
+            // 中对应命名的键盘 part（asset 中名为 up/down/left/right，多个同名 part 共存）。
+            OverrideNavigatePart(action, "up", CurrentBinding.navigateUp);
+            OverrideNavigatePart(action, "down", CurrentBinding.navigateDown);
+            OverrideNavigatePart(action, "left", CurrentBinding.navigateLeft);
+            OverrideNavigatePart(action, "right", CurrentBinding.navigateRight);
+        }
 
-            // 确保方向键也存在（如果被意外覆盖）
-            EnsureKeyInAction(action, "upArrow");
-            EnsureKeyInAction(action, "downArrow");
-            EnsureKeyInAction(action, "leftArrow");
-            EnsureKeyInAction(action, "rightArrow");
+        /// <summary>
+        /// 覆盖 2DVector composite 中指定方向 part 的按键路径（覆盖第一个匹配的键盘 part）。
+        /// 同名 part 有多个（如 up 有 w 与 upArrow）时只覆盖第一个，方向键仍保留。幂等：已是目标键则跳过。
+        /// </summary>
+        private void OverrideNavigatePart(InputAction action, string partName, string keyName)
+        {
+            if (string.IsNullOrEmpty(keyName)) return;
+            var targetPath = $"<Keyboard>/{keyName}";
+
+            for (int i = 0; i < action.bindings.Count; i++)
+            {
+                var binding = action.bindings[i];
+                if (!binding.isComposite) continue;
+
+                for (int j = i + 1; j < action.bindings.Count; j++)
+                {
+                    var part = action.bindings[j];
+                    if (!part.isPartOfComposite) break;
+                    if (!part.path.Contains("Keyboard")) continue;
+                    if (!string.Equals(part.name, partName, StringComparison.OrdinalIgnoreCase)) continue;
+
+                    if (part.path == targetPath) return; // 已是目标键，无需覆盖
+                    action.ApplyBindingOverride(j, targetPath);
+                    return;
+                }
+            }
         }
 
         /// <summary>
@@ -298,57 +341,6 @@ namespace ReunionMovement.Core.UIInput
             {
                 action.AddBinding("<Keyboard>/numpadEnter");
             }
-        }
-
-        /// <summary>
-        /// 检查 action 中是否已有指定按键绑定，没有则追加
-        /// </summary>
-        private void EnsureKeyInAction(InputAction action, string keyName)
-        {
-            if (string.IsNullOrEmpty(keyName)) return;
-
-            var targetPath = $"<Keyboard>/{keyName}";
-            for (int i = 0; i < action.bindings.Count; i++)
-            {
-                if (action.bindings[i].path == targetPath)
-                    return; // 已存在，跳过
-            }
-            action.AddBinding(targetPath);
-        }
-
-        /// <summary>
-        /// 对指定 Action 的指定 Binding 应用覆盖
-        /// </summary>
-        private void ApplyBindingOverride(string actionMap, string actionName, string bindingKey, string compositePart = null)
-        {
-            if (string.IsNullOrEmpty(bindingKey)) return;
-
-            var action = inputActions.FindAction($"{actionMap}/{actionName}");
-            if (action == null) return;
-
-            // 查找对应 binding
-            for (int i = 0; i < action.bindings.Count; i++)
-            {
-                var binding = action.bindings[i];
-                if (binding.isComposite || binding.isPartOfComposite) continue;
-
-                // 如果指定了 composite part，匹配对应部分
-                if (!string.IsNullOrEmpty(compositePart))
-                {
-                    // 对于 composite binding，需要找到键盘部分的 binding index
-                    // 2D Vector composite: Up=0, Down=1, Left=2, Right=3
-                }
-
-                // 简单方案：找到第一个非 composite 的键盘 binding 并覆盖
-                if (!binding.isComposite && binding.path.Contains("Keyboard"))
-                {
-                    action.ApplyBindingOverride(i, $"<Keyboard>/{bindingKey}");
-                    return;
-                }
-            }
-
-            // 如果没有找到键盘 binding，添加新的
-            action.AddBinding($"<Keyboard>/{bindingKey}");
         }
 
         /// <summary>
@@ -415,6 +407,7 @@ namespace ReunionMovement.Core.UIInput
                 .OnComplete(operation =>
                 {
                     isRebinding = false;
+                    activeRebindOperation = null;
 
                     // 更新 CurrentBinding
                     var newKey = operation.selectedControl.path;
@@ -432,20 +425,23 @@ namespace ReunionMovement.Core.UIInput
                 .OnCancel(operation =>
                 {
                     isRebinding = false;
+                    activeRebindOperation = null;
                     onCancel?.Invoke();
                     operation.Dispose();
                 });
 
+            activeRebindOperation = rebindOperation;
             rebindOperation.Start();
         }
 
         /// <summary>
-        /// 取消当前重绑定
+        /// 取消当前重绑定（真正 Dispose 底层 operation，停止监听按键）
         /// </summary>
         public void CancelRebind()
         {
+            activeRebindOperation?.Dispose();
+            activeRebindOperation = null;
             isRebinding = false;
-            // 注意：PerformInteractiveRebinding 取消由用户按 Escape 触发
         }
 
         /// <summary>
@@ -597,7 +593,9 @@ namespace ReunionMovement.Core.UIInput
         }
 
         /// <summary>
-        /// 将焦点压入栈并设置为当前选中（包装方法，包含边界检查）
+        /// 将焦点压入栈并设置为当前选中（包装方法，包含边界检查）。
+        /// 注意：压入的是【当前选中】的旧焦点，开窗→设新焦点只入栈一次，
+        /// PopFocus 弹出并恢复该旧焦点，保证 Push/Pop 严格配对。
         /// </summary>
         public void PushFocus(GameObject go)
         {
@@ -610,7 +608,15 @@ namespace ReunionMovement.Core.UIInput
                 if (selectable == null || !selectable.interactable) return;
             }
 
-            focusStack.Push(go);
+            // 幂等：目标与当前一致时不重复压栈
+            if (go == CurrentSelected) return;
+
+            // 先压入旧焦点，再设置新焦点
+            if (CurrentSelected != null)
+            {
+                focusStack.Push(CurrentSelected);
+            }
+
             eventSystem.SetSelectedGameObject(go);
             CurrentSelected = go;
 
@@ -635,27 +641,34 @@ namespace ReunionMovement.Core.UIInput
                 return;
             }
 
-            focusStack.Pop();
+            // 弹出的是开窗时压入的旧焦点
+            GameObject restoreTarget = focusStack.Pop();
 
-            GameObject restoreTarget = null;
-            if (focusStack.Count > 0)
+            // 旧焦点可能已销毁/失活，向下找最近的有效焦点
+            while (restoreTarget != null && !restoreTarget.activeInHierarchy && focusStack.Count > 0)
             {
-                restoreTarget = focusStack.Peek();
-            }
-            else if (LastSelected != null && LastSelected.activeInHierarchy)
-            {
-                restoreTarget = LastSelected;
+                restoreTarget = focusStack.Pop();
             }
 
-            if (restoreTarget != null)
+            if (restoreTarget != null && restoreTarget.activeInHierarchy)
             {
                 eventSystem?.SetSelectedGameObject(restoreTarget);
                 CurrentSelected = restoreTarget;
             }
+            else if (LastSelected != null && LastSelected.activeInHierarchy)
+            {
+                eventSystem?.SetSelectedGameObject(LastSelected);
+                CurrentSelected = LastSelected;
+            }
+            else
+            {
+                eventSystem?.SetSelectedGameObject(null);
+                CurrentSelected = null;
+            }
         }
 
         /// <summary>
-        /// 手动设置当前选中的 GameObject（直接替换栈顶）
+        /// 手动设置当前选中的 GameObject（压入当前旧焦点后设置新焦点）
         /// </summary>
         public void SetSelectedGameObject(GameObject go)
         {
@@ -827,7 +840,7 @@ namespace ReunionMovement.Core.UIInput
                 // 在 Gameplay 模式：检测进入 UI 模式的切换键
                 if (Keyboard.current != null)
                 {
-                    var toggleKey = GetKeyFromName(CurrentBinding.toggleToUI);
+                    var toggleKey = GetCachedKey(ref cachedToggleToUIStr, ref cachedToggleToUIKey, CurrentBinding.toggleToUI);
                     if (toggleKey != Key.None && Keyboard.current[toggleKey].wasPressedThisFrame)
                     {
                         EnableUIControl();
@@ -840,9 +853,18 @@ namespace ReunionMovement.Core.UIInput
                 // 在 UI 模式：检测退出 UI 模式的切换键
                 if (Keyboard.current != null)
                 {
-                    var exitKey = GetKeyFromName(CurrentBinding.toggleToGameplay);
+                    var exitKey = GetCachedKey(ref cachedToggleToGameplayStr, ref cachedToggleToGameplayKey, CurrentBinding.toggleToGameplay);
                     if (exitKey != Key.None && Keyboard.current[exitKey].wasPressedThisFrame)
                     {
+                        // 修复 Esc 冲突：当退出键与 Cancel 键相同（默认都是 escape）且
+                        // 有打开的窗口（或本帧 Cancel 已被窗口消费）时，让 Cancel 优先关闭
+                        // 窗口，不退出 UI 模式；仅在没有窗口需要取消时才切换到 Gameplay。
+                        var cancelKey = GetKeyFromName(CurrentBinding.cancel);
+                        if (exitKey == cancelKey && (HasOpenUI() || cancelConsumedByWindowThisFrame))
+                        {
+                            return;
+                        }
+
                         // 标记 cancel 已被本帧处理，避免 OnCancel 事件重复触发
                         cancelHandledThisFrame = true;
                         DisableUIControl();
@@ -850,6 +872,20 @@ namespace ReunionMovement.Core.UIInput
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// 按键名 → Key 的免分配缓存：仅当字符串值变化时才重新解析，
+        /// 避免每帧 ToLower().Trim() 产生字符串分配。
+        /// </summary>
+        private Key GetCachedKey(ref string cachedStr, ref Key cachedKey, string current)
+        {
+            if (cachedStr != current)
+            {
+                cachedStr = current;
+                cachedKey = GetKeyFromName(current);
+            }
+            return cachedKey;
         }
 
         /// <summary>
@@ -925,12 +961,8 @@ namespace ReunionMovement.Core.UIInput
 
             if (firstSelected != null)
             {
-                // 将当前焦点压栈（如果存在）
-                if (CurrentSelected != null)
-                {
-                    focusStack.Push(CurrentSelected);
-                }
-
+                // PushFocus 内部会压入当前旧焦点并设置新焦点（单次压栈）。
+                // 不要在此处再手动 Push，否则每次开窗多压一条，焦点栈无界增长。
                 SetSelectedGameObject(firstSelected);
             }
         }
@@ -940,6 +972,10 @@ namespace ReunionMovement.Core.UIInput
         /// </summary>
         private void OnUIClosed(UIController controller)
         {
+            // 与 OnUIOpened 对称：仅当窗口是在 UI 模式下打开（压栈过焦点）时才恢复焦点，
+            // 避免 Gameplay 模式下关窗误弹栈导致焦点栈错位（Pop 多于 Push）。
+            if (currentMode != UIControlMode.UIControl) return;
+
             // 延迟一帧恢复焦点，确保关闭的 UI 已完全移除
             // 使用 Unity 的延迟调用
             if (focusStack.Count > 0)
@@ -1075,7 +1111,29 @@ namespace ReunionMovement.Core.UIInput
         {
             // 如果当前帧已被切换键消耗，不再触发 OnCancel 事件
             if (cancelHandledThisFrame) return;
+
+            // 有打开的窗口时记录“本帧 Cancel 已由窗口消费”，
+            // 防止同帧 PollToggleKeys 检测到窗口已关闭后误退出 UI 模式
+            if (HasOpenUI())
+            {
+                cancelConsumedByWindowThisFrame = true;
+            }
             CancelSubject.OnNext(Unit.Default);
+        }
+
+        /// <summary>
+        /// 是否存在已打开的 UI 窗口（用于区分 Esc 应优先取消窗口还是退出 UI 模式）
+        /// </summary>
+        private bool HasOpenUI()
+        {
+            try
+            {
+                return UISystem.Instance != null && UISystem.Instance.GetAllOpenWindowNames().Count > 0;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         #endregion
