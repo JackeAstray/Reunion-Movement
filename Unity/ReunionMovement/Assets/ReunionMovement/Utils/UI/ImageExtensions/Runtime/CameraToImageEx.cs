@@ -61,6 +61,7 @@ namespace ReunionMovement.UI.ImageExtensions
 
         private Camera boundCamera;
         private Vector2 lastRectSize;
+        private bool hasRenderedOnce; // 相机画面是否已成功渲染/Blit 过（避免把透明 RT 赋给 ImageEx）
 
         private const string opaqueShaderName = "Hidden/ReunionMovement/ForceAlpha";
 
@@ -86,11 +87,13 @@ namespace ReunionMovement.UI.ImageExtensions
         }
 
         /// <summary>当前显示到 ImageEx 上的纹理（null 表示尚未就绪）。</summary>
+        /// 注意：forceOpaque 时，在相机第一帧渲染并 Blit 完成之前返回 null，
+        /// 避免把“尚未渲染的透明 RenderTexture”赋给 ImageEx，导致其整体半透明不可见。
         public Texture DisplayTexture
         {
             get
             {
-                if (forceOpaque) return opaqueRT;
+                if (forceOpaque) return hasRenderedOnce ? opaqueRT : null;
                 return ownedRT != null ? ownedRT : externalRenderTexture;
             }
         }
@@ -136,6 +139,7 @@ namespace ReunionMovement.UI.ImageExtensions
         {
             UnbindCamera();
             if (cleanupOnDisable) ReleaseResources();
+            hasRenderedOnce = false;
             if (autoAssignToImage && image != null) image.CameraTexture = null;
         }
 
@@ -296,6 +300,13 @@ namespace ReunionMovement.UI.ImageExtensions
             if (opaqueRT == null || opaqueMaterial == null || cam.targetTexture == null) return;
 
             Graphics.Blit(cam.targetTexture, opaqueRT, opaqueMaterial);
+
+            // 第一帧渲染完成后才把画面赋给 ImageEx
+            if (!hasRenderedOnce)
+            {
+                hasRenderedOnce = true;
+                ApplyTexture();
+            }
         }
 
         private void ApplyTexture()

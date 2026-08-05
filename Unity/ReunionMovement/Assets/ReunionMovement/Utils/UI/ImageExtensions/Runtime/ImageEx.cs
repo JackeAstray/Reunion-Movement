@@ -283,6 +283,7 @@ namespace ReunionMovement.UI.ImageExtensions
 
         #region Material PropertyIds
 
+        private static readonly int mainTex_Sp = Shader.PropertyToID("_MainTex");
         private static readonly int pixelWorldScale_Sp = Shader.PropertyToID("_PixelWorldScale");
         private static readonly int drawShape_Sp = Shader.PropertyToID("_DrawShape");
         private static readonly int strokeWidth_Sp = Shader.PropertyToID("_StrokeWidth");
@@ -407,8 +408,68 @@ namespace ReunionMovement.UI.ImageExtensions
         /// <summary>
         /// 重写 mainTexture：把动态画面作为主纹理绑定到 _MainTex，
         /// CanvasRenderer 会把该纹理传给 ImageEx 着色器采样。
+        /// 注意：没有精灵也没有相机纹理时必须显式返回纯白纹理，
+        /// 否则若动态材质的 _MainTex 被污染（绑定到透明/异常纹理），
+        /// 整个 ImageEx 会呈半透明/不可见，且改颜色、赋精灵都无效。
         /// </summary>
-        public override Texture mainTexture => cameraTexture != null ? cameraTexture : base.mainTexture;
+        public override Texture mainTexture
+        {
+            get
+            {
+                if (cameraTexture != null) return cameraTexture;
+                Sprite s = ActiveSprite;
+                if (s != null && s.texture != null) return s.texture;
+                return Texture2D.whiteTexture;
+            }
+        }
+
+        #if UNITY_EDITOR
+        /// <summary>
+        /// 调试：输出当前 ImageEx 的运行时材质/纹理状态，用于排查“透明/半透明”问题。
+        /// 在 Inspector 组件上右键 → “调试：输出材质状态” 运行。
+        /// </summary>
+        [UnityEditor.MenuItem("CONTEXT/ImageEx/调试：输出材质状态")]
+        private static void DebugMaterialState(UnityEditor.MenuCommand command)
+        {
+            ImageEx img = (ImageEx)command.context;
+            img.DebugPrintMaterialState();
+        }
+
+        /// <summary>
+        /// 打印材质状态到 Console。
+        /// </summary>
+        public void DebugPrintMaterialState()
+        {
+            Material m = material;
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+            Texture mainTex = mainTexture;
+            string mainTexDesc = mainTex != null
+                ? mainTex.name + "  " + mainTex.width + "x" + mainTex.height
+                : "NULL";
+
+            sb.AppendLine("[ImageEx] Shader: " + (m != null ? m.shader.name : "NULL"));
+            sb.AppendLine("[ImageEx] mainTexture: " + mainTexDesc);
+            sb.AppendLine("[ImageEx] cameraTexture: " + (cameraTexture != null ? cameraTexture.name : "NULL"));
+            sb.AppendLine("[ImageEx] sprite: " + (sprite != null ? sprite.name : "NULL")
+                + "  overrideSprite: " + (overrideSprite != null ? overrideSprite.name : "NULL"));
+            sb.AppendLine("[ImageEx] Image.color: " + color);
+
+            if (m != null)
+            {
+                Texture mt = m.GetTexture("_MainTex");
+                string mtDesc = mt != null ? mt.name + "  " + mt.width + "x" + mt.height : "NULL";
+                sb.AppendLine("[ImageEx] material._MainTex: " + mtDesc);
+                sb.AppendLine("[ImageEx] material._Color: " + m.GetColor("_Color"));
+                sb.AppendLine("[ImageEx] material._DrawShape: " + m.GetInt("_DrawShape"));
+                sb.AppendLine("[ImageEx] material._SrcBlend: " + m.GetInt("_SrcBlend")
+                    + "  _DstBlend: " + m.GetInt("_DstBlend"));
+                sb.AppendLine("[ImageEx] material keywords: " + string.Join(", ", m.shaderKeywords));
+            }
+
+            Debug.Log(sb.ToString());
+        }
+        #endif
 
         #endregion
 
@@ -1908,6 +1969,8 @@ namespace ReunionMovement.UI.ImageExtensions
         protected override void OnValidate()
         {
             InitializeComponents();
+            // 编辑模式下也立即补齐 Canvas 通道（尤其 Tangent），避免场景中 ImageEx 透明
+            FixAdditionalShaderChannelsInCanvas();
             if (parseAgainOnValidate)
             {
                 InitValuesFromSharedMaterial();
@@ -2070,16 +2133,24 @@ namespace ReunionMovement.UI.ImageExtensions
         }
 
         /// <summary>
-        /// 修复画布中的附加着色通道
+        /// 修复画布中的附加着色通道。
+        /// ImageEx 着色器需要：TexCoord1(effectsUv) / TexCoord2(size) / Tangent(阴影顶点标记 tangent.w)。
+        /// 若 Canvas 的 Additional Shader Channels 未包含 Tangent，顶点 tangent 会是垃圾值，
+        /// 导致 isShadowVertexFlag 误判、主图被当成阴影顶点渲染（表现为透明/异常）。
         /// </summary>
         void FixAdditionalShaderChannelsInCanvas()
         {
             Canvas c = canvas;
-            if (canvas == null) return;
-            AdditionalCanvasShaderChannels additionalShaderChannels = c.additionalShaderChannels;
-            additionalShaderChannels |= AdditionalCanvasShaderChannels.TexCoord1;
-            additionalShaderChannels |= AdditionalCanvasShaderChannels.TexCoord2;
-            c.additionalShaderChannels = additionalShaderChannels;
+            if (c == null) c = GetComponentInParent<Canvas>();
+            if (c == null) return;
+
+            AdditionalCanvasShaderChannels channels = c.additionalShaderChannels;
+            AdditionalCanvasShaderChannels needed = channels
+                | AdditionalCanvasShaderChannels.TexCoord1
+                | AdditionalCanvasShaderChannels.TexCoord2
+                | AdditionalCanvasShaderChannels.Tangent;
+            if (channels != needed)
+                c.additionalShaderChannels = needed;
         }
 
 #if UNITY_EDITOR
@@ -2652,6 +2723,14 @@ namespace ReunionMovement.UI.ImageExtensions
                 var (src, dst) = ConvertBlendType(m_BlendType);
                 mat.SetInt(srcBlend_Sp, (int)src);
                 mat.SetInt(dstBlend_Sp, (int)dst);
+            }
+
+            // -------------------- 兜底：无精灵、无相机画面时绑定纯白纹理 --------------------
+            // 防止动态材质的 _MainTex 被历史状态/共享材质污染成透明或异常纹理，
+            // 导致 ImageEx 半透明不可见、且改颜色/赋精灵都无效。
+            if (cameraTexture == null && ActiveSprite == null)
+            {
+                mat.SetTexture(mainTex_Sp, Texture2D.whiteTexture);
             }
 
             return mat;

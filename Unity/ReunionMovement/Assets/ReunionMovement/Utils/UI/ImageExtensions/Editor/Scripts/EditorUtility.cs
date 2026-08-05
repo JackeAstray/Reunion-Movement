@@ -22,6 +22,19 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             Transform parent = GetParentTransform();
             g.transform.SetParent(parent, false);
             g.AddComponent<ImageEx>();
+
+            // 新物体默认 RectTransform 尺寸为 (0,0)，会导致 ImageEx 没有任何绘制面积，
+            // 在场景/游戏视图中看起来就像“透明”，此时修改 Color 也毫无效果。
+            // 这里补一个默认尺寸（与 Unity 内置 UI/Image 的 100x100 一致）。
+            RectTransform rt = g.GetComponent<RectTransform>();
+            if (rt != null)
+            {
+                rt.anchorMin = new Vector2(0.5f, 0.5f);
+                rt.anchorMax = new Vector2(0.5f, 0.5f);
+                rt.anchoredPosition = Vector2.zero;
+                rt.sizeDelta = new Vector2(100f, 100f);
+            }
+
             Selection.activeGameObject = g;
 
             Undo.RegisterCreatedObjectUndo(g, "ImageEx Created");
@@ -87,6 +100,7 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             AdditionalCanvasShaderChannels additionalShaderChannels = c.additionalShaderChannels;
             additionalShaderChannels |= AdditionalCanvasShaderChannels.TexCoord1;
             additionalShaderChannels |= AdditionalCanvasShaderChannels.TexCoord2;
+            additionalShaderChannels |= AdditionalCanvasShaderChannels.Tangent;
             c.additionalShaderChannels = additionalShaderChannels;
         }
 
