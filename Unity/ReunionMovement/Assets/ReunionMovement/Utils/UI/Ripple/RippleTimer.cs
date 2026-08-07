@@ -32,27 +32,33 @@ namespace ReunionMovement.UI.RippleAnimation
         //颜色索引
         int ColorIndex = 0;
 
+        //缓存组件引用，避免每帧重复 GetComponent
+        UIRipple ripple;
+
+        void Awake()
+        {
+            ripple = GetComponent<UIRipple>();
+        }
+
         void Update()
         {
             //当前时间 - 最后一个波纹的时间 >= 波纹
             if (Time.time - T >= Rate)
             {
-                //创建波纹
-                var ripple = GetComponent<UIRipple>();
-                ripple.CreateRipple(Offset);
-                //设置新的时间
-                T = Time.time;
-                //改变颜色
+                // 必须先设置颜色再创建波纹：
+                // CreateRipple 内部会读取 StartColor/EndColor 并 InitVisuals，
+                // 若在创建之后才设置，每个周期创建的第一个波纹会显示上一周期的颜色。
                 if (Colors.Count > 0)
                 {
                     ripple.StartColor = Colors[ColorIndex];
                     ripple.EndColor = Colors[ColorIndex];
-
-                    ColorIndex++;
-
-                    //如果位于颜色列表末尾则循环返回
-                    ColorIndex = ColorIndex % Colors.Count;
+                    ColorIndex = (ColorIndex + 1) % Colors.Count;
                 }
+
+                //创建波纹
+                ripple.CreateRipple(Offset);
+                //设置新的时间
+                T = Time.time;
             }
         }
     }

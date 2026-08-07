@@ -24,7 +24,7 @@ namespace ReunionMovement.Core.Sound
         // 可配置的播放参数
         public float volume = -1f; // -1 表示使用全局设置
         public bool useFade = false;
-        public float fadeDuration = 3.0f;
+        public float fadeDuration = -1f; // -1 表示使用全局淡入淡出时长（与 volume 约定一致）
         public bool playOnAwake = false;
 
         // 播放列表行为
@@ -79,7 +79,7 @@ namespace ReunionMovement.Core.Sound
                 return;
             }
 
-            SoundSystem.Instance.fadeDuration = fadeDuration;
+            ApplyFadeDurationOverride();
 
             if (useFade)
             {
@@ -109,7 +109,7 @@ namespace ReunionMovement.Core.Sound
             playlistPosition = Mathf.Clamp(pos, 0, playlist.Count - 1);
             int index = playlist[playlistPosition];
 
-            SoundSystem.Instance.fadeDuration = fadeDuration;
+            ApplyFadeDurationOverride();
 
             if (useFade)
             {
@@ -125,10 +125,24 @@ namespace ReunionMovement.Core.Sound
         }
 
         /// <summary>
+        /// 仅在显式配置淡入淡出时长（>= 0）时覆盖全局设置；
+        /// -1（默认）表示使用 SoundSystem 的全局 fadeDuration。
+        /// </summary>
+        private void ApplyFadeDurationOverride()
+        {
+            if (fadeDuration >= 0f)
+            {
+                SoundSystem.Instance.fadeDuration = fadeDuration;
+            }
+        }
+
+        /// <summary>
         /// 播放下一曲 - Button 可绑定
         /// </summary>
         public void PlayNext()
         {
+            // 防御：监控协程可能在组件销毁后仍调用（本方法由异步监控链触发）
+            if (this == null) return;
             PlayNextAsync().Forget();
         }
 
@@ -345,6 +359,13 @@ namespace ReunionMovement.Core.Sound
                 catch (System.Exception ex) { Log.Warning("PlayMusic 取消监控令牌异常: {0}", ex.Message); }
                 playbackMonitorCts = null;
             }
+        }
+
+        private void OnDestroy()
+        {
+            // 组件销毁时取消播放监控：MonitorPlaybackAsync 捕获的是 SoundSystem 共享的
+            // AudioSource（不随本组件销毁），若不取消，曲目结束后仍会调用 PlayNext() 推进全局播放列表。
+            CancelPlaybackMonitor();
         }
     }
 }

@@ -205,7 +205,12 @@ namespace ReunionMovement.Common.Util.Download
             List<string> urlsToDownload = new List<string>();
             foreach (var fileUrl in url)
             {
-                string fileName = FileOperationUtil.GetFileName(fileUrl);
+                // 存在性检查必须与实际写入文件名一致：
+                // useMd5Name=true 时 FileDownloader 写入 MD5 哈希名（PathUtil.GetFileNameByUrl），
+                // 用 URL 最后一段文件名检查会永远识别不到已下载文件，导致重复下载。
+                string fileName = useMd5Name
+                    ? PathUtil.GetFileNameByUrl(fileUrl)
+                    : FileOperationUtil.GetFileName(fileUrl);
                 string localFilePath = Path.Combine(savePath, fileName);
 
                 if (File.Exists(localFilePath))

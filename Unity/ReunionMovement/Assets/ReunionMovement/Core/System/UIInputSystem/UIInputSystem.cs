@@ -69,10 +69,10 @@ namespace ReunionMovement.Core.UIInput
         /// <summary>进入 UI 模式前的玩家操作映射状态缓存（用于恢复）</summary>
         private bool playerMapWasEnabled = false;
 
-        /// <summary>UI 模式下的 Cancel 是否已被本帧处理（防止与切换键冲突）</summary>
-        private bool cancelHandledThisFrame = false;
-        /// <summary>本帧 Cancel 是否已被打开的窗口消费（防止同帧 PollToggleKeys 再退出 UI 模式）</summary>
-        private bool cancelConsumedByWindowThisFrame = false;
+        /// <summary>切换键退出 UI 模式时消耗 Cancel 的帧号（-1=无）。OnCancelPerformed 据此跳过同帧的 Cancel 触发</summary>
+        private int cancelConsumedFrame = -1;
+        /// <summary>本帧 Cancel 已被打开的窗口消费的帧号（-1=无）。防止同帧 PollToggleKeys 误退出 UI 模式</summary>
+        private int cancelConsumedByWindowFrame = -1;
 
         // ---- 切换键解析缓存（避免每帧字符串分配）----
         private string cachedToggleToUIStr;
@@ -153,11 +153,8 @@ namespace ReunionMovement.Core.UIInput
             // 轮询检测切换键
             PollToggleKeys();
 
-            // 复位“本帧 Cancel 已处理”标记。
-            // 必须在 PollToggleKeys 之后复位：输入回调阶段（早于 Update 执行）可能已置位，
-            // 若提前复位会抹掉标记，导致同一次 Esc 既关闭窗口又退出 UI 模式。
-            cancelHandledThisFrame = false;
-            cancelConsumedByWindowThisFrame = false;
+            // 取消帧标记无需每帧复位：帧号会自然过期（跨帧后 == Time.frameCount 恒不成立），
+            // 因此不再依赖“输入回调早于 Update 执行”的顺序假设。
 
             // 仅在 UI 模式下轮询焦点变化
             if (currentMode != UIControlMode.UIControl) return;
@@ -393,6 +390,19 @@ namespace ReunionMovement.Core.UIInput
                 return;
             }
 
+            // Navigate 是 2D Vector composite（含 up/down/left/right 四个 part），
+            // 单次交互式重绑定无法确定捕获的按键属于哪个方向，
+            // 若强行使用会只写入 navigateUp 造成方向键设置混乱。
+            // 拒绝并引导调用方使用按方向的 SetBinding。
+            if (string.Equals(actionName, "Navigate", StringComparison.OrdinalIgnoreCase) &&
+                action.expectedControlType == "Vector2")
+            {
+                Log.Warning("UIInputSystem: Navigate 为 2D Vector 复合动作，不支持交互式重绑定。" +
+                            "请改用 SetBinding(\"NavigateUp\"/\"NavigateDown\"/\"NavigateLeft\"/\"NavigateRight\", key)。");
+                onCancel?.Invoke();
+                return;
+            }
+
             isRebinding = true;
 
             // 对键盘设备执行重绑定
@@ -473,8 +483,8 @@ namespace ReunionMovement.Core.UIInput
                     CurrentBinding.cancelDisplayName = displayName;
                     break;
                 case "Navigate":
-                    // Navigate 是 2D Vector composite，这里简化处理 ——
-                    // 实际项目中应该支持分别重绑定上下左右
+                    // Navigate 是 2D Vector composite，正常路径已被 StartRebind 拒绝
+                    // （交互式重绑定无法确定方向）。此分支仅作防御，保持向后兼容。
                     CurrentBinding.navigateUp = keyName;
                     break;
             }
@@ -860,13 +870,15 @@ namespace ReunionMovement.Core.UIInput
                         // 有打开的窗口（或本帧 Cancel 已被窗口消费）时，让 Cancel 优先关闭
                         // 窗口，不退出 UI 模式；仅在没有窗口需要取消时才切换到 Gameplay。
                         var cancelKey = GetKeyFromName(CurrentBinding.cancel);
-                        if (exitKey == cancelKey && (HasOpenUI() || cancelConsumedByWindowThisFrame))
+                        if (exitKey == cancelKey && (HasOpenUI() || cancelConsumedByWindowFrame == Time.frameCount))
                         {
                             return;
                         }
 
-                        // 标记 cancel 已被本帧处理，避免 OnCancel 事件重复触发
-                        cancelHandledThisFrame = true;
+                        // 记录本帧已被切换键消耗的帧号：无论 OnCancelPerformed 在
+                        // 本帧的输入阶段（早于 Update）还是晚于 Update 触发，
+                        // 都会跳过同帧 CancelSubject，避免同一次 Esc 既退出 UI 模式又关窗。
+                        cancelConsumedFrame = Time.frameCount;
                         DisableUIControl();
                         return;
                     }
@@ -1109,26 +1121,29 @@ namespace ReunionMovement.Core.UIInput
 
         private void OnCancelPerformed(InputAction.CallbackContext ctx)
         {
-            // 如果当前帧已被切换键消耗，不再触发 OnCancel 事件
-            if (cancelHandledThisFrame) return;
+            // 若本帧 Cancel 已被切换键（退出 UI 模式）消耗，不再触发 CancelSubject。
+            // 使用帧号判断（Time.frameCount 同帧内恒等），消除对
+            // “输入回调早于 Update 执行”的顺序依赖。
+            if (cancelConsumedFrame == Time.frameCount) return;
 
-            // 有打开的窗口时记录“本帧 Cancel 已由窗口消费”，
+            // 有打开的窗口时记录本帧 Cancel 已由窗口消费的帧号，
             // 防止同帧 PollToggleKeys 检测到窗口已关闭后误退出 UI 模式
             if (HasOpenUI())
             {
-                cancelConsumedByWindowThisFrame = true;
+                cancelConsumedByWindowFrame = Time.frameCount;
             }
             CancelSubject.OnNext(Unit.Default);
         }
 
         /// <summary>
-        /// 是否存在已打开的 UI 窗口（用于区分 Esc 应优先取消窗口还是退出 UI 模式）
+        /// 是否存在已打开的 UI 窗口（用于区分 Esc 应优先取消窗口还是退出 UI 模式）。
+        /// 使用零分配的 HasAnyOpenWindow，避免每次按键分配 List。
         /// </summary>
         private bool HasOpenUI()
         {
             try
             {
-                return UISystem.Instance != null && UISystem.Instance.GetAllOpenWindowNames().Count > 0;
+                return UISystem.Instance != null && UISystem.Instance.HasAnyOpenWindow();
             }
             catch
             {

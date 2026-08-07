@@ -319,7 +319,6 @@ namespace ReunionMovement.Core.UI
             var uiLoadState = new UILoadState(name)
             {
                 uiWindow = uiController,
-                isLoading = false,
                 openWhenFinish = openWhenFinish,
                 openArgs = args,
                 isOnInit = true
@@ -357,8 +356,6 @@ namespace ReunionMovement.Core.UI
                     uiBase.gameObject.SetActive(true);
                 }
             }
-
-            uiState.OnUIWindowLoadedCallbacks(uiState);
         }
 
         /// <summary>
@@ -394,13 +391,7 @@ namespace ReunionMovement.Core.UI
         /// <param name="args"></param>
         private void OnOpen(UILoadState uiState, params object[] args)
         {
-            if (uiState.isLoading)
-            {
-                uiState.openWhenFinish = true;
-                uiState.openArgs = args;
-                return;
-            }
-
+            // LoadWindow 为同步加载，不存在“加载中”状态，无需 isLoading 分支
             UIController uiBase = uiState.uiWindow;
 
             Log.Debug("[UISystem] OnOpen({0}) activeSelf before={1}", uiBase.gameObject.name, uiBase.gameObject.activeSelf);
@@ -446,6 +437,7 @@ namespace ReunionMovement.Core.UI
         {
             //TODO: 需要先创建脚本对象，再根据脚本中的值进行加载资源
             UILoadState uiState;
+
             if (!uiStateCache.TryGetValue(uiName, out uiState))
             {
                 uiState = LoadWindow(uiName, true, args);
@@ -511,13 +503,7 @@ namespace ReunionMovement.Core.UI
         /// <param name="args"></param>
         private void OnSet(UILoadState uiState, params object[] args)
         {
-            if (uiState.isLoading)
-            {
-                uiState.openWhenFinish = true;
-                uiState.openArgs = args;
-                return;
-            }
-
+            // LoadWindow 为同步加载，不存在“加载中”状态，无需 isLoading 分支
             UIController uiBase = uiState.uiWindow;
 
             if (uiBase != null && uiBase.gameObject.activeSelf)
@@ -571,14 +557,7 @@ namespace ReunionMovement.Core.UI
                 return;
             }
 
-            // Loading中
-            if (uiState.isLoading)
-            {
-                Log.Error("[CloseWindow]是加载中的{0}", name);
-                uiState.openWhenFinish = false;
-                return;
-            }
-
+            // LoadWindow 为同步加载，不存在“加载中”状态，无需 isLoading 分支
             uiState.uiWindow.gameObject.SetActive(false);
 
             uiState.uiWindow.OnClose();
@@ -664,7 +643,7 @@ namespace ReunionMovement.Core.UI
         }
 
         /// <summary>
-        /// 是否已经打开
+        /// 是否已打开
         /// </summary>
         /// <param name="name"></param>
         /// <returns></returns>
@@ -672,6 +651,22 @@ namespace ReunionMovement.Core.UI
         {
             UIController uiBase = GetUIBase(name);
             return uiBase == null ? false : uiBase.gameObject.activeSelf;
+        }
+
+        /// <summary>
+        /// 是否存在任意已打开的窗口（零分配，供高频输入路径使用）
+        /// </summary>
+        public bool HasAnyOpenWindow()
+        {
+            foreach (var kv in uiStateCache)
+            {
+                var uiBase = kv.Value?.uiWindow;
+                if (uiBase != null && uiBase.gameObject.activeSelf)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         /// <summary>
@@ -1040,8 +1035,6 @@ namespace ReunionMovement.Core.UI
         public UIController uiWindow;
         // ui类型
         public Type uiType;
-        // 是否正在加载
-        public bool isLoading;
         // 非复制出来的, 静态UI
         public bool isStaticUI;
         // 是否初始化
@@ -1050,10 +1043,6 @@ namespace ReunionMovement.Core.UI
         public bool openWhenFinish;
         // 打开时的参数
         public object[] openArgs;
-        // 回调
-        internal Queue<Action<UIController, object[]>> callbacksWhenFinish;
-        // 回调参数
-        internal Queue<object[]> callbacksArgsWhenFinish;
 
         /// <summary>
         /// UILoadState构造函数
@@ -1068,16 +1057,12 @@ namespace ReunionMovement.Core.UI
             uiWindow = null;
             uiType = uiControllerType;
 
-            isLoading = false;
             openWhenFinish = false;
             openArgs = null;
-
-            callbacksWhenFinish = new Queue<Action<UIController, object[]>>();
-            callbacksArgsWhenFinish = new Queue<object[]>();
         }
 
         /// <summary>
-        /// 确保加载完成后的回调
+        /// 执行回调。UI 加载为同步（LoadWindow 完成后窗口已就绪），回调立即执行。
         /// </summary>
         /// <param name="callback"></param>
         /// <param name="args"></param>
@@ -1088,30 +1073,7 @@ namespace ReunionMovement.Core.UI
                 args = new object[0];
             }
 
-            // Loading
-            if (isLoading)
-            {
-                callbacksWhenFinish.Enqueue(callback);
-                callbacksArgsWhenFinish.Enqueue(args);
-                return;
-            }
-
-            // 立即执行即可
             callback(uiWindow, args);
-        }
-
-        /// <summary>
-        /// 执行加载完成后的回调
-        /// </summary>
-        /// <param name="uiState"></param>
-        internal void OnUIWindowLoadedCallbacks(UILoadState uiState)
-        {
-            while (uiState.callbacksWhenFinish.Count > 0)
-            {
-                Action<UIController, object[]> callback = uiState.callbacksWhenFinish.Dequeue();
-                object[] args = uiState.callbacksArgsWhenFinish.Dequeue();
-                DoCallback(callback, args);
-            }
         }
     }
 }

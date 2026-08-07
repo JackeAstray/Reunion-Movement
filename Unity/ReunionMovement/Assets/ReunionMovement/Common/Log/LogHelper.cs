@@ -175,12 +175,13 @@ namespace ReunionMovement.Common
         }
 
         /// <summary>
-        /// 构建带颜色 Tag 和频道前缀的完整日志字符串（ZString 零分配拼接）。
+        /// 追加控制台前缀（颜色 Tag + 频道缩写）。
+        /// Utf16ValueStringBuilder 是结构体，必须 ref 传递：
+        /// 按值传递会在方法返回后丢失长度/缓冲变更。
         /// </summary>
         [HideInCallstack]
-        private static string BuildLogString(LogLevel level, LogChannel channel, string message)
+        private static void AppendConsolePrefix(ref Utf16ValueStringBuilder sb, LogLevel level, LogChannel channel)
         {
-            using var sb = ZString.CreateStringBuilder();
             sb.Append(GetTag(level));
 
             // 频道前缀
@@ -190,16 +191,35 @@ namespace ReunionMovement.Common
                 if (idx >= 0 && idx < s_channelShortNames.Length)
                     sb.Append(s_channelShortNames[idx]);
             }
-
-            sb.Append(message);
-            sb.Append(kTagClose);
-            return sb.ToString();
         }
 
         /// <summary>
-        /// 写入文件日志（纯文本，不含颜色 Tag，便于 grep）。
+        /// 构建带颜色 Tag 和频道前缀的完整日志字符串（ZString 池化缓冲）。
+        /// 注意：不能用 using var —— using 变量既不能作为 ref 实参（CS1657）也不能重新赋值（CS1656）。
+        /// 因此用普通局部变量 + try/finally 手动 Dispose，确保池化缓冲归还（缺失则每次日志多一次 char[] 分配）。
         /// </summary>
-        private static void WriteToFile(string levelName, LogChannel channel, string message)
+        [HideInCallstack]
+        private static string BuildConsoleString(LogLevel level, LogChannel channel, string message)
+        {
+            var sb = ZString.CreateStringBuilder();
+            try
+            {
+                AppendConsolePrefix(ref sb, level, channel);
+                sb.Append(message);
+                sb.Append(kTagClose);
+                return sb.ToString();
+            }
+            finally
+            {
+                sb.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// 写入文件日志行（纯文本，不含颜色 Tag，便于 grep）。
+        /// Log 与 LogFormat 所有路径的统一文件入口（替代 5 份重复的 WriteToFileFormatted）。
+        /// </summary>
+        private static void WriteToFileLine(LogLevel level, LogChannel channel, string message)
         {
             if (!EnableFileLog) return;
             EnsureFileLogReady();
@@ -209,7 +229,7 @@ namespace ReunionMovement.Common
                 ? ZString.Format("[{0}] ", channel)
                 : "";
             string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
-                DateTime.Now, levelName, channelStr, message, Environment.NewLine);
+                DateTime.Now, level, channelStr, message, Environment.NewLine);
             WriteLineToFile(line);
         }
 
@@ -234,9 +254,8 @@ namespace ReunionMovement.Common
 
         public void Log(LogLevel level, string message, UnityEngine.Object context, LogChannel channel)
         {
-            string formatted = BuildLogString(level, channel, message);
-            Dispatch(level, formatted, context);
-            WriteToFile(level.ToString(), channel, message);
+            Dispatch(level, BuildConsoleString(level, channel, message), context);
+            WriteToFileLine(level, channel, message);
         }
 
         // ---- LogFormat 单参数 ----
@@ -301,157 +320,46 @@ namespace ReunionMovement.Common
         private void LogFormatInternal(LogLevel level, LogChannel channel, string format,
             object arg0)
         {
-            using var sb = ZString.CreateStringBuilder();
-            sb.Append(GetTag(level));
-            if (channel != LogChannel.General)
-            {
-                int idx = (int)channel;
-                if (idx >= 0 && idx < s_channelShortNames.Length)
-                    sb.Append(s_channelShortNames[idx]);
-            }
-            sb.AppendFormat(format, arg0);
-            sb.Append(kTagClose);
-            string message = sb.ToString();
-            Dispatch(level, message, null);
-            // 写文件时用原始 format 还原纯文本（不带颜色 tag）
-            WriteToFileFormatted(level, channel, format, arg0);
+            // 只格式化一次，消息同时用于控制台（加颜色前缀）与文件（纯文本）
+            string message = ZString.Format(format, arg0);
+            Dispatch(level, BuildConsoleString(level, channel, message), null);
+            WriteToFileLine(level, channel, message);
         }
 
         [HideInCallstack]
         private void LogFormatInternal(LogLevel level, LogChannel channel, string format,
             object arg0, object arg1)
         {
-            using var sb = ZString.CreateStringBuilder();
-            sb.Append(GetTag(level));
-            if (channel != LogChannel.General)
-            {
-                int idx = (int)channel;
-                if (idx >= 0 && idx < s_channelShortNames.Length)
-                    sb.Append(s_channelShortNames[idx]);
-            }
-            sb.AppendFormat(format, arg0, arg1);
-            sb.Append(kTagClose);
-            Dispatch(level, sb.ToString(), null);
-            WriteToFileFormatted(level, channel, format, arg0, arg1);
+            string message = ZString.Format(format, arg0, arg1);
+            Dispatch(level, BuildConsoleString(level, channel, message), null);
+            WriteToFileLine(level, channel, message);
         }
 
         [HideInCallstack]
         private void LogFormatInternal(LogLevel level, LogChannel channel, string format,
             object arg0, object arg1, object arg2)
         {
-            using var sb = ZString.CreateStringBuilder();
-            sb.Append(GetTag(level));
-            if (channel != LogChannel.General)
-            {
-                int idx = (int)channel;
-                if (idx >= 0 && idx < s_channelShortNames.Length)
-                    sb.Append(s_channelShortNames[idx]);
-            }
-            sb.AppendFormat(format, arg0, arg1, arg2);
-            sb.Append(kTagClose);
-            Dispatch(level, sb.ToString(), null);
-            WriteToFileFormatted(level, channel, format, arg0, arg1, arg2);
+            string message = ZString.Format(format, arg0, arg1, arg2);
+            Dispatch(level, BuildConsoleString(level, channel, message), null);
+            WriteToFileLine(level, channel, message);
         }
 
         [HideInCallstack]
         private void LogFormatInternal(LogLevel level, LogChannel channel, string format,
             object arg0, object arg1, object arg2, object arg3)
         {
-            using var sb = ZString.CreateStringBuilder();
-            sb.Append(GetTag(level));
-            if (channel != LogChannel.General)
-            {
-                int idx = (int)channel;
-                if (idx >= 0 && idx < s_channelShortNames.Length)
-                    sb.Append(s_channelShortNames[idx]);
-            }
-            sb.AppendFormat(format, arg0, arg1, arg2, arg3);
-            sb.Append(kTagClose);
-            Dispatch(level, sb.ToString(), null);
-            WriteToFileFormatted(level, channel, format, arg0, arg1, arg2, arg3);
+            string message = ZString.Format(format, arg0, arg1, arg2, arg3);
+            Dispatch(level, BuildConsoleString(level, channel, message), null);
+            WriteToFileLine(level, channel, message);
         }
 
         [HideInCallstack]
         private void LogFormatInternal(LogLevel level, LogChannel channel, string format,
             params object[] args)
         {
-            using var sb = ZString.CreateStringBuilder();
-            sb.Append(GetTag(level));
-            if (channel != LogChannel.General)
-            {
-                int idx = (int)channel;
-                if (idx >= 0 && idx < s_channelShortNames.Length)
-                    sb.Append(s_channelShortNames[idx]);
-            }
-            sb.AppendFormat(format, args);
-            sb.Append(kTagClose);
-            Dispatch(level, sb.ToString(), null);
-            WriteToFileFormatted(level, channel, format, args);
-        }
-
-        private static void WriteToFileFormatted(LogLevel level, LogChannel channel,
-            string format, object arg0)
-        {
-            if (!EnableFileLog) return;
-            EnsureFileLogReady();
-            if (s_fileWriter == null) return;
-            string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
-            string msg = ZString.Format(format, arg0);
-            string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
-                DateTime.Now, level, channelStr, msg, Environment.NewLine);
-            WriteLineToFile(line);
-        }
-
-        private static void WriteToFileFormatted(LogLevel level, LogChannel channel,
-            string format, object arg0, object arg1)
-        {
-            if (!EnableFileLog) return;
-            EnsureFileLogReady();
-            if (s_fileWriter == null) return;
-            string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
-            string msg = ZString.Format(format, arg0, arg1);
-            string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
-                DateTime.Now, level, channelStr, msg, Environment.NewLine);
-            WriteLineToFile(line);
-        }
-
-        private static void WriteToFileFormatted(LogLevel level, LogChannel channel,
-            string format, object arg0, object arg1, object arg2)
-        {
-            if (!EnableFileLog) return;
-            EnsureFileLogReady();
-            if (s_fileWriter == null) return;
-            string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
-            string msg = ZString.Format(format, arg0, arg1, arg2);
-            string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
-                DateTime.Now, level, channelStr, msg, Environment.NewLine);
-            WriteLineToFile(line);
-        }
-
-        private static void WriteToFileFormatted(LogLevel level, LogChannel channel,
-            string format, object arg0, object arg1, object arg2, object arg3)
-        {
-            if (!EnableFileLog) return;
-            EnsureFileLogReady();
-            if (s_fileWriter == null) return;
-            string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
-            string msg = ZString.Format(format, arg0, arg1, arg2, arg3);
-            string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
-                DateTime.Now, level, channelStr, msg, Environment.NewLine);
-            WriteLineToFile(line);
-        }
-
-        private static void WriteToFileFormatted(LogLevel level, LogChannel channel,
-            string format, params object[] args)
-        {
-            if (!EnableFileLog) return;
-            EnsureFileLogReady();
-            if (s_fileWriter == null) return;
-            string channelStr = channel != LogChannel.General ? ZString.Format("[{0}] ", channel) : "";
-            string msg = ZString.Format(format, args);
-            string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
-                DateTime.Now, level, channelStr, msg, Environment.NewLine);
-            WriteLineToFile(line);
+            string message = ZString.Format(format, args);
+            Dispatch(level, BuildConsoleString(level, channel, message), null);
+            WriteToFileLine(level, channel, message);
         }
     }
 }

@@ -218,12 +218,16 @@ namespace ReunionMovement
 
             string[] trace = stackTrace.Split(new char[] { '\n' });
 
+            // 堆栈行入队同样受容量上限约束：否则单条大堆栈可把队列推到
+            // MaxQueueSize + 堆栈行数，突破上限
             foreach (string t in trace)
             {
-                if (t.Length != 0)
+                if (t.Length == 0) continue;
+                if (queue.Count >= MaxQueueSize)
                 {
-                    queue.Enqueue(new LogMessage("  " + t, type));
+                    queue.TryDequeue(out _);
                 }
+                queue.Enqueue(new LogMessage("  " + t, type));
             }
         }
 

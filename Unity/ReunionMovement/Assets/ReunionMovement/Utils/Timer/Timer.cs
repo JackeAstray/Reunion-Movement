@@ -148,6 +148,9 @@ namespace ReunionMovement.Common.Util.Timer
         /// <returns></returns>
         public float GetProgress()
         {
+            // duration 可能为 0（构造时 Math.Max(0, duration)），直接除零得到 NaN。
+            // 0 时长的计时器在首次 Update 即完成，视为进度 1。
+            if (duration <= 0f) return 1f;
             return Math.Clamp(elapsed / duration, 0f, 1f);
         }
 

@@ -114,10 +114,18 @@ namespace ReunionMovement.EditorTools
                 T item = Activator.CreateInstance<T>();
                 foreach (DataColumn column in mSheet.Columns)
                 {
-                    if (propertyCache.TryGetValue(column.ColumnName, out PropertyInfo property))
+                    if (!propertyCache.TryGetValue(column.ColumnName, out PropertyInfo property)) continue;
+
+                    var cell = row[column];
+                    // 空单元格（DBNull/null）：赋类型默认值，避免 Convert.ChangeType 抛 InvalidCastException
+                    if (cell is DBNull || cell == null)
                     {
-                        property.SetValue(item, Convert.ChangeType(row[column], property.PropertyType));
+                        property.SetValue(item, property.PropertyType.IsValueType
+                            ? Activator.CreateInstance(property.PropertyType)
+                            : null);
+                        continue;
                     }
+                    property.SetValue(item, Convert.ChangeType(cell, property.PropertyType));
                 }
                 list.Add(item);
             }

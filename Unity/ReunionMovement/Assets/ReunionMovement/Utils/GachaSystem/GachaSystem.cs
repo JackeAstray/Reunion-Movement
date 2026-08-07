@@ -147,14 +147,16 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         private bool Check4StarPull()
         {
-            // 硬保底触发
+            // 硬保底触发（第 10 抽必出四星）
             if (pity4Star >= 10) return true;
 
-            // 动态概率计算
+            // 动态概率：第 9 抽起从 66% 递增，第 10 抽达到 100%。
+            // 注意偏移量必须是 (pity4Star - 9)：若用 -8，第 9 抽即达 1.0，
+            // 第 10 抽的硬保底分支将永远不可达。
             float currentRate = BASE_4STAR_RATE;
-            if (pity4Star >= 8) // 第9抽开始递增
+            if (pity4Star >= 9)
             {
-                currentRate = Mathf.Min(0.66f + (0.34f * (pity4Star - 8)), 1.0f);
+                currentRate = Mathf.Min(0.66f + (0.34f * (pity4Star - 9)), 1.0f);
             }
             return CryptoRandomValue() <= currentRate;
         }
@@ -232,6 +234,8 @@ namespace ReunionMovement.Common.Util
             {
                 GachaItem item = PerformPull();
                 results.Add(item);
+                // 卡池为空时 PerformPull 可能返回 null（SelectRandomItem 已告警），跳过统计避免 NRE
+                if (item == null) continue;
                 if (item.starRating >= 4)
                     hasFourStarOrAbove = true;
                 else
@@ -308,6 +312,7 @@ namespace ReunionMovement.Common.Util
             for (int i = 0; i < 90; i++)
             {
                 GachaItem item = PerformPull();
+                if (item == null) continue; // 卡池为空时跳过统计，避免 NRE
                 singlePullStarCount[item.starRating]++;
                 if (item.starRating == 5)
                 {
@@ -328,6 +333,7 @@ namespace ReunionMovement.Common.Util
                 List<GachaItem> tenPullResults = Perform10Pull();
                 foreach (var item in tenPullResults)
                 {
+                    if (item == null) continue; // 卡池为空时跳过统计，避免 NRE
                     tenPullStarCount[item.starRating]++;
                     if (item.starRating == 5)
                     {
@@ -350,6 +356,7 @@ namespace ReunionMovement.Common.Util
             for (int i = 0; i < 90; i++)
             {
                 GachaItem item = PerformPull();
+                if (item == null) continue; // 卡池为空时跳过统计，避免 NRE
                 singlePullStarCount[item.starRating]++;
                 if (item.starRating == 5)
                 {
@@ -374,6 +381,7 @@ namespace ReunionMovement.Common.Util
                 List<GachaItem> tenPullResults = Perform10Pull();
                 foreach (var item in tenPullResults)
                 {
+                    if (item == null) continue; // 卡池为空时跳过统计，避免 NRE
                     tenPullStarCount[item.starRating]++;
                     if (item.starRating == 5)
                     {

@@ -39,7 +39,7 @@ namespace ReunionMovement.Common.Util
 
 #if UNITY_NAVMESH_ENABLED
         //导航网格
-		private NavMeshObstacle edgeColliders2D;
+		private NavMeshObstacle navMeshObstacle;
 #endif
 
 #if UNITY_PHYSICS2D_ENABLED
@@ -103,7 +103,7 @@ namespace ReunionMovement.Common.Util
             withColliders.Clear();
 
 #if UNITY_NAVMESH_ENABLED
-			edgeColliders2D = gameObject.GetComponent<NavMeshObstacle>();
+			navMeshObstacle = gameObject.GetComponent<NavMeshObstacle>();
 #endif
 
 #if UNITY_PHYSICS2D_ENABLED
@@ -310,7 +310,7 @@ namespace ReunionMovement.Common.Util
             if (!needDrawWire && !needDrawFill) return;
 
 #if UNITY_NAVMESH_ENABLED
-			if (edgeColliders2D != null) DrawNavMeshObstacle(edgeColliders2D);
+			if (navMeshObstacle != null) DrawNavMeshObstacle(navMeshObstacle);
 #endif
 
 #if UNITY_PHYSICS2D_ENABLED

@@ -25,19 +25,20 @@ namespace ReunionMovement.Core.Languages
         /// <summary>R3 订阅管理器 —— OnDestroy 时自动取消所有订阅</summary>
         private IDisposable languageSubscription;
         private IDisposable initSubscription;
+        /// <summary>初始化完成回调是否已执行（防止订阅+直接调用双路径重复初始化）</summary>
+        private bool isInitFinished;
 
         void Start()
         {
-            // 如果游戏引擎已经运行完毕，直接执行；否则等待初始化完成的广播
+            // 先订阅初始化广播，再检查引擎是否已运行：
+            // 若先检查后订阅，引擎在检查与订阅之间完成初始化（OnInitializedSubject 已广播、无重放），
+            // 事件会被错过，文本永不更新。
+            initSubscription = GameEngine.OnInitializedSubject
+                .Subscribe(_ => OnGameInitFinished());
+
             if (GameEngine.Current != null && GameEngine.Current.State == EngineState.Running)
             {
                 OnGameInitFinished();
-            }
-            else
-            {
-                // 使用 R3 Subject 订阅（自动管理生命周期，无需手动 -=）
-                initSubscription = GameEngine.OnInitializedSubject
-                    .Subscribe(_ => OnGameInitFinished());
             }
         }
 
@@ -46,6 +47,10 @@ namespace ReunionMovement.Core.Languages
         /// </summary>
         private void OnGameInitFinished()
         {
+            // 幂等：订阅路径与 Running 直调路径可能同时命中，避免重复初始化/重复订阅
+            if (isInitFinished) return;
+            isInitFinished = true;
+
             tmpTextComponent = GetComponent<TMP_Text>();
             textComponent = GetComponent<Text>();
             if (tmpTextComponent == null && textComponent == null)

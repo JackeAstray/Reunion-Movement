@@ -70,7 +70,7 @@ namespace ReunionMovement.Example
                     stateMachine.CurrentState = StateMachineExampleState.Idle;
                 }
 
-                if (keyboard.spaceKey.isPressed)
+                if (keyboard.spaceKey.wasPressedThisFrame)
                 {
                     stateMachine.CurrentState = StateMachineExampleState.Jumping;
                 }

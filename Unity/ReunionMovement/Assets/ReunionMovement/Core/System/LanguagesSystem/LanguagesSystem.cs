@@ -29,11 +29,21 @@ namespace ReunionMovement.Core.Languages
         public ReactiveProperty<Multilingual> CurrentLanguage { get; private set; }
             = new ReactiveProperty<Multilingual>(Multilingual.ZH_CN);
 
-        /// <summary>兼容旧代码的非响应式访问器</summary>
+        /// <summary>兼容旧代码的非响应式访问器（Clear 后未重 Init 时为 null，安全降级为 ZH_CN）</summary>
         public Multilingual multilingual
         {
-            get => CurrentLanguage.Value;
-            set => CurrentLanguage.Value = value;
+            get => CurrentLanguage != null ? CurrentLanguage.Value : Multilingual.ZH_CN;
+            set
+            {
+                if (CurrentLanguage != null)
+                {
+                    CurrentLanguage.Value = value;
+                }
+                else
+                {
+                    Log.Warning("LanguagesSystem.multilingual: 系统未初始化（Clear 后未重新 Init），设置被忽略");
+                }
+            }
         }
 
         private LanguagesContainer languagesContainer;
@@ -67,6 +77,12 @@ namespace ReunionMovement.Core.Languages
                 languagesDict = new Dictionary<int, LanguagesConfig>(languagesContainer.configs.Count);
                 foreach (var lang in languagesContainer.configs)
                 {
+                    // configs 中可能混入空项（ScriptableObject 列表未填满），跳过避免 NRE
+                    if (lang == null)
+                    {
+                        Log.Warning("LanguagesSystem: configs 中存在空项，已跳过");
+                        continue;
+                    }
                     languagesDict[lang.Number] = lang;
                 }
             }
@@ -105,6 +121,12 @@ namespace ReunionMovement.Core.Languages
         /// <param name="multilingual"></param>
         public void SetMultilingual(Multilingual multilingual)
         {
+            // Clear() 后（未重新 Init）CurrentLanguage 为 null，判空避免 NRE
+            if (CurrentLanguage == null)
+            {
+                Log.Warning("LanguagesSystem.SetMultilingual: 系统未初始化（Clear 后未重新 Init），设置被忽略");
+                return;
+            }
             CurrentLanguage.Value = multilingual;
         }
 

@@ -444,16 +444,21 @@ namespace ReunionMovement.UI.ButtonAnimated
         /// <returns></returns>
         private ButtonAniSetting GetSetting(ButtonAniState state)
         {
-            switch (state)
+            // Inspector 未配置某状态时回退到 normal；
+            // normal 也未配置时使用默认值兜底，避免 OnEnable/OnValidate 立即 NRE
+            ButtonAniSetting setting = state switch
             {
-                case ButtonAniState.Normal: return normal;
-                case ButtonAniState.Highlighted: return highlighted;
-                case ButtonAniState.Pressed: return pressed;
-                case ButtonAniState.Selected: return selected;
-                case ButtonAniState.Disabled: return disabled;
-                default: return normal;
-            }
+                ButtonAniState.Highlighted => highlighted,
+                ButtonAniState.Pressed => pressed,
+                ButtonAniState.Selected => selected,
+                ButtonAniState.Disabled => disabled,
+                _ => normal
+            };
+            return setting ?? normal ?? defaultSetting;
         }
+
+        /// <summary>默认设置兜底（所有字段使用类默认值），当 Inspector 未配置任何状态时使用</summary>
+        private static readonly ButtonAniSetting defaultSetting = new ButtonAniSetting();
 
         /// <summary>
         /// 应用状态设置

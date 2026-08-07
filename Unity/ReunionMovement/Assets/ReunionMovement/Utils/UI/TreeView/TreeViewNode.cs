@@ -69,7 +69,8 @@ namespace ReunionMovement
         /// <summary>
         /// 懒加载方式获取并缓存当前节点所需的全部 UI 组件引用。
         /// 仅在首次调用时执行查找，后续调用直接返回（通过 myTransform != null 判断）。
-        /// 查找路径基于固定的节点预制体层级结构。
+        /// 查找路径基于固定的节点预制体层级结构；
+        /// 结构不完整时输出明确错误并禁用节点，避免后续链式调用 NRE。
         /// </summary>
         private void GetComponent()
         {
@@ -80,12 +81,29 @@ namespace ReunionMovement
             bg = myTransform.GetComponent<Image>();
             container = myTransform.Find("Container");
 
+            // Container 缺失：后续所有 Find 都会 NRE，直接降级
+            if (container == null)
+            {
+                Debug.LogError($"TreeViewNode: 节点 '{myTransform.name}' 缺少 'Container' 子物体，节点已禁用。请检查预制体结构。", this);
+                enabled = false;
+                return;
+            }
+
             // Container 下的 UI 元素
-            toggle = container.Find("Toggle").GetComponent<Toggle>();
-            text = container.Find("Toggle/Text").GetComponent<TextMeshProUGUI>();
+            toggle = container.Find("Toggle")?.GetComponent<Toggle>();
+            text = container.Find("Toggle/Text")?.GetComponent<TextMeshProUGUI>();
             decorate = container.Find("Decorate");
             placeholder = container.Find("Toggle/Placeholder");
-            placeholderParent = placeholder.parent;
+            placeholderParent = placeholder != null ? placeholder.parent : null;
+
+            // 关键组件缺失：禁用节点，避免 Insert/SetColor 等后续调用 NRE
+            if (toggle == null || text == null || placeholder == null)
+            {
+                Debug.LogError($"TreeViewNode: 节点 '{myTransform.name}' 的 Container 结构不完整" +
+                    $"（Toggle={toggle != null}，Text={text != null}，Placeholder={placeholder != null}），节点已禁用。请检查预制体结构。", this);
+                enabled = false;
+                return;
+            }
 
             // Toggle 中的箭头图标
             toggleTransform = toggle.transform.Find("Icon");

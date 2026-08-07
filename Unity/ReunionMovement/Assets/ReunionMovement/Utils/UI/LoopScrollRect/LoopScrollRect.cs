@@ -159,6 +159,17 @@ namespace ReunionMovement.Common.Util
             scrollRect.onValueChanged.RemoveListener(OnScroll);
         }
 
+        void OnDestroy()
+        {
+            // 销毁时停止平滑滚动协程：否则 UniTaskVoid 协程会继续每帧访问
+            // 已销毁的 content.anchoredPosition，导致 MissingReferenceException 持续刷屏。
+            StopScrollCoroutineIfAny();
+            if (scrollRect != null)
+            {
+                scrollRect.onValueChanged.RemoveListener(OnScroll);
+            }
+        }
+
         /// <summary>
         /// 初始化并开始（会读取 dataSource 的数量并构建池）。
         /// 可在运行时多次调用以刷新数据源。
