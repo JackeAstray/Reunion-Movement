@@ -24,8 +24,18 @@ namespace ReunionMovement.Common.Util
         /// <param name="camera">用于发射射线的摄像机，默认为主摄像机（Camera.main）。</param>
         public RaycastBase(string layerName, Camera camera = null)
         {
-            layerMask = 1 << LayerMask.NameToLayer(layerName);
-            this.camera = camera ?? Camera.main;
+            layerMask = 0;
+            int layer = LayerMask.NameToLayer(layerName);
+            if (layer < 0)
+            {
+                // NameToLayer 对不存在的层返回 -1，直接 1 << -1 会得到错误掩码（int.MinValue）且无告警
+                Log.Error("RaycastBase: 层名 '{0}' 不存在，射线将不会命中任何对象", layerName);
+            }
+            else
+            {
+                layerMask = 1 << layer;
+            }
+            this.camera = camera != null ? camera : Camera.main;
         }
 
 
@@ -37,11 +47,20 @@ namespace ReunionMovement.Common.Util
         public RaycastBase(string[] layerNames, Camera camera = null)
         {
             layerMask = 0;
-            foreach (var name in layerNames)
+            if (layerNames != null)
             {
-                layerMask |= 1 << LayerMask.NameToLayer(name);
+                foreach (var name in layerNames)
+                {
+                    int layer = LayerMask.NameToLayer(name);
+                    if (layer < 0)
+                    {
+                        Log.Error("RaycastBase: 层名 '{0}' 不存在，已跳过", name);
+                        continue;
+                    }
+                    layerMask |= 1 << layer;
+                }
             }
-            this.camera = camera ?? Camera.main;
+            this.camera = camera != null ? camera : Camera.main;
         }
 
         /// <summary>
@@ -64,6 +83,13 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public bool CastRayFromScreenPoint(Vector2 screenPoint, out RaycastHit hitInfo, float distance = Mathf.Infinity)
         {
+            // 摄像机缺失（Camera.main 为 null 时构造处可能仍为 null）时明确报错而非 NRE
+            if (camera == null)
+            {
+                Log.Error("RaycastBase: 摄像机为空，无法发射射线");
+                hitInfo = default;
+                return false;
+            }
             Ray ray = camera.ScreenPointToRay(screenPoint);
             return Physics.Raycast(ray, out hitInfo, distance, layerMask);
         }
@@ -74,7 +100,7 @@ namespace ReunionMovement.Common.Util
         /// <param name="camera"></param>
         public void SetCamera(Camera camera)
         {
-            this.camera = camera ?? Camera.main;
+            this.camera = camera != null ? camera : Camera.main;
         }
 
         /// <summary>
@@ -87,7 +113,13 @@ namespace ReunionMovement.Common.Util
             layerMask = 0;
             foreach (var name in layerNames)
             {
-                layerMask |= 1 << LayerMask.NameToLayer(name);
+                int layer = LayerMask.NameToLayer(name);
+                if (layer < 0)
+                {
+                    Log.Error("RaycastBase: 层名 '{0}' 不存在，已跳过", name);
+                    continue;
+                }
+                layerMask |= 1 << layer;
             }
         }
     }
