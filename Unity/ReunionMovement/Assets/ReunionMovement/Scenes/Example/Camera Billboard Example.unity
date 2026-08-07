@@ -1273,8 +1273,11 @@ MonoBehaviour:
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
     chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
-  parallelogram:
-    parallelogramValue: 0
+  quadrilateral:
+    topLeftOffset: {x: 0, y: 0}
+    topRightOffset: {x: 0, y: 0}
+    bottomLeftOffset: {x: 0, y: 0}
+    bottomRightOffset: {x: 0, y: 0}
   nStarPolygon:
     sideCount: 3
     inset: 2
@@ -1360,6 +1363,7 @@ MonoBehaviour:
   m_GradientOffset: 0
   m_GradientScale: 1
   m_BlendType: 0
+  cameraTexture: {fileID: 0}
 --- !u!1 &1785300613
 GameObject:
   m_ObjectHideFlags: 0
@@ -1459,6 +1463,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 833275381277563082, guid: ceff2848aa7a646408afca3f60087570, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3386072285389872280, guid: ceff2848aa7a646408afca3f60087570, type: 3}
       propertyPath: m_Name
       value: CameraUtil

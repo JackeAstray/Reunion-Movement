@@ -2,7 +2,6 @@ using Cysharp.Threading.Tasks;
 using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine.Networking;
 
 namespace ReunionMovement.Common.Util.Download
@@ -92,10 +91,15 @@ namespace ReunionMovement.Common.Util.Download
             {
                 float totalBytes = 0;
                 float totalElapsed = 0;
-                foreach (var idf in executors.Concat(executorsOld))
+                for (int i = 0; i < executors.Count; i++)
                 {
-                    totalBytes += idf.BytesDownloaded;
-                    totalElapsed += idf.ElapsedTime;
+                    totalBytes += executors[i].BytesDownloaded;
+                    totalElapsed += executors[i].ElapsedTime;
+                }
+                for (int i = 0; i < executorsOld.Count; i++)
+                {
+                    totalBytes += executorsOld[i].BytesDownloaded;
+                    totalElapsed += executorsOld[i].ElapsedTime;
                 }
                 return totalElapsed > 0 ? totalBytes / totalElapsed : 0;
             }
@@ -175,7 +179,8 @@ namespace ReunionMovement.Common.Util.Download
                 return false;
             }
             OnDownloadInvoked?.Invoke();
-            pendingUris = Uris.ToArray();
+            // Uris 已在上方守卫保证非空非空数组，Clone 替代 LINQ ToArray
+            pendingUris = (string[])Uris.Clone();
             pendingOffset = 0;
             numFilesRemaining = Uris.Length;
             startTime = Environment.TickCount;
@@ -230,7 +235,7 @@ namespace ReunionMovement.Common.Util.Download
                 initialCount = 1;
             }
 
-            if (!executors.Any(idf => idf.Uri == uri) && !executorsOld.Any(idf => idf.Uri == uri))
+            if (FindExecutor(executors, uri) == null && FindExecutor(executorsOld, uri) == null)
             {
                 var idf = DownloadExecutorFactory.CreateFromClassName(iDownloadExecutorClassName);
                 idf.Uri = uri;
@@ -239,17 +244,18 @@ namespace ReunionMovement.Common.Util.Download
                 idf.DownloadToRoot = DownloadToRoot;
                 idf.AbandonOnFailure = AbandonOnFailure;
                 idf.Timeout = Timeout;
-                // pendingUris 可能为 null（未先调用无参 Download()），需判空后再 Append
-                pendingUris = (pendingUris ?? Array.Empty<string>()).Append(uri).ToArray();
-                executors = executors.Append(idf).ToArray();
+                // pendingUris 可能为 null（未先调用无参 Download()），需判空后再追加。
+                // 使用项目自带的 string[] 扩展 Add（非 LINQ），避免 Append+ToArray 分配
+                pendingUris = (pendingUris ?? Array.Empty<string>()).Add(uri);
+                executors.Add(idf);
                 numFilesRemaining++;
             }
-            else if (executorsOld.Any(idf => idf.Uri == uri))
+            else if (FindExecutor(executorsOld, uri) != null)
             {
-                var idf = executorsOld.First(idf => idf.Uri == uri);
-                executorsOld = executorsOld.Where(x => x != idf).ToArray();
-                pendingUris = (pendingUris ?? Array.Empty<string>()).Append(uri).ToArray();
-                executors = executors.Append(idf).ToArray();
+                var idf = FindExecutor(executorsOld, uri);
+                executorsOld.Remove(idf);
+                pendingUris = (pendingUris ?? Array.Empty<string>()).Add(uri);
+                executors.Add(idf);
             }
 
             OnDownloadIndividualInvoked?.Invoke(uri);
@@ -273,7 +279,7 @@ namespace ReunionMovement.Common.Util.Download
             }
 
             // executors 与异步回调访问 pendingUris 不同步，需越界保护
-            if (executors == null || executors.Length == 0)
+            if (executors.Count == 0)
             {
                 Log.Error("Dispatch: executors 列表为空，无法分发任务");
                 return ReturnFalseAsync();
@@ -282,11 +288,17 @@ namespace ReunionMovement.Common.Util.Download
             string uri = pendingUris[pendingOffset];
             IDownloadExecutor idf = executors[0];
             pendingOffset++;
-            executors = executors.Skip(1).ToArray();
-            executorsOld = executorsOld.Append(idf).ToArray();
+            // List 原地操作：头部移除 + 尾部追加，零数组分配
+            // （原 Skip(1).ToArray() + Append().ToArray() 每次分发分配两个新数组）
+            executors.RemoveAt(0);
+            executorsOld.Add(idf);
 
             if (idf.CompletedMultipartDownload)
             {
+                // 该 executor 已完成分块下载（可能被 Download(string uri) 从 executorsOld 重新入队）：
+                // 必须走 DispatchCompletion 递减计数并继续分发下一个任务，
+                // 否则 numFilesRemaining 永不归零 → OnDownloadsSuccess 永不触发，任务队列卡死。
+                _ = DispatchCompletion(idf);
                 return ReturnFalseAsync();
             }
 
@@ -450,12 +462,12 @@ namespace ReunionMovement.Common.Util.Download
         /// <returns></returns>
         public IDownloadExecutor GetExecutor(string uri)
         {
-            var exec = executors.FirstOrDefault(idf => idf.Uri == uri);
+            var exec = FindExecutor(executors, uri);
             if (exec != null)
             {
                 return exec;
             }
-            return executorsOld.FirstOrDefault(idf => idf.Uri == uri);
+            return FindExecutor(executorsOld, uri);
         }
 
         /// <summary>
@@ -472,9 +484,13 @@ namespace ReunionMovement.Common.Util.Download
             // 总是中止所有在途 executor（无论 AbandonOnFailure 配置），
             // 避免取消后网络 IO 继续运行、文件被重新写回、回调仍触发。
             // UWRExecutor.Cancel 内部会 Abort 在途 UWR，并视 abandonOnFailure 删除未完成文件。
-            foreach (var idf in executors.Concat(executorsOld))
+            for (int i = 0; i < executors.Count; i++)
             {
-                try { idf.Cancel(); } catch (Exception ex) { Log.Error("Cancel executor 异常: {0}", ex.Message); }
+                try { executors[i].Cancel(); } catch (Exception ex) { Log.Error("Cancel executor 异常: {0}", ex.Message); }
+            }
+            for (int i = 0; i < executorsOld.Count; i++)
+            {
+                try { executorsOld[i].Cancel(); } catch (Exception ex) { Log.Error("Cancel executor 异常: {0}", ex.Message); }
             }
 
             return UniTask.FromResult(true);
@@ -489,14 +505,14 @@ namespace ReunionMovement.Common.Util.Download
         {
             OnCancelIndividual?.Invoke(uri);
 
-            var exec = executors.FirstOrDefault(idf => idf.Uri == uri);
+            var exec = FindExecutor(executors, uri);
             if (exec != null)
             {
                 exec.Cancel();
-                executors = executors.Where(x => x != exec).ToArray();
-                executorsOld = executorsOld.Append(exec).ToArray();
+                executors.Remove(exec);
+                executorsOld.Add(exec);
             }
-            else if (!executorsOld.Any(idf => idf.Uri == uri))
+            else if (FindExecutor(executorsOld, uri) == null)
             {
                 Log.Error("从未下载过该 URI，无法取消 {0}", uri);
                 return UniTask.FromResult(false);
@@ -515,10 +531,8 @@ namespace ReunionMovement.Common.Util.Download
         {
             if (AbandonOnFailure)
             {
-                foreach (var idf in executors.Concat(executorsOld))
-                {
-                    idf.Cancel();
-                }
+                for (int i = 0; i < executors.Count; i++) executors[i].Cancel();
+                for (int i = 0; i < executorsOld.Count; i++) executorsOld[i].Cancel();
             }
         }
 
@@ -546,11 +560,21 @@ namespace ReunionMovement.Common.Util.Download
             pendingUris = Array.Empty<string>();
             downloadedUris = new List<string>();
             incompletedUris = new List<string>();
-            executors = Array.Empty<IDownloadExecutor>();
-            executorsOld = Array.Empty<IDownloadExecutor>();
+            executors.Clear();
+            executorsOld.Clear();
             Uris = Array.Empty<string>();
             n = 0;
             initialCount = 0;
+        }
+
+        /// <summary>在 executor 列表中按 URI 查找（零分配，替代 LINQ FirstOrDefault/Any）</summary>
+        private static IDownloadExecutor FindExecutor(List<IDownloadExecutor> list, string uri)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (list[i].Uri == uri) return list[i];
+            }
+            return null;
         }
     }
 }

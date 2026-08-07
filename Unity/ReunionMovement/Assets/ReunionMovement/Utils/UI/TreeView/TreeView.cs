@@ -192,6 +192,27 @@ namespace ReunionMovement
             treeNode.SetActive(false);
             pool.Add(treeNode);
         }
+
+        protected override void OnDestroy()
+        {
+            // poolParent 是独立根对象，不随 TreeView 销毁。
+            // 若 Clear() 未被调用（如运行中直接销毁 TreeView），必须在此清理，
+            // 否则池内节点与 CachePool 会变成场景中的孤儿根对象长期累积。
+            if (pool.Count > 0 || poolParent != null)
+            {
+                foreach (var obj in pool)
+                {
+                    if (obj != null) UnityEngine.Object.Destroy(obj);
+                }
+                pool.Clear();
+                if (poolParent != null)
+                {
+                    UnityEngine.Object.Destroy(poolParent.gameObject);
+                    poolParent = null;
+                }
+            }
+            base.OnDestroy();
+        }
         /// <summary>
         /// 克隆节点
         /// </summary>

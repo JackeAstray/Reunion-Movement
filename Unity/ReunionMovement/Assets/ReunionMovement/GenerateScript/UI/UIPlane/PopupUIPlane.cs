@@ -46,6 +46,11 @@ namespace ReunionMovement.Core.UI
         {
             base.OnOpen(args);
 
+            // 清理上一次打开残留的回调引用：若窗口在未经过 OnClose 的情况下被连续 OnOpen（重入），
+            // 旧 Action 会残留并在本次点击时触发
+            cancelAction = null;
+            confirmAction = null;
+
             if (confirmBtn != null) confirmBtn.gameObject.SetActive(false);
             if (cancelBtn != null) cancelBtn.gameObject.SetActive(false);
 

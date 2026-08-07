@@ -75,30 +75,49 @@ namespace ReunionMovement.Common.Util
             }
         }
 
+        /// <summary>
+        /// 移除通道并关闭它（与 CloseChannel 行为一致：锁外 Close，避免持锁执行网络操作）。
+        /// 仅从集合移除而不 Close 会导致通道的线程/socket/事件订阅泄漏。
+        /// </summary>
         public void RemoveChannel(string channelName)
         {
+            INetworkChannel toClose = null;
             lock (syncRoot)
             {
                 if (channelIndex.TryGetValue(channelName, out var found))
                 {
                     channelList.Remove(found);
                     channelIndex.Remove(channelName);
-                    return;
+                    toClose = found;
                 }
+            }
+            if (toClose != null)
+            {
+                toClose.Close();
+                return;
             }
             Log.Error("不存在：" + channelName);
         }
 
+        /// <summary>
+        /// 移除通道并关闭它（锁外 Close，避免持锁执行网络操作）。
+        /// </summary>
         public void RemoveChannel(INetworkChannel channel)
         {
             if (channel == null) return;
+            INetworkChannel toClose = null;
             lock (syncRoot)
             {
                 if (channelList.Remove(channel))
                 {
                     channelIndex.Remove(channel.ChannelName);
-                    return;
+                    toClose = channel;
                 }
+            }
+            if (toClose != null)
+            {
+                toClose.Close();
+                return;
             }
             Log.Error("不存在：" + channel.ChannelName);
         }

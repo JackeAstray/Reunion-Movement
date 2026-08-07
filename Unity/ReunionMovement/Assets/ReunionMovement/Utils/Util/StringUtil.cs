@@ -249,7 +249,8 @@ namespace ReunionMovement.Common.Util
             {
                 throw new ArgumentNullException("旧上下文无效");
             }
-            if (string.IsNullOrEmpty(newContext))
+            // 允许空串替换（“删除文本”是合法用途），仅校验 null
+            if (newContext == null)
             {
                 throw new ArgumentNullException("新上下文无效");
             }

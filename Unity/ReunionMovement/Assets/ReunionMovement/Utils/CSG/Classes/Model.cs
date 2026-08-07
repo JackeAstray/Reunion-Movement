@@ -74,9 +74,14 @@ namespace ReunionMovement.Common.Util
             // 预计算总顶点数以预分配容量，避免多次扩容
             int totalVertCount = 0;
             for (int i = 0; i < polygons.Count; i++)
-                totalVertCount += (polygons[i].vertices.Count - 2) * 3;
+            {
+                // 退化多边形（顶点数 < 3）会算出负容量，导致 new List<Vertex>(负数) 抛异常；
+                // 容量仅为预分配提示，钳到非负即可（实际添加时 List 自动扩容）
+                int triangleVerts = (polygons[i].vertices.Count - 2) * 3;
+                if (triangleVerts > 0) totalVertCount += triangleVerts;
+            }
 
-            m_Vertices = new List<Vertex>(totalVertCount);
+            m_Vertices = new List<Vertex>(Math.Max(0, totalVertCount));
             Dictionary<Material, List<int>> submeshes = new Dictionary<Material, List<int>>();
 
             int p = 0;

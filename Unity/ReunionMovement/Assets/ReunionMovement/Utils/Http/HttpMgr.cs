@@ -20,6 +20,8 @@ namespace ReunionMovement.Common.Util.HttpService
         private IHttpService service;
         private Dictionary<string, string> superHeaders;
         private Dictionary<IHttpRequest, CancellationTokenSource> httpRequests;
+        /// <summary>Update 进度轮询的复用快照数组（仅在扩容时分配，避免每帧分配）</summary>
+        private IHttpRequest[] updateSnapshot = System.Array.Empty<IHttpRequest>();
 
         protected override void Awake()
         {
@@ -293,14 +295,18 @@ namespace ReunionMovement.Common.Util.HttpService
             // 快速路径：无请求时跳过
             if (httpRequests.Count == 0) return;
 
-            // 使用 Keys 的数组快照做一次分配（仅在需要时），
-            // 替代每次 ToList() 以避免在进度回调中修改集合导致异常
+            // 复用快照数组（仅在扩容时分配），替代每次 new + CopyTo 的每帧分配；
+            // 快照防止进度回调中修改集合导致异常
             var requests = httpRequests.Keys;
-            var snapshot = new IHttpRequest[requests.Count];
-            requests.CopyTo(snapshot, 0);
-            foreach (var httpRequest in snapshot)
+            if (updateSnapshot.Length < requests.Count)
             {
-                (httpRequest as IUpdateProgress)?.UpdateProgress();
+                updateSnapshot = new IHttpRequest[requests.Count];
+            }
+            requests.CopyTo(updateSnapshot, 0);
+            int count = requests.Count;
+            for (int i = 0; i < count; i++)
+            {
+                (updateSnapshot[i] as IUpdateProgress)?.UpdateProgress();
             }
         }
     }

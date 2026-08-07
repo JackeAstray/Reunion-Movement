@@ -348,7 +348,16 @@ namespace ReunionMovement.Common.Util
             long la = Math.Abs((long)a);
             long lb = Math.Abs((long)b);
             long gcd = CalculateMaximumCommonDivisor(a, b);
-            return (int)(la / gcd * lb);
+
+            // la/gcd*lb 最大可达 ~2^62，虽不溢出 long，但 (int) 强转会静默回绕成负数/错误值；
+            // 显式检测超出 int 范围，返回 int.MaxValue 并告警
+            long result = la / gcd * lb;
+            if (result > int.MaxValue)
+            {
+                Log.Warning("CalculateMinimumCommonMultiple({0}, {1}) 结果溢出 int，返回 int.MaxValue", a, b);
+                return int.MaxValue;
+            }
+            return (int)result;
         }
 
         /// <summary>

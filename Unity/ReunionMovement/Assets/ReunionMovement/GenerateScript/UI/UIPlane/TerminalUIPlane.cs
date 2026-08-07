@@ -1,5 +1,6 @@
 //此脚本是由工具自动生成，请勿手动创建
 
+using ReunionMovement.Common;
 using ReunionMovement.Common.Util;
 using ReunionMovement.Core.Terminal;
 using System.Collections;
@@ -100,7 +101,17 @@ namespace ReunionMovement.Core.UI
         {
             command = text;
             /*"TestTerminal 2 2"*/
-            TerminalSystem.Instance.terminalRequest.ParseCommand(command);
+            // terminalRequest 仅在编辑器/开发构建中由 TerminalSystem 创建，
+            // Release 构建或系统未初始化时为 null，必须判空避免 NRE
+            var terminalRequest = TerminalSystem.Instance?.terminalRequest;
+            if (terminalRequest != null)
+            {
+                terminalRequest.ParseCommand(command);
+            }
+            else
+            {
+                Log.Warning("TerminalUIPlane.OnEndEdit: terminalRequest 为 null（终端仅在编辑器/开发构建可用），已跳过命令解析");
+            }
             CreateItem(command);
         }
 
@@ -115,10 +126,18 @@ namespace ReunionMovement.Core.UI
                 return;
             }
 
-            // 限制最大条目数，超过上限时删除最旧的条目
+            // 限制最大条目数，超过上限时删除最旧的条目。
+            // 必须跳过模板 itemGo：若模板恰好是 root 的第一个子节点，
+            // 直接 Destroy(GetChild(0)) 会销毁模板，之后 Instantiate(itemGo) 抛 MissingReferenceException。
             if (root.transform.childCount >= MaxTerminalItems)
             {
-                Destroy(root.transform.GetChild(0).gameObject);
+                for (int i = 0; i < root.transform.childCount; i++)
+                {
+                    var child = root.transform.GetChild(i);
+                    if (child.gameObject == itemGo) continue; // 跳过模板
+                    Destroy(child.gameObject);
+                    break;
+                }
             }
 
             GameObject @object = Instantiate(itemGo, Vector3.zero, Quaternion.identity);

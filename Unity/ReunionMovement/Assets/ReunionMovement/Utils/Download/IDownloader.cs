@@ -1,7 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 namespace ReunionMovement.Common.Util.Download
@@ -32,13 +31,14 @@ namespace ReunionMovement.Common.Util.Download
         /// </summary>
         public bool tryMultipartDownload = true;
         /// <summary>
-        /// 下载执行器
+        /// 下载执行器（List 而非数组：Dispatch 每分发一个文件都要从头部移除、尾部追加，
+        /// 数组 + LINQ Skip/Append 会每次分配新数组，改为 List 后零分配）
         /// </summary>
-        protected IDownloadExecutor[] executors = Array.Empty<IDownloadExecutor>();
+        protected readonly List<IDownloadExecutor> executors = new List<IDownloadExecutor>();
         /// <summary>
         /// 旧的下载执行器
         /// </summary>
-        protected IDownloadExecutor[] executorsOld = Array.Empty<IDownloadExecutor>();
+        protected readonly List<IDownloadExecutor> executorsOld = new List<IDownloadExecutor>();
         /// <summary>
         /// 下载执行器类名
         /// </summary>
@@ -63,19 +63,21 @@ namespace ReunionMovement.Common.Util.Download
         {
             get
             {
-                int total = executors.Length + executorsOld.Length;
+                int total = executors.Count + executorsOld.Count;
                 if (total == 0)
                 {
                     return 0f;
                 }
 
-                float prog = executors.Sum(e => e.Progress) + executorsOld.Sum(e => e.Progress);
+                float prog = 0f;
+                for (int i = 0; i < executors.Count; i++) prog += executors[i].Progress;
+                for (int i = 0; i < executorsOld.Count; i++) prog += executorsOld[i].Progress;
 
                 return prog / total;
             }
         }
 
-        public int NumFilesTotal => executors.Length;
+        public int NumFilesTotal => executors.Count;
         public bool Completed => Progress == 1.0f;
         public int MultipartChunkSize = 200000;
 
@@ -170,7 +172,9 @@ namespace ReunionMovement.Common.Util.Download
                 }
 
                 uris = validUris.ToArray();
-                executors = newExecutors.ToArray();
+                // List 原地替换（readonly 字段不可重新赋值）：先清空再填充，避免数组分配
+                executors.Clear();
+                executors.AddRange(newExecutors);
             }
         }
 

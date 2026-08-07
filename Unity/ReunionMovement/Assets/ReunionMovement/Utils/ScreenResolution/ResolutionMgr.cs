@@ -207,9 +207,19 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         public void SetResolution(int index, bool fullscreen)
         {
-            Vector2 r = fullscreen
-                ? fullscreenResolutions[currFullscreenRes = index]
-                : windowedResolutions[currWindowedRes = index];
+            // 列表可能为空（InitResolutions 未填充时 Count-1 = -1 会越界），
+            // 统一做边界校验与 clamp，避免 IndexOutOfRangeException
+            var list = fullscreen ? fullscreenResolutions : windowedResolutions;
+            if (list == null || list.Count == 0)
+            {
+                Log.Warning("ResolutionMgr: {0}分辨率列表为空，无法设置分辨率。", fullscreen ? "全屏" : "窗口");
+                return;
+            }
+
+            int clamped = Mathf.Clamp(index, 0, list.Count - 1);
+            Vector2 r = list[clamped];
+            if (fullscreen) currFullscreenRes = clamped;
+            else currWindowedRes = clamped;
 
             bool fullscreen2windowed = Screen.fullScreenMode != FullScreenMode.Windowed && !fullscreen;
             Screen.SetResolution((int)r.x, (int)r.y, fullscreen);

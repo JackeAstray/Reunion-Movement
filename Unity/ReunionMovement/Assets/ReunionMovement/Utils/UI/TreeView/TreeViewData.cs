@@ -75,6 +75,7 @@ namespace ReunionMovement
         /// 设置当前节点的父节点。
         /// 会自动从旧父节点中移除自身，加入新父节点的子节点列表，
         /// 并递归更新自身及所有后代节点的层级。
+        /// parent 传 null 表示将该节点提升为根节点（层级归 0）。
         /// </summary>
         /// <param name="parent">新的父节点</param>
         public void SetParent(TreeViewData parent)
@@ -85,12 +86,12 @@ namespace ReunionMovement
             // 从旧父节点中移除自身
             this.parent?.RemoveChild(this);
 
-            // 设置新父节点并更新层级
+            // 设置新父节点并更新层级（null 表示成为根节点，避免 NRE）
             this.parent = parent;
-            this.layer = parent.layer + 1;
+            this.layer = parent != null ? parent.layer + 1 : 0;
 
             // 确保自身已加入新父节点的子节点列表
-            if (!parent.childNodes.Contains(this))
+            if (parent != null && !parent.childNodes.Contains(this))
                 parent.childNodes.Add(this);
 
             // 递归修正所有后代节点的 parent 和 layer

@@ -33,6 +33,17 @@ namespace ReunionMovement.Core.UI
 
             base.OnInit();
 
+            // 生成代码空保护：logo 未赋值时给出明确告警而非 NRE
+            if (logo1 == null || logo2 == null)
+            {
+                Log.Error("StartGameUIPlane: logo1/logo2 未赋值，跳过 Logo 动画");
+                return;
+            }
+
+            // 先杀残留动画，避免重复打开/重复 OnInit 时动画叠加
+            logo1.DOKill();
+            logo2.DOKill();
+
             logo1.DOFade(1, 0.45f).OnComplete(() =>
             {
                 logo2.DOFade(1, 0.25f).OnComplete(() =>

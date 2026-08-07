@@ -41,7 +41,8 @@ namespace ReunionMovement.Common.Util.StateMachine
         private State currentState;
         // 全局更新
         private Action GlobalUpdate;
-        // 历史状态
+        // 状态历史（栈），带上限防止无界增长
+        private const int MaxStateHistory = 64;
         private Stack<State> stateHistory;
         // 并行状态
         private List<State> parallelStates;
@@ -103,11 +104,13 @@ namespace ReunionMovement.Common.Util.StateMachine
                 return;
             }
 
-            // 用局部快照：OnUpdate 回调内可能调用 ChangeState/Reset 修改 currentState，
-            // 后续基于快照并判空，避免 NRE
+            // 用局部快照：OnUpdate 回调内可能调用 ChangeState/Reset 修改 currentState。
+            // 注意：对局部快照判空是无效防御（快照刚来自非空 currentState），
+            // 必须在 OnUpdate 之后重新校验 currentState 是否仍指向同一状态实例，
+            // 否则会对已退出的旧状态累加计时并触发虚假的超时切换。
             var state = currentState;
             state?.OnUpdate?.Invoke();
-            if (state == null) return;
+            if (state == null || !ReferenceEquals(currentState, state)) return;
 
             state.elapsedTime += Time.deltaTime;
 
@@ -235,7 +238,27 @@ namespace ReunionMovement.Common.Util.StateMachine
                     oldLabel = currentState.label;
                     currentState.OnStop?.Invoke();
                     OnStateExit?.Invoke(currentState.label);
-                    stateHistory.Push(currentState);
+
+                    // 同状态重入（如 Attacking→Attacking 重启攻击）不压历史栈：
+                    // 从重启后的状态 Revert 应回到真正的上一个状态，而不是重复的自身条目；
+                    // 同时避免高频同状态重入导致历史栈无界增长（触发上限告警刷屏）。
+                    bool isSameState = ReferenceEquals(currentState, targetState);
+                    if (!isSameState)
+                    {
+                        // 带上限压栈：超出时丢弃最旧记录，防止高频 ChangeState 导致无界增长
+                        if (stateHistory.Count >= MaxStateHistory)
+                        {
+                            var items = stateHistory.ToArray();
+                            stateHistory.Clear();
+                            // items[0] 为栈顶（最新），末位为最旧；丢弃最旧的一条
+                            for (int i = 0; i < items.Length - 1; i++)
+                            {
+                                stateHistory.Push(items[i]);
+                            }
+                            Log.Warning("StateMachine: 状态历史超过上限 {0}，已丢弃最旧记录", MaxStateHistory);
+                        }
+                        stateHistory.Push(currentState);
+                    }
                 }
 
                 currentState = targetState;

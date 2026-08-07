@@ -429,6 +429,22 @@ namespace ReunionMovement.UI.Select
 
         private void Refresh()
         {
+            // options 为空时直接返回：Bind() 中 ValidateFields 仅告警不阻断，
+            // 此处必须有空保护，否则 options.Length 会抛 NullReferenceException
+            if (options == null || options.Length == 0)
+            {
+                // 无选项时隐藏所有预览，避免残留上次显示的预览对象
+                if (previews != null)
+                {
+                    for (int i = 0; i < previews.Length; i++)
+                    {
+                        if (previews[i] != null) previews[i].SetActive(false);
+                    }
+                }
+                lastPreviewIndex = -1;
+                return;
+            }
+
             for (int i = 0; i < options.Length; i++)
             {
                 // 高亮当前项
