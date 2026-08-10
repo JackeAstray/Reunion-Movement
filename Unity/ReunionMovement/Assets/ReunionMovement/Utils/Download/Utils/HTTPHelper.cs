@@ -102,11 +102,8 @@ namespace ReunionMovement.Common.Util.Download
 
             var arr = uri.Split('/');
             var v = arr[^1];
-            if (v.Contains("%"))
-            {
-                var arr2 = v.Split('%');
-                v = arr2[^1];
-            }
+            // 注意：不要对含 % 的文件名做 Split('%') 截断 —— 编码文件名（如 report%20final.png）
+            // 会被错误截成 "20 final.png"。% 解码已由下方的 Uri.UnescapeDataString 处理。
 
             // 路径遍历防护：使用 Path.GetFileName 剥离任何目录穿越字符
             // 先做 URL 解码以防编码绕过（如 %2e%2e%2f）
@@ -215,12 +212,9 @@ namespace ReunionMovement.Common.Util.Download
 
             if (downloadToRoot)
             {
+                // filename 已由 GetFilenameFromUriNaively（URL 解码）或 PathUtil.GetFileNameByUrl（MD5）处理，
+                // 不要再对路径做 Split('%') 截断，否则会破坏编码文件名与目录路径
                 tempPath = Path.Combine(path, filename).Replace("/", Path.DirectorySeparatorChar.ToString());
-                if (tempPath.Contains("%"))
-                {
-                    var arr = tempPath.Split('%');
-                    tempPath = arr[^1];
-                }
             }
             else
             {

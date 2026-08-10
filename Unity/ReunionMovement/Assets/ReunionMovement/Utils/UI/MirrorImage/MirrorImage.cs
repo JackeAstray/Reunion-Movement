@@ -304,6 +304,9 @@ namespace ReunionMovement.UI.ImageExtensions
 
             int spriteW = Mathf.RoundToInt(size.x);
             int spriteH = Mathf.RoundToInt(size.y);
+            // 异常精灵尺寸（0）时避免除零产生 NaN/Infinity
+            if (spriteW <= 0) spriteW = 1;
+            if (spriteH <= 0) spriteH = 1;
 
             var v = new Vector4(
                     padding.x / spriteW,

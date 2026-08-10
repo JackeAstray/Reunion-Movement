@@ -46,8 +46,8 @@ namespace ReunionMovement.Core.Resources
         public void Clear()
         {
             Log.Debug("ResourcesSystem 清除数据");
-            resourceTable.Clear();
-            resourceRefCount.Clear();
+            // 委托 ClearAssetsCache 真正卸载已缓存资源，避免资源驻留到场景卸载
+            ClearAssetsCache();
             atlasCache.Clear();
             isInited = false;
         }

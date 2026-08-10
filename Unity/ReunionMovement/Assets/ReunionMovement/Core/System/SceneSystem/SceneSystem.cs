@@ -227,7 +227,8 @@ namespace ReunionMovement.Core.Scene
                 slcc?.Invoke();
                 return;
             }
-            LoadState.Value = SceneLoadState.Loading;
+            // Clear() 可能已置空 LoadState（系统清理），判空避免 NRE
+            if (LoadState != null) LoadState.Value = SceneLoadState.Loading;
             // 开始加载
             sceneLoadingCompletionCallback = slcc;
             beforeSceneLoadingCompletionCallback = bslcc;
@@ -249,7 +250,7 @@ namespace ReunionMovement.Core.Scene
             catch (Exception ex)
             {
                 Log.Error("场景加载异常：{0}", ex);
-                LoadState.Value = SceneLoadState.Failed;
+                if (LoadState != null) LoadState.Value = SceneLoadState.Failed;
                 // 确保异常情况下回调也被触发、状态被重置
                 ExecuteBslcc();
                 ExecuteSlcc();
@@ -258,12 +259,14 @@ namespace ReunionMovement.Core.Scene
             {
                 // 确保无论成功、失败还是异常，都能重置加载锁，防止后续加载被永久阻塞
                 System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
-                // 若提前返回（async==null）或异常，targetSceneName 和 currentSceneName 需回滚
-                if (LoadState.Value != SceneLoadState.Loaded)
+                // 加载未完成时修正状态（Clear() 可能已置空 LoadState，判空避免 NRE）
+                if (LoadState != null && LoadState.Value != SceneLoadState.Loaded)
                 {
                     targetSceneName = null;
-                    if (currentSceneName == loadSceneName)
-                        currentSceneName = previousSceneName;
+                    // 以实际激活场景为准，避免 currentSceneName 与真实场景不一致：
+                    // openLoad 模式下过渡场景已激活，不能回滚成 previousSceneName，
+                    // 否则后续 LoadScene(旧场景名) 会误判"已加载"直接回调而不真正加载。
+                    currentSceneName = SceneManager.GetActiveScene().name;
                 }
             }
         }
@@ -303,13 +306,14 @@ namespace ReunionMovement.Core.Scene
             if (async == null)
             {
                 Log.Error("加载场景失败：{0} 为 null", nameof(AsyncOperation));
-                LoadState.Value = SceneLoadState.Failed;
+                if (LoadState != null) LoadState.Value = SceneLoadState.Failed;
                 // 触发并清空所有回调，避免泄漏
                 ExecuteBslcc();
                 ExecuteSlcc();
                 System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
                 targetSceneName = null;
-                currentSceneName = previousSceneName;
+                // 以实际激活场景修正（openLoad 模式下过渡场景可能已激活，不能回滚成 previousSceneName）
+                currentSceneName = SceneManager.GetActiveScene().name;
                 return;
             }
 
@@ -372,9 +376,10 @@ namespace ReunionMovement.Core.Scene
             System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
             currentSceneName = targetSceneName;
             targetSceneName = null;
-            LoadState.Value = SceneLoadState.Loaded;
-            SceneChangedSubject.OnNext(currentSceneName);
-            SceneLoadedSubject.OnNext(currentSceneName);
+            // Clear() 可能已释放 Subject/ReactiveProperty（系统清理）,判空避免 NRE
+            if (LoadState != null) LoadState.Value = SceneLoadState.Loaded;
+            SceneChangedSubject?.OnNext(currentSceneName);
+            SceneLoadedSubject?.OnNext(currentSceneName);
         }
 
         /// <summary>

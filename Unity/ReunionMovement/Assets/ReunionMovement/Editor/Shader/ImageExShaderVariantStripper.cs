@@ -32,12 +32,24 @@ namespace ReunionMovement.UI.ImageExtensions.Editor
             "NTRIANGLE_ROUNDED"
         };
 
-        // WebGL 白名单：只保留常用形状，未列出的形状变体会被剥离。
+        // WebGL 白名单：形状在运行时由 Inspector 任意配置（DrawShape 枚举支持 12 种形状），
+        // 静态白名单无法穷举实际使用集合；剥离未列出的形状会导致 WebGL 渲染损坏
+        // （如四边形 QUADRILATERAL 被剥掉后 ImageEx 四边形 UI 直接消失）。
+        // 因此保留全部形状变体，体积优化仅作用于过渡模式与高成本模糊/描边组合。
         private static readonly HashSet<string> AllowedShapeKeywords = new HashSet<string>
         {
             "RECTANGLE",
             "CIRCLE",
-            "TRIANGLE"
+            "TRIANGLE",
+            "PENTAGON",
+            "HEXAGON",
+            "CHAMFERBOX",
+            "QUADRILATERAL",
+            "NSTAR_POLYGON",
+            "HEART",
+            "BLOBBYCROSS",
+            "SQUIRCLE",
+            "NTRIANGLE_ROUNDED"
         };
 
         private static readonly HashSet<string> TransitionKeywords = new HashSet<string>

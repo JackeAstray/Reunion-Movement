@@ -4,12 +4,14 @@ using UnityEngine.Networking;
 
 namespace ReunionMovement.Common.Util.HttpService
 {
-    public class UnityHttpRequest : IHttpRequest, IUpdateProgress
+    public class UnityHttpRequest : IHttpRequest, IUpdateProgress, IDisposable
     {
         internal UnityWebRequest UnityWebRequest => unityWebRequest;
 
         private readonly UnityWebRequest unityWebRequest;
         private readonly Dictionary<string, string> headers;
+        // 防重入：Send() 只能调用一次，重复调用会覆盖请求跟踪并产生无效的第二次协程
+        private bool sent;
 
         private event Action<float> onUploadProgress;
         private event Action<float> onDownloadProgress;
@@ -149,6 +151,10 @@ namespace ReunionMovement.Common.Util.HttpService
         /// <returns></returns>
         public IHttpRequest Send()
         {
+            // 防重入：重复 Send 会覆盖 HttpMgr 的请求跟踪条目（首条请求失去取消能力）
+            if (sent) return this;
+            sent = true;
+
             foreach (var header in headers)
             {
                 unityWebRequest.SetRequestHeader(header.Key, header.Value);
@@ -156,6 +162,15 @@ namespace ReunionMovement.Common.Util.HttpService
 
             HttpMgr.Instance.Send(this, onSuccess, onError, onNetworkError);
             return this;
+        }
+
+        /// <summary>
+        /// 释放底层 UnityWebRequest 原生资源。
+        /// 取消路径（协程被 cts 掐断、using 不执行）由 HttpMgr.Abort 调用，防止原生泄漏。
+        /// </summary>
+        public void Dispose()
+        {
+            unityWebRequest?.Dispose();
         }
 
         /// <summary>

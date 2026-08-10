@@ -117,11 +117,14 @@ namespace ReunionMovement.Core.EventMessage
 
             foreach (var kvp in eventSubjects)
             {
-                kvp.Value?.Dispose();
+                // OnCompleted 而非 Dispose：通知旧订阅者流结束。
+                // 已完成 Subject 再 Subscribe 不会抛 ObjectDisposedException（Dispose 会抛）。
+                kvp.Value?.OnCompleted();
             }
             eventSubjects.Clear();
 
-            // 释放泛型零装箱 Subjects
+            // 释放泛型零装箱 Subjects（泛型无法直接调用 OnCompleted，保持 Dispose；
+            // 通过 AddEventListenerTyped 追踪的订阅已在上方释放）
             foreach (var obj in typedSubjects.Values)
             {
                 if (obj is IDisposable disp) disp.Dispose();
@@ -279,7 +282,9 @@ namespace ReunionMovement.Core.EventMessage
         /// <returns>可观测序列</returns>
         public Observable<EventData> AsObservable(EventMessageType type)
         {
-            return GetOrCreateSubject(type);
+            // 返回只读包装：外部只能 Subscribe，不能 OnNext；
+            // 且 Clear 后旧引用（已完成 Subject）Subscribe 不会抛 ObjectDisposedException
+            return GetOrCreateSubject(type).AsObservable();
         }
 
         // ============================================================
@@ -374,7 +379,7 @@ namespace ReunionMovement.Core.EventMessage
         /// </summary>
         public Observable<EventData<T>> AsObservableTyped<T>(EventMessageType type)
         {
-            return GetOrCreateTypedSubject<T>(type);
+            return GetOrCreateTypedSubject<T>(type).AsObservable();
         }
 
         #endregion

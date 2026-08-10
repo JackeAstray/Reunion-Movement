@@ -14,9 +14,9 @@ namespace ReunionMovement.Common.Util.StateMachine
         private class State
         {
             public readonly TLabel label;       // 状态标签
-            public readonly Action OnStart;     // 开始时的回调
-            public readonly Action OnStop;      // 结束时的回调
-            public readonly Action OnUpdate;    // 更新时的回调
+            [JsonIgnore] public readonly Action OnStart;     // 开始时的回调
+            [JsonIgnore] public readonly Action OnStop;      // 结束时的回调
+            [JsonIgnore] public readonly Action OnUpdate;    // 更新时的回调
 
             public readonly int priority;       // 优先级
 
@@ -39,7 +39,8 @@ namespace ReunionMovement.Common.Util.StateMachine
         private readonly Dictionary<TLabel, State> stateDictionary;
         // 当前状态
         private State currentState;
-        // 全局更新
+        // 全局更新（委托不参与序列化，避免 JSON.NET 展开 Target 对象图）
+        [JsonIgnore]
         private Action GlobalUpdate;
         // 状态历史（栈），带上限防止无界增长
         private const int MaxStateHistory = 64;
@@ -52,7 +53,8 @@ namespace ReunionMovement.Common.Util.StateMachine
         public event Action<TLabel> OnStateEnter;
         // 状态退出事件
         public event Action<TLabel> OnStateExit;
-        // 状态转换条件
+        // 状态转换条件（委托不参与序列化，避免 JSON.NET 展开 Target 对象图）
+        [JsonIgnore]
         private readonly Dictionary<(TLabel, TLabel), Func<bool>> transitionConditions;
         // 默认状态
         private TLabel defaultStateLabel;

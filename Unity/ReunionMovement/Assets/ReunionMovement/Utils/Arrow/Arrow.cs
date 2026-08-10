@@ -75,15 +75,7 @@ namespace ReunionMovement.Common.Util
             var originRect = origin.GetComponent<RectTransform>();
             if (originRect != null)
                 myRect.anchoredPosition = originRect.anchoredPosition;
-            Vector2 differenceToMouse = Pointer.current != null ? Pointer.current.position.ReadValue() - originPosOnScreen : Vector2.zero;
-            differenceToMouse.Scale(new Vector2(1f / myRect.localScale.x, 1f / myRect.localScale.y));
-
-            // 鼠标恰好位于箭头上方时方向向量为零，跳过旋转/长度设置，避免 NaN 与除零
-            if (differenceToMouse.sqrMagnitude < 0.0001f)
-                return;
-
-            transform.up = differenceToMouse;
-            baseRect.anchorMax = new Vector2(baseRect.anchorMax.x, differenceToMouse.magnitude / canvas.scaleFactor / Mathf.Max(baseHeight, 0.01f));
+            ApplyDirection(originPosOnScreen);
         }
 
         public void SetupWorld()
@@ -92,6 +84,15 @@ namespace ReunionMovement.Common.Util
                 return;
             Vector2 originPosOnScreen = mainCamera.WorldToScreenPoint(origin.position);
             myRect.anchoredPosition = new Vector2(originPosOnScreen.x - Screen.width / 2, originPosOnScreen.y - Screen.height / 2) / canvas.scaleFactor;
+            ApplyDirection(originPosOnScreen);
+        }
+
+        /// <summary>
+        /// 计算鼠标相对原点的方向并设置箭头旋转与长度（UI/World 共用）。
+        /// 鼠标恰好位于箭头上方时方向向量为零，跳过设置避免 NaN 与除零。
+        /// </summary>
+        private void ApplyDirection(Vector2 originPosOnScreen)
+        {
             Vector2 differenceToMouse = Pointer.current != null ? Pointer.current.position.ReadValue() - originPosOnScreen : Vector2.zero;
             differenceToMouse.Scale(new Vector2(1f / myRect.localScale.x, 1f / myRect.localScale.y));
 

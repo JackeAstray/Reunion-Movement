@@ -13,8 +13,9 @@ namespace ReunionMovement.Common.Util.EditorTools
     /// </summary>
     public class SmallFunctions : EditorWindow
     {
-        public static List<string> scenesName = new List<string>();
-        public static List<string> scenePaths = new List<string>();
+        // 实例字段：避免公共静态可变状态在编辑器域内跨窗口泄漏，且 OnEnable 时刷新保证不过期
+        private List<string> scenesName = new List<string>();
+        private List<string> scenePaths = new List<string>();
 
         /// <summary>
         /// 小功能窗口
@@ -24,33 +25,32 @@ namespace ReunionMovement.Common.Util.EditorTools
         {
             //version = new System.Version(PlayerSettings.bundleVersion);
 
-            GetAllScene();
             SmallFunctions smallFunctions = GetWindow<SmallFunctions>(true, "小功能", true);
             smallFunctions.minSize = new Vector2(400, 600);
+            smallFunctions.GetAllScene();
+        }
+
+        private void OnEnable()
+        {
+            // 窗口打开/Build Settings 变化后重新加载场景列表，避免列表过期
+            GetAllScene();
         }
 
         /// <summary>
         /// 获取所有场景
         /// </summary>
-        public static void GetAllScene()
+        public void GetAllScene()
         {
             scenesName.Clear();
             scenePaths.Clear();
 
             foreach (UnityEditor.EditorBuildSettingsScene scene in UnityEditor.EditorBuildSettings.scenes)
             {
-                string tempPath = scene.path;
-                scenePaths.Add(tempPath);
+                // 过滤被禁用的场景与空路径，保证 scenesName 与 scenePaths 一一对应（防索引错位）
+                if (!scene.enabled || string.IsNullOrEmpty(scene.path)) continue;
 
-                string[] Name = tempPath.Split('/');
-
-                foreach (var item in Name)
-                {
-                    if (item.Contains(".unity"))
-                    {
-                        scenesName.Add(item.Substring(0, item.IndexOf('.')));
-                    }
-                }
+                scenePaths.Add(scene.path);
+                scenesName.Add(System.IO.Path.GetFileNameWithoutExtension(scene.path));
             }
         }
 
@@ -122,7 +122,8 @@ namespace ReunionMovement.Common.Util.EditorTools
             {
                 if (selectedObject.GetComponent<T>())
                 {
-                    selectedObject.AddComponent<U>();
+                    // 通过 Undo API 添加，支持 Ctrl+Z 撤销
+                    Undo.AddComponent<U>(selectedObject);
                 }
                 else
                 {
@@ -150,10 +151,13 @@ namespace ReunionMovement.Common.Util.EditorTools
             var assetPath = EditorUtility.IsPersistent(selectedObject);
             if (assetPath == false)
             {
-                if (selectedObject.GetComponent<T>())
+                var comp = selectedObject.GetComponent<T>();
+                if (comp)
                 {
-                    DestroyImmediate(selectedObject.GetComponent<T>());
-                    DestroyImmediate(selectedObject.GetComponent<Mask>());
+                    // 通过 Undo API 移除，支持 Ctrl+Z 撤销
+                    Undo.DestroyObjectImmediate(comp);
+                    // 不再无条件删除 Mask：Mask 可能是用户自行添加的（用于裁剪），误删会破坏场景数据。
+                    // 若 Mask 是添加波纹时由 RequireComponent 自动生成的，移除 UIRipple 后 Unity 会尝试自动清理。
                 }
                 else
                 {
@@ -211,14 +215,15 @@ namespace ReunionMovement.Common.Util.EditorTools
             {
                 if (!obj.GetComponent<T>())
                 {
-                    obj.AddComponent<T>();
+                    Undo.AddComponent<T>(obj);
                 }
             }
             else
             {
                 obj = new GameObject(name);
                 Selection.activeGameObject = obj;
-                obj.AddComponent<T>();
+                Undo.RegisterCreatedObjectUndo(obj, "创建 " + name);
+                Undo.AddComponent<T>(obj);
             }
         }
 
@@ -232,9 +237,11 @@ namespace ReunionMovement.Common.Util.EditorTools
 
             foreach (GameObject obj in objects)
             {
-                if (obj.GetComponent<T>())
+                var comp = obj.GetComponent<T>();
+                if (comp != null)
                 {
-                    GameObject.DestroyImmediate(obj);
+                    // 仅移除目标组件（支持 Undo），避免销毁整个 GameObject 连带删掉整棵 UI 子树
+                    Undo.DestroyObjectImmediate(comp);
                 }
             }
         }

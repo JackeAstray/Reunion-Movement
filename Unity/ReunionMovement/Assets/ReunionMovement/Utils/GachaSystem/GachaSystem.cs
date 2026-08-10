@@ -16,13 +16,10 @@ namespace ReunionMovement.Common.Util
         // ===== 加密随机数生成器（不可预测，替代 UnityEngine.Random） =====
         // 使用 RandomNumberGenerator 替代已过时的 RNGCryptoServiceProvider
 
-        /// <summary>生成 [0, 1) 范围的加密随机浮点数</summary>
+        /// <summary>生成 [0, 1) 范围的加密随机浮点数（GetInt32 避免每次 new byte[4] 分配）</summary>
         private static float CryptoRandomValue()
         {
-            byte[] bytes = new byte[4];
-            RandomNumberGenerator.Fill(bytes);
-            uint randomUint = BitConverter.ToUInt32(bytes, 0);
-            return (float)(randomUint / (uint.MaxValue + 1.0));
+            return RandomNumberGenerator.GetInt32(0, int.MaxValue) / (float)int.MaxValue;
         }
 
         /// <summary>生成 [min, max) 范围的加密随机整数（GetInt32 内部无模偏差）</summary>
@@ -326,54 +323,6 @@ namespace ReunionMovement.Common.Util
             Log.Debug("单抽统计: 三星: {0} | 四星: {1} | 五星: {2}", singlePullStarCount[3], singlePullStarCount[4], singlePullStarCount[5]);
             Log.Debug("-------------------------");
 
-            // 统计十连抽星级数量
-            Dictionary<int, int> tenPullStarCount = new Dictionary<int, int> { { 3, 0 }, { 4, 0 }, { 5, 0 } };
-            for (int i = 0; i < 9; i++)
-            {
-                List<GachaItem> tenPullResults = Perform10Pull();
-                foreach (var item in tenPullResults)
-                {
-                    if (item == null) continue; // 卡池为空时跳过统计，避免 NRE
-                    tenPullStarCount[item.starRating]++;
-                    if (item.starRating == 5)
-                    {
-                        Log.Debug("<color=#ffd32a>第 {0} 抽抽到了5星: {1}| 是否UP: {2}</color>", last5StarPullCount, item.itemName, isLastPullUp);
-                    }
-                    //else
-                    //{
-                    //    Debug.Log($"十连抽: {item.itemName} | 星级: {item.starRating} | 是否UP: {isLastPullUp}");
-                    //}
-                }
-            }
-            Log.Debug("十连抽统计: 三星: {0} | 四星: {1} | 五星: {2}", tenPullStarCount[3], tenPullStarCount[4], tenPullStarCount[5]);
-        }
-
-        [ContextMenu("TestPull1")]
-        public void TestPull1()
-        {
-            // 统计单抽星级数量
-            Dictionary<int, int> singlePullStarCount = new Dictionary<int, int> { { 3, 0 }, { 4, 0 }, { 5, 0 } };
-            for (int i = 0; i < 90; i++)
-            {
-                GachaItem item = PerformPull();
-                if (item == null) continue; // 卡池为空时跳过统计，避免 NRE
-                singlePullStarCount[item.starRating]++;
-                if (item.starRating == 5)
-                {
-                    Log.Debug("<color=#ffd32a>第 {0} 抽抽到了5星: {1}| 是否UP: {2}</color>", last5StarPullCount, item.itemName, isLastPullUp);
-                }
-                //else
-                //{
-                //    Debug.Log($"第 {i + 1} 抽: {item.itemName} | 星级: {item.starRating} | 是否UP: {isLastPullUp}");
-                //}
-            }
-            Log.Debug("单抽统计: 三星: {0} | 四星: {1} | 五星: {2}", singlePullStarCount[3], singlePullStarCount[4], singlePullStarCount[5]);
-            Log.Debug("-------------------------");
-        }
-
-        [ContextMenu("TestPull10")]
-        public void TestPull10()
-        {
             // 统计十连抽星级数量
             Dictionary<int, int> tenPullStarCount = new Dictionary<int, int> { { 3, 0 }, { 4, 0 }, { 5, 0 } };
             for (int i = 0; i < 9; i++)

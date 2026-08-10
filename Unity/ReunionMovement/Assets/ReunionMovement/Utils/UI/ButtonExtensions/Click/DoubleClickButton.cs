@@ -35,22 +35,8 @@ namespace ReunionMovement.UI.ButtonClick
         [SerializeField]
         private UnityEngine.InputSystem.Key[] keyboardTriggerKeys = new UnityEngine.InputSystem.Key[] { UnityEngine.InputSystem.Key.Space, UnityEngine.InputSystem.Key.Enter };
 
-        public enum GamepadButtonType
-        {
-            South,
-            North,
-            West,
-            East,
-            LeftShoulder,
-            RightShoulder,
-            LeftTrigger,
-            RightTrigger,
-            Start,
-            Select
-        }
-
         [SerializeField]
-        private GamepadButtonType[] gamepadTriggerButtons = new GamepadButtonType[] { GamepadButtonType.South };
+        private ButtonInputHelper.GamepadButtonType[] gamepadTriggerButtons = new ButtonInputHelper.GamepadButtonType[] { ButtonInputHelper.GamepadButtonType.South };
 
         /// <summary>
         /// 双击
@@ -72,13 +58,21 @@ namespace ReunionMovement.UI.ButtonClick
         public override void OnPointerDown(PointerEventData eventData)
         {
             base.OnPointerDown(eventData);
+            var now = DateTime.Now;
             if (firstTime.Equals(default(DateTime)))
             {
-                firstTime = DateTime.Now;
+                firstTime = now;
+            }
+            else if ((now - firstTime).TotalMilliseconds > 400)
+            {
+                // 距上次单击已超过双击窗口：本次作为新的第一次点击，
+                // 避免"单击后长时间再双击"时第一次点击被当作 secondTime 导致双击永不触发
+                firstTime = now;
+                secondTime = default(DateTime);
             }
             else
             {
-                secondTime = DateTime.Now;
+                secondTime = now;
             }
         }
 
@@ -104,88 +98,22 @@ namespace ReunionMovement.UI.ButtonClick
 
         private bool KeyboardPressedThisFrame()
         {
-            if (!enableInput || !enableKeyboard) return false;
-            if (UnityEngine.InputSystem.Keyboard.current == null) return false;
-            foreach (var k in keyboardTriggerKeys)
-            {
-                var kc = UnityEngine.InputSystem.Keyboard.current[k];
-                if (kc != null && kc.wasPressedThisFrame) return true;
-            }
-            return false;
+            return ButtonInputHelper.KeyboardPressedThisFrame(enableInput, enableKeyboard, keyboardTriggerKeys);
         }
 
         private bool KeyboardReleasedThisFrame()
         {
-            if (!enableInput || !enableKeyboard) return false;
-            if (UnityEngine.InputSystem.Keyboard.current == null) return false;
-            foreach (var k in keyboardTriggerKeys)
-            {
-                var kc = UnityEngine.InputSystem.Keyboard.current[k];
-                if (kc != null && kc.wasReleasedThisFrame) return true;
-            }
-            return false;
-        }
-
-        private bool IsGamepadButtonPressed(GamepadButtonType btn)
-        {
-            if (UnityEngine.InputSystem.Gamepad.current == null) return false;
-            var g = UnityEngine.InputSystem.Gamepad.current;
-            switch (btn)
-            {
-                case GamepadButtonType.South: return g.buttonSouth.wasPressedThisFrame;
-                case GamepadButtonType.North: return g.buttonNorth.wasPressedThisFrame;
-                case GamepadButtonType.West: return g.buttonWest.wasPressedThisFrame;
-                case GamepadButtonType.East: return g.buttonEast.wasPressedThisFrame;
-                case GamepadButtonType.LeftShoulder: return g.leftShoulder.wasPressedThisFrame;
-                case GamepadButtonType.RightShoulder: return g.rightShoulder.wasPressedThisFrame;
-                case GamepadButtonType.LeftTrigger: return g.leftTrigger.wasPressedThisFrame;
-                case GamepadButtonType.RightTrigger: return g.rightTrigger.wasPressedThisFrame;
-                case GamepadButtonType.Start: return g.startButton != null && g.startButton.wasPressedThisFrame;
-                case GamepadButtonType.Select: return g.selectButton != null && g.selectButton.wasPressedThisFrame;
-                default: return false;
-            }
-        }
-
-        private bool IsGamepadButtonReleased(GamepadButtonType btn)
-        {
-            if (UnityEngine.InputSystem.Gamepad.current == null) return false;
-            var g = UnityEngine.InputSystem.Gamepad.current;
-            switch (btn)
-            {
-                case GamepadButtonType.South: return g.buttonSouth.wasReleasedThisFrame;
-                case GamepadButtonType.North: return g.buttonNorth.wasReleasedThisFrame;
-                case GamepadButtonType.West: return g.buttonWest.wasReleasedThisFrame;
-                case GamepadButtonType.East: return g.buttonEast.wasReleasedThisFrame;
-                case GamepadButtonType.LeftShoulder: return g.leftShoulder.wasReleasedThisFrame;
-                case GamepadButtonType.RightShoulder: return g.rightShoulder.wasReleasedThisFrame;
-                case GamepadButtonType.LeftTrigger: return g.leftTrigger.wasReleasedThisFrame;
-                case GamepadButtonType.RightTrigger: return g.rightTrigger.wasReleasedThisFrame;
-                case GamepadButtonType.Start: return g.startButton != null && g.startButton.wasReleasedThisFrame;
-                case GamepadButtonType.Select: return g.selectButton != null && g.selectButton.wasReleasedThisFrame;
-                default: return false;
-            }
+            return ButtonInputHelper.KeyboardReleasedThisFrame(enableInput, enableKeyboard, keyboardTriggerKeys);
         }
 
         private bool GamepadPressedThisFrame()
         {
-            if (!enableInput || !enableGamepad) return false;
-            if (UnityEngine.InputSystem.Gamepad.current == null) return false;
-            foreach (var b in gamepadTriggerButtons)
-            {
-                if (IsGamepadButtonPressed(b)) return true;
-            }
-            return false;
+            return ButtonInputHelper.GamepadPressedThisFrame(enableInput, enableGamepad, gamepadTriggerButtons);
         }
 
         private bool GamepadReleasedThisFrame()
         {
-            if (!enableInput || !enableGamepad) return false;
-            if (UnityEngine.InputSystem.Gamepad.current == null) return false;
-            foreach (var b in gamepadTriggerButtons)
-            {
-                if (IsGamepadButtonReleased(b)) return true;
-            }
-            return false;
+            return ButtonInputHelper.GamepadReleasedThisFrame(enableInput, enableGamepad, gamepadTriggerButtons);
         }
 
         /// <summary>
@@ -217,13 +145,20 @@ namespace ReunionMovement.UI.ButtonClick
             // 在按下帧记录时间（与鼠标 OnPointerDown 相同逻辑）
             if (pressedThisFrame)
             {
+                var now = DateTime.Now;
                 if (firstTime.Equals(default(DateTime)))
                 {
-                    firstTime = DateTime.Now;
+                    firstTime = now;
+                }
+                else if ((now - firstTime).TotalMilliseconds > 400)
+                {
+                    // 距上次单击已超时：本次作为新的第一次点击
+                    firstTime = now;
+                    secondTime = default(DateTime);
                 }
                 else
                 {
-                    secondTime = DateTime.Now;
+                    secondTime = now;
                 }
             }
 

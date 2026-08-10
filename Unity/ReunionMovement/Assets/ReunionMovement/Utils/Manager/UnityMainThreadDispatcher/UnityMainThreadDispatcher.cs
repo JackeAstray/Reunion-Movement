@@ -35,36 +35,36 @@ namespace ReunionMovement.Common.Util.Manager
             EnsureCreated();
         }
 
+        /// <summary>复用的快照缓冲（执行后 Clear），避免每帧 new List 分配</summary>
+        private readonly List<Action> snapshotBuffer = new List<Action>(16);
+
         private void Update()
         {
             // 先快照队列（持有锁），再释放锁执行，防止外部 Action 回调时递归 Enqueue 导致死锁
-            List<Action> snapshot = null;
             lock (executionQueue)
             {
                 if (executionQueue.Count > 0)
                 {
-                    snapshot = new List<Action>(executionQueue.Count);
+                    snapshotBuffer.Clear();
                     while (executionQueue.Count > 0)
                     {
-                        snapshot.Add(executionQueue.Dequeue());
+                        snapshotBuffer.Add(executionQueue.Dequeue());
                     }
                 }
             }
 
-            if (snapshot != null)
+            for (int i = 0; i < snapshotBuffer.Count; i++)
             {
-                for (int i = 0; i < snapshot.Count; i++)
+                try
                 {
-                    try
-                    {
-                        snapshot[i]?.Invoke();
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.LogError($"[UnityMainThreadDispatcher] 执行 Action 时发生异常: {ex}");
-                    }
+                    snapshotBuffer[i]?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[UnityMainThreadDispatcher] 执行 Action 时发生异常: {ex}");
                 }
             }
+            snapshotBuffer.Clear();
         }
 
         /// <summary>

@@ -30,6 +30,13 @@ namespace ReunionMovement.Core.UI
         {
             base.OnInit();
 
+            // Prefab 未绑定时给出明确错误，避免后续 NRE（与 OnDestroy 判空保持一致）
+            if (clear == null || close == null || input == null || root == null || itemGo == null)
+            {
+                Log.Error("TerminalUIPlane.OnInit: 存在未绑定的引用（clear/close/input/root/itemGo），请检查 Prefab 配置");
+                return;
+            }
+
             clear.onClick.RemoveAllListeners();
             close.onClick.RemoveAllListeners();
             input.onEndEdit.RemoveAllListeners();
@@ -58,12 +65,12 @@ namespace ReunionMovement.Core.UI
         {
             base.OnSet(args);
 
-            if (args.Length > 0)
+            if (args != null && args.Length > 0 && args[0] != null)
             {
                 switch (args[0].ToString())
                 {
                     case "CreateItem":
-                        if (args.Length >= 2)
+                        if (args.Length >= 2 && args[1] != null)
                         {
                             CreateItem(args[1].ToString());
                         }
@@ -100,6 +107,11 @@ namespace ReunionMovement.Core.UI
         public void OnEndEdit(string text)
         {
             command = text;
+            // 空命令不创建空条目
+            if (string.IsNullOrEmpty(text))
+            {
+                return;
+            }
             /*"TestTerminal 2 2"*/
             // terminalRequest 仅在编辑器/开发构建中由 TerminalSystem 创建，
             // Release 构建或系统未初始化时为 null，必须判空避免 NRE
@@ -148,7 +160,11 @@ namespace ReunionMovement.Core.UI
                 terminalItem.SetText(str);
             }
 
-            LayoutRebuilder.ForceRebuildLayoutImmediate(root.GetComponent<RectTransform>());
+            // root 可能缺少 RectTransform（异常 Prefab），TryGetComponent 避免 NRE
+            if (root.TryGetComponent<RectTransform>(out var rootRt))
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(rootRt);
+            }
         }
     }
 }

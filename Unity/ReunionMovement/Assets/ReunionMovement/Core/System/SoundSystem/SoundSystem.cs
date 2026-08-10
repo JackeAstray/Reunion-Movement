@@ -238,12 +238,22 @@ namespace ReunionMovement.Core.Sound
                 source.clip = null;
             }
 
-            audioClipCache?.Clear();
+            // 卸载缓存中的 AudioClip，释放底层资源（不卸载则驻留到场景卸载）
+            if (audioClipCache != null)
+            {
+                foreach (var clip in audioClipCache.Values)
+                {
+                    if (clip != null) UnityEngine.Resources.UnloadAsset(clip);
+                }
+                audioClipCache.Clear();
+            }
             audioClipCacheOrder?.Clear();
             audioClipCacheNodes?.Clear();
             audioClipLoading?.Clear();
             soundConfigDict?.Clear();
             soundConfigContainer = null;
+            // 重置音效 prefab 缓存，避免重 Init 时误用旧引用
+            cachedSfxPrefab = null;
 
             // 销毁音频根节点
             if (musicRoot != null)
@@ -354,17 +364,25 @@ namespace ReunionMovement.Core.Sound
         /// 音乐切换-带渐入渐出效果（优化版：新曲加载与淡出并行，减少等待时间）
         /// </summary>
         /// <param name="index"></param>
+        // 音乐切换版本号：最新调用优先，旧链在每次 await 恢复后校验版本并退出，
+        // 避免并发 PlaySwitch 互相改写共享 fadeTcs/fadeState 导致淡入淡出被截断
+        private int musicSwitchVersion;
+
         public async UniTask PlaySwitch(int index)
         {
             if (soundConfigDict == null || !soundConfigDict.TryGetValue(index, out SoundConfig soundConfig))
                 return;
 
+            int version = ++musicSwitchVersion;
+
             // 启动淡出（不等待），同时并行加载新曲目
             var fadeOutTask = FadeOut();
             AudioClip newClip = await GetAudioClipAsync(soundConfig.Path, soundConfig.Name);
+            if (version != musicSwitchVersion) return; // 已被更新的 PlaySwitch 取代
 
             // 等待淡出完成
             await fadeOutTask;
+            if (version != musicSwitchVersion) return;
 
             // 切换曲目并淡入
             EnsureAudioSource();
@@ -377,6 +395,7 @@ namespace ReunionMovement.Core.Sound
                 source.Play();
                 currentMusicIndex = index;
             }
+            if (version != musicSwitchVersion) return;
             await FadeIn();
         }
 
@@ -1045,9 +1064,12 @@ namespace ReunionMovement.Core.Sound
                     if (audioClipCache.Count >= MaxAudioClipCacheSize && audioClipCacheOrder.First != null)
                     {
                         var oldestNode = audioClipCacheOrder.First;
-                        audioClipCache.Remove(oldestNode.Value);
-                        audioClipCacheNodes.Remove(oldestNode.Value);
+                        string evicted = oldestNode.Value;
+                        audioClipCache.Remove(evicted);
+                        audioClipCacheNodes.Remove(evicted);
                         audioClipCacheOrder.RemoveFirst();
+                        // 联动 ResourcesSystem 递减引用计数并卸载底层 AudioClip，真正释放内存
+                        ResourcesSystem.Instance.DeleteAssetCache(evicted);
                     }
                     audioClipCache[fullPath] = clip;
                     var node = audioClipCacheOrder.AddLast(fullPath);

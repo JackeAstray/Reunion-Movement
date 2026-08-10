@@ -56,8 +56,6 @@ namespace ReunionMovement.Common.Util
         // 启用到达 0 距离后继续沿摄像机 Z 轴前进
         [Tooltip("启用到达 0 距离后继续沿摄像机 Z 轴前进")]
         public bool enableForwardZoomAfterZero = false;
-        // 前进缩放累计位移（目标点沿摄像机 Z 轴前进的总量，用于回退）
-        private float forwardZoomDistance = 0f;
         // 双指手势状态（每帧更新，确保平移/缩放互斥）
         private bool hasTwoFingerTouchGesture;
         private bool isTwoFingerPanGesture;
@@ -568,9 +566,6 @@ namespace ReunionMovement.Common.Util
                             newTargetPos = ClampPointToBoxCollider(restrictedZone, newTargetPos);
                         }
                         targetPos.position = newTargetPos;
-                        // 记录实际前进量（可能被 restrictedZone 限制）
-                        float actualForward = Vector3.Dot(newTargetPos - oldTargetPos, csmoCamera.transform.forward);
-                        forwardZoomDistance += Mathf.Max(0f, actualForward);
                     }
                 }
                 else if (delta > 0f)
@@ -581,7 +576,6 @@ namespace ReunionMovement.Common.Util
             }
             else
             {
-                forwardZoomDistance = 0f;
                 distance = Mathf.Clamp(distance + delta, minZoomDistance, maxDistance);
             }
 
@@ -669,7 +663,6 @@ namespace ReunionMovement.Common.Util
             if (duration <= 0f)
             {
                 distance = clampedValue;
-                forwardZoomDistance = 0f;
                 UpdatePosition();
             }
             else
@@ -744,12 +737,10 @@ namespace ReunionMovement.Common.Util
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / duration);
                 distance = Mathf.Lerp(startDistance, clampedTargetDistance, t);
-                forwardZoomDistance = 0f;
                 await UniTask.Yield(PlayerLoopTiming.Update);
             }
             if (ct.IsCancellationRequested) return;
             distance = clampedTargetDistance;
-            forwardZoomDistance = 0f;
             UpdatePosition();
         }
         #endregion

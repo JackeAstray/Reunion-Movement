@@ -214,7 +214,8 @@ namespace ReunionMovement.EditorTools
                             fieldType = FieldTypes.Unknown;
                         }
 
-                        field.fieldType = field.fieldType == FieldTypes.UnknownList ? FieldTypes.CustomTypeList : FieldTypes.CustomType;
+                        // 用本地变量 fieldType 判断（field.fieldType 此时恒为 Unknown, 判断会失效）
+                        field.fieldType = fieldType == FieldTypes.UnknownList ? FieldTypes.CustomTypeList : FieldTypes.CustomType;
                         // 同步更新剥离括号后的类型名，否则 GetFieldTypeString(CustomTypeList, "[Item]") 会生成 List<[Item]> 非法 C#
                         field.fieldTypeName = fieldTypeStr;
                     }
@@ -230,6 +231,10 @@ namespace ReunionMovement.EditorTools
                 _ = GenerateScript(sheets[i]);
                 _ = GenerateScriptList(sheets[i], i);
             }
+
+            // 所有 sheet 写盘完成后统一刷新一次资源（GenerateScript/GenerateScriptList 内部不再各自 Refresh），
+            // 避免每个 sheet 触发 2 次 AssetDatabase.Refresh 导致编辑器卡顿
+            AssetDatabase.Refresh();
 
             return sheets;
         }
@@ -291,7 +296,7 @@ namespace ReunionMovement
             // 可能在文件未落盘时执行，导致资源未导入、需手动刷新
             FileOperationUtil.SaveFileSync(scriptOutPutPath + dataName + ".cs", str);
 
-            AssetDatabase.Refresh();
+            // Refresh 由 ExcelToScripts 循环外统一执行，避免每个 sheet 多次全量刷新
             return UniTask.CompletedTask;
         }
 
@@ -393,7 +398,7 @@ namespace ReunionMovement
             // 使用同步写盘，避免 fire-and-forget 异步写盘与 Refresh 的竞态
             FileOperationUtil.SaveFileSync(scriptOutPutPath + dataName + "Container.cs", str);
 
-            AssetDatabase.Refresh();
+            // Refresh 由 ExcelToScripts 循环外统一执行，避免每个 sheet 多次全量刷新
             return UniTask.CompletedTask;
         }
 
@@ -501,21 +506,22 @@ namespace ReunionMovement
                 // 动态生成 ScriptableObject 文件路径
                 string assetPath = scriptableOutPutPath + containerName + "Container.asset";
 
-                // 动态获取容器类类型
-                Type containerType = Type.GetType($"ReunionMovement.{containerName}Container, Assembly-CSharp");
+                // 动态获取容器类类型（用程序集实例获取，避免硬编码程序集名在引入 asmdef 后失效）
+                var runtimeAssembly = typeof(ReunionMovement.Core.Resources.ResourcesSystem).Assembly;
+                Type containerType = runtimeAssembly.GetType($"ReunionMovement.{containerName}Container");
                 if (containerType == null)
                 {
-                    Log.Error($"无法获取类型：ReunionMovement.{containerName}Container, Assembly-CSharp");
+                    Log.Error($"无法获取类型：ReunionMovement.{containerName}Container");
                     continue;
                 }
 
                 // 动态创建容器实例
                 ScriptableObject asset = ScriptableObject.CreateInstance(containerType);
 
-                Type configType = Type.GetType($"ReunionMovement.{tableName}, Assembly-CSharp");
+                Type configType = runtimeAssembly.GetType($"ReunionMovement.{tableName}");
                 if (configType == null)
                 {
-                    Log.Error($"无法获取类型：ReunionMovement.{tableName}, Assembly-CSharp");
+                    Log.Error($"无法获取类型：ReunionMovement.{tableName}");
                     continue;
                 }
 
@@ -691,58 +697,6 @@ namespace ReunionMovement
         #region 工具
 
         /// <summary>
-        /// 根据字段类型枚举获取对应的解析类型
-        /// </summary>
-        /// <param name="fieldType"></param>
-        /// <returns></returns>
-        private static Type GetParseType(FieldTypes fieldType)
-        {
-            switch (fieldType)
-            {
-                case FieldTypes.Bool:
-                    return typeof(bool);
-                case FieldTypes.Int:
-                    return typeof(int);
-                case FieldTypes.Ints:
-                    return typeof(List<int>);
-                case FieldTypes.Float:
-                    return typeof(float);
-                case FieldTypes.Floats:
-                    return typeof(List<float>);
-                case FieldTypes.Double:
-                    return typeof(double);
-                case FieldTypes.Doubles:
-                    return typeof(List<double>);
-                case FieldTypes.Long:
-                    return typeof(long);
-                case FieldTypes.Longs:
-                    return typeof(List<long>);
-                case FieldTypes.Vector2:
-                    return typeof(Vector2);
-                case FieldTypes.Vector3:
-                    return typeof(Vector3);
-                case FieldTypes.Vector4:
-                    return typeof(Vector4);
-                case FieldTypes.Rect:
-                    return typeof(Rect);
-                case FieldTypes.Color:
-                    return typeof(Color);
-                case FieldTypes.String:
-                    return typeof(string);
-                case FieldTypes.Strings:
-                    return typeof(List<string>);
-                case FieldTypes.Object:
-                    return typeof(string);
-                case FieldTypes.CustomType:
-                case FieldTypes.CustomTypeList:
-                case FieldTypes.Unknown:
-                case FieldTypes.UnknownList:
-                default:
-                    return typeof(string);
-            }
-        }
-
-        /// <summary>
         /// 解析单元格字符串到目标类型
         /// </summary>
         private static object ParseValue(string value, Type type, FieldTypes fieldType = FieldTypes.Unknown)
@@ -817,7 +771,7 @@ namespace ReunionMovement
         /// 获取所有的xlsx文件路径
         /// </summary>
         /// <returns></returns>
-        public static List<string> GetAllConfigFiles(string toDir, string filetype = "*.xlsx")
+        public static List<string> GetAllConfigFiles(string toDir)
         {
             List<string> tableList = new List<string>();
             //等待编译结束
@@ -832,17 +786,10 @@ namespace ReunionMovement
                 Directory.CreateDirectory(toDir);
                 return null;
             }
-            //查找文件目录
-            foreach (var path in Directory.GetFiles(toDir, "*", SearchOption.AllDirectories))
+            // 只按扩展名枚举，避免把 .meta 等非表格文件误报为"不是表格"
+            foreach (var pattern in new[] { "*.xlsx", "*.xls" })
             {
-                var suffix = Path.GetExtension(path);
-                if (suffix != ".xlsx" && suffix != ".xls")
-                {
-                    string msg = string.Format("文件“{0}”不是表格！", path);
-                    Log.Warning(msg);
-                    continue;
-                }
-                tableList.Add(path);
+                tableList.AddRange(Directory.GetFiles(toDir, pattern, SearchOption.AllDirectories));
             }
 
             if (tableList.Count <= 0)

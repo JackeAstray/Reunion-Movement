@@ -389,11 +389,6 @@ namespace ReunionMovement.Core.UI
             base.OnClose();
         }
 
-        public void OnDestroy()
-        {
-
-        }
-        
         //打开窗口
         public void OpenWindow()
         {
@@ -413,6 +408,22 @@ namespace ReunionMovement.Core.UI
             str = str.Replace("{_0_}", name);
 
             var dataName = scriptOutPutPath + name + ".cs";
+
+            // 防覆盖保护：生成目录可能已被手写逻辑"寄生"（如 PopupUIPlane/TerminalUIPlane 含手写业务逻辑），
+            // 无条件覆盖会静默清空手写代码且无法撤销。文件已存在时要求确认。
+            if (System.IO.File.Exists(dataName))
+            {
+                if (!EditorUtility.DisplayDialog(
+                    "CreateUIPlane",
+                    $"脚本 {name}.cs 已存在。\n\n若该文件包含手写业务逻辑（如参数分发、动画），覆盖将永久丢失且无法撤销。\n是否仍要覆盖？",
+                    "覆盖",
+                    "取消"))
+                {
+                    Log.Warning("[CreateUIPlane] 已取消覆盖 {0}", name);
+                    return;
+                }
+            }
+
             await FileOperationUtil.SaveFile(dataName, str);
 
             AssetDatabase.Refresh();

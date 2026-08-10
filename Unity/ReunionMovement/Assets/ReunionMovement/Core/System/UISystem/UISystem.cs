@@ -620,7 +620,10 @@ namespace ReunionMovement.Core.UI
                 return;
             }
 
-            UnityEngine.Object.Destroy(uiState.uiWindow.gameObject);
+            // 使用 DestroyImmediate 立即销毁：Destroy 延迟到帧末，若同帧内重新打开同名窗口，
+            // LoadWindow 会实例化新对象而旧对象尚未销毁 → 短暂双实例。
+            // UI 窗口关闭时本应停止自身协程/动画，立即销毁是安全且符合预期的。
+            UnityEngine.Object.DestroyImmediate(uiState.uiWindow.gameObject);
 
             uiState.uiWindow = null;
             uiStateCache.Remove(uiName);

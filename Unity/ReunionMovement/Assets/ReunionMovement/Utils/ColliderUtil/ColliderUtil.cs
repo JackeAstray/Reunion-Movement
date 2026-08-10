@@ -639,7 +639,7 @@ namespace ReunionMovement.Common.Util
                 result += target.gameObject.GetComponentsInChildren<Collider>().Length;
 #endif
 #if UNITY_PHYSICS2D_ENABLED
-				result += _target.gameObject.GetComponentsInChildren<Collider2D>().Length;
+				result += target.gameObject.GetComponentsInChildren<Collider2D>().Length;
 #endif
                 return result;
             }
@@ -648,7 +648,7 @@ namespace ReunionMovement.Common.Util
             result += target.gameObject.GetComponents<Collider>().Length;
 #endif
 #if UNITY_PHYSICS2D_ENABLED
-			result += _target.gameObject.GetComponents<Collider2D>().Length;
+			result += target.gameObject.GetComponents<Collider2D>().Length;
 #endif
             return result;
         }

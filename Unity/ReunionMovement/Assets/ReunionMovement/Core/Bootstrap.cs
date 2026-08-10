@@ -139,7 +139,11 @@ namespace ReunionMovement.Core
             // 创建持久化 GameObject 承载 GameEngineDriver
             var go = new GameObject("[GameEngineDriver]");
             driverGo = go;
-            go.AddComponent<AudioListener>(); // 兼容旧版场景，避免缺少 AudioListener 报错
+            // 仅当场景确实无 AudioListener 时才挂载，避免与场景相机自带监听器形成双监听器警告
+            if (UnityEngine.Object.FindFirstObjectByType<AudioListener>() == null)
+            {
+                go.AddComponent<AudioListener>(); // 兼容旧版场景，避免缺少 AudioListener 报错
+            }
             UnityEngine.Object.DontDestroyOnLoad(go);
             var driver = go.AddComponent<GameEngineDriver>();
 

@@ -35,6 +35,18 @@ namespace ReunionMovement.UI.ImageExtensions
         // 复用的临时缓冲：ModifyMaterial 是 GetModifiedMaterial 热路径的一部分，避免每次调用分配
         private static readonly Color[] TempGradientColors = new Color[8];
         private static readonly Color[] TempGradientAlphas = new Color[8];
+        // 预缓存渐变颜色/透明度/角落渐变 PropertyID，避免热路径字符串拼接与 ID 查找
+        private static readonly int[] GradientColorIds = BuildGradientIds("_GradientColor");
+        private static readonly int[] GradientAlphaIds = BuildGradientIds("_GradientAlpha");
+        private static readonly int[] CornerGradientColorIds = BuildGradientIds("_CornerGradientColor");
+
+        private static int[] BuildGradientIds(string prefix)
+        {
+            var ids = new int[8];
+            for (int i = 0; i < ids.Length; i++)
+                ids[i] = Shader.PropertyToID(prefix + i);
+            return ids;
+        }
 
         /// <summary>
         /// 启用/禁用渐变覆盖
@@ -156,7 +168,13 @@ namespace ReunionMovement.UI.ImageExtensions
             get => cornerGradientColors;
             set
             {
-                if (cornerGradientColors.Length != 4)
+                if (value == null)
+                {
+                    cornerGradientColors = null;
+                    onComponentSettingsChanged?.Invoke(this, EventArgs.Empty);
+                    return;
+                }
+                if (cornerGradientColors == null || cornerGradientColors.Length != 4)
                 {
                     cornerGradientColors = new Color[4];
                 }
@@ -170,7 +188,7 @@ namespace ReunionMovement.UI.ImageExtensions
                 {
                     for (int i = 0; i < cornerGradientColors.Length; i++)
                     {
-                        sharedMat.SetColor("_CornerGradientColor" + i, cornerGradientColors[i]);
+                        sharedMat.SetColor(CornerGradientColorIds[i], cornerGradientColors[i]);
                     }
                 }
                 onComponentSettingsChanged?.Invoke(this, EventArgs.Empty);
@@ -282,7 +300,7 @@ namespace ReunionMovement.UI.ImageExtensions
             {
                 for (int i = 0; i < cornerGradientColors.Length; i++)
                 {
-                    material.SetColor("_CornerGradientColor" + i, cornerGradientColors[i]);
+                    material.SetColor(CornerGradientColorIds[i], cornerGradientColors[i]);
                 }
             }
             else
@@ -309,12 +327,12 @@ namespace ReunionMovement.UI.ImageExtensions
 
                 for (int i = 0; i < colors.Length; i++)
                 {
-                    material.SetColor("_GradientColor" + i, colors[i]);
+                    material.SetColor(GradientColorIds[i], colors[i]);
                 }
 
                 for (int i = 0; i < alphas.Length; i++)
                 {
-                    material.SetColor("_GradientAlpha" + i, alphas[i]);
+                    material.SetColor(GradientAlphaIds[i], alphas[i]);
                 }
             }
         }

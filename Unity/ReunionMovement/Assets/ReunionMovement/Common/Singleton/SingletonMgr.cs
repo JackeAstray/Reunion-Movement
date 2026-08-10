@@ -36,6 +36,7 @@ namespace ReunionMovement.Common
             }
             protected set
             {
+                T created = null;
                 lock (instanceLock)
                 {
                     if (instance != null && instance != value)
@@ -48,8 +49,13 @@ namespace ReunionMovement.Common
                     if (instance == null && value != null)
                     {
                         instance = value;
-                        OnInstanceCreated?.Invoke(instance);
+                        created = value;
                     }
+                }
+                // 锁外触发用户事件：避免持锁回调用户代码形成锁序环（A→B→A 交叉死锁）
+                if (created != null)
+                {
+                    OnInstanceCreated?.Invoke(created);
                 }
             }
         }
@@ -103,21 +109,29 @@ namespace ReunionMovement.Common
         /// <summary>手动销毁单例</summary>
         public static void DestroyInstance()
         {
+            T toDestroy = null;
             lock (instanceLock)
             {
                 if (instance != null)
                 {
-                    OnInstanceDestroyed?.Invoke();
-                    if (instance.gameObject != null)
-                        Destroy(instance.gameObject);
+                    toDestroy = instance;
                     instance = null;
                 }
+            }
+            if (toDestroy != null)
+            {
+                // 锁外触发用户事件与销毁，避免持锁回调用户代码形成锁序环
+                OnInstanceDestroyed?.Invoke();
+                if (toDestroy.gameObject != null)
+                    Destroy(toDestroy.gameObject);
             }
         }
 
         /// <summary>
         /// 创建单例实例（场景中无现有实例时作为兜底）。
         /// 调用方已持有 instanceLock。
+        /// 注意：Unity API（FindFirstObjectByType/new GameObject）必须在主线程执行，
+        /// 若需从工作线程安全访问 Instance，请先在主线程触发一次初始化。
         /// </summary>
         private static T CreateInstance()
         {
