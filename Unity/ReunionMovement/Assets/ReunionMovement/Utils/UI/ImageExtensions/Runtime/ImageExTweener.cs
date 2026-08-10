@@ -214,8 +214,8 @@ namespace ReunionMovement.UI.ImageExtensions
                     else
                     {
                         pingPongReversed = loop > 1f;
-                        rawT = loop % 2f;
-                        rawT = pingPongReversed ? 2f - rawT : rawT;
+                        // 回程段直接 2f - loop 得到 1→0 的下降时间（不要对 rawT 取 % 后再镜像，会得到 2→1）
+                        rawT = pingPongReversed ? 2f - loop : loop;
                     }
                     break;
                 }
@@ -235,8 +235,10 @@ namespace ReunionMovement.UI.ImageExtensions
                 isReversed = pingPongReversed;
             }
 
-            if (isReversed)
+            if (isReversed && m_WrapMode != WrapMode.PingPong)
             {
+                // 非 PingPong 模式才翻转 t：PingPong 回程段的 rawT 已在 switch 中镜像为 1→0，
+                // 若再翻转一次会变成 -1→0，标准曲线 Evaluate 结果为 0（回程动画消失）。
                 rawT = 1f - rawT;
             }
 

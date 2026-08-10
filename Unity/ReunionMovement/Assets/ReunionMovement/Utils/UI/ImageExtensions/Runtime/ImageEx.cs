@@ -1929,6 +1929,14 @@ namespace ReunionMovement.UI.ImageExtensions
 
         private Material dynamicMaterial;
 
+        // ===== Shared 模式串扰诊断 =====
+        // 同一共享材质被 keywordMask 不同的多个 ImageEx 使用时，渲染由最后写入者决定，
+        // 形状/特效会互相覆盖。以下静态注册表用于检测并告警一次（不改变渲染行为）。
+        private static readonly System.Collections.Generic.Dictionary<Material, int> s_sharedMatLastMask
+            = new System.Collections.Generic.Dictionary<Material, int>(8);
+        private static readonly System.Collections.Generic.HashSet<Material> s_sharedMatWarned
+            = new System.Collections.Generic.HashSet<Material>();
+
         /// <summary>Shared 模式是否已回读共享材质（避免每帧回读）</summary>
         private bool m_sharedValuesLoaded;
         /// <summary>上次回读的共享材质引用（引用变化时重新回读）</summary>
@@ -2416,6 +2424,29 @@ namespace ReunionMovement.UI.ImageExtensions
         }
 
         /// <summary>
+        /// Shared 模式串扰诊断：同一共享材质被设置不同的多个 ImageEx 使用时告警一次。
+        /// Shared 模式下每个实例都会 DisableAll 后写入自己的关键字/属性，最终状态由最后调用者决定。
+        /// </summary>
+        private static void DiagnoseSharedMaterialContention(Material shared, int keywordMask)
+        {
+            if (shared == null) return;
+            if (s_sharedMatLastMask.TryGetValue(shared, out int prevMask))
+            {
+                if (prevMask != keywordMask && s_sharedMatWarned.Add(shared))
+                {
+                    Log.Warning("[ImageEx] 检测到共享材质被多个设置不同的 ImageEx 使用（关键字掩码不一致），"
+                        + "渲染结果将由最后一个实例决定，形状/特效可能互相覆盖。"
+                        + "建议为每个实例使用独立材质（Material Mode = Dynamic）或保持各实例设置一致。");
+                }
+                s_sharedMatLastMask[shared] = keywordMask;
+            }
+            else
+            {
+                s_sharedMatLastMask[shared] = keywordMask;
+            }
+        }
+
+        /// <summary>
         /// 获取修改后的材质
         /// </summary>
         /// <param name="baseMaterial"></param>
@@ -2440,6 +2471,8 @@ namespace ReunionMovement.UI.ImageExtensions
             int keywordMask = ComputeKeywordMask();
             if (m_Material != null || appliedKeywordMaterial != mat || appliedKeywordMask != keywordMask)
             {
+                // Shared 模式：检测多实例串扰（不同 keywordMask 共用同一材质）并告警一次
+                DiagnoseSharedMaterialContention(m_Material, keywordMask);
                 DisableAllMaterialKeywords(mat);
                 appliedKeywordMask = keywordMask;
                 appliedKeywordMaterial = mat;
@@ -2467,7 +2500,9 @@ namespace ReunionMovement.UI.ImageExtensions
             Vector2 scale = transitionTexScale;
             Vector2 offset = transitionTexOffset;
 
-            if (transitionKeepAspectRatio && transitionTexture != null && rectTransform != null)
+            // rect/纹理高度为 0 时跳过,避免除零产生 NaN 污染 transitionTex_ST
+            if (transitionKeepAspectRatio && transitionTexture != null && rectTransform != null
+                && rectTransform.rect.height > 0f && transitionTexture.height > 0)
             {
                 float rectAspect = rectTransform.rect.width / rectTransform.rect.height;
                 float texAspect = (float)transitionTexture.width / transitionTexture.height;

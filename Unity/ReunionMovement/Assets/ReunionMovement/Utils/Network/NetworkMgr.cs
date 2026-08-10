@@ -200,6 +200,12 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
+        /// 后台线程是否在驱动网络 Tick（供 UniversalNetworkBehaviour 判断是否还需自行 Tick）。
+        /// 双线程同时调用 kcp2k/Telepathy 的 Tick 是非线程安全的。
+        /// </summary>
+        public bool IsThreadRunning => isRunning && netRun != null;
+
+        /// <summary>
         /// 开启Update线程
         /// </summary>
         public void StartThread()
@@ -293,7 +299,13 @@ namespace ReunionMovement.Common.Util
                 {
                     var ch = channelDictRemove[i];
                     channelList.Remove(ch);
-                    channelIndex.Remove(ch.ChannelName);
+                    // 仅当索引仍映射到该通道时才删除：
+                    // 防止同帧内 ScheduleRemove(旧通道) 后又 AddChannel(同名新通道) 时,
+                    // 延迟删除误删新通道的索引,导致 channelList 与 channelIndex 永久不一致。
+                    if (channelIndex.TryGetValue(ch.ChannelName, out var mapped) && ReferenceEquals(mapped, ch))
+                    {
+                        channelIndex.Remove(ch.ChannelName);
+                    }
                 }
                 channelDictRemove.Clear();
             }

@@ -198,7 +198,9 @@ namespace ReunionMovement
                     var child = placeholderParent.GetChild(i);
                     if (child != placeholder && child.name == "Placeholder")
                     {
-                        GameObject.Destroy(child.gameObject);
+                        // 编辑模式下 Destroy 不生效，需 DestroyImmediate 立即清理，避免占位符克隆累积
+                        if (Application.isPlaying) GameObject.Destroy(child.gameObject);
+                        else GameObject.DestroyImmediate(child.gameObject);
                     }
                 }
 
@@ -242,7 +244,9 @@ namespace ReunionMovement
                     var child = placeholderParent.GetChild(i);
                     if (child != placeholder && child.name == "Placeholder")
                     {
-                        GameObject.Destroy(child.gameObject);
+                        // 编辑模式下 Destroy 不生效，需 DestroyImmediate 立即清理
+                        if (Application.isPlaying) GameObject.Destroy(child.gameObject);
+                        else GameObject.DestroyImmediate(child.gameObject);
                     }
                 }
             }

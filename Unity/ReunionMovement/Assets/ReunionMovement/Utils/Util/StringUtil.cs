@@ -277,6 +277,10 @@ namespace ReunionMovement.Common.Util
             return true;
         }
 
+        // 预编译正则，避免每次调用解析模式
+        private static readonly Regex ClassNameRegex = new Regex(@"^[A-Z][A-Za-z0-9_]*$", RegexOptions.Compiled);
+        private static readonly Regex FieldNameRegex = new Regex(@"^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.Compiled);
+
         /// <summary>
         /// 检查类名
         /// </summary>
@@ -284,7 +288,7 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static bool CheckClassName(string str)
         {
-            return Regex.IsMatch(str, @"^[A-Z][A-Za-z0-9_]*$");
+            return ClassNameRegex.IsMatch(str);
         }
 
         /// <summary>
@@ -294,7 +298,7 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static bool CheckFieldName(string name)
         {
-            return Regex.IsMatch(name, @"^[A-Za-z_][A-Za-z0-9_]*$");
+            return FieldNameRegex.IsMatch(name);
         }
 
         /// <summary>

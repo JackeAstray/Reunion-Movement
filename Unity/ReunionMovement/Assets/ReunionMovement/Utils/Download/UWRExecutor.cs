@@ -9,15 +9,18 @@ using UnityEngine.Networking;
 
 namespace ReunionMovement.Common.Util.Download
 {
+    /// <summary>
+    /// UnityWebRequest 下载器执行器
+    /// </summary>
     public class UWRExecutor : IDownloadExecutor
     {
-        protected int expectedSize = 0;
+        protected long expectedSize = 0;
         protected int chunkSize = 0;
 
         internal int startTime = 0;
         internal int endTime = 0;
 
-        internal int bytesDownloaded;
+        internal long bytesDownloaded;
         internal float progress = 0f;
         internal int timeout = 6;
         internal string uri = null;
@@ -38,7 +41,7 @@ namespace ReunionMovement.Common.Util.Download
 
         public bool Completed => Progress == 1.0f;
         public override float Progress => progress;
-        public override int BytesDownloaded => bytesDownloaded;
+        public override long BytesDownloaded => bytesDownloaded;
 
         public override string Uri
         {
@@ -93,6 +96,8 @@ namespace ReunionMovement.Common.Util.Download
 
         /// <summary>当前在途的 UnityWebRequest（用于 Cancel 时 Abort，完成后 Dispose 防泄漏）</summary>
         internal UnityWebRequest currentRequest;
+        /// <summary>已取消标记（防止 Cancel 被二次调用时 OnCancel 事件重复触发）</summary>
+        private bool cancelCalled;
 
         public override int StartTime => startTime;
         public override int EndTime => endTime;
@@ -103,6 +108,9 @@ namespace ReunionMovement.Common.Util.Download
         /// <returns></returns>
         public override bool Cancel()
         {
+            if (cancelCalled) return false;
+            cancelCalled = true;
+
             // 中止在途的 UWR，避免取消后网络 IO 继续运行、文件被重新写回
             if (currentRequest != null && !currentRequest.isDone)
             {
@@ -165,7 +173,8 @@ namespace ReunionMovement.Common.Util.Download
                         return;
                     }
 
-                    if (!int.TryParse(headers["Content-Length"], out expectedSize))
+                    // 用 long 解析，避免 >2GB 文件的 Content-Length 超出 int 范围解析失败
+                    if (!long.TryParse(headers["Content-Length"], out expectedSize))
                     {
                         Log.Debug("URI {0} 不支持分块下载。Content-Length 解析失败。", Uri);
                         MultipartDownload = false;
@@ -219,19 +228,19 @@ namespace ReunionMovement.Common.Util.Download
                     progress = 1.0f;
                     OnDownloadSuccess?.Invoke();
                     endTime = Environment.TickCount;
-                    bytesDownloaded = (int)new FileInfo(DownloadResultPath).Length;
+                    bytesDownloaded = new FileInfo(DownloadResultPath).Length;
                 };
             }
             else
             {
                 try
                 {
-                    int fileSize = 0;
+                    long fileSize = 0;
                     if (File.Exists(DownloadResultPath))
                     {
                         try
                         {
-                            fileSize = (int)(new FileInfo(DownloadResultPath).Length);
+                            fileSize = new FileInfo(DownloadResultPath).Length;
                         }
                         catch (Exception ex)
                         {
@@ -239,14 +248,14 @@ namespace ReunionMovement.Common.Util.Download
                             return null;
                         }
                     }
-                    int remaining = expectedSize - fileSize;
+                    long remaining = expectedSize - fileSize;
                     if (remaining <= 0)
                     {
                         Log.Warning("文件已存在且大小符合要求，跳过下载: {0}", DownloadResultPath);
                         return null;
                     }
 
-                    int reqChunkSize = Math.Min(chunkSize, remaining);
+                    int reqChunkSize = (int)Math.Min((long)chunkSize, remaining);
 
                     if (RequestHeaders == null)
                     {
@@ -272,6 +281,8 @@ namespace ReunionMovement.Common.Util.Download
                 {
                     try
                     {
+                        // Cancel() 已 Dispose 本请求：跳过回调，避免访问已释放的 UWR
+                        if (uwr == null || currentRequest != uwr) return;
                         if (uwr.result != UnityWebRequest.Result.Success)
                         {
                             DidError = true;
@@ -297,13 +308,19 @@ namespace ReunionMovement.Common.Util.Download
         /// <param name="obj"></param>
         internal void OnCompleteMulti(AsyncOperation obj)
         {
+            // 分块请求失败或已被 Cancel：不触发任何成功事件
+            // （失败由通用回调走 OnDownloadError + Cancel 分支；
+            //   若不校验，残留部分文件时会把失败误报为成功，甚至误删已完整文件）
+            if (currentRequest == null || currentRequest.result != UnityWebRequest.Result.Success)
+            {
+                return;
+            }
             if (!File.Exists(DownloadResultPath))
             {
                 return;
             }
-            int fileSize = (int)(new FileInfo(DownloadResultPath).Length);
+            long fileSize = new FileInfo(DownloadResultPath).Length;
             OnDownloadChunkedSucces?.Invoke();
-            int remaining = expectedSize - fileSize;
             progress = expectedSize > 0 ? (float)fileSize / expectedSize : 0f;
             bytesDownloaded = fileSize;
 

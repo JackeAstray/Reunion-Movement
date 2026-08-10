@@ -157,6 +157,9 @@ namespace ReunionMovement.Core
             GameEntry = entry;
             modules = moduleList;
 
+            // 失败重试时清空上次已注册的更新模块，避免重复添加导致模块每帧被 Update 多次
+            updatableModules.Clear();
+
             try
             {
                 var t0 = Time.realtimeSinceStartup;
@@ -202,7 +205,15 @@ namespace ReunionMovement.Core
                 // 清理已成功初始化的模块（资源/UI/音效等），
                 // 避免初始化失败后模块资源全部泄漏
                 ClearModuleData();
-                OnInitFailedSubject.OnNext(errorMsg);
+                // 隔离订阅者异常：失败通知的订阅者抛错不应掩盖真实初始化错误
+                try
+                {
+                    OnInitFailedSubject.OnNext(errorMsg);
+                }
+                catch (Exception ex2)
+                {
+                    Log.Error("[GameEngine] OnInitFailedSubject 订阅者异常（不影响错误处理）: {0}", ex2.Message);
+                }
                 return InitResult.Failure(errorMsg, ex);
             }
         }

@@ -20,6 +20,8 @@ namespace ReunionMovement.Common.Util.HttpService
         private IHttpService service;
         private Dictionary<string, string> superHeaders;
         private Dictionary<IHttpRequest, CancellationTokenSource> httpRequests;
+        /// <summary>SuperHeaders 的只读包装缓存（superHeaders 变更时失效重建）</summary>
+        private IReadOnlyDictionary<string, string> superHeadersReadOnlyCache;
         /// <summary>Update 进度轮询的复用快照数组（仅在扩容时分配，避免每帧分配）</summary>
         private IHttpRequest[] updateSnapshot = System.Array.Empty<IHttpRequest>();
 
@@ -37,6 +39,8 @@ namespace ReunionMovement.Common.Util.HttpService
         {
             superHeaders = new Dictionary<string, string>();
             httpRequests = new Dictionary<IHttpRequest, CancellationTokenSource>();
+            // 重建字典后失效只读包装缓存,避免返回旧字典的包装
+            superHeadersReadOnlyCache = null;
             this.service = service;
         }
 
@@ -48,7 +52,8 @@ namespace ReunionMovement.Common.Util.HttpService
         /// <returns>A read-only wrapper of super-headers.</returns>
         public IReadOnlyDictionary<string, string> GetSuperHeaders()
         {
-            return new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(superHeaders);
+            // 缓存只读包装，避免每次请求 new ReadOnlyDictionary 堆分配；superHeaders 变更时置空重建
+            return superHeadersReadOnlyCache ??= new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(superHeaders);
         }
 
         /// <summary>
@@ -69,6 +74,7 @@ namespace ReunionMovement.Common.Util.HttpService
             }
 
             superHeaders[key] = value;
+            superHeadersReadOnlyCache = null; // 失效缓存
         }
 
         /// <summary>
@@ -83,7 +89,9 @@ namespace ReunionMovement.Common.Util.HttpService
                 throw new ArgumentException("密钥不能为null或为空");
             }
 
-            return superHeaders.Remove(key);
+            bool removed = superHeaders.Remove(key);
+            if (removed) superHeadersReadOnlyCache = null; // 失效缓存
+            return removed;
         }
 
         #endregion
@@ -288,6 +296,10 @@ namespace ReunionMovement.Common.Util.HttpService
                 cts?.Dispose();
                 httpRequests.Remove(request);
             }
+
+            // 取消路径下协程被 cts 掐断,UnityHttpService.Send 的 using 不会执行 → UWR 原生资源泄漏。
+            // 在此显式 Dispose（正常完成路径由协程 using 负责,幂等）
+            (request as IDisposable)?.Dispose();
         }
 
         public void Update()

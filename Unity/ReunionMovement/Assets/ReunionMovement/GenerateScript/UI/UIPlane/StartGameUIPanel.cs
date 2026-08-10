@@ -74,18 +74,18 @@ namespace ReunionMovement.Core.UI
 
         public override async void OnOpen(object data = null)
         {
-            base.OnOpen(data);
-
-            if (animationPlaying) return;
-            animationPlaying = true;
-
             try
             {
+                base.OnOpen(data);
+
+                if (animationPlaying) return;
+                animationPlaying = true;
+
                 await PlayLogoAnimation();
             }
             catch (System.Exception ex)
             {
-                Log.Error("[StartGameUIPanel] OnOpen 动画异常: {0}", ex);
+                Log.Error("[StartGameUIPanel] OnOpen 异常: {0}", ex);
                 animationPlaying = false;
             }
         }
@@ -110,7 +110,8 @@ namespace ReunionMovement.Core.UI
             if (!animationPlaying) return;
 
             // ============ 对应：SoundSystem.Instance.PlaySfx(300015) ============
-            _ = SoundSystem.Instance.PlaySfx(300015);
+            // Forget + 错误处理，避免丢弃 UniTask 静默吞异常
+            SoundSystem.Instance.PlaySfx(300015).Forget(ex => Log.Error("[StartGameUIPanel] PlaySfx 异常: {0}", ex.Message));
 
             // ============ 对应：DOTween.To(() => logo1.TransitionRate, x => logo1.TransitionRate = x, 1f, 1f).SetEase(Ease.Linear) ============
             // ============ 同时：DOTween.To(() => logo2.TransitionRate, x => logo2.TransitionRate = x, 1f, 0.9f).SetEase(Ease.Linear) ============

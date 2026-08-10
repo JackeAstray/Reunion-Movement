@@ -329,12 +329,33 @@ namespace ReunionMovement.Core.UIToolkit
                 panelAssetCache[panelName] = asset;
             }
 
+            // await 期间系统可能被 Clear() 清理，恢复后需重新校验，避免 RootVisualElement 为 null 时 NRE
+            if (RootVisualElement == null)
+            {
+                Log.Error("[UIToolkitSystem] OpenPanelAsync 失败：等待资源加载期间系统已清理");
+                return null;
+            }
+            // 并发打开同一面板：另一调用已在 await 期间完成创建，直接复用
+            if (panelInstances.TryGetValue(panelName, out var concurrent))
+            {
+                concurrent.OnOpen(data);
+                OnPanelOpenSubject.OnNext(concurrent);
+                return concurrent as T;
+            }
+
             // 实例化面板
             var panel = new T();
             panel.Initialize(panelName, asset, RootVisualElement, this);
 
             // 异步加载面板样式
             await LoadPanelStyleAsync(panelName, panel.Root);
+
+            // 样式加载期间再次校验（Clear 或重复打开）
+            if (RootVisualElement == null || panel.Root == null)
+            {
+                Log.Error("[UIToolkitSystem] OpenPanelAsync 失败：样式加载期间系统已清理");
+                return null;
+            }
 
             panelInstances[panelName] = panel;
             panelStack.Push(panel);

@@ -153,14 +153,21 @@ namespace ReunionMovement.Common.Util.Download
                 {
                     if (response.texture != null)
                     {
+                        // 竞态：下载期间另一请求已缓存同 URL，丢弃本响应纹理并复用缓存
+                        Texture2D cachedHit = null;
                         lock (imageCacheLock)
                         {
                             if (imageCache.TryGetValue(url, out Texture2D oldTex) && oldTex != null)
                             {
                                 UnityEngine.Object.Destroy(response.texture);
-                                onComplete?.Invoke(oldTex);
-                                return;
+                                cachedHit = oldTex;
                             }
+                        }
+                        // 锁外触发用户回调，避免锁内执行用户代码（防死锁/重入）
+                        if (cachedHit != null)
+                        {
+                            onComplete?.Invoke(cachedHit);
+                            return;
                         }
                         AddToImageCache(url, response.texture);
 

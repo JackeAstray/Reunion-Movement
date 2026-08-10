@@ -94,6 +94,10 @@ namespace ReunionMovement.Common.Util
 
         void Update()
         {
+            // 若 NetworkMgr 后台线程在驱动 Tick，主线程不再重复驱动，
+            // 避免并发调用非线程安全的 kcp2k/Telepathy Tick 导致协议状态损坏
+            if (NetworkMgr.Instance != null && NetworkMgr.Instance.IsThreadRunning) return;
+
             // 根据所选传输类型调用对应的 Tick / Process，使网络在主线程执行
             switch (transport)
             {
@@ -260,9 +264,12 @@ namespace ReunionMovement.Common.Util
                         reconnectAttempts = 0;
                         ClientConnected?.Invoke();
                         onClientConnected?.Invoke();
-                        // start heartbeat if enabled
-                        if (enableHeartbeat && heartbeatCts == null)
+                        // 无条件重建心跳：先取消旧心跳，避免旧协程退出时清空 heartbeatCts
+                        // 导致心跳停摆，或重连后多个心跳协程并发发包
+                        if (enableHeartbeat)
                         {
+                            heartbeatCts?.Cancel();
+                            heartbeatCts?.Dispose();
                             heartbeatCts = new CancellationTokenSource();
                             HeartbeatRoutineAsync(heartbeatCts.Token).Forget();
                         }
@@ -295,8 +302,12 @@ namespace ReunionMovement.Common.Util
                         reconnectAttempts = 0;
                         ClientConnected?.Invoke();
                         onClientConnected?.Invoke();
-                        if (enableHeartbeat && heartbeatCts == null)
+                        // 无条件重建心跳：先取消旧心跳，避免旧协程退出时清空 heartbeatCts
+                        // 导致心跳停摆，或重连后多个心跳协程并发发包
+                        if (enableHeartbeat)
                         {
+                            heartbeatCts?.Cancel();
+                            heartbeatCts?.Dispose();
                             heartbeatCts = new CancellationTokenSource();
                             HeartbeatRoutineAsync(heartbeatCts.Token).Forget();
                         }
@@ -337,8 +348,12 @@ namespace ReunionMovement.Common.Util
                             reconnectAttempts = 0;
                             ClientConnected?.Invoke();
                             onClientConnected?.Invoke();
-                            if (enableHeartbeat && heartbeatCts == null)
+                            // 无条件重建心跳：先取消旧心跳，避免旧协程退出时清空 heartbeatCts
+                            // 导致心跳停摆，或重连后多个心跳协程并发发包
+                            if (enableHeartbeat)
                             {
+                                heartbeatCts?.Cancel();
+                                heartbeatCts?.Dispose();
                                 heartbeatCts = new CancellationTokenSource();
                                 HeartbeatRoutineAsync(heartbeatCts.Token).Forget();
                             }

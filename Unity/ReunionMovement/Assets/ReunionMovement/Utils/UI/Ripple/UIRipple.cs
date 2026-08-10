@@ -81,6 +81,12 @@ namespace ReunionMovement.UI.RippleAnimation
             MaxSize = Mathf.Clamp(MaxSize, 0.5f, 1000f);
         }
 
+        void OnDestroy()
+        {
+            // 本组件销毁时子物体波纹一并销毁，清空池避免残留已销毁引用
+            ripplePool.Clear();
+        }
+
         void Update()
         {
             // 检测鼠标左键的点击或者手机屏幕的触摸
@@ -100,11 +106,16 @@ namespace ReunionMovement.UI.RippleAnimation
         /// <param name="Position"></param>
         public void CreateRipple(Vector2 Position)
         {
-            // 优先从对象池复用
+            // 优先从对象池复用（顺带清理已被销毁的失效项，防止池退化）
             GameObject ThisRipple = null;
-            for (int i = 0; i < ripplePool.Count; i++)
+            for (int i = ripplePool.Count - 1; i >= 0; i--)
             {
-                if (ripplePool[i] != null && !ripplePool[i].activeInHierarchy)
+                if (ripplePool[i] == null)  // Unity fake-null：组件已被销毁的条目
+                {
+                    ripplePool.RemoveAt(i);
+                    continue;
+                }
+                if (!ripplePool[i].activeInHierarchy)
                 {
                     ThisRipple = ripplePool[i];
                     break;

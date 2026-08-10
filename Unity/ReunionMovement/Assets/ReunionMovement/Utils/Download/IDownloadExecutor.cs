@@ -34,9 +34,9 @@ namespace ReunionMovement.Common.Util.Download
         public abstract string Uri { get; set; }
 
         /// <summary>
-        /// 下载的文件大小
+        /// 下载的文件大小（long 支持 >2GB 文件，避免 int 溢出为负）
         /// </summary>
-        public abstract int BytesDownloaded { get; }
+        public abstract long BytesDownloaded { get; }
 
         /// <summary>
         /// 请求头

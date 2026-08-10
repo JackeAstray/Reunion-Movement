@@ -485,6 +485,9 @@ namespace ReunionMovement.Common.Util
                     if (loopItemComp != null)
                     {
                         loopItemComp.onClick = OnItemClicked;
+                        // 由 LoopScrollRect 直接维护数据索引，不再依赖数据源 BindItem 写入，
+                        // 避免自定义数据源提前 return 时 index 残留旧值导致点击/选中错位
+                        loopItemComp.index = dataIndex;
                         loopItemComp.SetSelected(dataIndex == selectedDataIndex);
                     }
 
@@ -526,14 +529,12 @@ namespace ReunionMovement.Common.Util
         {
             // 选择数据索引（不自动滚动）
             selectedDataIndex = dataIndex;
-            // 更新可见项的选中状态
-            for (int i = 0; i < pooledItems.Count; i++)
+            // 更新可见项的选中状态（复用已缓存的组件引用，避免 GetComponent 循环）
+            for (int i = 0; i < pooledItemComps.Count; i++)
             {
-                var item = pooledItems[i];
-                var li = item.GetComponent<LoopItemBase>();
+                var li = pooledItemComps[i];
                 if (li != null)
                 {
-                    // 获取当前绑定的索引（LoopItemBase.index）与 selectedDataIndex 比较
                     li.SetSelected(li.index == selectedDataIndex);
                 }
             }
@@ -550,11 +551,10 @@ namespace ReunionMovement.Common.Util
             dataIndex = Mathf.Clamp(dataIndex, 0, totalCount - 1);
             selectedDataIndex = dataIndex;
 
-            // 更新可见项状态
-            for (int i = 0; i < pooledItems.Count; i++)
+            // 更新可见项状态（复用已缓存的组件引用，避免 GetComponent 循环）
+            for (int i = 0; i < pooledItemComps.Count; i++)
             {
-                var item = pooledItems[i];
-                var li = item.GetComponent<LoopItemBase>();
+                var li = pooledItemComps[i];
                 if (li != null)
                 {
                     li.SetSelected(li.index == selectedDataIndex);
@@ -573,9 +573,9 @@ namespace ReunionMovement.Common.Util
         public void ClearSelection()
         {
             selectedDataIndex = -1;
-            for (int i = 0; i < pooledItems.Count; i++)
+            for (int i = 0; i < pooledItemComps.Count; i++)
             {
-                var li = pooledItems[i].GetComponent<LoopItemBase>();
+                var li = pooledItemComps[i];
                 if (li != null) li.SetSelected(false);
             }
         }

@@ -762,7 +762,12 @@ namespace ReunionMovement.Core.UIInput
         public void DisableUIControl()
         {
             if (currentMode == UIControlMode.Gameplay) return;
-            if (inputActions == null) return;
+            if (inputActions == null)
+            {
+                // 输入未初始化：无法真正关闭导航，但需同步模式状态避免残留
+                currentMode = UIControlMode.Gameplay;
+                return;
+            }
 
             // 清除 UI 焦点
             ClearFocus();

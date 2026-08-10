@@ -24,12 +24,28 @@ namespace ReunionMovement.Core.UI
 
         #region 每个界面都有一个Canvas
         private Canvas canvas;
-        public Canvas Canvas => canvas ??= GetComponent<Canvas>();
+        public Canvas Canvas
+        {
+            get
+            {
+                // 用 Unity == 判空（识别 fake-null）：组件被 Destroy 后缓存引用需重新获取，
+                // ??= 无法识别已销毁对象，会抛 MissingReferenceException
+                if (canvas == null) canvas = GetComponent<Canvas>();
+                return canvas;
+            }
+        }
         #endregion
 
         #region 每个界面都有一个UIWindowAsset
         private UIWindowAsset windowAsset;
-        public UIWindowAsset WindowAsset => windowAsset ??= GetComponent<UIWindowAsset>();
+        public UIWindowAsset WindowAsset
+        {
+            get
+            {
+                if (windowAsset == null) windowAsset = GetComponent<UIWindowAsset>();
+                return windowAsset;
+            }
+        }
         #endregion
 
         /// <summary>

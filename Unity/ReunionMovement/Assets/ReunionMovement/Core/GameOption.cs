@@ -206,7 +206,10 @@ namespace ReunionMovement.Core
                 float f => (T)(object)PlayerPrefs.GetFloat(key, f),
                 string s => (T)(object)PlayerPrefs.GetString(key, s),
                 // 枚举：按字符串持久化（与 SetOption 的 Enum 分支配对）
-                _ when typeof(T).IsEnum => (T)Enum.Parse(typeof(T), PlayerPrefs.GetString(key, defaultValue.ToString())),
+                // 存档被篡改/损坏时 TryParse 兜底返回默认值，避免崩溃
+                _ when typeof(T).IsEnum => Enum.TryParse(typeof(T), PlayerPrefs.GetString(key, defaultValue.ToString()), ignoreCase: true, out var enumValue)
+                    ? (T)enumValue
+                    : defaultValue,
                 _ => throw new NotSupportedException($"不支持的类型: {typeof(T)}")
             };
         }
@@ -237,34 +240,38 @@ namespace ReunionMovement.Core
         /// </summary>
         public static void ApplyOption<T>(string key, T value)
         {
-            // 更新内存中的 currentOption 对象 的常见键
+            // 用反射按字段名更新 currentOption（字段名与 key 约定一致，见 Option 定义）。
+            // 消除了原先硬编码的 20+ 字符串 case，新增设置项无需再改 ApplyOption。
             try
             {
-                // 特殊处理常见字段，便于即时应用
-                switch (key)
+                var field = typeof(Option).GetField(key,
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                if (field != null)
                 {
-                    case "fullscreen": currentOption.fullscreen = Convert.ToBoolean(value); break;
-                    case "resolutionWidth": currentOption.resolutionWidth = Convert.ToInt32(value); break;
-                    case "resolutionHeight": currentOption.resolutionHeight = Convert.ToInt32(value); break;
-                    case "vsync": currentOption.vsync = Convert.ToBoolean(value); break;
-                    case "framerate": currentOption.framerate = Convert.ToInt32(value); break;
-                    case "graphicsQuality": currentOption.graphicsQuality = Convert.ToInt32(value); break;
-                    case "brightness": currentOption.brightness = Convert.ToSingle(value); break;
-                    case "autoPause": currentOption.autoPause = Convert.ToBoolean(value); break;
-                    case "masterVolumeMuted": currentOption.masterVolumeMuted = Convert.ToBoolean(value); break;
-                    case "masterVolume": currentOption.masterVolume = Convert.ToSingle(value); break;
-                    case "musicMuted": currentOption.musicMuted = Convert.ToBoolean(value); break;
-                    case "musicVolume": currentOption.musicVolume = Convert.ToSingle(value); break;
-                    case "musicFadeTime": currentOption.musicFadeTime = Convert.ToSingle(value); break;
-                    case "sfxMuted": currentOption.sfxMuted = Convert.ToBoolean(value); break;
-                    case "sfxVolume": currentOption.sfxVolume = Convert.ToSingle(value); break;
-                    case "language":
-                        if (value is Multilingual ml) currentOption.language = ml;
-                        else if (value is string s && Enum.TryParse<Multilingual>(s, out var le)) currentOption.language = le;
-                        break;
-                    default:
-                        // 对于不在上面列表的 key，不在此重复 SetOption（下方统一调用一次）
-                        break;
+                    try
+                    {
+                        object converted;
+                        if (field.FieldType.IsEnum)
+                        {
+                            // 枚举字段：支持 string / 同类型枚举 / 数值三种来源
+                            if (value is string str) converted = Enum.Parse(field.FieldType, str, ignoreCase: true);
+                            else if (value is Enum) converted = value;
+                            else converted = Enum.ToObject(field.FieldType, Convert.ToInt32(value));
+                        }
+                        else
+                        {
+                            converted = Convert.ChangeType(value, field.FieldType, System.Globalization.CultureInfo.InvariantCulture);
+                        }
+                        field.SetValue(currentOption, converted);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning("ApplyOption 字段 {0} 赋值失败: {1}", key, ex.Message);
+                    }
+                }
+                else
+                {
+                    Log.Warning("ApplyOption 未知字段: {0}", key);
                 }
 
                 // 持久化并应用（SetOption 对所有 key 仅调用一次）
