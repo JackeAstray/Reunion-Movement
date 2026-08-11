@@ -168,6 +168,19 @@ namespace ReunionMovement.Common.Util
             {
                 scrollRect.onValueChanged.RemoveListener(OnScroll);
             }
+            // 销毁复用的指示器实例（挂在 viewport 下，不随本组件销毁）
+            if (pullStartIndicatorInstance != null)
+            {
+                Destroy(pullStartIndicatorInstance.gameObject);
+                pullStartIndicatorInstance = null;
+                pullStartIndicatorComp = null;
+            }
+            if (pullEndIndicatorInstance != null)
+            {
+                Destroy(pullEndIndicatorInstance.gameObject);
+                pullEndIndicatorInstance = null;
+                pullEndIndicatorComp = null;
+            }
         }
 
         /// <summary>
@@ -697,17 +710,23 @@ namespace ReunionMovement.Common.Util
         void ShowPullStartIndicator()
         {
             if (pullStartIndicatorPrefab == null) return;
-            if (pullStartIndicatorInstance != null) return;
-            // 将指示器生成在 viewport 下，避免 content 的子项重建或布局影响它的位置
-            RectTransform parent = viewport != null ? viewport : content;
-            pullStartIndicatorInstance = Instantiate(pullStartIndicatorPrefab, parent);
+            if (pullStartIndicatorInstance == null)
+            {
+                // 将指示器生成在 viewport 下，避免 content 的子项重建或布局影响它的位置
+                RectTransform parent = viewport != null ? viewport : content;
+                pullStartIndicatorInstance = Instantiate(pullStartIndicatorPrefab, parent);
+                // 获取脚本引用（如果存在）
+                pullStartIndicatorComp = pullStartIndicatorInstance.GetComponent<PullIndicatorBase>();
+            }
+            else
+            {
+                // 复用已创建的实例（Hide 仅隐藏不销毁），避免反复 Instantiate/Destroy 的 GC 压力
+                pullStartIndicatorInstance.gameObject.SetActive(true);
+            }
             pullStartIndicatorInstance.SetAsLastSibling();
             // 确保它在布局上不会被 LayoutGroup 干扰（如果存在）
             LayoutGroup lg = pullStartIndicatorInstance.GetComponentInParent<LayoutGroup>();
             if (lg != null) { /* keep as simple; parent is viewport which normally has no LayoutGroup */ }
-            pullStartIndicatorInstance.gameObject.SetActive(true);
-            // 获取脚本引用（如果存在）
-            pullStartIndicatorComp = pullStartIndicatorInstance.GetComponent<PullIndicatorBase>();
             // 保证对齐
             // 将起始指示器固定在 viewport 的上边缘
             pullStartIndicatorInstance.pivot = new Vector2(0.5f, 1f);
@@ -745,13 +764,19 @@ namespace ReunionMovement.Common.Util
         void ShowPullEndIndicator()
         {
             if (pullEndIndicatorPrefab == null) return;
-            if (pullEndIndicatorInstance != null) return;
-            RectTransform parent = viewport != null ? viewport : content;
-            pullEndIndicatorInstance = Instantiate(pullEndIndicatorPrefab, parent);
+            if (pullEndIndicatorInstance == null)
+            {
+                RectTransform parent = viewport != null ? viewport : content;
+                pullEndIndicatorInstance = Instantiate(pullEndIndicatorPrefab, parent);
+                // 获取脚本引用
+                pullEndIndicatorComp = pullEndIndicatorInstance.GetComponent<PullIndicatorBase>();
+            }
+            else
+            {
+                // 复用已创建的实例（Hide 仅隐藏不销毁），避免反复 Instantiate/Destroy 的 GC 压力
+                pullEndIndicatorInstance.gameObject.SetActive(true);
+            }
             pullEndIndicatorInstance.SetAsLastSibling();
-            pullEndIndicatorInstance.gameObject.SetActive(true);
-            // 获取脚本引用
-            pullEndIndicatorComp = pullEndIndicatorInstance.GetComponent<PullIndicatorBase>();
             // 将末端指示器固定在 viewport 的下边缘
             pullEndIndicatorInstance.pivot = new Vector2(0.5f, 0f);
             pullEndIndicatorInstance.anchorMin = new Vector2(0.5f, 0f);
@@ -783,28 +808,24 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 隐藏并销毁起始端指示器实例。
+        /// 隐藏起始端指示器实例（保留复用，避免反复 Instantiate/Destroy）。
         /// </summary>
         void HidePullStartIndicator()
         {
             if (pullStartIndicatorInstance != null)
             {
-                try { Destroy(pullStartIndicatorInstance.gameObject); } catch (System.Exception ex) { Log.Warning($"LoopScrollRect 销毁起始指示器异常: {ex.Message}"); }
-                pullStartIndicatorInstance = null;
-                pullStartIndicatorComp = null;
+                pullStartIndicatorInstance.gameObject.SetActive(false);
             }
         }
 
         /// <summary>
-        /// 隐藏并销毁末端指示器实例。
+        /// 隐藏末端指示器实例（保留复用，避免反复 Instantiate/Destroy）。
         /// </summary>
         void HidePullEndIndicator()
         {
             if (pullEndIndicatorInstance != null)
             {
-                try { Destroy(pullEndIndicatorInstance.gameObject); } catch (System.Exception ex) { Log.Warning($"LoopScrollRect 销毁末端指示器异常: {ex.Message}"); }
-                pullEndIndicatorInstance = null;
-                pullEndIndicatorComp = null;
+                pullEndIndicatorInstance.gameObject.SetActive(false);
             }
         }
 

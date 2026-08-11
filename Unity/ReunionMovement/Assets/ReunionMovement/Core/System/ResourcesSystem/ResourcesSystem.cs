@@ -3,13 +3,8 @@ using ReunionMovement.Core.Base;
 using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 using UnityEngine.Events;
-using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.U2D;
 using Object = UnityEngine.Object;
 
@@ -297,82 +292,9 @@ namespace ReunionMovement.Core.Resources
         }
         #endregion
 
-        #region Addressables 集成（推荐用于 WebGL 远程更新和大型项目资源管理）
-        /// <summary>
-        /// 通过 Addressables 异步加载资源（推荐方式，支持远程更新和内存跟踪）。
-        /// 加载的资源不经过 ResourcesSystem 的引用计数缓存（Addressables 自行管理生命周期）。
-        /// </summary>
-        /// <typeparam name="T">资源类型</typeparam>
-        /// <param name="key">Addressables key（路径或 Label）</param>
-        /// <returns>加载的资源，失败返回 null</returns>
-        public async UniTask<T> LoadAddressableAsync<T>(string key) where T : Object
-        {
-            try
-            {
-                var handle = Addressables.LoadAssetAsync<T>(key);
-                await handle.Task;
-                if (handle.Status == AsyncOperationStatus.Succeeded)
-                {
-                    return handle.Result;
-                }
-                Log.Error("Addressables 加载失败: {0}, Status: {1}", key, handle.Status);
-                return null;
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Addressables 加载异常: {0}, {1}", key, ex.Message);
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// 通过 Addressables 异步实例化 GameObject（自动处理引用计数）。
-        /// </summary>
-        /// <param name="key">Addressables key</param>
-        /// <param name="parent">父 Transform（可选）</param>
-        /// <returns>实例化的 GameObject，失败返回 null</returns>
-        public async UniTask<GameObject> InstantiateAddressableAsync(string key, Transform parent = null)
-        {
-            try
-            {
-                var handle = Addressables.InstantiateAsync(key, parent);
-                await handle.Task;
-                if (handle.Status == AsyncOperationStatus.Succeeded)
-                {
-                    return handle.Result;
-                }
-                Log.Error("Addressables 实例化失败: {0}, Status: {1}", key, handle.Status);
-                return null;
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Addressables 实例化异常: {0}, {1}", key, ex.Message);
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// 释放 Addressables 实例化的 GameObject。
-        /// </summary>
-        public void ReleaseAddressableInstance(GameObject instance)
-        {
-            if (instance != null)
-            {
-                Addressables.ReleaseInstance(instance);
-            }
-        }
-
-        /// <summary>
-        /// 释放 Addressables 加载的资源。
-        /// </summary>
-        public void ReleaseAddressableAsset<T>(T asset) where T : Object
-        {
-            if (asset != null)
-            {
-                Addressables.Release(asset);
-            }
-        }
-        #endregion
+        // 注：原 Addressables 集成（LoadAddressableAsync 等 4 个方法）已迁移至
+        // AddressableSystem（Assets/ReunionMovement/Core/System/AddressableSystem/AddressableSystem.cs），
+        // 本类仅保留 Resources 目录职责（含降级兜底）。
     }
 
     /// <summary>

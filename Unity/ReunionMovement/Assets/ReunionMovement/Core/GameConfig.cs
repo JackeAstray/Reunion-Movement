@@ -1,4 +1,5 @@
 using ReunionMovement.Common;
+using ReunionMovement.Core.Resources;
 using UnityEngine;
 
 namespace ReunionMovement
@@ -16,6 +17,12 @@ namespace ReunionMovement
         public string uiPath = "Prefabs/UIs/";
         public string uiToolkitUxmlPath = "UI/UIToolkit/";
         public string uiToolkitUssPath = "UI/UIToolkit/Styles/";
+
+        [Header("Addressables")]
+        public bool enableAddressables = true;
+        public AddressablesMode addressablesMode = AddressablesMode.LocalOnly;
+        public string remoteBundleUrl = "";
+        public string remoteCatalogUrl = "";
 
         [Header("日志等级")]
         public bool enableLog = true;

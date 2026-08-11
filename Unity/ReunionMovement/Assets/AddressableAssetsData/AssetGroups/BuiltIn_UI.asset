@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: BuiltIn_UI
+  m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
+  m_GroupName: BuiltIn_UI
+  m_GUID: 19b4b2ff1a460f84c8df7810122fdd48
+  m_SerializeEntries:
+  - m_GUID: 07ba34b5b6ae8ff43936bfff7851ef04
+    m_Address: BuiltIn/UI/PopupUIPlane
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - builtin
+    - ui
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: af5c8b2fc3fbeaf43b76556cdd2f9e14
+    m_Address: BuiltIn/UI/TerminalUIPlane
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - builtin
+    - ui
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f92202f551c81274685bea4e19bc0a41
+    m_Address: BuiltIn/UI/StartGameUIPlane
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - builtin
+    - ui
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: 655daefa14e1d2b42811fdd378da0a5c, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 3a1ef0d71a4f3a5499baa679cf37146a, type: 2}
+    - {fileID: 11400000, guid: df85cd555ef439e4587fa66add19f3f5, type: 2}
