@@ -295,6 +295,8 @@ namespace ReunionMovement.Core.UI
                 return existingState;
             }
 
+            // 同步路径：仅走 Resources（Addressables 无法真正同步加载，WebGL 不支持 WaitForCompletion）。
+            // 推荐使用 LoadWindowAsync 走 Addressables 双轨。
             GameObject uiObj = ResourcesSystem.Instance.InstantiateAsset<GameObject>(Config.UIPath + name);
             Log.Debug("[UISystem] LoadWindow({0}) Instantiate → {1}, activeSelf={2}", name, (uiObj ? uiObj.name : "NULL"), uiObj?.activeSelf);
             if (uiObj == null)
@@ -302,6 +304,66 @@ namespace ReunionMovement.Core.UI
                 return null;
             }
 
+            return SetupLoadedWindow(uiObj, name, openWhenFinish, args);
+        }
+
+        /// <summary>
+        /// [推荐] 异步加载 UI —— Addressables 优先（AddressableKeys.UIRoot + name），
+        /// 失败自动降级 Resources（Config.UIPath + name）。
+        /// 实例化完成后立即释放源 Prefab 的 Addressables 引用，避免泄漏。
+        /// </summary>
+        public async UniTask<UILoadState> LoadWindowAsync(string name, bool openWhenFinish, params object[] args)
+        {
+            if (uiStateCache.TryGetValue(name, out var existingState))
+            {
+                return existingState;
+            }
+
+            GameObject prefab = null;
+            bool fromAddressables = false;
+
+            // 双轨：Addressables 优先
+            if (Config.AddressablesMode != AddressablesMode.Off)
+            {
+                prefab = await AddressableSystem.Instance.LoadAssetAsync<GameObject>(AddressableKeys.UIRoot + name);
+                fromAddressables = prefab != null;
+                if (prefab != null)
+                {
+                    Log.Debug("[UISystem] LoadWindowAsync({0}) 从 Addressables 加载成功: {1}", name, AddressableKeys.UIRoot + name);
+                }
+            }
+
+            // 降级：Resources
+            if (prefab == null)
+            {
+                prefab = ResourcesSystem.Instance.Load<GameObject>(Config.UIPath + name);
+                if (prefab != null)
+                {
+                    Log.Debug("[UISystem] LoadWindowAsync({0}) 降级 Resources 加载成功: {1}", name, Config.UIPath + name);
+                }
+            }
+
+            if (prefab == null)
+            {
+                Log.Error("[UISystem] LoadWindowAsync({0}) 加载失败（Addressables + Resources 均未命中）", name);
+                return null;
+            }
+
+            var uiObj = UnityEngine.Object.Instantiate(prefab);
+            // 实例化后释放源 Prefab 的 Addressables 引用（Resources 路径无引用计数，无需释放）
+            if (fromAddressables)
+            {
+                AddressableSystem.Instance.ReleaseAsset(prefab);
+            }
+
+            return SetupLoadedWindow(uiObj, name, openWhenFinish, args);
+        }
+
+        /// <summary>
+        /// 对已实例化的 UI GameObject 完成初始化并登记（LoadWindow / LoadWindowAsync 共用）。
+        /// </summary>
+        private UILoadState SetupLoadedWindow(GameObject uiObj, string name, bool openWhenFinish, object[] args)
+        {
             uiObj.name = name;
             InitUIAsset(uiObj);
             uiObj.transform.localRotation = Quaternion.identity;
@@ -456,6 +518,42 @@ namespace ReunionMovement.Core.UI
 
             OnOpen(uiState, args);
             return uiState;
+        }
+
+        /// <summary>
+        /// [推荐] 异步打开窗口 —— 走 LoadWindowAsync（Addressables 双轨加载，失败自动降级 Resources）。
+        /// </summary>
+        public async UniTask<UILoadState> OpenWindowAsync(string uiName, params object[] args)
+        {
+            UILoadState uiState;
+
+            if (!uiStateCache.TryGetValue(uiName, out uiState))
+            {
+                uiState = await LoadWindowAsync(uiName, true, args);
+                Log.Debug("[UISystem] OpenWindowAsync({0}) LoadWindowAsync → {1}", uiName, (uiState != null ? "OK" : "NULL"));
+                return uiState;
+            }
+
+            if (!uiState.isOnInit)
+            {
+                uiState.isOnInit = true;
+                if (uiState.uiWindow != null)
+                {
+                    uiState.uiWindow.OnInit();
+                }
+            }
+
+            OnOpen(uiState, args);
+            return uiState;
+        }
+
+        /// <summary>
+        /// [推荐] 类型安全的异步打开窗口 —— 通过 UIController 类型名自动推断 UI 名称。
+        /// 使用方式：UISystem.Instance.OpenWindowAsync&lt;PopupUIPlane&gt;(args);
+        /// </summary>
+        public async UniTask<UILoadState> OpenWindowAsync<T>(params object[] args) where T : UIController
+        {
+            return await OpenWindowAsync(typeof(T).Name, args);
         }
 
         /// <summary>

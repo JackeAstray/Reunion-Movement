@@ -93,7 +93,7 @@ namespace ReunionMovement.EditorTools
         #endregion
 
         #region 表格 -> 脚本
-        [MenuItem("工具箱/表格处理/表格 -> 脚本", false, 1)]
+        [MenuItem("ReunionMovement/表格处理/表格 -> 脚本", false, 1)]
         public static void ExcelToScripts()
         {
             List<string> xlsxFiles = GetAllConfigFiles(toDirSO);
@@ -433,7 +433,7 @@ namespace ReunionMovement
         #endregion
 
         #region 表格 -> ScriptableObject
-        [MenuItem("工具箱/表格处理/表格 -> ScriptableObject", false, 2)]
+        [MenuItem("ReunionMovement/表格处理/表格 -> ScriptableObject", false, 2)]
         public static void ExcelToScriptableObject()
         {
             List<string> xlsxFiles = GetAllConfigFiles(toDirSO);
@@ -449,6 +449,9 @@ namespace ReunionMovement
             {
                 ExcelToScriptableObject(path);
             }
+
+            // 所有 SO 写盘后统一刷新一次资源，避免每个文件触发一次 Refresh
+            AssetDatabase.Refresh();
 
             Log.Debug("表格转为ScriptableObject完成！");
         }
@@ -623,12 +626,12 @@ namespace ReunionMovement
             }
 
             AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
+            // Refresh 由 ExcelToScriptableObject() 入口统一执行
         }
         #endregion
 
         #region 表格 -> Json
-        [MenuItem("工具箱/表格处理/表格 -> JSON", false, 3)]
+        [MenuItem("ReunionMovement/表格处理/表格 -> JSON", false, 3)]
         public static void ExcelToJson()
         {
             List<string> xlsxFiles = GetAllConfigFiles(toDirSO);
@@ -644,6 +647,9 @@ namespace ReunionMovement
             {
                 ExcelToJson(path);
             }
+
+            // 所有 JSON 写盘后统一刷新一次资源，避免每个文件触发一次 Refresh
+            AssetDatabase.Refresh();
 
             Log.Debug("表格转为Json完成！");
         }
@@ -689,8 +695,7 @@ namespace ReunionMovement
                 FileOperationUtil.SaveFileSync(output, json);
             }
 
-            //刷新本地资源
-            AssetDatabase.Refresh();
+            // Refresh 由 ExcelToJson() 入口统一执行
         }
         #endregion
 

@@ -1,4 +1,5 @@
 using ReunionMovement.Common;
+using ReunionMovement.Core.Resources;
 using UnityEngine;
 
 namespace ReunionMovement
@@ -203,5 +204,32 @@ namespace ReunionMovement
         {
             return Channel(channel, true);
         }
+
+        // ============================================================
+        //  Addressables 配置
+        // ============================================================
+        /// <summary>是否启用 Addressables（false 时 AddressableSystem 处于 Off 模式）</summary>
+        public static bool EnableAddressables
+        {
+            get => Cfg?.enableAddressables ?? true;
+            set { if (Cfg != null) Cfg.enableAddressables = value; }
+        }
+
+        /// <summary>Addressables 运行模式（Off/LocalOnly/Remote）；enableAddressables 关闭时恒为 Off</summary>
+        public static AddressablesMode AddressablesMode
+        {
+            get
+            {
+                var cfg = Cfg;
+                return (cfg != null && cfg.enableAddressables) ? cfg.addressablesMode : AddressablesMode.Off;
+            }
+            set { if (Cfg != null) Cfg.addressablesMode = value; }
+        }
+
+        /// <summary>远程 Bundle 根地址（Remote 模式构建/部署时回填，用于 CDN）</summary>
+        public static string RemoteBundleUrl => Cfg?.remoteBundleUrl ?? string.Empty;
+
+        /// <summary>远程 Catalog 根地址（Remote 模式构建/部署时回填）</summary>
+        public static string RemoteCatalogUrl => Cfg?.remoteCatalogUrl ?? string.Empty;
     }
 }

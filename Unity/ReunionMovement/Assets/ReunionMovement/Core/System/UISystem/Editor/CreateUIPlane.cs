@@ -32,7 +32,7 @@ namespace ReunionMovement.Common.Util.EditorTools
         string targetName { get; set; }
         GameObject uiObj { get; set; }
 
-        [MenuItem("工具箱/UI工具", false, 40)]
+        [MenuItem("ReunionMovement/UI工具", false, 40)]
         //创建UI
         public static void ShowWindow()
         {

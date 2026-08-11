@@ -86,6 +86,8 @@ namespace ReunionMovement.Common.Util
         int reconnectAttempts = 0;
         CancellationTokenSource reconnectCts;
         CancellationTokenSource heartbeatCts;
+        // TCP 是否曾成功连接（用于区分"连接失败"与"正常断开",补齐 TCP 分支的 ClientError 契约）
+        bool tcpEverConnected;
 
         void Start()
         {
@@ -262,6 +264,7 @@ namespace ReunionMovement.Common.Util
                     {
                         Log.Info("TCP 客户端已连接");
                         reconnectAttempts = 0;
+                        tcpEverConnected = true;
                         ClientConnected?.Invoke();
                         onClientConnected?.Invoke();
                         // 无条件重建心跳：先取消旧心跳，避免旧协程退出时清空 heartbeatCts
@@ -283,6 +286,14 @@ namespace ReunionMovement.Common.Util
                     tcpClient.OnDisconnected += () =>
                     {
                         Log.Info("TCP 客户端已断开连接");
+                        // TCP 连接失败也表现为 OnDisconnected；若从未成功连接，视为连接失败，
+                        // 触发 ClientError 以与 KCP/WS 分支的错误事件契约保持一致
+                        if (!tcpEverConnected)
+                        {
+                            const string tcpErrMsg = "TCP 连接失败";
+                            ClientError?.Invoke(tcpErrMsg);
+                            try { onClientError?.Invoke(tcpErrMsg); } catch (System.Exception ex) { Log.Warning("onClientError(TCP) 回调异常: {0}", ex.Message); }
+                        }
                         ClientDisconnected?.Invoke();
                         onClientDisconnected?.Invoke();
                         if (reconnectCts == null && autoReconnect)

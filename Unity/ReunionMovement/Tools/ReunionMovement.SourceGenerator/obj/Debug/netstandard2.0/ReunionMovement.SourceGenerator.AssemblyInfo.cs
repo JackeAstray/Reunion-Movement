@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ReunionMovement.SourceGenerator")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c905a000e73e3ad82fa371f57cb6b3e5422c42ac")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+51f6bba8b752318068dc6ca5ad9254b519322b30")]
 [assembly: System.Reflection.AssemblyProductAttribute("ReunionMovement.SourceGenerator")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ReunionMovement.SourceGenerator")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

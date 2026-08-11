@@ -343,6 +343,15 @@ namespace ReunionMovement.UI.ImageExtensions
         // 色调滤镜
         private static readonly int toneIntensity_Sp = Shader.PropertyToID("_ToneIntensity");
 
+        // Shared 模式回读补齐：枚举/开关属性 ID（GetModifiedMaterial 写入，InitValuesFromSharedMaterial 回读）
+        private static readonly int toneFilter_Sp = Shader.PropertyToID("_ToneFilter");
+        private static readonly int edgeMode_Sp = Shader.PropertyToID("_EdgeMode");
+        private static readonly int samplingMode_Sp = Shader.PropertyToID("_SamplingMode");
+        private static readonly int targetMode_Sp = Shader.PropertyToID("_TargetMode");
+        private static readonly int detailMode_Sp = Shader.PropertyToID("_DetailMode");
+        private static readonly int blendType_Sp = Shader.PropertyToID("_BlendType");
+        private static readonly int gradientTexEnabled_Sp = Shader.PropertyToID("_GradientTexEnabled");
+
         // 独立颜色滤镜
         private static readonly int colorFilter_Sp = Shader.PropertyToID("_ColorFilter");
         private static readonly int colorValue_Sp = Shader.PropertyToID("_ColorValue");
@@ -2727,6 +2736,7 @@ namespace ReunionMovement.UI.ImageExtensions
 
             // -------------------- 色调滤镜（TONE） --------------------
             mat.SetFloat(toneIntensity_Sp, m_ToneIntensity);
+            mat.SetInt(toneFilter_Sp, (int)m_ToneFilter);
             switch (m_ToneFilter)
             {
                 case ToneFilter.None:
@@ -2766,6 +2776,7 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.SetFloat(edgeShinyRate_Sp, m_EdgeShinyRate);
             mat.SetFloat(edgeShinyWidth_Sp, m_EdgeShinyWidth);
             mat.SetFloat(edgeShinyAutoPlaySpeed_Sp, m_EdgeShinyAutoPlaySpeed);
+            mat.SetInt(edgeMode_Sp, (int)m_EdgeMode);
             switch (m_EdgeMode)
             {
                 case EdgeMode.None:
@@ -2780,6 +2791,7 @@ namespace ReunionMovement.UI.ImageExtensions
 
             // -------------------- 采样增强（SAMPLING） --------------------
             mat.SetFloat(samplingIntensity_Sp, m_SamplingIntensity);
+            mat.SetInt(samplingMode_Sp, (int)m_SamplingMode);
             switch (m_SamplingMode)
             {
                 case SamplingFilter.Pixelation:
@@ -2800,6 +2812,7 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.SetColor(targetColor_Sp, m_TargetColor);
             mat.SetFloat(targetRange_Sp, m_TargetRange);
             mat.SetFloat(targetSoftness_Sp, m_TargetSoftness);
+            mat.SetInt(targetMode_Sp, (int)m_TargetMode);
             switch (m_TargetMode)
             {
                 case TargetMode.None:
@@ -2821,11 +2834,13 @@ namespace ReunionMovement.UI.ImageExtensions
             if (m_EnableGradientTex && m_GradientTex != null)
             {
                 mat.SetTexture(gradientTex_Sp, m_GradientTex);
+                mat.SetInt(gradientTexEnabled_Sp, 1);
                 mat.EnableKeyword("GRADIENT_TEXTURE");
             }
             else
             {
                 mat.SetTexture(gradientTex_Sp, null);
+                mat.SetInt(gradientTexEnabled_Sp, 0);
             }
 
             // -------------------- 细节纹理（DETAIL FILTER） --------------------
@@ -2835,6 +2850,7 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.SetFloat(detailIntensity_Sp, m_DetailIntensity);
             mat.SetVector(detailThreshold_Sp, m_DetailThreshold);
             mat.SetColor(detailColor_Sp, m_DetailColor);
+            mat.SetInt(detailMode_Sp, (int)m_DetailMode);
             switch (m_DetailMode)
             {
                 case DetailFilter.Masking: mat.EnableKeyword("DETAIL_MASKING"); break;
@@ -2846,6 +2862,7 @@ namespace ReunionMovement.UI.ImageExtensions
             }
 
             // -------------------- 混合模式（BLEND TYPE） --------------------
+            mat.SetInt(blendType_Sp, (int)m_BlendType);
             {
                 var (src, dst) = ConvertBlendType(m_BlendType);
                 mat.SetInt(srcBlend_Sp, (int)src);
@@ -3023,6 +3040,7 @@ namespace ReunionMovement.UI.ImageExtensions
 
             // 色调滤镜
             m_ToneIntensity = mat.GetFloat(toneIntensity_Sp);
+            m_ToneFilter = (ToneFilter)mat.GetInt(toneFilter_Sp);
 
             // 独立颜色滤镜
             m_ColorFilterMode = (ColorMode)mat.GetInt(colorFilter_Sp);
@@ -3038,14 +3056,17 @@ namespace ReunionMovement.UI.ImageExtensions
             m_EdgeShinyRate = mat.GetFloat(edgeShinyRate_Sp);
             m_EdgeShinyWidth = mat.GetFloat(edgeShinyWidth_Sp);
             m_EdgeShinyAutoPlaySpeed = mat.GetFloat(edgeShinyAutoPlaySpeed_Sp);
+            m_EdgeMode = (EdgeMode)mat.GetInt(edgeMode_Sp);
 
             // 采样增强
             m_SamplingIntensity = mat.GetFloat(samplingIntensity_Sp);
+            m_SamplingMode = (SamplingFilter)mat.GetInt(samplingMode_Sp);
 
             // 目标模式
             m_TargetColor = mat.GetColor(targetColor_Sp);
             m_TargetRange = mat.GetFloat(targetRange_Sp);
             m_TargetSoftness = mat.GetFloat(targetSoftness_Sp);
+            m_TargetMode = (TargetMode)mat.GetInt(targetMode_Sp);
 
             // 图案区域
             m_PatternArea = (PatternArea)mat.GetInt(patternArea_Sp);
@@ -3055,10 +3076,18 @@ namespace ReunionMovement.UI.ImageExtensions
             m_DetailIntensity = mat.GetFloat(detailIntensity_Sp);
             m_DetailThreshold = mat.GetVector(detailThreshold_Sp);
             m_DetailColor = mat.GetColor(detailColor_Sp);
+            m_DetailMode = (DetailFilter)mat.GetInt(detailMode_Sp);
+            Vector4 detailST = mat.GetVector(detailTex_ST_Sp);
+            m_DetailTexScale = new Vector2(detailST.x, detailST.y);
+            m_DetailTexOffset = new Vector2(detailST.z, detailST.w);
+            m_DetailTexSpeed = mat.GetVector(detailTexSpeed_Sp);
 
             // 渐变纹理
             m_GradientOffset = mat.GetFloat(gradientOffset_Sp);
             m_GradientScale = mat.GetFloat(gradientScale_Sp);
+            m_EnableGradientTex = mat.GetInt(gradientTexEnabled_Sp) == 1;
+            m_GradientTex = mat.GetTexture(gradientTex_Sp);
+            m_BlendType = (BlendType)mat.GetInt(blendType_Sp);
         }
 
         private static (UnityEngine.Rendering.BlendMode, UnityEngine.Rendering.BlendMode) ConvertBlendType(BlendType type)

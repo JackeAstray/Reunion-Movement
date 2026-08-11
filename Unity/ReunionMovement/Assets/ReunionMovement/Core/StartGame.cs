@@ -32,18 +32,19 @@ namespace ReunionMovement.Core
         /// </summary>
         public override IList<ICustomSystem> CreateModules()
         {
-            var modules = new List<ICustomSystem>(10);
+            var modules = new List<ICustomSystem>(11);
 
-            modules.Add(ResourcesSystem.Instance);    // 0: 资源加载（最高依赖）
-            modules.Add(SceneSystem.Instance);        // 1: 场景管理
-            modules.Add(EventMessageSystem.Instance); // 2: 事件总线
-            modules.Add(LanguagesSystem.Instance);    // 3: 多语言
-            modules.Add(SoundSystem.Instance);        // 4: 音频（需要 Update 驱动淡入淡出）
-            modules.Add(TimerMgr.Instance);           // 5: 计时器（需要 Update 驱动）
-            modules.Add(UISystem.Instance);           // 6: UI 管理
-            modules.Add(UIInputSystem.Instance);      // 7: UI 输入（需要 Update 驱动导航）
-            modules.Add(UIToolkitSystem.Instance);    // 8: UI Toolkit
-            modules.Add(TerminalSystem.Instance);     // 9: 终端（需要 Update 检测按键）
+            modules.Add(ResourcesSystem.Instance);    // 0: 资源加载（同步/兜底，最高依赖）
+            modules.Add(AddressableSystem.Instance);  // 1: Addressables（受管异步/远程）【新增】
+            modules.Add(SceneSystem.Instance);        // 2: 场景管理
+            modules.Add(EventMessageSystem.Instance); // 3: 事件总线
+            modules.Add(LanguagesSystem.Instance);    // 4: 多语言
+            modules.Add(SoundSystem.Instance);        // 5: 音频（需要 Update 驱动淡入淡出）
+            modules.Add(TimerMgr.Instance);           // 6: 计时器（需要 Update 驱动）
+            modules.Add(UISystem.Instance);           // 7: UI 管理
+            modules.Add(UIInputSystem.Instance);      // 8: UI 输入（需要 Update 驱动导航）
+            modules.Add(UIToolkitSystem.Instance);    // 9: UI Toolkit
+            modules.Add(TerminalSystem.Instance);     // 10: 终端（需要 Update 检测按键）
 
             return modules;
         }
@@ -90,11 +91,10 @@ namespace ReunionMovement.Core
             // SceneSystem.Instance.ExcludeWindowFromSceneHide(UINames.StartGame);
 
             // 加载初始场景
-            await SceneSystem.Instance.LoadScene("Temp", true, null, ()=>
-            {
-                // 打开启动界面
-                UISystem.Instance.OpenWindow(UINames.StartGame);
-            });
+            await SceneSystem.Instance.LoadScene("Temp", true, null, null);
+
+            // 打开启动界面（Addressables 双轨加载，失败自动降级 Resources）
+            await UISystem.Instance.OpenWindowAsync(UINames.StartGame);
         }
     }
 }
