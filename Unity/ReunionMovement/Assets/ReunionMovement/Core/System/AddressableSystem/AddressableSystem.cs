@@ -7,6 +7,7 @@ using System.Threading;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
@@ -86,6 +87,13 @@ namespace ReunionMovement.Core.Resources
 
             try
             {
+                // Remote 模式：在 InitializeAsync 之前配置远程 URL 重写
+                // （GameConfig.remoteBundleUrl/remoteCatalogUrl 覆盖构建时烘焙地址；远程 catalog 在初始化时加载，故须提前）
+                if (Mode == AddressablesMode.Remote)
+                {
+                    ConfigureRemoteUrlRewrite();
+                }
+
                 var handle = Addressables.InitializeAsync();
                 await handle.ToUniTask();
                 initProgress = 50;
@@ -113,6 +121,59 @@ namespace ReunionMovement.Core.Resources
                 Log.Error("AddressableSystem 初始化失败（业务层将降级 Resources）: {0}", ex.Message);
                 isInited = false;
             }
+        }
+
+        /// <summary>
+        /// 配置远程 URL 重写：用 GameConfig 的 remoteBundleUrl / remoteCatalogUrl 覆盖构建时
+        /// 烘焙的远程地址（Profile Remote.LoadPath），使同一构建产物可部署到任意 CDN。
+        /// 必须在 Addressables.InitializeAsync 之前调用（远程 catalog 在初始化时加载）。
+        /// 规则：仅重写 http(s) 远程地址；catalog_* 文件优先用 remoteCatalogUrl，其余用 remoteBundleUrl；
+        /// 目标 URL 视为“最终目录 URL”（含平台目录），如 https://cdn.example.com/reunion/0.2.0/WebGL。
+        /// </summary>
+        private void ConfigureRemoteUrlRewrite()
+        {
+            string bundleRoot = Config.RemoteBundleUrl;
+            string catalogRoot = Config.RemoteCatalogUrl;
+
+            if (string.IsNullOrEmpty(bundleRoot) && string.IsNullOrEmpty(catalogRoot))
+            {
+                // 未配置：使用构建时烘焙地址，清除可能残留的重写
+                Addressables.ResourceManager.InternalIdTransformFunc = null;
+                return;
+            }
+
+            Addressables.ResourceManager.InternalIdTransformFunc = location =>
+            {
+                string id = location.InternalId;
+                if (string.IsNullOrEmpty(id)) return id;
+
+                // 仅重写远程 http(s) 地址（本地 file:// / StreamingAssets 路径不受影响）
+                bool isHttp = id.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                           || id.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+                if (!isHttp) return id;
+
+                string root = IsRemoteCatalogId(id) && !string.IsNullOrEmpty(catalogRoot) ? catalogRoot : bundleRoot;
+                if (string.IsNullOrEmpty(root)) return id;
+
+                return ReplaceRemoteRoot(id, root);
+            };
+            Log.Debug("AddressableSystem 已配置远程 URL 重写: bundle={0}, catalog={1}", bundleRoot, catalogRoot);
+        }
+
+        /// <summary>判断 InternalId 是否为远程 Catalog 文件（catalog_*.bin/.hash/.json）</summary>
+        private static bool IsRemoteCatalogId(string id)
+        {
+            int slash = id.LastIndexOf('/');
+            string name = slash >= 0 ? id.Substring(slash + 1) : id;
+            return name.StartsWith("catalog_", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>把 InternalId 的远程目录部分（最后一个 / 之前）替换为目标根 URL（含平台目录）</summary>
+        private static string ReplaceRemoteRoot(string internalId, string newRoot)
+        {
+            int lastSlash = internalId.LastIndexOf('/');
+            if (lastSlash <= 0) return internalId;
+            return newRoot.TrimEnd('/') + "/" + internalId.Substring(lastSlash + 1);
         }
 
         public void Clear()

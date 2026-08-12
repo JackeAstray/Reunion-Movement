@@ -102,6 +102,7 @@ namespace ReunionMovement.EditorTools.Addressables
             string manifest = File.ReadAllText(VersionJsonPath);
 
             string uploadFolder = ReadJsonString(manifest, "remoteUploadFolder");
+            string remoteCatalogFolder = ReadJsonString(manifest, "remoteCatalogFolder");
             string platform = ReadJsonString(manifest, "platform");
             string buildVersion = ReadJsonString(manifest, "version");
 
@@ -123,15 +124,35 @@ namespace ReunionMovement.EditorTools.Addressables
             string version = string.IsNullOrEmpty(VersionOverride) ? buildVersion : VersionOverride;
             string prefix = Prefix.Replace("{version}", version);
 
-            // 3. 收集待上传文件（.bundle + catalog_*.json，递归）
+            // 3. 收集待上传文件：
+            //    - Bundle：构建输出目录（remoteUploadFolder）下所有 .bundle
+            //    - 远程 Catalog：远程 Catalog 目录（remoteCatalogFolder，如 ServerData/WebGL）
+            //      下的 catalog_*.bin/.hash/.json（Addressables 2.9.x 为二进制 .bin + .hash）
+            // 注意：本地 catalog（catalog.bin，无版本号前缀）不打进 CDN，不收集。
             var files = new List<string>();
             foreach (var f in Directory.GetFiles(uploadFolder, "*.bundle", SearchOption.AllDirectories))
                 files.Add(f);
-            foreach (var f in Directory.GetFiles(uploadFolder, "catalog_*.json", SearchOption.AllDirectories))
-                files.Add(f);
+
+            // 远程 Catalog 目录：优先 version.json 的 remoteCatalogFolder；缺失时按约定 ServerData/{platform} 兜底
+            if (string.IsNullOrEmpty(remoteCatalogFolder) || !Directory.Exists(remoteCatalogFolder))
+            {
+                remoteCatalogFolder = Path.Combine(Directory.GetCurrentDirectory(), "ServerData", platform);
+            }
+            AddCatalogFiles(files, remoteCatalogFolder);
+            // 兼容：构建输出目录下若也存在远程 catalog 一并收集
+            AddCatalogFiles(files, uploadFolder);
+
+            // 按目标 key（{prefix}/{platform}/{文件名}）去重，避免两目录 catalog 重名重复上传
+            var seenKeys = new HashSet<string>();
+            for (int i = files.Count - 1; i >= 0; i--)
+            {
+                string key = $"{prefix}/{platform}/{Path.GetFileName(files[i])}";
+                if (!seenKeys.Add(key)) files.RemoveAt(i);
+            }
+
             if (files.Count == 0)
             {
-                EditorUtility.DisplayDialog("上传到 OSS", "remoteUploadFolder 下未找到 .bundle 或 catalog_*.json，无可上传内容。", "确定");
+                EditorUtility.DisplayDialog("上传到 OSS", "未找到 .bundle 或远程 catalog（catalog_*.bin/.hash），无可上传内容。", "确定");
                 return;
             }
 
@@ -352,6 +373,18 @@ namespace ReunionMovement.EditorTools.Addressables
             string bucket = NormalizeBucketName(Bucket);
             string canonicalResource = $"/{bucket}/{objectKey}";
             return $"PUT\n\n{contentType}\n{date}\n{canonicalResource}";
+        }
+
+        /// <summary>收集目录下的远程 Catalog 文件（catalog_*.bin/.hash/.json，递归）</summary>
+        private static void AddCatalogFiles(List<string> files, string folder)
+        {
+            if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) return;
+            foreach (var f in Directory.GetFiles(folder, "catalog_*.bin", SearchOption.AllDirectories))
+                files.Add(f);
+            foreach (var f in Directory.GetFiles(folder, "catalog_*.hash", SearchOption.AllDirectories))
+                files.Add(f);
+            foreach (var f in Directory.GetFiles(folder, "catalog_*.json", SearchOption.AllDirectories))
+                files.Add(f);
         }
 
         // ============================================================

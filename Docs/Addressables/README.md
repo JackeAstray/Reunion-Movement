@@ -21,7 +21,7 @@
 上线发版：远程部署(4) → 打包分发(见 Docs/Packaging)
 ```
 
-## 当前实现状态（2026-08-11）
+## 当前实现状态（2026-08-12）
 
 | 模块 | 状态 | 说明 |
 | --- | --- | --- |
@@ -31,11 +31,15 @@
 | `AddressablesSetup`（自动配置） | ✅ 已实现 | `[InitializeOnLoad]` 自动建分组/Label/Profile，校验并修正 Remote 分组路径变量，默认激活 `DevLocal`；远程 Catalog **默认关闭**（`ReunionMovement → Addressables → 启用远程 Catalog（Phase 3 热更）` 手动开启） |
 | `AddressablesMigrator`（资源迁移） | ✅ 已实现 | 复制+GUID 重映射+导入设置+Addressable 标记（需在 Unity 手动点菜单） |
 | `AddressablesBuildWindow`（构建） | ✅ 已实现 | 当前平台构建 + 全平台子菜单切换 + version.json |
-| `AddressablesCdnUploader`（自动上传） | ✅ 已实现 | 阿里云 OSS HTTP PUT + 签名，增量上传 `.bundle`+catalog（独立菜单触发，需配置 AK/SK） |
+| `AddressablesCdnUploader`（自动上传） | ✅ 已实现 | 阿里云 OSS HTTP PUT + 签名，增量上传 `.bundle`+远程 catalog（`catalog_*.bin`/`.hash`，独立菜单触发，需配置 AK/SK） |
 | `ReunionMovementPackageExporter`（打包） | ✅ 已实现 | 一键导出 .unitypackage（独立于 Addressables，见 `Docs/Packaging/打包指南.md`） |
 | UI 双轨加载（`LoadWindowAsync`） | ✅ 已实现 | Addressables 优先 → Resources 降级 |
+| SoundSystem 双轨加载（`GetAudioClipAsync`） | ✅ 已实现 | Addressables 优先（`Remote/Sounds/...`）→ Resources 降级，按来源释放 |
+| SceneSystem 双轨加载（`LoadScene`） | ✅ 已实现 | Addressable 场景优先（`Remote/Scenes/...`）→ SceneManager 降级，切换释放旧场景 |
+| 远程 URL 运行时重写 | ✅ 已实现 | `remoteBundleUrl`/`remoteCatalogUrl` 在 Remote 模式覆盖构建烘焙地址（`InternalIdTransformFunc`），同构建产物可部署任意 CDN |
 | 远程 CDN 实测 | ⏳ 待验证 | 代码就绪，无 CDN，LocalOnly 本地可用 |
-| UI 资源实际迁移 | ⏳ 待执行 | 需在 Unity 点「迁移/UI 资源」菜单 |
+| UI 资源实际迁移 | ✅ 已迁移 | `BuiltIn_UI`：StartGameUIPlane / PopupUIPlane / TerminalUIPlane（含 Logo/材质/Shader 依赖） |
+| 音频/纹理资源迁移 | ⏳ 待执行 | 需在 Unity 点「迁移/音频」「迁移/图片」菜单（`Remote_Sounds`/`Remote_Textures` 当前为空） |
 
 ## 关键术语速查
 
