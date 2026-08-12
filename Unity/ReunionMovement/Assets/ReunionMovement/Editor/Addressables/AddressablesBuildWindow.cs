@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
@@ -110,7 +111,7 @@ namespace ReunionMovement.EditorTools.Addressables
                 return;
             }
 
-            WriteVersionManifest(result.OutputPath, target);
+            WriteVersionManifest(settings, result.OutputPath, target);
             Debug.Log($"[AddressablesBuild] 构建成功 [{target}]，版本清单: {OutputFolder}/{VersionFileName}");
             EditorUtility.DisplayDialog("Addressables 构建",
                 $"构建成功 [{target}]\n已生成 version.json（含 catalog hash 与 Bundle 清单）", "确定");
@@ -131,7 +132,7 @@ namespace ReunionMovement.EditorTools.Addressables
         /// 写入部署版本清单：version / platform / buildTime / catalogHash / bundle 文件清单（md5+size）。
         /// 供 CI 或人工上传 Remote Bundle 到 CDN 后核对（每个平台一份，按平台目录区分）。
         /// </summary>
-        private static void WriteVersionManifest(string outputPath, BuildTarget target)
+        private static void WriteVersionManifest(AddressableAssetSettings settings, string outputPath, BuildTarget target)
         {
             var dir = Path.Combine(Directory.GetCurrentDirectory(), OutputFolder);
             Directory.CreateDirectory(dir);
@@ -140,7 +141,12 @@ namespace ReunionMovement.EditorTools.Addressables
             // （如 Library/com.unity.addressables/aa/WebGL/settings.json），需取其所在目录作为产物目录。
             string buildFolder = ResolveBuildFolder(outputPath);
 
-            string catalogFile = FindCatalogFile(buildFolder);
+            // 远程 Catalog 输出目录（Remote.BuildPath 求值，如 ServerData/WebGL）。
+            // 远程 catalog（catalog_*.bin/.hash）不落在构建输出目录，需单独定位，否则 catalogHash 恒为空。
+            string remoteCatalogFolder = ResolveRemoteCatalogFolder(settings, target);
+
+            // 远程 catalog 优先在远程输出目录查找，其次构建输出目录（兼容旧布局）
+            string catalogFile = FindCatalogFile(remoteCatalogFolder) ?? FindCatalogFile(buildFolder);
             string catalogHash = catalogFile != null ? Md5File(catalogFile) : "";
 
             var bundleFiles = new List<FileInfo>();
@@ -157,6 +163,7 @@ namespace ReunionMovement.EditorTools.Addressables
             sb.AppendLine($"  \"buildTime\": \"{System.DateTime.Now:yyyy-MM-ddTHH:mm:ss}\",");
             sb.AppendLine($"  \"catalogHash\": \"{catalogHash}\",");
             sb.AppendLine($"  \"catalogFile\": \"{Escape(catalogFile)}\",");
+            sb.AppendLine($"  \"remoteCatalogFolder\": \"{Escape(remoteCatalogFolder)}\",");
             sb.AppendLine($"  \"remoteUploadFolder\": \"{Escape(buildFolder)}\",");
             sb.AppendLine($"  \"bundleCount\": {bundleFiles.Count},");
             sb.AppendLine("  \"bundles\": [");
@@ -193,9 +200,39 @@ namespace ReunionMovement.EditorTools.Addressables
         private static string FindCatalogFile(string outputPath)
         {
             if (string.IsNullOrEmpty(outputPath) || !Directory.Exists(outputPath)) return null;
+            // Addressables 2.9.x 默认生成二进制 catalog（catalog_*.bin + .hash）；
+            // 兼容旧版 JSON catalog（catalog_*.json，需 m_EnableJsonCatalog=true）。
+            foreach (var f in Directory.GetFiles(outputPath, "catalog_*.bin", SearchOption.AllDirectories))
+                return f;
             foreach (var f in Directory.GetFiles(outputPath, "catalog_*.json", SearchOption.AllDirectories))
                 return f;
             return null;
+        }
+
+        /// <summary>
+        /// 解析远程 Catalog 输出目录：对 Remote.BuildPath 变量求值（如 "ServerData/[BuildTarget]" → ServerData/WebGL）。
+        /// 求值失败或目录不存在时按约定 "ServerData/{target}" 兜底。
+        /// </summary>
+        private static string ResolveRemoteCatalogFolder(AddressableAssetSettings settings, BuildTarget target)
+        {
+            try
+            {
+                string folder = settings.RemoteCatalogBuildPath.GetValue(settings);
+                if (!string.IsNullOrEmpty(folder))
+                {
+                    folder = folder.Replace("[BuildTarget]", target.ToString());
+                    string full = Path.GetFullPath(folder);
+                    if (Directory.Exists(full))
+                    {
+                        return Escape(full);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[AddressablesBuild] 解析远程 Catalog 目录失败（使用默认 ServerData/{target}）: {ex.Message}");
+            }
+            return Path.Combine(Directory.GetCurrentDirectory(), "ServerData", target.ToString()).Replace('\\', '/');
         }
 
         private static string Md5File(string path)

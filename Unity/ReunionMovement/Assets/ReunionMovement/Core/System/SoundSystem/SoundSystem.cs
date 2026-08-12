@@ -64,6 +64,8 @@ namespace ReunionMovement.Core.Sound
         // 并发加载去重：同一路径加载在途时复用同一个 TCS（防止重复加载同一 clip）
         private readonly Dictionary<string, UniTaskCompletionSource<AudioClip>> audioClipLoading
             = new Dictionary<string, UniTaskCompletionSource<AudioClip>>();
+        // 从 Addressables 加载的 clip 来源记录（用于按来源正确释放：Addressables.Release vs Resources 卸载）
+        private readonly HashSet<string> addressableClips = new HashSet<string>();
 
         // 启动时预设对象池
         public List<StartupPool> startupPools = new List<StartupPool>();
@@ -238,15 +240,24 @@ namespace ReunionMovement.Core.Sound
                 source.clip = null;
             }
 
-            // 卸载缓存中的 AudioClip，释放底层资源（不卸载则驻留到场景卸载）
+            // 卸载缓存中的 AudioClip，释放底层资源（按来源：Addressables 用 ReleaseAsset，Resources 直接卸载）
             if (audioClipCache != null)
             {
-                foreach (var clip in audioClipCache.Values)
+                foreach (var kv in audioClipCache)
                 {
-                    if (clip != null) UnityEngine.Resources.UnloadAsset(clip);
+                    if (kv.Value == null) continue;
+                    if (addressableClips.Contains(kv.Key))
+                    {
+                        AddressableSystem.Instance.ReleaseAsset(kv.Value);
+                    }
+                    else
+                    {
+                        UnityEngine.Resources.UnloadAsset(kv.Value);
+                    }
                 }
                 audioClipCache.Clear();
             }
+            addressableClips.Clear();
             audioClipCacheOrder?.Clear();
             audioClipCacheNodes?.Clear();
             audioClipLoading?.Clear();
@@ -1057,19 +1068,35 @@ namespace ReunionMovement.Core.Sound
         {
             try
             {
-                var clip = await ResourcesSystem.Instance.LoadAsync<AudioClip>(fullPath);
+                // 双轨：Addressables 优先（Remote/Sounds/...），失败自动降级 Resources
+                AudioClip clip = null;
+                bool fromAddressables = false;
+                if (Config.AddressablesMode != AddressablesMode.Off)
+                {
+                    clip = await AddressableSystem.Instance.LoadAssetAsync<AudioClip>(ToSoundAddressableKey(fullPath));
+                    fromAddressables = clip != null;
+                }
+                if (clip == null)
+                {
+                    clip = await ResourcesSystem.Instance.LoadAsync<AudioClip>(fullPath);
+                }
+
                 if (clip != null)
                 {
+                    // 记录来源，便于按来源正确释放
+                    if (fromAddressables) addressableClips.Add(fullPath);
+                    else addressableClips.Remove(fullPath);
+
                     // LRU 驱逐：缓存满时移除最久未使用的条目（链表头部）
                     if (audioClipCache.Count >= MaxAudioClipCacheSize && audioClipCacheOrder.First != null)
                     {
                         var oldestNode = audioClipCacheOrder.First;
                         string evicted = oldestNode.Value;
+                        AudioClip evictedClip = audioClipCache[evicted];
                         audioClipCache.Remove(evicted);
                         audioClipCacheNodes.Remove(evicted);
                         audioClipCacheOrder.RemoveFirst();
-                        // 联动 ResourcesSystem 递减引用计数并卸载底层 AudioClip，真正释放内存
-                        ResourcesSystem.Instance.DeleteAssetCache(evicted);
+                        ReleaseClip(evicted, evictedClip);
                     }
                     audioClipCache[fullPath] = clip;
                     var node = audioClipCacheOrder.AddLast(fullPath);
@@ -1086,6 +1113,28 @@ namespace ReunionMovement.Core.Sound
                 Log.Error("加载AudioClip异常: {0} {1}", fullPath, ex.Message);
                 tcs.TrySetResult(null);
             }
+        }
+
+        /// <summary>
+        /// 把 SoundSystem 的 Resources 路径（如 "Sounds/BGM/xxx"，SoundConfig.Path 恒为 Sounds/ 开头且 Name 无扩展名）
+        /// 转换为 Addressables 地址（"Remote/Sounds/BGM/xxx"），与迁移器生成的地址对齐。
+        /// </summary>
+        private static string ToSoundAddressableKey(string fullPath)
+        {
+            return AddressableKeys.RemoteRoot + fullPath.TrimStart('/');
+        }
+
+        /// <summary>按来源释放单个 clip：Addressables 加载的用 ReleaseAsset，Resources 加载的由 ResourcesSystem 卸载。</summary>
+        private void ReleaseClip(string fullPath, AudioClip clip)
+        {
+            if (clip == null) return;
+            if (addressableClips.Remove(fullPath))
+            {
+                AddressableSystem.Instance.ReleaseAsset(clip);
+                return;
+            }
+            // 联动 ResourcesSystem 递减引用计数并卸载底层 AudioClip，真正释放内存
+            ResourcesSystem.Instance.DeleteAssetCache(fullPath);
         }
     }
 

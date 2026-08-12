@@ -1,10 +1,14 @@
 ﻿using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
+using ReunionMovement.Core.Resources;
 using Cysharp.Threading.Tasks;
 using R3;
 using System;
 using System.Collections.Generic;
+using UnityEngine.AddressableAssets;
 using UnityEngine.Events;
+using UnityEngine.ResourceManagement.ResourceLocations;
+using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.SceneManagement;
 using UnityEngine;
 using ReunionMovement.Core.UI;
@@ -124,6 +128,9 @@ namespace ReunionMovement.Core.Scene
         public float endProgressWaitingTime;                              // 结束 - 等待时长
 
         public bool openLoad;
+
+        // 当前通过 Addressables 加载的场景实例（切换时用于释放 Bundle，避免泄漏）
+        private SceneInstance loadedSceneInstance;
         #endregion
 
         public UniTask Init()
@@ -272,6 +279,72 @@ namespace ReunionMovement.Core.Scene
         }
 
         /// <summary>
+        /// 检查 Addressables key 是否已注册（Addressables 2.9.1 无 Addressables.Exists API，
+        /// 通过遍历 ResourceLocators 判断）。须在 Addressables 初始化后调用。
+        /// </summary>
+        private static bool AddressableKeyExists(object key, Type type)
+        {
+            try
+            {
+                foreach (var locator in Addressables.ResourceLocators)
+                {
+                    if (locator.Locate(key, type, out var locations))
+                    {
+                        return locations != null && locations.Count > 0;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("Addressables 检查 key 失败 {0}: {1}", key, ex.Message);
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// 通过 Addressables 加载目标场景（地址 Remote/Scenes/{name}），成功返回 true。
+        /// 切换前先卸载旧 Addressable 场景（释放 Bundle）；进度映射为 0.15~1.0，与 SceneManager 流程对齐。
+        /// </summary>
+        private async UniTask<bool> LoadTargetSceneViaAddressablesAsync(string levelName, LoadSceneMode loadSceneMode)
+        {
+            try
+            {
+                // 释放上一个 Addressable 场景，避免 Bundle 泄漏
+                if (loadedSceneInstance.Scene.IsValid())
+                {
+                    await AddressableSystem.Instance.UnloadSceneAsync(loadedSceneInstance);
+                    loadedSceneInstance = default;
+                }
+
+                // 进度映射：Addressables 0~1 → SceneSystem 0.15~1.0（与 SceneManager 流程起始回调点对齐）
+                var progress = new Progress<float>(p => CallbackProgress(0.15f + 0.85f * Mathf.Clamp01(p)));
+                var sceneInstance = await AddressableSystem.Instance.LoadSceneAsync(
+                    AddressableKeys.SceneRoot + levelName, loadSceneMode, progress);
+                if (!sceneInstance.Scene.IsValid())
+                {
+                    return false;
+                }
+
+                loadedSceneInstance = sceneInstance;
+                CallbackProgress(1f);
+                if (!openLoad)
+                {
+                    ExecuteBslcc();
+                }
+                OnTargetSceneLoaded();
+                ClearExcludeSet();
+                ExecuteSlcc();
+                Log.Debug("目标场景（Addressables）加载完成: {0}", levelName);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Addressables 场景加载异常 {0}: {1}", levelName, ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
         /// 加载过渡场景
         /// </summary>
         private async UniTask OnLoadingSceneAsync(string loadSceneName, LoadSceneMode loadSceneMode)
@@ -301,6 +374,19 @@ namespace ReunionMovement.Core.Scene
         /// </summary>
         private async UniTask OnLoadTargetSceneAsync(string levelName, LoadSceneMode loadSceneMode)
         {
+            // 双轨：Addressables 优先（场景已标记为 Addressable 时），失败/未标记则降级 SceneManager。
+            // 注意：Addressables 关闭或未初始化时（含 enableAddressables=false），恒走 SceneManager。
+            if (Config.AddressablesMode != AddressablesMode.Off
+                && AddressableSystem.Instance.isInited
+                && AddressableKeyExists(AddressableKeys.SceneRoot + levelName, typeof(SceneInstance)))
+            {
+                if (await LoadTargetSceneViaAddressablesAsync(levelName, loadSceneMode))
+                {
+                    return;
+                }
+                Log.Warning("场景 {0} Addressables 加载失败，降级 SceneManager", levelName);
+            }
+
             AsyncOperation async = SceneManager.LoadSceneAsync(levelName, loadSceneMode);
 
             if (async == null)
