@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using ReunionMovement.Common;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
@@ -48,11 +49,11 @@ namespace ReunionMovement.EditorTools.Addressables
             EditorApplication.delayCall += EnsureSetup;
         }
 
-        [MenuItem("ReunionMovement/Addressables/初始化配置（分组+Label+Profile）")]
+        [MenuItem("ReunionMovement/Addressables/配置/初始化配置（分组+Label+Profile）", priority = 10)]
         public static void EnsureSetupMenu()
         {
             EnsureSetup();
-            Debug.Log("[AddressablesSetup] 手动执行完成");
+            Log.Debug("[AddressablesSetup] 手动执行完成", channel: LogChannel.Resource);
         }
 
         /// <summary>
@@ -71,7 +72,7 @@ namespace ReunionMovement.EditorTools.Addressables
             var settings = AddressableAssetSettingsDefaultObject.GetSettings(true);
             if (settings == null)
             {
-                Debug.LogWarning("[AddressablesSetup] 无法获取/创建 AddressableAssetSettings");
+                Log.Warning("[AddressablesSetup] 无法获取/创建 AddressableAssetSettings", channel: LogChannel.Resource);
                 return;
             }
 
@@ -98,7 +99,7 @@ namespace ReunionMovement.EditorTools.Addressables
                         typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
                     if (group == null)
                     {
-                        Debug.LogWarning($"[AddressablesSetup] 创建分组失败: {name}");
+                        Log.Warning($"[AddressablesSetup] 创建分组失败: {name}", channel: LogChannel.Resource);
                         continue;
                     }
                     changed = true;
@@ -138,7 +139,7 @@ namespace ReunionMovement.EditorTools.Addressables
             if (changed)
             {
                 AssetDatabase.SaveAssets();
-                Debug.Log("[AddressablesSetup] 配置创建/补齐完成（分组 + Label + Profile + 激活 DevLocal）");
+                Log.Debug("[AddressablesSetup] 配置创建/补齐完成（分组 + Label + Profile + 激活 DevLocal）", channel: LogChannel.Resource);
             }
         }
 
@@ -179,7 +180,7 @@ namespace ReunionMovement.EditorTools.Addressables
         /// 手动启用远程 Catalog。
         /// 默认保持关闭（m_BuildRemoteCatalog = false），避免无 CDN 环境下生成无用远程 catalog。
         /// </summary>
-        [MenuItem("ReunionMovement/Addressables/启用远程 Catalog")]
+        [MenuItem("ReunionMovement/Addressables/配置/启用远程 Catalog", priority = 11)]
         public static void EnableRemoteCatalog()
         {
             var settings = AddressableAssetSettingsDefaultObject.GetSettings(true);
@@ -190,7 +191,7 @@ namespace ReunionMovement.EditorTools.Addressables
             settings.RemoteCatalogBuildPath.SetVariableByName(settings, AddressableAssetSettings.kRemoteBuildPath);
             settings.RemoteCatalogLoadPath.SetVariableByName(settings, AddressableAssetSettings.kRemoteLoadPath);
             AssetDatabase.SaveAssets();
-            Debug.Log("[AddressablesSetup] 远程 Catalog 已启用（默认关闭，Phase 3 部署 CDN 时开启）");
+            Log.Debug("[AddressablesSetup] 远程 Catalog 已启用（默认关闭，Phase 3 部署 CDN 时开启）", channel: LogChannel.Resource);
         }
     }
 }

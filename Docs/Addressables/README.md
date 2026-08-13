@@ -28,18 +28,43 @@
 | `AddressableSystem`（运行时封装） | ✅ 已实现 | 加载/实例化/场景/释放/降级/远程更新检查/缓存清理 |
 | `AddressableKeys`（地址常量） | ✅ 已实现 | `BuiltIn/UI/...` 前缀 + Label 约定 |
 | `Config`/`GameConfig` 配置 | ✅ 已实现 | `enableAddressables` / `addressablesMode` / 远程 URL |
-| `AddressablesSetup`（自动配置） | ✅ 已实现 | `[InitializeOnLoad]` 自动建分组/Label/Profile，校验并修正 Remote 分组路径变量，默认激活 `DevLocal`；远程 Catalog **默认关闭**（`ReunionMovement → Addressables → 启用远程 Catalog（Phase 3 热更）` 手动开启） |
-| `AddressablesMigrator`（资源迁移） | ✅ 已实现 | 复制+GUID 重映射+导入设置+Addressable 标记（需在 Unity 手动点菜单） |
+| `AddressablesSetup`（自动配置） | ✅ 已实现 | `[InitializeOnLoad]` 自动建分组/Label/Profile，校验并修正 Remote 分组路径变量，默认激活 `DevLocal`；远程 Catalog **默认关闭**（`ReunionMovement → Addressables → 配置/启用远程 Catalog（Phase 3 热更）` 手动开启） |
+| `AddressablesMigrator`（资源迁移） | ✅ 已实现 | 复制+GUID 重映射+导入设置+Addressable 标记；`迁移/一键迁移全部（UI+音频+图片）` 统一入口（幂等，流水线也调用），亦可单项补迁 |
 | `AddressablesBuildWindow`（构建） | ✅ 已实现 | 当前平台构建 + 全平台子菜单切换 + version.json |
 | `AddressablesCdnUploader`（自动上传） | ✅ 已实现 | 阿里云 OSS HTTP PUT + 签名，增量上传 `.bundle`+远程 catalog（`catalog_*.bin`/`.hash`，独立菜单触发，需配置 AK/SK） |
+| `AddressablesPipeline`（一键流水线） | ✅ 已实现 | 迁移（音频/图片）→ 构建 Content → 上传 OSS 串联；编辑器菜单 `ReunionMovement → Addressables → 一键流水线（迁移+构建+上传 OSS）` 或批处理 `-executeMethod ReunionMovement.EditorTools.Addressables.AddressablesPipeline.RunPipeline`（默认 WebGL，结果写 `Build/Addressables/pipeline_result.txt`） |
 | `ReunionMovementPackageExporter`（打包） | ✅ 已实现 | 一键导出 .unitypackage（独立于 Addressables，见 `Docs/Packaging/打包指南.md`） |
 | UI 双轨加载（`LoadWindowAsync`） | ✅ 已实现 | Addressables 优先 → Resources 降级 |
 | SoundSystem 双轨加载（`GetAudioClipAsync`） | ✅ 已实现 | Addressables 优先（`Remote/Sounds/...`）→ Resources 降级，按来源释放 |
 | SceneSystem 双轨加载（`LoadScene`） | ✅ 已实现 | Addressable 场景优先（`Remote/Scenes/...`）→ SceneManager 降级，切换释放旧场景 |
 | 远程 URL 运行时重写 | ✅ 已实现 | `remoteBundleUrl`/`remoteCatalogUrl` 在 Remote 模式覆盖构建烘焙地址（`InternalIdTransformFunc`），同构建产物可部署任意 CDN |
 | 远程 CDN 实测 | ⏳ 待验证 | 代码就绪，无 CDN，LocalOnly 本地可用 |
+| 运行时开关（`GameConfig.enableAddressables`） | ⏸ 当前关闭 | 交付包内 `GameConfig.asset` 为 `enableAddressables=0`（有意关闭），运行时全走 Resources 降级；启用热更前需置 1 并配置 `remoteBundleUrl`/`remoteCatalogUrl`（注：`m_BuildAddressablesWithPlayerBuild=0`，玩家包内无本地 bundle） |
 | UI 资源实际迁移 | ✅ 已迁移 | `BuiltIn_UI`：StartGameUIPlane / PopupUIPlane / TerminalUIPlane（含 Logo/材质/Shader 依赖） |
-| 音频/纹理资源迁移 | ⏳ 待执行 | 需在 Unity 点「迁移/音频」「迁移/图片」菜单（`Remote_Sounds`/`Remote_Textures` 当前为空） |
+| 音频/纹理资源迁移 | ✅ 已迁移 | `Remote_Sounds` / `Remote_Textures` 已迁移并随一键流水线上传 OSS（2026-08-13） |
+
+## 菜单结构（2026-08-13 整理）
+
+```
+ReunionMovement/Addressables/
+├─ 一键流水线（迁移+构建+上传 OSS）      ← 推荐入口（优先 0）
+├─ 配置/
+│   ├─ 初始化配置（分组+Label+Profile）
+│   └─ 启用远程 Catalog
+├─ 构建/
+│   ├─ 构建 Content（当前平台）
+│   └─ 选择平台并构建/（Windows / macOS / Linux / Android / iOS / WebGL）
+├─ 迁移/
+│   ├─ 一键迁移全部（UI+音频+图片）   ← 推荐入口
+│   ├─ UI 资源（复制+重映射）
+│   ├─ 音频（Sounds → Remote_Sounds）
+│   └─ 图片（UI/Sprites → Remote_Textures）
+└─ 上传/
+    ├─ OSS 上传配置…
+    └─ 上传到 OSS（增量）
+```
+
+> 全部菜单日志走 `ReunionMovement.Common.Log`（频道 `LogChannel.Resource`），与运行时 `AddressableSystem` 一致，可按频道过滤。
 
 ## 关键术语速查
 

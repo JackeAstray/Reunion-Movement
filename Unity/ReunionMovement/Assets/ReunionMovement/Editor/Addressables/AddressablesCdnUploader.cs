@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using ReunionMovement.Common;
 using UnityEditor;
 using UnityEngine;
 
@@ -73,31 +74,48 @@ namespace ReunionMovement.EditorTools.Addressables
         //  上传入口（独立菜单触发）
         // ============================================================
         /// <summary>打开 OSS 上传配置窗口（Endpoint / Bucket / AK / SK / Prefix / Version）</summary>
-        [MenuItem("ReunionMovement/Addressables/OSS 上传配置…", priority = 3)]
+        [MenuItem("ReunionMovement/Addressables/上传/OSS 上传配置…", priority = 40)]
         public static void OpenConfigWindow()
         {
             OSSUploadConfigWindow.Open();
         }
 
-        [MenuItem("ReunionMovement/Addressables/上传到 OSS（增量）", priority = 4)]
+        [MenuItem("ReunionMovement/Addressables/上传/上传到 OSS（增量）", priority = 41)]
         public static void UploadToOSS()
         {
+            bool ok = UploadToOSSCore(out string message);
+            if (Application.isBatchMode)
+            {
+                if (ok) Log.Debug("[OSSUpload] " + message, channel: LogChannel.Resource);
+                else Log.Error("[OSSUpload] " + message, channel: LogChannel.Resource);
+                return;
+            }
+            EditorUtility.DisplayDialog("上传到 OSS" + (ok ? "" : "（未完成）"), message, "确定");
+        }
+
+        /// <summary>批处理安全上传入口（不弹窗）：返回是否成功与结果消息。供流水线 / CI（-executeMethod）调用。</summary>
+        public static bool UploadToOSSBatch(out string message)
+        {
+            return UploadToOSSCore(out message);
+        }
+
+        /// <summary>上传核心逻辑（无 UI）：配置校验 → 收集文件 → 增量对比 → 上传 → 保存状态。返回是否成功。</summary>
+        private static bool UploadToOSSCore(out string message)
+        {
+            message = null;
+
             // 1. 配置校验
             if (string.IsNullOrEmpty(Bucket) || string.IsNullOrEmpty(AccessKey) || string.IsNullOrEmpty(SecretKey))
             {
-                EditorUtility.DisplayDialog("上传到 OSS",
-                    "尚未配置 OSS 参数（Bucket / AK / SK）。\n请先执行：ReunionMovement → Addressables → OSS 上传配置…",
-                    "去配置", "取消");
-                EditorWindow.GetWindow<OSSUploadConfigWindow>("OSS 上传配置");
-                return;
+                message = "尚未配置 OSS 参数（Bucket / AK / SK）。请先执行：ReunionMovement → Addressables → OSS 上传配置…";
+                return false;
             }
 
             // 2. 读取 version.json
             if (!File.Exists(VersionJsonPath))
             {
-                EditorUtility.DisplayDialog("上传到 OSS",
-                    $"未找到 {VersionJsonPath}。\n请先执行「构建 Content」生成版本清单。", "确定");
-                return;
+                message = $"未找到 {VersionJsonPath}。请先执行「构建 Content」生成版本清单。";
+                return false;
             }
             string manifest = File.ReadAllText(VersionJsonPath);
 
@@ -116,28 +134,32 @@ namespace ReunionMovement.EditorTools.Addressables
             }
             if (string.IsNullOrEmpty(uploadFolder) || !Directory.Exists(uploadFolder))
             {
-                EditorUtility.DisplayDialog("上传到 OSS",
-                    $"version.json 中 remoteUploadFolder 无效：{uploadFolder}\n请确认已构建 Content。", "确定");
-                return;
+                message = $"version.json 中 remoteUploadFolder 无效：{uploadFolder}。请确认已构建 Content。";
+                return false;
             }
 
             string version = string.IsNullOrEmpty(VersionOverride) ? buildVersion : VersionOverride;
             string prefix = Prefix.Replace("{version}", version);
 
             // 3. 收集待上传文件：
-            //    - Bundle：构建输出目录（remoteUploadFolder）下所有 .bundle
-            //    - 远程 Catalog：远程 Catalog 目录（remoteCatalogFolder，如 ServerData/WebGL）
-            //      下的 catalog_*.bin/.hash/.json（Addressables 2.9.x 为二进制 .bin + .hash）
+            //    - 本地 Bundle：构建输出目录（remoteUploadFolder）下所有 .bundle
+            //    - 远程 Bundle：远程输出目录（remoteCatalogFolder，如 ServerData/WebGL）下的 *.bundle
+            //      （Remote_* 分组产物；客户端按 catalog 内 URL 直接拉取，必须一并上传，否则远程加载 404）
+            //    - 远程 Catalog：远程输出目录下的 catalog_*.bin/.hash/.json（Addressables 2.9.x 为二进制 .bin + .hash）
             // 注意：本地 catalog（catalog.bin，无版本号前缀）不打进 CDN，不收集。
             var files = new List<string>();
             foreach (var f in Directory.GetFiles(uploadFolder, "*.bundle", SearchOption.AllDirectories))
                 files.Add(f);
 
-            // 远程 Catalog 目录：优先 version.json 的 remoteCatalogFolder；缺失时按约定 ServerData/{platform} 兜底
+            // 远程输出目录：优先 version.json 的 remoteCatalogFolder；缺失时按约定 ServerData/{platform} 兜底
             if (string.IsNullOrEmpty(remoteCatalogFolder) || !Directory.Exists(remoteCatalogFolder))
             {
                 remoteCatalogFolder = Path.Combine(Directory.GetCurrentDirectory(), "ServerData", platform);
             }
+            // 远程 Bundle（Remote_* 分组产物在 Remote.BuildPath = ServerData/{platform}）
+            foreach (var f in Directory.GetFiles(remoteCatalogFolder, "*.bundle", SearchOption.AllDirectories))
+                files.Add(f);
+            // 远程 Catalog
             AddCatalogFiles(files, remoteCatalogFolder);
             // 兼容：构建输出目录下若也存在远程 catalog 一并收集
             AddCatalogFiles(files, uploadFolder);
@@ -152,8 +174,8 @@ namespace ReunionMovement.EditorTools.Addressables
 
             if (files.Count == 0)
             {
-                EditorUtility.DisplayDialog("上传到 OSS", "未找到 .bundle 或远程 catalog（catalog_*.bin/.hash），无可上传内容。", "确定");
-                return;
+                message = "未找到 .bundle 或远程 catalog（catalog_*.bin/.hash），无可上传内容。";
+                return false;
             }
 
             // 4. 加载上次上传状态，计算增量
@@ -175,16 +197,18 @@ namespace ReunionMovement.EditorTools.Addressables
 
             if (toUpload.Count == 0)
             {
-                EditorUtility.DisplayDialog("上传到 OSS",
-                    $"增量对比完成：全部 {files.Count} 个文件已是最新（跳过 {skipped} 个），无需上传。", "确定");
-                return;
+                message = $"增量对比完成：全部 {files.Count} 个文件已是最新（跳过 {skipped} 个），无需上传。";
+                return false;
             }
 
-            // 5. 确认
-            if (!EditorUtility.DisplayDialog("上传到 OSS",
+            // 5. 确认（仅 GUI 交互；批处理 / 流水线自动执行）
+            if (!Application.isBatchMode && !EditorUtility.DisplayDialog("上传到 OSS",
                     $"将上传 {toUpload.Count} 个文件（跳过 {skipped} 个已是最新）到：\n{prefix}/{platform}/\nBucket: {Bucket}\n\n是否继续？",
                     "上传", "取消"))
-                return;
+            {
+                message = "已取消";
+                return false;
+            }
 
             // 6. 逐个上传
             int ok = 0;
@@ -215,16 +239,13 @@ namespace ReunionMovement.EditorTools.Addressables
 
             if (errors.Count == 0)
             {
-                EditorUtility.DisplayDialog("上传到 OSS",
-                    $"上传完成：{ok}/{toUpload.Count} 成功，跳过 {skipped} 个未变文件。", "确定");
-                Debug.Log($"[OSSUpload] 完成：{ok}/{toUpload.Count}，跳过 {skipped}，目标 {prefix}/{platform}/");
+                message = $"上传完成：{ok}/{toUpload.Count} 成功，跳过 {skipped} 个未变文件。目标 {prefix}/{platform}/";
+                Log.Debug("[OSSUpload] " + message, channel: LogChannel.Resource);
+                return true;
             }
-            else
-            {
-                string msg = $"成功 {ok}/{toUpload.Count}，失败 {errors.Count} 个：\n" + string.Join("\n", errors);
-                EditorUtility.DisplayDialog("上传到 OSS（部分失败）", msg, "确定");
-                Debug.LogError($"[OSSUpload] 部分失败：\n{msg}");
-            }
+            message = $"部分失败：成功 {ok}/{toUpload.Count}，失败 {errors.Count} 个：\n" + string.Join("\n", errors);
+            Log.Error("[OSSUpload] " + message, channel: LogChannel.Resource);
+            return false;
         }
 
         // ============================================================
@@ -301,7 +322,7 @@ namespace ReunionMovement.EditorTools.Addressables
                     // 不允许 path-style（https://oss-cn-beijing.aliyuncs.com/{bucket}/{object}）
                     // （否则返回 403 SecondLevelDomainForbidden）
                     string url = $"https://{bucket}.{endpointUri.Host}/{objectKey}";
-                    Debug.Log($"[OSSUpload] PUT -> {url}"); // 打印实际请求 URL，便于核对是否为三级域名
+                    Log.Debug($"[OSSUpload] PUT -> {url}", channel: LogChannel.Resource); // 打印实际请求 URL，便于核对是否为三级域名
                     var req = (HttpWebRequest)WebRequest.Create(url);
                     req.Method = "PUT";
                     req.Date = utcNow; // 与签名 date 保持一致
@@ -409,7 +430,7 @@ namespace ReunionMovement.EditorTools.Addressables
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[OSSUpload] 读取上传状态失败（忽略，将全量对比）: {ex.Message}");
+                Log.Warning($"[OSSUpload] 读取上传状态失败（忽略，将全量对比）: {ex.Message}", channel: LogChannel.Resource);
             }
             return dict;
         }
@@ -435,7 +456,7 @@ namespace ReunionMovement.EditorTools.Addressables
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[OSSUpload] 写入上传状态失败: {ex.Message}");
+                Log.Warning($"[OSSUpload] 写入上传状态失败: {ex.Message}", channel: LogChannel.Resource);
             }
         }
 

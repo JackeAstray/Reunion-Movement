@@ -252,7 +252,7 @@ namespace ReunionMovement.Core.Resources
 | `Publish` | `{UnityEngine.AddressableAssets.Addressables.BuildPath}` | `https://cdn.example.com/reunion/{version}/` |
 
 - 默认激活 `DevLocal`（`AddressablesSetup` 自动切换），避免停留在 `Default`（其 `Remote.LoadPath` 为 `<undefined>`）。
-- **远程 Catalog 默认关闭**（`m_BuildRemoteCatalog=false`）：`AddressablesSetup` 不主动开启；Phase 3 部署 CDN 前执行菜单 `ReunionMovement → Addressables → 启用远程 Catalog（Phase 3 热更）` 手动开启（自动把 `RemoteCatalogBuildPath/LoadPath` 指向 Remote 变量）。
+- **远程 Catalog 默认关闭**（`m_BuildRemoteCatalog=false`）：`AddressablesSetup` 不主动开启；Phase 3 部署 CDN 前执行菜单 `ReunionMovement → Addressables → 配置/启用远程 Catalog（Phase 3 热更）` 手动开启（自动把 `RemoteCatalogBuildPath/LoadPath` 指向 Remote 变量）。
 - `AddressablesSetup` 对已存在的 Remote 分组会**校验并修正** BuildPath/LoadPath 指向 Remote 变量（修复历史/手动创建分组遗留的 Local 路径错误）。
 - `Remote.LoadPath` 的 base URL + `{version}` 写入 `GameConfig`（`remoteBundleUrl`、`remoteCatalogUrl`），构建时由 Editor 工具回填，避免硬编码。
 - 移动端/PC 的 Remote Bundle 走 `Caching`；WebGL 走浏览器 IndexedDB。
@@ -260,7 +260,7 @@ namespace ReunionMovement.Core.Resources
 ### 6.2 Editor 工具（新增 `Assets/ReunionMovement/Editor/Addressables/`）
 | 脚本 | 职责 |
 | --- | --- |
-| `AddressablesSetup.cs` | 一键创建 `AddressableAssetsData`、分组、Label、Profile；`[InitializeOnLoad]` 检测缺失时自动建；已存在分组也校验/修正 Remote 路径；默认激活 `DevLocal`；提供「启用远程 Catalog」菜单（默认关闭） |
+| `AddressablesSetup.cs` | 一键创建 `AddressableAssetsData`、分组、Label、Profile；`[InitializeOnLoad]` 检测缺失时自动建；已存在分组也校验/修正 Remote 路径；默认激活 `DevLocal`；提供「配置/启用远程 Catalog」菜单（默认关闭） |
 | `AddressablesBuildWindow.cs` | 菜单 `ReunionMovement/Addressables/一键构建`：构建 Addressables → 输出 catalog hash → 写版本清单 `Build/Addressables/version.json` |
 | `AddressablesDeployReport.cs` | 生成部署清单（哪些 Bundle 需上传 CDN、md5、大小），供 CI/人工上传 |
 
