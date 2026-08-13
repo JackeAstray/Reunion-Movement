@@ -14,7 +14,194 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
   m_GroupName: Remote_Sounds
   m_GUID: 1e53900fa4c4b3342aa1a5e273cdecb1
-  m_SerializeEntries: []
+  m_SerializeEntries:
+  - m_GUID: 0448136a43f13a946ae18f0210865a58
+    m_Address: Remote/Sounds/SFX/UI/JDSherbert - Ultimate UI SFX Pack - Select -
+      2
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1326506fc76787c4a9876a54a0771598
+    m_Address: Remote/Sounds/BGM/JDSherbert - Minigame Music Pack - Digital Waves
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 141f8e249b987c54db37ac95a0092432
+    m_Address: Remote/Sounds/BGM/JDSherbert - Minigame Music Pack - Streetlights
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1d4091a6140a1ad4d903f84183a15eae
+    m_Address: Remote/Sounds/SFX/UI/JDSherbert - Ultimate UI SFX Pack - Popup Open
+      - 1
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 364f95a68eb6be1478352ec20d601d97
+    m_Address: Remote/Sounds/BGM/JDSherbert - Minigame Music Pack - Refreshing Dawn
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 409d0a455c8b9da4bab14e4e560ea5f4
+    m_Address: Remote/Sounds/SFX/UI/JDSherbert - Ultimate UI SFX Pack - Cursor -
+      3
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 42cbb41c07640d74e9864bcaba013286
+    m_Address: Remote/Sounds/SFX/UI/JDSherbert - Ultimate UI SFX Pack - Select -
+      1
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4bd2687b50379724691628f7a516e225
+    m_Address: Remote/Sounds/BGM/JDSherbert - Minigame Music Pack - A Minor Distraction
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4fbe234410ad97a44b11103bec4a096e
+    m_Address: Remote/Sounds/BGM/JDSherbert - Minigame Music Pack - Temple Puzzle
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 66c9ed6513d2dd64cadc7380eaf6d01e
+    m_Address: Remote/Sounds/SFX/UI/JDSherbert - Ultimate UI SFX Pack - Cursor -
+      2
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 69e4612123ef72047bef62101c3396dc
+    m_Address: Remote/Sounds/BGM/JDSherbert - Minigame Music Pack - Smooth Driving
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8934521eacb44404da6864053ac7c188
+    m_Address: Remote/Sounds/BGM/JDSherbert - Minigame Music Pack - Blackjack
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ad3da3e8a1fbfb8488a03edd42f46a6d
+    m_Address: Remote/Sounds/BGM/JDSherbert - Minigame Music Pack - Beach Vibes
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b0172bba4506f9e4f83d8faa8bbdb325
+    m_Address: Remote/Sounds/SFX/UI/RPG3_FireMagicMisc_AttackMissed03
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b1d17be1ac048724d89b8d42482394e0
+    m_Address: Remote/Sounds/BGM/JDSherbert - Minigame Music Pack - Corrupted Circuitry
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b212d9405dfb12d4a876852165671291
+    m_Address: Remote/Sounds/SFX/UI/JDSherbert - Ultimate UI SFX Pack - Swipe - 1
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ba459bac43ea9de46a5a9ff425f86fd8
+    m_Address: Remote/Sounds/SFX/UI/JDSherbert - Ultimate UI SFX Pack - Cursor -
+      5
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c0facd3ac7a5f2f428c8f23158d0a037
+    m_Address: Remote/Sounds/SFX/UI/JDSherbert - Ultimate UI SFX Pack - Popup Close
+      - 1
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cc367766378748347a989ec0ccea1040
+    m_Address: Remote/Sounds/BGM/JDSherbert - Minigame Music Pack - Electric Eel
+      Fishing
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cf5b56cab1f8e2444b3af150d1e457f0
+    m_Address: Remote/Sounds/SFX/UI/JDSherbert - Ultimate UI SFX Pack - Cursor -
+      1
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: dd950982243e4824aad0e02617469255
+    m_Address: Remote/Sounds/SFX/UI/JDSherbert - Ultimate UI SFX Pack - Cursor -
+      4
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e4bdde861e3d7bf4c914a56bbd69b0ee
+    m_Address: Remote/Sounds/SFX/UI/JDSherbert - Ultimate UI SFX Pack - Cancel -
+      1
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f6bdde49f410a85479b06c2f1e80e647
+    m_Address: Remote/Sounds/SFX/UI/JDSherbert - Ultimate UI SFX Pack - Swipe - 2
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fed01b6efa4146244944f692cc442bd4
+    m_Address: Remote/Sounds/SFX/UI/JDSherbert - Ultimate UI SFX Pack - Error - 1
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ff9fbedcd6c14a34caf98d37afb0b8c4
+    m_Address: Remote/Sounds/SFX/UI/JDSherbert - Ultimate UI SFX Pack - Cancel -
+      2
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - sound
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 655daefa14e1d2b42811fdd378da0a5c, type: 2}
   m_SchemaSet:

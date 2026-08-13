@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using ReunionMovement.Common;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
@@ -12,7 +13,8 @@ namespace ReunionMovement.EditorTools.Addressables
     /// 再标记 Addressable（分组 + Label + Address）。
     /// 仅复制、不删除源资源：同步 Resources 路径零破坏，异步 Addressables 路径独立可用（双轨过渡期安全）。
     /// 设计文档：仓库 Docs/Addressables/Addressables集成设计方案.md §4、§8 Phase1
-    /// 菜单：ReunionMovement → Addressables → 迁移 → UI 资源（复制+重映射）
+    /// 推荐入口：ReunionMovement → Addressables → 迁移 → 一键迁移全部（UI+音频+图片）
+    /// 细分入口：迁移 → UI 资源 / 音频 / 图片（可单独补迁某类）
     /// </summary>
     public static class AddressablesMigrator
     {
@@ -31,7 +33,20 @@ namespace ReunionMovement.EditorTools.Addressables
         /// <summary>UI Addressable 逻辑地址前缀（与运行时 AddressableKeys.UIRoot 对齐）</summary>
         private const string AddressPrefix = "BuiltIn/UI/";
 
-        [MenuItem("ReunionMovement/Addressables/迁移/UI 资源（复制+重映射）")]
+        /// <summary>
+        /// 一键迁移全部资源（UI + 音频 + 图片）。幂等：目标已存在自动跳过复制，只补齐标记，可重复执行。
+        /// 推荐入口 —— 流水线与日常发版统一调用，避免漏迁某一类资源。
+        /// </summary>
+        [MenuItem("ReunionMovement/Addressables/迁移/一键迁移全部（UI+音频+图片）", priority = 30)]
+        public static void MigrateAll()
+        {
+            MigrateUI();
+            MigrateSounds();
+            MigrateTextures();
+            Log.Debug("[AddressablesMigrator] 全部迁移完成（UI + 音频 + 图片）", channel: LogChannel.Resource);
+        }
+
+        [MenuItem("ReunionMovement/Addressables/迁移/UI 资源（复制+重映射）", priority = 31)]
         public static void MigrateUI()
         {
             // 确保配置与分组存在
@@ -40,14 +55,14 @@ namespace ReunionMovement.EditorTools.Addressables
             var group = settings.FindGroup(GroupName);
             if (group == null)
             {
-                Debug.LogError($"[AddressablesMigrator] 分组 {GroupName} 不存在，请先执行「初始化配置」");
+                Log.Error($"[AddressablesMigrator] 分组 {GroupName} 不存在，请先执行「初始化配置」", channel: LogChannel.Resource);
                 return;
             }
 
             var prefabGuids = AssetDatabase.FindAssets("t:Prefab", new[] { SrcUIPrefabFolder });
             if (prefabGuids.Length == 0)
             {
-                Debug.LogWarning($"[AddressablesMigrator] 未在 {SrcUIPrefabFolder} 找到 UI Prefab，跳过");
+                Log.Warning($"[AddressablesMigrator] 未在 {SrcUIPrefabFolder} 找到 UI Prefab，跳过", channel: LogChannel.Resource);
                 return;
             }
 
@@ -103,12 +118,12 @@ namespace ReunionMovement.EditorTools.Addressables
                 entry.SetLabel("builtin", true, false, false);
                 entry.SetLabel("ui", true, false, false);
                 migrated++;
-                Debug.Log($"[AddressablesMigrator] 已迁移 UI: {dstPrefab}  address={AddressPrefix + uiName}");
+                Log.Debug($"[AddressablesMigrator] 已迁移 UI: {dstPrefab}  address={AddressPrefix + uiName}", channel: LogChannel.Resource);
             }
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log($"[AddressablesMigrator] 完成：迁移 {migrated} 个 UI Prefab（含 Resources 内依赖 {allSrc.Count - prefabGuids.Length} 个）到 {DstAddressableRoot}");
+            Log.Debug($"[AddressablesMigrator] 完成：迁移 {migrated} 个 UI Prefab（含 Resources 内依赖 {allSrc.Count - prefabGuids.Length} 个）到 {DstAddressableRoot}", channel: LogChannel.Resource);
         }
 
         /// <summary>复制单个资源到目标路径并登记 GUID 映射；已存在则仅登记映射（幂等）</summary>
@@ -125,7 +140,7 @@ namespace ReunionMovement.EditorTools.Addressables
                 EnsureFolder(Path.GetDirectoryName(dstPath).Replace('\\', '/'));
                 if (!AssetDatabase.CopyAsset(srcPath, dstPath))
                 {
-                    Debug.LogWarning($"[AddressablesMigrator] 复制失败: {srcPath}");
+                    Log.Warning($"[AddressablesMigrator] 复制失败: {srcPath}", channel: LogChannel.Resource);
                     return;
                 }
                 AssetDatabase.ImportAsset(dstPath);
@@ -245,7 +260,7 @@ namespace ReunionMovement.EditorTools.Addressables
         // =====================================================================
 
         /// <summary>迁移音频：Resources/Sounds → AddressableAssets/Remote/Sounds（Remote_Sounds 分组）</summary>
-        [MenuItem("ReunionMovement/Addressables/迁移/音频（Sounds → Remote_Sounds）")]
+        [MenuItem("ReunionMovement/Addressables/迁移/音频（Sounds → Remote_Sounds）", priority = 32)]
         public static void MigrateSounds()
         {
             MigrateLeafAssets(
@@ -257,7 +272,7 @@ namespace ReunionMovement.EditorTools.Addressables
         }
 
         /// <summary>迁移纹理：Resources/UI/Sprites → AddressableAssets/Remote/Textures（Remote_Textures 分组）</summary>
-        [MenuItem("ReunionMovement/Addressables/迁移/图片（UI/Sprites → Remote_Textures）")]
+        [MenuItem("ReunionMovement/Addressables/迁移/图片（UI Sprites → Remote_Textures）", priority = 33)]
         public static void MigrateTextures()
         {
             MigrateLeafAssets(
@@ -276,7 +291,7 @@ namespace ReunionMovement.EditorTools.Addressables
         {
             if (!Directory.Exists(srcRoot))
             {
-                Debug.LogWarning($"[AddressablesMigrator] 源目录不存在: {srcRoot}");
+                Log.Warning($"[AddressablesMigrator] 源目录不存在: {srcRoot}", channel: LogChannel.Resource);
                 return;
             }
 
@@ -285,7 +300,7 @@ namespace ReunionMovement.EditorTools.Addressables
             var group = settings.FindGroup(groupName);
             if (group == null)
             {
-                Debug.LogError($"[AddressablesMigrator] 分组 {groupName} 不存在，请先执行「初始化配置」");
+                Log.Error($"[AddressablesMigrator] 分组 {groupName} 不存在，请先执行「初始化配置」", channel: LogChannel.Resource);
                 return;
             }
 
@@ -299,7 +314,7 @@ namespace ReunionMovement.EditorTools.Addressables
             }
             if (srcFiles.Count == 0)
             {
-                Debug.LogWarning($"[AddressablesMigrator] {srcRoot} 下无资源文件，跳过");
+                Log.Warning($"[AddressablesMigrator] {srcRoot} 下无资源文件，跳过", channel: LogChannel.Resource);
                 return;
             }
 
@@ -316,7 +331,7 @@ namespace ReunionMovement.EditorTools.Addressables
                     EnsureFolder(Path.GetDirectoryName(dst).Replace('\\', '/'));
                     if (!AssetDatabase.CopyAsset(src, dst))
                     {
-                        Debug.LogWarning($"[AddressablesMigrator] 复制失败: {src}");
+                        Log.Warning($"[AddressablesMigrator] 复制失败: {src}", channel: LogChannel.Resource);
                         continue;
                     }
                     AssetDatabase.ImportAsset(dst);
@@ -342,12 +357,12 @@ namespace ReunionMovement.EditorTools.Addressables
                 entry.SetLabel("remote", true, false, false);
                 entry.SetLabel(label, true, false, false);
                 migrated++;
-                Debug.Log($"[AddressablesMigrator] 已迁移: {dst}  address={addressPrefix + relNoExt}");
+                Log.Debug($"[AddressablesMigrator] 已迁移: {dst}  address={addressPrefix + relNoExt}", channel: LogChannel.Resource);
             }
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log($"[AddressablesMigrator] 完成：{groupName} 迁移 {migrated} 个（跳过已存在 {skipped} 个）→ {dstRoot}");
+            Log.Debug($"[AddressablesMigrator] 完成：{groupName} 迁移 {migrated} 个（跳过已存在 {skipped} 个）→ {dstRoot}", channel: LogChannel.Resource);
         }
     }
 }

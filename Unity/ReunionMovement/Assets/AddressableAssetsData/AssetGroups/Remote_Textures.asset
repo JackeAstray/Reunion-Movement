@@ -14,7 +14,63 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
   m_GroupName: Remote_Textures
   m_GUID: 4a40d1a13e602f841af9aad91edea9ca
-  m_SerializeEntries: []
+  m_SerializeEntries:
+  - m_GUID: 0d17534e7bb557d498f3f769ab994d03
+    m_Address: Remote/Textures/default_empty_sprite
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - texture
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1b3fe2eb718bf1748b0f798fabbd6c9b
+    m_Address: Remote/Textures/Btn_Basic_Square_White
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - texture
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1f5915021b6c11b439d35d1646317727
+    m_Address: Remote/Textures/Test
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - texture
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 611a156e4f3ddda40a23c6fd5acde212
+    m_Address: Remote/Textures/RoundedShadow
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - texture
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9ef7376e325e1d34da675ca01f1ddd99
+    m_Address: "Remote/Textures/\u5361\u8299\u5361"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - texture
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: dc99b61de804efc4b957b46e79748b29
+    m_Address: Remote/Textures/Saber
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - texture
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e800bbe0e77bf9c4e9036bcffe5561db
+    m_Address: Remote/Textures/square_01
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - texture
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ec402f948dd01d047a3cdc7ddf92d92e
+    m_Address: "Remote/Textures/\u900F\u660E"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - remote
+    - texture
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 655daefa14e1d2b42811fdd378da0a5c, type: 2}
   m_SchemaSet:

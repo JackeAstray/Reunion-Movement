@@ -6,6 +6,7 @@ using System.Text;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
+using ReunionMovement.Common;
 using UnityEngine;
 
 namespace ReunionMovement.EditorTools.Addressables
@@ -22,29 +23,29 @@ namespace ReunionMovement.EditorTools.Addressables
         private const string VersionFileName = "version.json";
 
         /// <summary>按当前激活平台构建 Content（Addressables 自动适配当前平台）</summary>
-        [MenuItem("ReunionMovement/Addressables/构建 Content（当前平台）", priority = 1)]
+        [MenuItem("ReunionMovement/Addressables/构建/构建 Content（当前平台）", priority = 20)]
         public static void BuildContent()
         {
             BuildContentForTarget(EditorUserBuildSettings.activeBuildTarget);
         }
 
         // ==================== 选择平台并构建（原生子菜单，悬停/点击即在菜单项右侧展开） ====================
-        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/Windows (x86_64)", priority = 2)]
+        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/Windows (x86_64)", priority = 21)]
         public static void BuildWindows() => SwitchAndBuild(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows64);
 
-        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/macOS (Universal)", priority = 2)]
+        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/macOS (Universal)", priority = 21)]
         public static void BuildMacOS() => SwitchAndBuild(BuildTargetGroup.Standalone, BuildTarget.StandaloneOSX);
 
-        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/Linux (x86_64)", priority = 2)]
+        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/Linux (x86_64)", priority = 21)]
         public static void BuildLinux() => SwitchAndBuild(BuildTargetGroup.Standalone, BuildTarget.StandaloneLinux64);
 
-        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/Android", priority = 2)]
+        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/Android", priority = 21)]
         public static void BuildAndroid() => SwitchAndBuild(BuildTargetGroup.Android, BuildTarget.Android);
 
-        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/iOS", priority = 2)]
+        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/iOS", priority = 21)]
         public static void BuildIOS() => SwitchAndBuild(BuildTargetGroup.iOS, BuildTarget.iOS);
 
-        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/WebGL", priority = 2)]
+        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/WebGL", priority = 21)]
         public static void BuildWebGL() => SwitchAndBuild(BuildTargetGroup.WebGL, BuildTarget.WebGL);
 
         /// <summary>切换到目标平台后构建（切换会触发资源重导入，延迟一帧执行）</summary>
@@ -58,7 +59,7 @@ namespace ReunionMovement.EditorTools.Addressables
 
                 if (!EditorUserBuildSettings.SwitchActiveBuildTarget(group, target))
                 {
-                    Debug.LogError($"[AddressablesBuild] 切换平台失败: {target}");
+                    Log.Error($"[AddressablesBuild] 切换平台失败: {target}", channel: LogChannel.Resource);
                     return;
                 }
                 EditorApplication.delayCall += () => BuildContentForTarget(target);
@@ -95,7 +96,7 @@ namespace ReunionMovement.EditorTools.Addressables
                     settings.RemoteCatalogBuildPath.SetVariableByName(settings, AddressableAssetSettings.kRemoteBuildPath);
                     settings.RemoteCatalogLoadPath.SetVariableByName(settings, AddressableAssetSettings.kRemoteLoadPath);
                     AssetDatabase.SaveAssets();
-                    Debug.Log("[AddressablesBuild] 已自动启用远程 Catalog");
+                    Log.Debug("[AddressablesBuild] 已自动启用远程 Catalog", channel: LogChannel.Resource);
                 }
             }
 
@@ -106,15 +107,71 @@ namespace ReunionMovement.EditorTools.Addressables
             AddressableAssetSettings.BuildPlayerContent(out var result);
             if (result.Error != null)
             {
-                Debug.LogError($"[AddressablesBuild] 构建失败: {result.Error}");
+                Log.Error($"[AddressablesBuild] 构建失败: {result.Error}", channel: LogChannel.Resource);
                 EditorUtility.DisplayDialog("Addressables 构建", $"构建失败:\n{result.Error}", "确定");
                 return;
             }
 
             WriteVersionManifest(settings, result.OutputPath, target);
-            Debug.Log($"[AddressablesBuild] 构建成功 [{target}]，版本清单: {OutputFolder}/{VersionFileName}");
+            Log.Debug($"[AddressablesBuild] 构建成功 [{target}]，版本清单: {OutputFolder}/{VersionFileName}", channel: LogChannel.Resource);
             EditorUtility.DisplayDialog("Addressables 构建",
                 $"构建成功 [{target}]\n已生成 version.json（含 catalog hash 与 Bundle 清单）", "确定");
+        }
+
+        /// <summary>
+        /// 批处理 / 流水线安全构建入口（无弹窗）：确保远程 Catalog 开启 → 切换目标平台（如需）→
+        /// 构建 Content → 写 version.json（含 catalogHash / remoteCatalogFolder）。
+        /// 返回是否成功；失败原因经 error 输出。供 AddressablesPipeline / CI（-executeMethod）调用。
+        /// </summary>
+        public static bool BuildContentForTargetBatch(BuildTarget target, out string error)
+        {
+            error = null;
+            try
+            {
+                var settings = AddressableAssetSettingsDefaultObject.GetSettings(false);
+                if (settings == null)
+                {
+                    settings = AddressableAssetSettingsDefaultObject.GetSettings(true);
+                    AddressablesSetup.EnsureSetup();
+                }
+
+                // 远程 Catalog 检测：含 Remote_* 分组但未开启时自动开启（批处理无弹窗，直接启用）
+                if (!settings.BuildRemoteCatalog && HasRemoteGroups(settings))
+                {
+                    settings.BuildRemoteCatalog = true;
+                    settings.RemoteCatalogBuildPath.SetVariableByName(settings, AddressableAssetSettings.kRemoteBuildPath);
+                    settings.RemoteCatalogLoadPath.SetVariableByName(settings, AddressableAssetSettings.kRemoteLoadPath);
+                    AssetDatabase.SaveAssets();
+                    Log.Debug("[AddressablesBuild] 批处理：已自动启用远程 Catalog", channel: LogChannel.Resource);
+                }
+
+                // 切换目标平台（仅当不一致；批处理下同步完成）
+                if (EditorUserBuildSettings.activeBuildTarget != target)
+                {
+                    var group = BuildPipeline.GetBuildTargetGroup(target);
+                    if (!EditorUserBuildSettings.SwitchActiveBuildTarget(group, target))
+                    {
+                        error = $"切换平台失败: {target}";
+                        return false;
+                    }
+                }
+
+                AddressableAssetSettings.BuildPlayerContent(out var result);
+                if (result.Error != null)
+                {
+                    error = result.Error;
+                    return false;
+                }
+
+                WriteVersionManifest(settings, result.OutputPath, target);
+                Log.Debug($"[AddressablesBuild] 批处理构建成功 [{target}]，version.json 已更新", channel: LogChannel.Resource);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
         }
 
         /// <summary>是否存在任何 Remote_* 前缀的分组</summary>
@@ -153,6 +210,12 @@ namespace ReunionMovement.EditorTools.Addressables
             if (!string.IsNullOrEmpty(buildFolder) && Directory.Exists(buildFolder))
             {
                 foreach (var f in Directory.GetFiles(buildFolder, "*.bundle", SearchOption.AllDirectories))
+                    bundleFiles.Add(new FileInfo(f));
+            }
+            // 远程分组 bundle 输出到 Remote.BuildPath（ServerData/{platform}），一并纳入部署清单
+            if (!string.IsNullOrEmpty(remoteCatalogFolder) && Directory.Exists(remoteCatalogFolder))
+            {
+                foreach (var f in Directory.GetFiles(remoteCatalogFolder, "*.bundle", SearchOption.AllDirectories))
                     bundleFiles.Add(new FileInfo(f));
             }
 
@@ -230,7 +293,7 @@ namespace ReunionMovement.EditorTools.Addressables
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[AddressablesBuild] 解析远程 Catalog 目录失败（使用默认 ServerData/{target}）: {ex.Message}");
+                Log.Warning($"[AddressablesBuild] 解析远程 Catalog 目录失败（使用默认 ServerData/{target}）: {ex.Message}", channel: LogChannel.Resource);
             }
             return Path.Combine(Directory.GetCurrentDirectory(), "ServerData", target.ToString()).Replace('\\', '/');
         }
