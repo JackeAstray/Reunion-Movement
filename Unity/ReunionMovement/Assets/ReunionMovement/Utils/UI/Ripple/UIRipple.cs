@@ -70,9 +70,16 @@ namespace ReunionMovement.UI.RippleAnimation
             if (AutomaticMaxSize)
             {
                 RectTransform RT = gameObject.transform as RectTransform;
-                MaxSize = (RT.rect.width > RT.rect.height) ? 4f * ((float)Mathf.Abs(RT.rect.width) / (float)Mathf.Abs(RT.rect.height)) : 4f * ((float)Mathf.Abs(RT.rect.height) / (float)Mathf.Abs(RT.rect.width));
+                float w = Mathf.Abs(RT.rect.width);
+                float h = Mathf.Abs(RT.rect.height);
+                // 宽高为 0 时除法产生 NaN/Infinity；Infinity 无法被下方 NaN 分支兑底，
+                // Clamp 后变成 1000 使波纹瞬间覆盖全屏。先做尺寸有效性守卫。
+                if (w > 0.001f && h > 0.001f)
+                {
+                    MaxSize = (w > h) ? 4f * (w / h) : 4f * (h / w);
+                }
 
-                if (float.IsNaN(MaxSize))
+                if (float.IsNaN(MaxSize) || float.IsInfinity(MaxSize) || MaxSize <= 0f)
                 {
                     MaxSize = (transform.localScale.x > transform.localScale.y) ? 4f * transform.localScale.x : 4f * transform.localScale.y;
                 }

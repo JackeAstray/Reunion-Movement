@@ -259,7 +259,9 @@ namespace ReunionMovement.UI.ButtonClick
         /// </summary>
         private async UniTaskVoid StartLongPressingAsync(CancellationToken token)
         {
-            bool canceled = await UniTask.Delay((int)(longPressDuration * 1000f), cancellationToken: token).SuppressCancellationThrow();
+            // 统一 unscaled 时间基准：进度条用 unscaledDeltaTime，若此处受 timeScale 影响，
+            // timeScale=0 时进度条照常涨满但 onLongPressing 永不触发（两处状态互相矛盾）
+            bool canceled = await UniTask.Delay((int)(longPressDuration * 1000f), ignoreTimeScale: true, cancellationToken: token).SuppressCancellationThrow();
             if (!canceled) onLongPressing?.Invoke();
         }
 

@@ -121,8 +121,9 @@ namespace ReunionMovement.Core.UIToolkit
         {
             Log.Debug("[UIToolkitSystem] 清除数据");
 
-            // 关闭所有面板
-            foreach (var kvp in panelInstances)
+            // 关闭所有面板。快照遍历：OnClose 是用户代码，若面板在 OnClose 中调用 ClosePanel
+            // 修改 panelInstances，foreach 会抛 InvalidOperationException。
+            foreach (var kvp in new List<KeyValuePair<string, UIToolkitPanel>>(panelInstances))
             {
                 kvp.Value?.OnClose();
             }
@@ -247,7 +248,7 @@ namespace ReunionMovement.Core.UIToolkit
             if (panelInstances.TryGetValue(panelName, out var existing))
             {
                 existing.OnOpen(data);
-                OnPanelOpenSubject.OnNext(existing);
+                SafeOpenNotify(existing);
                 return existing as T;
             }
 
@@ -275,7 +276,7 @@ namespace ReunionMovement.Core.UIToolkit
             panelStack.Push(panel);
 
             panel.OnOpen(data);
-            OnPanelOpenSubject.OnNext(panel);
+            SafeOpenNotify(panel);
 
             Log.Debug("[UIToolkitSystem] 打开面板: {0}", panelName);
             return panel;
@@ -312,7 +313,7 @@ namespace ReunionMovement.Core.UIToolkit
             if (panelInstances.TryGetValue(panelName, out var existing))
             {
                 existing.OnOpen(data);
-                OnPanelOpenSubject.OnNext(existing);
+                SafeOpenNotify(existing);
                 return existing as T;
             }
 
@@ -339,7 +340,7 @@ namespace ReunionMovement.Core.UIToolkit
             if (panelInstances.TryGetValue(panelName, out var concurrent))
             {
                 concurrent.OnOpen(data);
-                OnPanelOpenSubject.OnNext(concurrent);
+                SafeOpenNotify(concurrent);
                 return concurrent as T;
             }
 
@@ -361,7 +362,7 @@ namespace ReunionMovement.Core.UIToolkit
             panelStack.Push(panel);
 
             panel.OnOpen(data);
-            OnPanelOpenSubject.OnNext(panel);
+            SafeOpenNotify(panel);
 
             Log.Debug("[UIToolkitSystem] 打开面板: {0}", panelName);
             return panel;
@@ -391,8 +392,31 @@ namespace ReunionMovement.Core.UIToolkit
             // 从栈中移除（先从栈中重建）
             RebuildStackWithout(panel);
 
-            OnPanelCloseSubject.OnNext(panel);
+            // 订阅者异常隔离：坏订阅者不应中断关闭流程
+            try
+            {
+                OnPanelCloseSubject?.OnNext(panel);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("[UIToolkitSystem] OnPanelCloseSubject 订阅者异常（已隔离）: {0}", ex.Message);
+            }
             Log.Debug("[UIToolkitSystem] 关闭面板: {0}", panelName);
+        }
+
+        /// <summary>
+        /// 安全派发面板打开事件（订阅者异常隔离，不中断打开流程）
+        /// </summary>
+        private void SafeOpenNotify(UIToolkitPanel panel)
+        {
+            try
+            {
+                OnPanelOpenSubject?.OnNext(panel);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("[UIToolkitSystem] OnPanelOpenSubject 订阅者异常（已隔离）: {0}", ex.Message);
+            }
         }
 
         /// <summary>

@@ -117,6 +117,10 @@ namespace ReunionMovement.Core.Sound
         // 预热取消令牌（Clear 时取消正在进行的预热任务）
         private CancellationTokenSource warmupCts;
 
+        // 缓存代次：Clear() 时自增。在途的 LoadAudioClipAndCacheAsync 写缓存前校验代次一致，
+        // 避免 Clear 后旧任务完成时把已清空的缓存条目复活（LRU 节点缺失 → 永不驱逐、句柄永久泄漏）
+        private int cacheGeneration = 0;
+
         public UniTask Init()
         {
             initProgress = 0;
@@ -205,6 +209,8 @@ namespace ReunionMovement.Core.Sound
         {
             Log.Debug("SoundSystem 清除数据");
             isInited = false;
+            // 代次自增：使所有在途加载任务写缓存前校验失败（见 LoadAudioClipAndCacheAsync）
+            cacheGeneration++;
             // 取消正在进行的预热任务
             warmupCts?.Cancel();
             warmupCts = null;
@@ -1066,6 +1072,7 @@ namespace ReunionMovement.Core.Sound
         /// </summary>
         private async UniTaskVoid LoadAudioClipAndCacheAsync(string fullPath, UniTaskCompletionSource<AudioClip> tcs)
         {
+            int generationAtStart = cacheGeneration;
             try
             {
                 // 双轨：Addressables 优先（Remote/Sounds/...），失败自动降级 Resources
@@ -1079,6 +1086,25 @@ namespace ReunionMovement.Core.Sound
                 if (clip == null)
                 {
                     clip = await ResourcesSystem.Instance.LoadAsync<AudioClip>(fullPath);
+                }
+
+                // Clear() 期间发生过：缓存已被清空并重建，不再写入（否则条目复活但 LRU 节点
+                // 缺失 → 永不驱逐、句柄永久泄漏）。直接释放新加载的 clip 并丢弃。
+                if (generationAtStart != cacheGeneration)
+                {
+                    if (clip != null)
+                    {
+                        if (fromAddressables)
+                        {
+                            AddressableSystem.Instance.ReleaseAsset(clip);
+                        }
+                        else
+                        {
+                            ResourcesSystem.Instance.DeleteAssetCache(fullPath);
+                        }
+                    }
+                    tcs.TrySetResult(null);
+                    return;
                 }
 
                 if (clip != null)

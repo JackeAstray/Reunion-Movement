@@ -43,7 +43,11 @@ namespace ReunionMovement.EditorTools.Addressables
             MigrateUI();
             MigrateSounds();
             MigrateTextures();
-            Log.Debug("[AddressablesMigrator] 全部迁移完成（UI + 音频 + 图片）", channel: LogChannel.Resource);
+            MigrateConfig();
+            MigratePrefabs();
+            MigrateScenes();
+            MigrateFonts();
+            Log.Debug("[AddressablesMigrator] 全部迁移完成（UI + 音频 + 图片 + 配置 + 预制体 + 场景 + 字体）", channel: LogChannel.Resource);
         }
 
         [MenuItem("ReunionMovement/Addressables/迁移/UI 资源（复制+重映射）", priority = 31)]
@@ -89,13 +93,13 @@ namespace ReunionMovement.EditorTools.Addressables
             var guidMap = new Dictionary<string, string>();
             foreach (var src in allSrc)
             {
-                CopyAssetWithGuid(guidMap, src);
+                CopyAssetWithGuid(guidMap, src, DstAddressableRoot);
             }
 
             // 阶段二：对所有复制出的 YAML 资源重映射 GUID 引用（prefab/mat/asset/anim 等）
             foreach (var src in allSrc)
             {
-                string dst = ToDstPath(src);
+                string dst = ToDstPath(src, DstAddressableRoot);
                 if (dst != null && File.Exists(dst) && IsYamlAsset(dst))
                 {
                     RemapGuids(dst, guidMap);
@@ -106,7 +110,7 @@ namespace ReunionMovement.EditorTools.Addressables
             foreach (var pg in prefabGuids)
             {
                 string srcPrefab = AssetDatabase.GUIDToAssetPath(pg);
-                string dstPrefab = ToDstPath(srcPrefab);
+                string dstPrefab = ToDstPath(srcPrefab, DstAddressableRoot);
                 if (dstPrefab == null || !File.Exists(dstPrefab)) continue;
 
                 string dstGuid = AssetDatabase.AssetPathToGUID(dstPrefab);
@@ -127,9 +131,9 @@ namespace ReunionMovement.EditorTools.Addressables
         }
 
         /// <summary>复制单个资源到目标路径并登记 GUID 映射；已存在则仅登记映射（幂等）</summary>
-        private static void CopyAssetWithGuid(Dictionary<string, string> guidMap, string srcPath)
+        private static void CopyAssetWithGuid(Dictionary<string, string> guidMap, string srcPath, string dstRoot)
         {
-            string dstPath = ToDstPath(srcPath);
+            string dstPath = ToDstPath(srcPath, dstRoot);
             if (dstPath == null) return;
 
             string srcGuid = AssetDatabase.AssetPathToGUID(srcPath);
@@ -213,12 +217,12 @@ namespace ReunionMovement.EditorTools.Addressables
             }
         }
 
-        /// <summary>源路径 → 目标路径（仅处理 Resources 内资源）</summary>
-        private static string ToDstPath(string srcPath)
+        /// <summary>源路径 → 目标路径（仅处理 Resources 内资源，目标根指定分组目录）</summary>
+        private static string ToDstPath(string srcPath, string dstRoot)
         {
             if (!srcPath.StartsWith(SrcResourcesRoot + "/", System.StringComparison.Ordinal)) return null;
             string rel = srcPath.Substring(SrcResourcesRoot.Length + 1);
-            return DstAddressableRoot + "/" + rel;
+            return dstRoot + "/" + rel;
         }
 
         /// <summary>判断是否为 YAML 文本资源（需要 GUID 重映射的类型）</summary>
@@ -285,9 +289,10 @@ namespace ReunionMovement.EditorTools.Addressables
 
         /// <summary>
         /// 通用迁移：把源目录下全部资源复制到目标目录（镜像相对结构）、同步导入设置、
-        /// 标记 Addressable（分组 + remote label + 功能 label + 地址）。幂等：目标已存在则跳过复制，只补齐标记。
+        /// 标记 Addressable（分组 + remote/builtin label + 功能 label + 地址）。幂等：目标已存在则跳过复制，只补齐标记。
         /// </summary>
-        private static void MigrateLeafAssets(string srcRoot, string dstRoot, string groupName, string label, string addressPrefix)
+        /// <param name="isRemote">true=远程分组（标记 remote label）；false=内置分组（标记 builtin label）</param>
+        private static void MigrateLeafAssets(string srcRoot, string dstRoot, string groupName, string label, string addressPrefix, bool isRemote = true)
         {
             if (!Directory.Exists(srcRoot))
             {
@@ -354,7 +359,7 @@ namespace ReunionMovement.EditorTools.Addressables
                 int dot = relNoExt.LastIndexOf('.');
                 if (dot >= 0) relNoExt = relNoExt.Substring(0, dot);
                 entry.SetAddress(addressPrefix + relNoExt, false);
-                entry.SetLabel("remote", true, false, false);
+                entry.SetLabel(isRemote ? "remote" : "builtin", true, false, false);
                 entry.SetLabel(label, true, false, false);
                 migrated++;
                 Log.Debug($"[AddressablesMigrator] 已迁移: {dst}  address={addressPrefix + relNoExt}", channel: LogChannel.Resource);
@@ -363,6 +368,215 @@ namespace ReunionMovement.EditorTools.Addressables
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Log.Debug($"[AddressablesMigrator] 完成：{groupName} 迁移 {migrated} 个（跳过已存在 {skipped} 个）→ {dstRoot}", channel: LogChannel.Resource);
+        }
+
+        // =====================================================================
+        //  BuiltIn 分组迁移（配置 / 预制体）
+        // =====================================================================
+
+        /// <summary>迁移配置：Resources/ScriptableObjects → AddressableAssets/BuiltIn/Config（BuiltIn_Config 分组）</summary>
+        [MenuItem("ReunionMovement/Addressables/迁移/配置（ScriptableObjects → BuiltIn_Config）", priority = 34)]
+        public static void MigrateConfig()
+        {
+            // 配置资产（GameConfig / LanguagesContainer / SoundConfigContainer）只引用共享脚本，
+            // 无 Resources 内资产依赖，走叶子迁移即可（无需 GUID 重映射）。
+            MigrateLeafAssets(
+                srcRoot: "Assets/ReunionMovement/Resources/ScriptableObjects",
+                dstRoot: "Assets/AddressableAssets/BuiltIn/Config",
+                groupName: "BuiltIn_Config",
+                label: "data",
+                addressPrefix: "BuiltIn/Config/",
+                isRemote: false);
+        }
+
+        /// <summary>迁移非 UI 预制体：Resources/Prefabs（排除 UIs，由 MigrateUI 负责）→ AddressableAssets/BuiltIn/Prefabs（BuiltIn_Prefabs 分组）</summary>
+        [MenuItem("ReunionMovement/Addressables/迁移/预制体（非 UI → BuiltIn_Prefabs）", priority = 35)]
+        public static void MigratePrefabs()
+        {
+            const string srcRoot = "Assets/ReunionMovement/Resources/Prefabs";
+            const string srcUIs = "Assets/ReunionMovement/Resources/Prefabs/UIs";
+            const string dstRoot = "Assets/AddressableAssets/BuiltIn/Prefabs";
+            const string groupName = "BuiltIn_Prefabs";
+            const string addressPrefix = "BuiltIn/Prefabs/";
+
+            if (!Directory.Exists(srcRoot))
+            {
+                Log.Warning($"[AddressablesMigrator] 源目录不存在: {srcRoot}", channel: LogChannel.Resource);
+                return;
+            }
+
+            var settings = AddressableAssetSettingsDefaultObject.GetSettings(true);
+            AddressablesSetup.EnsureSetup();
+            var group = settings.FindGroup(groupName);
+            if (group == null)
+            {
+                Log.Error($"[AddressablesMigrator] 分组 {groupName} 不存在，请先执行「初始化配置」", channel: LogChannel.Resource);
+                return;
+            }
+
+            // 收集源预制体（排除 UIs 子目录 —— 由 MigrateUI 负责，避免重复迁移）
+            var prefabPaths = new List<string>();
+            foreach (var pg in AssetDatabase.FindAssets("t:Prefab", new[] { srcRoot }))
+            {
+                string p = AssetDatabase.GUIDToAssetPath(pg);
+                if (p.StartsWith(srcUIs + "/", System.StringComparison.Ordinal)) continue;
+                prefabPaths.Add(p);
+            }
+            if (prefabPaths.Count == 0)
+            {
+                Log.Warning("[AddressablesMigrator] 未找到可迁移的非 UI 预制体，跳过", channel: LogChannel.Resource);
+                return;
+            }
+
+            // 阶段一：复制全部（预制体 + Resources 内依赖）并建立 GUID 映射
+            var allSrc = new List<string>();
+            foreach (var prefab in prefabPaths)
+            {
+                if (!allSrc.Contains(prefab)) allSrc.Add(prefab);
+                foreach (var dep in AssetDatabase.GetDependencies(prefab, true))
+                {
+                    if (string.IsNullOrEmpty(dep)) continue;
+                    if (!dep.StartsWith(SrcResourcesRoot + "/", System.StringComparison.Ordinal)) continue;
+                    if (dep == prefab) continue;
+                    if (AssetDatabase.IsValidFolder(dep)) continue;
+                    if (!allSrc.Contains(dep)) allSrc.Add(dep);
+                }
+            }
+
+            var guidMap = new Dictionary<string, string>();
+            foreach (var src in allSrc)
+            {
+                CopyAssetWithGuid(guidMap, src, dstRoot);
+            }
+
+            // 阶段二：对复制出的 YAML 资源重映射 GUID 引用
+            foreach (var src in allSrc)
+            {
+                string dst = ToDstPath(src, dstRoot);
+                if (dst != null && File.Exists(dst) && IsYamlAsset(dst))
+                {
+                    RemapGuids(dst, guidMap);
+                }
+            }
+
+            // 阶段三：标记预制体 Addressable（地址镜像相对结构，如 BuiltIn/Prefabs/EventSystem/EventSystem）
+            int migrated = 0;
+            foreach (var prefab in prefabPaths)
+            {
+                string dst = ToDstPath(prefab, dstRoot);
+                if (dst == null || !File.Exists(dst)) continue;
+
+                string dstGuid = AssetDatabase.AssetPathToGUID(dst);
+                var entry = settings.CreateOrMoveEntry(dstGuid, group, false, true);
+                if (entry == null) continue;
+
+                string rel = dst.Substring(dstRoot.Length + 1);
+                int dot = rel.LastIndexOf('.');
+                if (dot >= 0) rel = rel.Substring(0, dot);
+                entry.SetAddress(addressPrefix + rel, false);
+                entry.SetLabel("builtin", true, false, false);
+                migrated++;
+                Log.Debug($"[AddressablesMigrator] 已迁移预制体: {dst}  address={addressPrefix + rel}", channel: LogChannel.Resource);
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Log.Debug($"[AddressablesMigrator] 完成：{groupName} 迁移 {migrated} 个预制体（含 Resources 内依赖 {allSrc.Count - prefabPaths.Count} 个）→ {dstRoot}", channel: LogChannel.Resource);
+        }
+
+        // =====================================================================
+        //  直接标记迁移（场景 / 字体 —— 不在 Resources 下，无需复制，原地标记）
+        // =====================================================================
+
+        /// <summary>迁移场景：Scenes 顶层（排除 Example 示例）→ Remote_Scenes 分组（原地标记，不复制）</summary>
+        [MenuItem("ReunionMovement/Addressables/迁移/场景（非示例 → Remote_Scenes）", priority = 36)]
+        public static void MigrateScenes()
+        {
+            const string srcRoot = "Assets/ReunionMovement/Scenes";
+            const string exampleRoot = "Assets/ReunionMovement/Scenes/Example";
+
+            var scenes = new List<string>();
+            foreach (var sg in AssetDatabase.FindAssets("t:Scene", new[] { srcRoot }))
+            {
+                string p = AssetDatabase.GUIDToAssetPath(sg);
+                if (p.StartsWith(exampleRoot + "/", System.StringComparison.Ordinal)) continue; // 示例场景不部署
+                scenes.Add(p);
+            }
+
+            MarkAssetsDirect(scenes.ToArray(), "Remote_Scenes", "Remote/Scenes/", isRemote: true,
+                featureLabel: "scene", rootToStrip: srcRoot, displayName: "场景");
+        }
+
+        /// <summary>迁移字体：Fonts 下 TMP Font Asset（.asset）→ BuiltIn_Fonts 分组（原地标记，SDF 纹理与源字体作隐式依赖）</summary>
+        [MenuItem("ReunionMovement/Addressables/迁移/字体（TMP → BuiltIn_Fonts）", priority = 37)]
+        public static void MigrateFonts()
+        {
+            const string srcRoot = "Assets/ReunionMovement/Fonts";
+
+            var fonts = new List<string>();
+            foreach (var fg in AssetDatabase.FindAssets("t:Object", new[] { srcRoot }))
+            {
+                string p = AssetDatabase.GUIDToAssetPath(fg);
+                if (!p.EndsWith(".asset", System.StringComparison.OrdinalIgnoreCase)) continue; // 仅 TMP Font Asset
+                fonts.Add(p);
+            }
+
+            MarkAssetsDirect(fonts.ToArray(), "BuiltIn_Fonts", "BuiltIn/Fonts/", isRemote: false,
+                featureLabel: null, rootToStrip: srcRoot, displayName: "字体");
+        }
+
+        /// <summary>
+        /// 直接标记迁移：把指定资源原地标记为 Addressable（分组 + remote/builtin label + 功能 label + 地址镜像相对结构）。
+        /// 适用于不在 Resources 下的资源（场景 / TMP 字体），无需复制双轨。幂等：已标记则仅补齐。
+        /// </summary>
+        private static void MarkAssetsDirect(string[] assetPaths, string groupName, string addressPrefix,
+            bool isRemote, string featureLabel, string rootToStrip, string displayName)
+        {
+            if (assetPaths == null || assetPaths.Length == 0)
+            {
+                Log.Warning($"[AddressablesMigrator] 未找到可迁移的{displayName}，跳过", channel: LogChannel.Resource);
+                return;
+            }
+
+            var settings = AddressableAssetSettingsDefaultObject.GetSettings(true);
+            AddressablesSetup.EnsureSetup();
+            var group = settings.FindGroup(groupName);
+            if (group == null)
+            {
+                Log.Error($"[AddressablesMigrator] 分组 {groupName} 不存在，请先执行「初始化配置」", channel: LogChannel.Resource);
+                return;
+            }
+
+            int marked = 0;
+            foreach (var path in assetPaths)
+            {
+                if (string.IsNullOrEmpty(path)) continue;
+                string guid = AssetDatabase.AssetPathToGUID(path);
+                if (string.IsNullOrEmpty(guid)) continue;
+
+                var entry = settings.CreateOrMoveEntry(guid, group, false, true);
+                if (entry == null) continue;
+
+                // 地址 = 前缀 + 相对结构（不含扩展名），如 Remote/Scenes/StartGame
+                string rel = path.StartsWith(rootToStrip + "/", System.StringComparison.Ordinal)
+                    ? path.Substring(rootToStrip.Length + 1)
+                    : System.IO.Path.GetFileName(path);
+                int dot = rel.LastIndexOf('.');
+                if (dot >= 0) rel = rel.Substring(0, dot);
+
+                entry.SetAddress(addressPrefix + rel, false);
+                entry.SetLabel(isRemote ? "remote" : "builtin", true, false, false);
+                if (!string.IsNullOrEmpty(featureLabel))
+                {
+                    entry.SetLabel(featureLabel, true, false, false);
+                }
+                marked++;
+                Log.Debug($"[AddressablesMigrator] 已标记{displayName}: {path}  address={addressPrefix + rel}", channel: LogChannel.Resource);
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Log.Debug($"[AddressablesMigrator] 完成：{groupName} 标记 {marked} 个{displayName}（原地标记，未复制）", channel: LogChannel.Resource);
         }
     }
 }

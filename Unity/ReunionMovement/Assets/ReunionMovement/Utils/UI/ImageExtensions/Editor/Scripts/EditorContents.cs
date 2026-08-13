@@ -1,8 +1,9 @@
 using System.IO;
 using UnityEditor;
 using UnityEngine;
+using ReunionMovement.UI.ImageExtensions;
 
-namespace ReunionMovement.UI.ImageExtensions.Editor
+namespace ReunionMovement.EditorTools.ImageExtensions
 {
     [InitializeOnLoad]
     internal static class EditorContents

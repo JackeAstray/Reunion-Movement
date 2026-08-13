@@ -1,4 +1,6 @@
 using ReunionMovement.Common;
+using ReunionMovement.Common.Util;
+using ReunionMovement.Core;
 using ReunionMovement.Core.UI;
 using Cysharp.Threading.Tasks;
 using System;
@@ -11,7 +13,7 @@ using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-namespace ReunionMovement.Common.Util.EditorTools
+namespace ReunionMovement.EditorTools
 {
     public class CreateUIPlane : EditorWindow
     {

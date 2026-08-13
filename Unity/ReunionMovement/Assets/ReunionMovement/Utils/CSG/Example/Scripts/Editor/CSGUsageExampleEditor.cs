@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEditor;
 using ReunionMovement.Common.Util.Example;
 
-namespace ReunionMovement.Common.Util
+namespace ReunionMovement.Common.Util.EditorTools
 {
     /// <summary>
     /// 这是一个简单的编辑器辅助脚本，用于快速测试/原型制作！

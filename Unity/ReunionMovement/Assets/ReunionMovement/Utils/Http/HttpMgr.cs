@@ -1,4 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
+using ReunionMovement.Core;
+using ReunionMovement.Core.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,9 +12,9 @@ using UnityEngine.Networking;
 namespace ReunionMovement.Common.Util.HttpService
 {
     /// <summary>
-    /// HTTP管理器
+    /// HTTP管理器 —— 同时作为 MonoBehaviour 单例和 GameEngine 模块（ISystemUpdatable 驱动进度轮询）。
     /// </summary>
-    public class HttpMgr : SingletonMgr<HttpMgr>
+    public class HttpMgr : SingletonMgr<HttpMgr>, ICustomSystem, ISystemUpdatable
     {
         /// <summary>HTTP 请求可能在切场景期间仍在途，保持跨场景存活</summary>
         protected override bool IsPersistentAcrossScenes => true;
@@ -29,6 +31,27 @@ namespace ReunionMovement.Common.Util.HttpService
         {
             base.Awake();
             Init(new UnityHttpService());
+        }
+
+        /// <summary>ICustomSystem 初始化进度（恒为 100，HttpMgr 由 Awake 完成初始化）</summary>
+        public double InitProgress => 100;
+
+        /// <summary>
+        /// ICustomSystem 初始化（幂等）：Awake 已通过 Init(IHttpService) 完成，这里仅保证接口契约。
+        /// </summary>
+        public UniTask Init()
+        {
+            if (service == null)
+            {
+                Init(new UnityHttpService());
+            }
+            return UniTask.CompletedTask;
+        }
+
+        /// <summary>ISystemUpdatable：GameEngine 运行时统一驱动进度轮询</summary>
+        void ISystemUpdatable.Update(float logicTime, float realTime)
+        {
+            UpdateProgressPump();
         }
 
         /// <summary>
@@ -283,26 +306,17 @@ namespace ReunionMovement.Common.Util.HttpService
         }
 
         /// <summary>
-        /// 中止请求并将其从活动请求列表中删除
+        /// MonoBehaviour Update 兜底：仅在 GameEngine 未运行时自行轮询进度，
+        /// 引擎运行时会通过 ISystemUpdatable.Update 驱动，避免双重轮询。
         /// </summary>
-        /// <param name="request"></param>
-        internal void Abort(IHttpRequest request)
+        public void Update()
         {
-            service.Abort(request);
-
-            if (httpRequests.TryGetValue(request, out CancellationTokenSource cts))
-            {
-                cts?.Cancel();
-                cts?.Dispose();
-                httpRequests.Remove(request);
-            }
-
-            // 取消路径下协程被 cts 掐断,UnityHttpService.Send 的 using 不会执行 → UWR 原生资源泄漏。
-            // 在此显式 Dispose（正常完成路径由协程 using 负责,幂等）
-            (request as IDisposable)?.Dispose();
+            if (GameEngine.Current != null && GameEngine.Current.State == EngineState.Running) return;
+            UpdateProgressPump();
         }
 
-        public void Update()
+        /// <summary>轮询所有在途请求的下载/上传进度（零分配快照）</summary>
+        private void UpdateProgressPump()
         {
             // 快速路径：无请求时跳过
             if (httpRequests.Count == 0) return;
@@ -320,6 +334,26 @@ namespace ReunionMovement.Common.Util.HttpService
             {
                 (updateSnapshot[i] as IUpdateProgress)?.UpdateProgress();
             }
+        }
+
+        /// <summary>
+        /// 中止请求并将其从活动请求列表中删除
+        /// </summary>
+        /// <param name="request"></param>
+        internal void Abort(IHttpRequest request)
+        {
+            service.Abort(request);
+
+            if (httpRequests.TryGetValue(request, out CancellationTokenSource cts))
+            {
+                cts?.Cancel();
+                cts?.Dispose();
+                httpRequests.Remove(request);
+            }
+
+            // 取消路径下协程被 cts 掐断,UnityHttpService.Send 的 using 不会执行 → UWR 原生资源泄漏。
+            // 在此显式 Dispose（正常完成路径由协程 using 负责,幂等）
+            (request as IDisposable)?.Dispose();
         }
     }
 }

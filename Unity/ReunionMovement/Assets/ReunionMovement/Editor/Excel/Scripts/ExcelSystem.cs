@@ -393,7 +393,11 @@ namespace ReunionMovement
     }
 }
 ";
-            var dataName = sheet.itemClassName;
+            // 兼容旧命名：与下方 SO 生成路径保持一致 —— LanguagesConfig 表 → Languages 容器。
+            // 修复双轨断裂：此前脚本路径产出 LanguagesConfigContainer（死类），
+            // 而 SO 路径产出 LanguagesContainer，运行时 LanguagesSystem 加载的 ScriptableObjects/LanguagesContainer
+            // 与脚本类脱节，重新生成后语言系统会静默失效。
+            var dataName = sheet.itemClassName == "LanguagesConfig" ? "Languages" : sheet.itemClassName;
             var str = GenerateDataScriptList(ScriptTemplate, dataName, sheet.fields, order);
             // 使用同步写盘，避免 fire-and-forget 异步写盘与 Refresh 的竞态
             FileOperationUtil.SaveFileSync(scriptOutPutPath + dataName + "Container.cs", str);
@@ -501,9 +505,9 @@ namespace ReunionMovement
                     return;
                 }
 
-                // 兼容旧命名：运行时 LanguagesSystem 加载的是 ScriptableObjects/LanguagesContainer，
-                // 而新表名 LanguagesConfig 生成的容器是 LanguagesConfigContainer，两者断裂会导致
-                // 重新生成后语言系统静默失效。这里将 LanguagesConfig 映射回 Languages。
+                // 兼容旧命名：运行时 LanguagesSystem 加载的是 ScriptableObjects/LanguagesContainer。
+                // 统一映射：LanguagesConfig 表 → Languages 容器（与 GenerateScriptList 脚本路径的映射一致），
+                // 避免重新生成后语言系统静默失效，也避免脚本产出无人使用的 LanguagesConfigContainer 死类。
                 string containerName = tableName == "LanguagesConfig" ? "Languages" : tableName;
 
                 // 动态生成 ScriptableObject 文件路径

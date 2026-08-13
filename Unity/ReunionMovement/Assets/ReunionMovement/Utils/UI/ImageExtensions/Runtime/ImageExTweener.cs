@@ -231,8 +231,9 @@ namespace ReunionMovement.UI.ImageExtensions
             bool isReversed = m_Direction == Direction.Reverse;
             if (m_WrapMode == WrapMode.PingPong)
             {
-                // PingPong 自带往返方向，直接取相位标记
-                isReversed = pingPongReversed;
+                // PingPong 自带往返方向，取相位标记；
+                // Direction.Reverse 时起始方向互换（反向段与正向段对调），不再忽略 Direction
+                isReversed = pingPongReversed ^ (m_Direction == Direction.Reverse);
             }
 
             if (isReversed && m_WrapMode != WrapMode.PingPong)

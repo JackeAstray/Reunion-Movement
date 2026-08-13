@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEditor.Build;
 using UnityEngine;
 
-namespace ReunionMovement.Common.Util.EditorTools
+namespace ReunionMovement.EditorTools
 {
     /// <summary>
     /// 对 Unity 脚本宏定义操作

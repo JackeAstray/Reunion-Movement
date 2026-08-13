@@ -27,6 +27,10 @@ namespace ReunionMovement.Core.Resources
         /// <summary>特效 Prefab（对象池示例）</summary>
         public const string PrefabEffect = PrefabRoot + "Effect";
 
+        // ========== 配置（对应 AddressableAssets/BuiltIn/Config/） ==========
+        /// <summary>配置资源根（迁移自 Resources/ScriptableObjects）</summary>
+        public const string ConfigRoot = BuiltInRoot + "Config/";
+
         // ========== 场景（对应 AddressableAssets/Remote/Scenes/） ==========
         /// <summary>场景资源根</summary>
         public const string SceneRoot = RemoteRoot + "Scenes/";

@@ -1,6 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
 using System;
 using System.IO;
+using ReunionMovement.Core;
 using UnityEngine;
 
 namespace ReunionMovement.Common.Util

@@ -5,8 +5,10 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
+using ReunionMovement.Common;
+using ReunionMovement.Common.Util;
 
-namespace ReunionMovement.Common.Util.EditorTools
+namespace ReunionMovement.EditorTools
 {
     /// <summary>
     /// 一些小功能

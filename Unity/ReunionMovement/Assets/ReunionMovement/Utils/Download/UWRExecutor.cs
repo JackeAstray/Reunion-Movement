@@ -131,7 +131,8 @@ namespace ReunionMovement.Common.Util.Download
                     Log.Error("删除文件失败: {0}", ex);
                 }
             }
-            return false;
+            // 返回 true 表示本次确实执行了取消（幂等重入返回 false 见开头）
+            return true;
         }
 
         /// <summary>
@@ -143,14 +144,16 @@ namespace ReunionMovement.Common.Util.Download
             UnityWebRequest uwr = null;
             UnityWebRequestAsyncOperation hreq = HTTPHelper.Head(ref uwr, Uri, RequestHeaders, Timeout);
             DidHeadReq = true;
+            // 挂载到 currentRequest：Cancel() 时可中止 HEAD 请求，
+            // 避免取消后 HEAD 完成回调仍发起首块下载产生多余 IO 与文件写入。
+            currentRequest = uwr;
             hreq.completed += (resp) =>
             {
                 try
                 {
-                    // 防止 UWR 已被释放或回调时对象已销毁
-                    if (uwr == null)
+                    // 已取消（currentRequest 被 Cancel 置空/中止）：不再解析，防止访问已 Dispose 的 UWR
+                    if (uwr == null || currentRequest != uwr)
                     {
-                        MultipartDownload = false;
                         return;
                     }
 
@@ -186,8 +189,9 @@ namespace ReunionMovement.Common.Util.Download
                 }
                 finally
                 {
-                    // 释放 HEAD 请求的 UWR 原生资源，避免每个文件泄漏
+                    // 释放 HEAD 请求的 UWR 原生资源，避免每个文件泄漏（Dispose 幂等，Cancel 已释放时安全）
                     uwr?.Dispose();
+                    if (currentRequest == uwr) currentRequest = null;
                 }
             };
             return hreq;
@@ -266,7 +270,7 @@ namespace ReunionMovement.Common.Util.Download
 
                     resp = HTTPHelper.Download(ref uwr, Uri, DownloadPath, isMd5Name, DownloadToRoot, AbandonOnFailure, true, RequestHeaders, Timeout);
                     currentRequest = uwr;
-                    resp.completed -= OnCompleteMulti;
+                    // resp 是每块新建的 AsyncOperation，不存在重复订阅，直接 +=
                     resp.completed += OnCompleteMulti;
                 }
                 catch (Exception e)
@@ -315,11 +319,33 @@ namespace ReunionMovement.Common.Util.Download
             {
                 return;
             }
+
+            // 分块响应必须是 206 Partial Content：服务器/代理忽略 Range 头返回 200 时，
+            // DownloadHandlerFile(append:true) 会把全量内容追加到已有文件 → 文件损坏，
+            // 且 fileSize > expectedSize 会导致后续块永不满足 == 判断而无限循环直到超时。
+            if (currentRequest.responseCode != 206)
+            {
+                DidError = true;
+                OnDownloadError?.Invoke(0, string.Format("服务器忽略 Range 头（HTTP {0}），中止分块下载以免文件被重复追加损坏", currentRequest.responseCode));
+                Cancel();
+                return;
+            }
+
             if (!File.Exists(DownloadResultPath))
             {
                 return;
             }
             long fileSize = new FileInfo(DownloadResultPath).Length;
+
+            // 文件已超过预期大小：说明发生重复追加（如中途服务端改返回全量），中止并清理
+            if (fileSize > expectedSize)
+            {
+                DidError = true;
+                OnDownloadError?.Invoke(0, string.Format("分块下载文件大小超过预期（{0} > {1}），判定文件损坏，中止下载", fileSize, expectedSize));
+                Cancel();
+                return;
+            }
+
             OnDownloadChunkedSucces?.Invoke();
             progress = expectedSize > 0 ? (float)fileSize / expectedSize : 0f;
             bytesDownloaded = fileSize;

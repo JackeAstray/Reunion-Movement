@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using Cysharp.Text;
+using ReunionMovement.Core;
 using UnityEngine;
 
 namespace ReunionMovement.Common.Util

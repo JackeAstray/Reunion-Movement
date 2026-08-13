@@ -208,7 +208,15 @@ namespace ReunionMovement.Core.EventMessage
         {
             if (eventSubjects.TryGetValue(eventType, out var subject))
             {
-                subject.OnNext(new EventData(eventType, eventData));
+                try
+                {
+                    subject.OnNext(new EventData(eventType, eventData));
+                }
+                catch (Exception ex)
+                {
+                    // 事件总线不信任订阅者：坏监听器不应中断分发调用方（如场景加载/战斗流程）
+                    Log.Error("DispatchEvent 监听器异常（已隔离）: {0}, {1}", eventType, ex.Message);
+                }
             }
         }
 
@@ -221,7 +229,14 @@ namespace ReunionMovement.Core.EventMessage
         {
             if (eventSubjects.TryGetValue(eventType, out var subject))
             {
-                subject.OnNext(new EventData(eventType, eventData));
+                try
+                {
+                    subject.OnNext(new EventData(eventType, eventData));
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("DispatchEvent 监听器异常（已隔离）: {0}, {1}", eventType, ex.Message);
+                }
             }
         }
 
@@ -370,7 +385,14 @@ namespace ReunionMovement.Core.EventMessage
             if (typedSubjects.TryGetValue(key, out var obj)
                 && obj is Subject<EventData<T>> subject)
             {
-                subject.OnNext(new EventData<T>(eventType, eventData));
+                try
+                {
+                    subject.OnNext(new EventData<T>(eventType, eventData));
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("DispatchEventTyped 监听器异常（已隔离）: {0}, {1}", eventType, ex.Message);
+                }
             }
         }
 

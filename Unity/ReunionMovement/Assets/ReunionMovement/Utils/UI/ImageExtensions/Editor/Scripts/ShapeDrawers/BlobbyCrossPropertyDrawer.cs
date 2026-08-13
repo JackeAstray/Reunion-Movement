@@ -2,8 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using ReunionMovement.UI.ImageExtensions;
 
-namespace ReunionMovement.UI.ImageExtensions.Editor
+namespace ReunionMovement.EditorTools.ImageExtensions
 {
     [CustomPropertyDrawer(typeof(BlobbyCrossImg))]
     internal class BlobbyCrossPropertyDrawer : PropertyDrawer

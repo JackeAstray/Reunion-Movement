@@ -209,9 +209,10 @@ namespace ReunionMovement.Core.Resources
                 if (!isInited) return null;
             }
 
+            AsyncOperationHandle<T> handle = default;
             try
             {
-                var handle = Addressables.LoadAssetAsync<T>(key);
+                handle = Addressables.LoadAssetAsync<T>(key);
                 var asset = await handle.ToUniTask(progress, cancellationToken: ct, autoReleaseWhenCanceled: true);
                 if (handle.Status != AsyncOperationStatus.Succeeded || asset == null)
                 {
@@ -223,9 +224,16 @@ namespace ReunionMovement.Core.Resources
                 Interlocked.Increment(ref activeCount);
                 return asset;
             }
+            catch (OperationCanceledException)
+            {
+                // 取消路径：autoReleaseWhenCanceled 已自动释放句柄，无需重复释放
+                return null;
+            }
             catch (Exception ex)
             {
                 Log.Error("Addressables 加载异常: {0}, {1}", key, ex.Message);
+                // 异常路径也必须释放句柄，否则每次失败泄漏一个 AsyncOperationHandle
+                if (handle.IsValid()) Addressables.Release(handle);
                 return null;
             }
         }
@@ -252,22 +260,31 @@ namespace ReunionMovement.Core.Resources
                 if (!isInited) return null;
             }
 
+            AsyncOperationHandle<GameObject> handle = default;
             try
             {
-                var handle = Addressables.InstantiateAsync(key, parent);
+                handle = Addressables.InstantiateAsync(key, parent);
                 var go = await handle.ToUniTask(progress, cancellationToken: ct, autoReleaseWhenCanceled: true);
                 if (handle.Status != AsyncOperationStatus.Succeeded || go == null)
                 {
                     Log.Error("Addressables 实例化失败: {0}, Status: {1}", key, handle.Status);
+                    if (handle.IsValid()) Addressables.Release(handle);
                     return null;
                 }
                 Interlocked.Increment(ref loadCount);
                 Interlocked.Increment(ref activeCount);
                 return go;
             }
+            catch (OperationCanceledException)
+            {
+                // 取消路径：autoReleaseWhenCanceled 已自动释放句柄
+                return null;
+            }
             catch (Exception ex)
             {
                 Log.Error("Addressables 实例化异常: {0}, {1}", key, ex.Message);
+                // 异常路径也必须释放句柄（含已创建实例的引用）
+                if (handle.IsValid()) Addressables.Release(handle);
                 return null;
             }
         }
@@ -344,22 +361,31 @@ namespace ReunionMovement.Core.Resources
                 if (!isInited) return default;
             }
 
+            AsyncOperationHandle<SceneInstance> handle = default;
             try
             {
-                var handle = Addressables.LoadSceneAsync(key, mode);
+                handle = Addressables.LoadSceneAsync(key, mode);
                 var scene = await handle.ToUniTask(progress, cancellationToken: ct, autoReleaseWhenCanceled: true);
                 if (handle.Status != AsyncOperationStatus.Succeeded)
                 {
                     Log.Error("Addressables 场景加载失败: {0}, Status: {1}", key, handle.Status);
+                    if (handle.IsValid()) Addressables.Release(handle);
                     return default;
                 }
                 Interlocked.Increment(ref loadCount);
                 Interlocked.Increment(ref activeCount);
                 return scene;
             }
+            catch (OperationCanceledException)
+            {
+                // 取消路径：autoReleaseWhenCanceled 已自动释放句柄
+                return default;
+            }
             catch (Exception ex)
             {
                 Log.Error("Addressables 场景加载异常: {0}, {1}", key, ex.Message);
+                // 异常路径也必须释放句柄
+                if (handle.IsValid()) Addressables.Release(handle);
                 return default;
             }
         }

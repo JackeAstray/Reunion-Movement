@@ -73,6 +73,8 @@ namespace ReunionMovement.Core
         public static bool IsApplicationQuit { get; private set; }
         /// <summary>应用是否拥有焦点</summary>
         public static bool IsApplicationFocus { get; private set; } = true;
+        /// <summary>应用是否已暂停（切后台/锁屏等，由 GameEngineDriver.OnApplicationPause 驱动）</summary>
+        public static bool IsApplicationPaused { get; private set; }
         /// <summary>应用是否正在运行</summary>
         public static bool IsAppPlaying { get; private set; }
         #endregion
@@ -126,6 +128,7 @@ namespace ReunionMovement.Core
         /// </summary>
         internal static void ResetStaticState()
         {
+            IsApplicationPaused = false;
             IsApplicationQuit = false;
             IsApplicationFocus = true;
             IsAppPlaying = false;
@@ -296,10 +299,28 @@ namespace ReunionMovement.Core
                 }
             }
 
-            // 仅遍历需要 Update 的模块（通过 ISystemUpdatable 接口预过滤）
-            for (int i = 0; i < updatableModules.Count; i++)
+            // 仅遍历需要 Update 的模块（通过 ISystemUpdatable 接口预过滤）。
+            // 倒序遍历以便安全移除已失效模块；逐模块隔离异常：
+            // 一个模块 Update 抛异常不应中断本帧后续模块（否则异常每帧刷屏且其余模块停摆）。
+            for (int i = updatableModules.Count - 1; i >= 0; i--)
             {
-                updatableModules[i]?.Update(deltaTime, unscaledDeltaTime);
+                var module = updatableModules[i];
+                try
+                {
+                    // fake-null 防护：MonoBehaviour 模块被意外销毁后引用非 null 但已失效，
+                    // `?.` 拦截不住，直接调用会抛 MissingReferenceException
+                    if (module is UnityEngine.Object unityObj && unityObj == null)
+                    {
+                        Log.Warning("[GameEngine] 移除已销毁的 Update 模块: {0}", module.GetType().Name);
+                        updatableModules.RemoveAt(i);
+                        continue;
+                    }
+                    module.Update(deltaTime, unscaledDeltaTime);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("[GameEngine] 模块 Update 异常（已隔离）: {0}, {1}", module.GetType().Name, ex.Message);
+                }
             }
         }
 
@@ -317,6 +338,26 @@ namespace ReunionMovement.Core
         internal void OnAppFocus(bool focus)
         {
             IsApplicationFocus = focus;
+        }
+
+        /// <summary>
+        /// 应用暂停/恢复（由 GameEngineDriver.OnApplicationPause 调用）。
+        /// autoPause 选项开启时：切后台自动暂停音频、回前台自动恢复。
+        /// </summary>
+        internal void OnAppPause(bool pause)
+        {
+            IsApplicationPaused = pause;
+            try
+            {
+                if (GameOption.CurrentOption.autoPause)
+                {
+                    AudioListener.pause = pause;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error("[GameEngine] OnAppPause 应用音频暂停失败: {0}", ex.Message);
+            }
         }
         #endregion
 
