@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace ReunionMovement.Common.Util.EditorTools
+namespace ReunionMovement.EditorTools
 {
     public class ColliderUtilEditor
     {

@@ -1,7 +1,8 @@
 using UnityEditor;
 using UnityEngine;
+using ReunionMovement.UI.ImageExtensions;
 
-namespace ReunionMovement.UI.ImageExtensions.Editor
+namespace ReunionMovement.EditorTools.ImageExtensions
 {
     /// <summary>
     /// float字段可拖动

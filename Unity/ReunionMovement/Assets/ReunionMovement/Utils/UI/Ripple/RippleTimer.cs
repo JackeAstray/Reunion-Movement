@@ -38,6 +38,11 @@ namespace ReunionMovement.UI.RippleAnimation
         void Awake()
         {
             ripple = GetComponent<UIRipple>();
+            // Rate = 0（Inspector 默认）时每帧创建一个波纹，瞬间刷满屏幕；设下限 0.05s
+            if (Rate <= 0f)
+            {
+                Rate = 0.05f;
+            }
         }
 
         void Update()

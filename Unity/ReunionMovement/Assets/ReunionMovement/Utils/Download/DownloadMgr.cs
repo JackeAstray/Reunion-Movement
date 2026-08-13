@@ -175,6 +175,13 @@ namespace ReunionMovement.Common.Util.Download
                         SaveToLocal(response.texture, localPath);
                         onComplete?.Invoke(response.texture);
                     }
+                    else
+                    {
+                        // HTTP 成功但纹理解码失败（如服务器返回 200 + 非图片内容）：
+                        // 必须兜底回调 null，否则调用方永久挂起
+                        Log.Error("下载图片失败: 响应成功但纹理解码失败 {0}", url);
+                        onComplete?.Invoke(null);
+                    }
                 })
                 .OnError(error => 
                 {
@@ -329,6 +336,13 @@ namespace ReunionMovement.Common.Util.Download
         {
             try
             {
+                // 文件已存在则跳过重新编码：EncodeToPNG 每次全图编码开销可观（大图数百 ms）
+                if (File.Exists(filePath))
+                {
+                    Log.Debug("文件已存在，跳过保存: {0}", filePath);
+                    return;
+                }
+
                 // 确保目录存在
                 var dir = Path.GetDirectoryName(filePath);
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))

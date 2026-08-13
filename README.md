@@ -32,6 +32,12 @@ Unity Game Framework | Unity游戏框架
 - **循环滚动列表**：`LoopScrollRect` 对象池 + 虚拟化 + 数据索引缓存，滚动零 GC、选中状态零 GetComponent。
 - **UI Toolkit 面板系统**：`UIToolkitSystem` 异步加载 UXML/USS，面板栈管理。
 - **WebGL 体积优化**：ImageEx Shader 变体剥离器（过渡 / 模糊 / 描边组合裁剪）。
+- **崩溃日志上报**：`ErrorReporter` 全局错误捕获（Error/Exception/Assert）+ 本地落盘 + 可选 HTTP 上报。
+- **通用存档**：`SaveSystem` JSON 原子写入存档（版本字段预留数据迁移）。
+- **性能监控**：`PerformanceMonitor` 每秒 FPS/托管内存采样 + 防抖告警。
+- **网络消息协议**：`NetworkMessageCodec` / `NetworkMessageDispatcher` 消息 ID 编解码与分发（异常隔离）。
+- **热更状态机**：`AddressableUpdateFlow` 检查→下载→应用流程（R3 可观测，UI 可直接绑定）。
+- **Addressables 全量迁移**：UI / 音频 / 图片 / 配置 / 预制体 / 场景 / 字体 一键迁移。
 
 ## 工具：<a name="Tool"></a>
 - **表格工具**：Excel → 脚本 / ScriptableObject / JSON（批量生成，支持自定义数组类型）
@@ -42,6 +48,9 @@ Unity Game Framework | Unity游戏框架
 - **ImageEx**：SDF 形状图片 + 渐变/模糊/描边/过渡特效
 - **ImageEx Editor**：形状/特效参数可视化编辑，含相机画面（Camera Feed）接入
 - **Shader 变体剥离器**：WebGL 构建体积优化
+- **Addressables 流水线**：一键迁移（UI/音频/图片/配置/预制体/场景/字体）→ 构建 Content → 上传 OSS（菜单：ReunionMovement → Addressables）
+
+> **框架保留工具**（暂无调用点，作为框架能力保留，请勿删除）：`VibrationUtil`、`ScreenCaptureUtil`、`AssemblyUtil`、`ColorUtil`、`EncryptUtil`、`TimeUtil`、`GachaSystem`、`Billboard`、`MirrorImage`、`DeadlineMgr`。
 
 ## 功能（系统）：<a name="Function"></a>
 | 系统 | 说明 |
@@ -67,6 +76,11 @@ Unity Game Framework | Unity游戏框架
 | `SafeArea` | 刘海屏安全区适配 |
 | `ScreenLogger` | 屏幕日志显示 |
 | `DeadlineMgr` | 截止日期检测 |
+| `ErrorReporter` | 全局错误捕获 / 日志落盘 / 可选上报 |
+| `SaveSystem` | 通用 JSON 存档（原子写入 + 版本字段） |
+| `PerformanceMonitor` | FPS / 内存采样与防抖告警 |
+| `NetworkMessage` | 消息 ID 编解码 + 分发器（协议层） |
+| `AddressableUpdateFlow` | Addressables 热更状态机（检查→下载→应用） |
 
 ## 示例：<a name="Example"></a>
 项目的例子在 Assets -> ReunionMovement -> Scenes -> Example 中<br>

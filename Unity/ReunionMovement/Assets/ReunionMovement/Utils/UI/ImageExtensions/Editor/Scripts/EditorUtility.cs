@@ -9,8 +9,9 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
+using ReunionMovement.UI.ImageExtensions;
 
-namespace ReunionMovement.UI.ImageExtensions.Editor
+namespace ReunionMovement.EditorTools.ImageExtensions
 {
     public static class EditorUtility
     {

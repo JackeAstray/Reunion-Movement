@@ -96,11 +96,8 @@ namespace ReunionMovement.Common.Util
 
         void Update()
         {
-            // 若 NetworkMgr 后台线程在驱动 Tick，主线程不再重复驱动，
+            // 网络 Tick 始终在主线程驱动（NetworkMgr 无后台线程模式），
             // 避免并发调用非线程安全的 kcp2k/Telepathy Tick 导致协议状态损坏
-            if (NetworkMgr.Instance != null && NetworkMgr.Instance.IsThreadRunning) return;
-
-            // 根据所选传输类型调用对应的 Tick / Process，使网络在主线程执行
             switch (transport)
             {
                 case Transport.TCP:
@@ -159,13 +156,13 @@ namespace ReunionMovement.Common.Util
             // 客户端关闭并从 NetworkMgr 移除通道
             if (tcpClient != null)
             {
-                try { NetworkMgr.Instance?.ScheduleRemove(tcpClient); } catch { }
+                SafeScheduleRemove(tcpClient);
                 try { tcpClient.Close(); } catch (System.Exception ex) { Log.Warning("TCP客户端关闭异常: {0}", ex.Message); }
                 tcpClient = null;
             }
             if (kcpClient != null)
             {
-                try { NetworkMgr.Instance?.ScheduleRemove(kcpClient); } catch { }
+                SafeScheduleRemove(kcpClient);
                 try { kcpClient.Close(); } catch (System.Exception ex) { Log.Warning("KCP客户端关闭异常: {0}", ex.Message); }
                 kcpClient = null;
             }
@@ -178,13 +175,13 @@ namespace ReunionMovement.Common.Util
             // 服务端关闭并从 NetworkMgr 移除通道
             if (tcpServer != null)
             {
-                try { NetworkMgr.Instance?.ScheduleRemove(tcpServer); } catch { }
+                SafeScheduleRemove(tcpServer);
                 try { tcpServer.Close(); } catch (System.Exception ex) { Log.Warning("TCP服务端关闭异常: {0}", ex.Message); }
                 tcpServer = null;
             }
             if (kcpServer != null)
             {
-                try { NetworkMgr.Instance?.ScheduleRemove(kcpServer); } catch { }
+                SafeScheduleRemove(kcpServer);
                 try { kcpServer.Close(); } catch (System.Exception ex) { Log.Warning("KCP服务端关闭异常: {0}", ex.Message); }
                 kcpServer = null;
             }
@@ -240,13 +237,13 @@ namespace ReunionMovement.Common.Util
             // 先关闭旧的客户端通道，避免重连时泄漏连接/线程
             if (tcpClient != null)
             {
-                try { NetworkMgr.Instance?.ScheduleRemove(tcpClient); } catch { }
+                SafeScheduleRemove(tcpClient);
                 try { tcpClient.Close(); } catch (System.Exception ex) { Log.Warning("TCP客户端关闭异常: {0}", ex.Message); }
                 tcpClient = null;
             }
             if (kcpClient != null)
             {
-                try { NetworkMgr.Instance?.ScheduleRemove(kcpClient); } catch { }
+                SafeScheduleRemove(kcpClient);
                 try { kcpClient.Close(); } catch (System.Exception ex) { Log.Warning("KCP客户端关闭异常: {0}", ex.Message); }
                 kcpClient = null;
             }
@@ -274,7 +271,7 @@ namespace ReunionMovement.Common.Util
                             heartbeatCts?.Cancel();
                             heartbeatCts?.Dispose();
                             heartbeatCts = new CancellationTokenSource();
-                            HeartbeatRoutineAsync(heartbeatCts.Token).Forget();
+                            HeartbeatRoutineAsync(heartbeatCts, heartbeatCts.Token).Forget();
                         }
                     };
                     tcpClient.OnDataReceived += (data) =>
@@ -299,7 +296,7 @@ namespace ReunionMovement.Common.Util
                         if (reconnectCts == null && autoReconnect)
                         {
                             reconnectCts = new CancellationTokenSource();
-                            ReconnectRoutineAsync(reconnectCts.Token).Forget();
+                            ReconnectRoutineAsync(reconnectCts, reconnectCts.Token).Forget();
                         }
                     };
                     tcpClient.Connect(host, port);
@@ -320,7 +317,7 @@ namespace ReunionMovement.Common.Util
                             heartbeatCts?.Cancel();
                             heartbeatCts?.Dispose();
                             heartbeatCts = new CancellationTokenSource();
-                            HeartbeatRoutineAsync(heartbeatCts.Token).Forget();
+                            HeartbeatRoutineAsync(heartbeatCts, heartbeatCts.Token).Forget();
                         }
                     };
                     kcpClient.OnDataReceived += (data) =>
@@ -337,7 +334,7 @@ namespace ReunionMovement.Common.Util
                         if (reconnectCts == null && autoReconnect)
                         {
                             reconnectCts = new CancellationTokenSource();
-                            ReconnectRoutineAsync(reconnectCts.Token).Forget();
+                            ReconnectRoutineAsync(reconnectCts, reconnectCts.Token).Forget();
                         }
                     };
                     kcpClient.OnError += (err) =>
@@ -366,7 +363,7 @@ namespace ReunionMovement.Common.Util
                                 heartbeatCts?.Cancel();
                                 heartbeatCts?.Dispose();
                                 heartbeatCts = new CancellationTokenSource();
-                                HeartbeatRoutineAsync(heartbeatCts.Token).Forget();
+                                HeartbeatRoutineAsync(heartbeatCts, heartbeatCts.Token).Forget();
                             }
                         };
                         swtClient.onDisconnect += () =>
@@ -377,7 +374,7 @@ namespace ReunionMovement.Common.Util
                             if (reconnectCts == null && autoReconnect)
                             {
                                 reconnectCts = new CancellationTokenSource();
-                                ReconnectRoutineAsync(reconnectCts.Token).Forget();
+                                ReconnectRoutineAsync(reconnectCts, reconnectCts.Token).Forget();
                             }
                         };
                         swtClient.onData += (seg) =>
@@ -419,7 +416,7 @@ namespace ReunionMovement.Common.Util
             }
         }
 
-        private async UniTaskVoid ReconnectRoutineAsync(CancellationToken ct)
+        private async UniTaskVoid ReconnectRoutineAsync(CancellationTokenSource owner, CancellationToken ct)
         {
             reconnectAttempts = 0;
             while (autoReconnect && (maxReconnectAttempts < 0 || reconnectAttempts < maxReconnectAttempts) && !ct.IsCancellationRequested)
@@ -445,7 +442,8 @@ namespace ReunionMovement.Common.Util
                     if (transport == Transport.WebSocket && swtClient != null) connected = (swtClient.ConnectionState == ClientState.Connected);
                     if (connected)
                     {
-                        reconnectCts = null;
+                        // 仅当字段仍指向自己时才清空，防止旧协程退出时误清新重连协程的 CTS
+                        if (ReferenceEquals(reconnectCts, owner)) reconnectCts = null;
                         return;
                     }
                     waited += Time.deltaTime;
@@ -453,10 +451,11 @@ namespace ReunionMovement.Common.Util
                 }
             }
 
-            reconnectCts = null;
+            // 仅当字段仍指向自己时才清空（同上：防止覆盖新协程的 CTS）
+            if (ReferenceEquals(reconnectCts, owner)) reconnectCts = null;
         }
 
-        private async UniTaskVoid HeartbeatRoutineAsync(CancellationToken ct)
+        private async UniTaskVoid HeartbeatRoutineAsync(CancellationTokenSource owner, CancellationToken ct)
         {
             while (enableHeartbeat && !ct.IsCancellationRequested)
             {
@@ -482,7 +481,9 @@ namespace ReunionMovement.Common.Util
                 bool canceled = await UniTask.Delay(TimeSpan.FromSeconds(heartbeatInterval), ignoreTimeScale: false, PlayerLoopTiming.Update, ct).SuppressCancellationThrow();
                 if (canceled) break;
             }
-            heartbeatCts = null;
+            // 仅当字段仍指向自己时才清空：旧协程被取消唤醒时，新心跳协程的 CTS 已被 OnConnected 重建，
+            // 无条件置 null 会丢失新 CTS 引用 → StopAll 无法取消新协程 → 销毁后心跳永久存活
+            if (ReferenceEquals(heartbeatCts, owner)) heartbeatCts = null;
         }
 
         /// <summary>
@@ -537,10 +538,46 @@ namespace ReunionMovement.Common.Util
 
         #region Server
         /// <summary>
+        /// 从 NetworkMgr 移除通道。先检查 IsInitialized：场景卸载/引擎销毁时直接访问
+        /// Instance 会懒创建单例（在销毁中的场景里实例化 GameObject），用 IsInitialized 阻断。
+        /// </summary>
+        private static void SafeScheduleRemove(INetworkChannel channel)
+        {
+            try
+            {
+                if (SingletonMgr<NetworkMgr>.IsInitialized)
+                {
+                    NetworkMgr.Instance.ScheduleRemove(channel);
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Log.Warning("ScheduleRemove 异常: {0}", ex.Message);
+            }
+        }
+
+        /// <summary>
         /// 启动服务器
         /// </summary>
         public void StartServer()
         {
+            // 重复启动防护：先关闭旧服务器，避免旧 socket/线程泄漏
+            if (tcpServer != null)
+            {
+                try { tcpServer.Close(); } catch (System.Exception ex) { Log.Warning("关闭旧 TCP 服务端异常: {0}", ex.Message); }
+                tcpServer = null;
+            }
+            if (kcpServer != null)
+            {
+                try { kcpServer.Close(); } catch (System.Exception ex) { Log.Warning("关闭旧 KCP 服务端异常: {0}", ex.Message); }
+                kcpServer = null;
+            }
+            if (swtServer != null)
+            {
+                try { swtServer.Stop(); } catch (System.Exception ex) { Log.Warning("关闭旧 WS 服务端异常: {0}", ex.Message); }
+                swtServer = null;
+            }
+
             clientIds.Clear();
             switch (transport)
             {
@@ -569,9 +606,20 @@ namespace ReunionMovement.Common.Util
                         ServerError?.Invoke(-1, msg);
                         try { onServerError?.Invoke(msg); } catch (System.Exception ex) { Log.Warning("onServerError 回调异常: {0}", ex.Message); }
                     };
-                    tcpServer.Start();
-                    ServerStarted?.Invoke();
-                    onServerStarted?.Invoke();
+                    bool tcpStarted = tcpServer.Start();
+                    if (tcpStarted)
+                    {
+                        ServerStarted?.Invoke();
+                        onServerStarted?.Invoke();
+                    }
+                    else
+                    {
+                        // 启动失败（如端口占用）：派发错误事件而不是 Started，与 WS 分支契约一致
+                        var errMsg = "TCP 服务启动失败（端口可能被占用）";
+                        Log.Error(errMsg);
+                        ServerError?.Invoke(-1, errMsg);
+                        try { onServerError?.Invoke(errMsg); } catch (System.Exception ex) { Log.Warning("onServerError 回调异常: {0}", ex.Message); }
+                    }
                     break;
                 case Transport.KCP:
                     kcpServer = new KcpServerChannel(channelName, (ushort)port);
@@ -597,9 +645,20 @@ namespace ReunionMovement.Common.Util
                         ServerError?.Invoke(id, err);
                         try { onServerError?.Invoke(err); } catch (System.Exception ex) { Log.Warning("onServerError 回调异常: {0}", ex.Message); }
                     };
-                    kcpServer.Start();
-                    ServerStarted?.Invoke();
-                    onServerStarted?.Invoke();
+                    bool kcpStarted = kcpServer.Start();
+                    if (kcpStarted)
+                    {
+                        ServerStarted?.Invoke();
+                        onServerStarted?.Invoke();
+                    }
+                    else
+                    {
+                        // 启动失败（如端口占用）：派发错误事件而不是 Started，与 WS 分支契约一致
+                        var errMsg = "KCP 服务启动失败（端口可能被占用）";
+                        Log.Error(errMsg);
+                        ServerError?.Invoke(-1, errMsg);
+                        try { onServerError?.Invoke(errMsg); } catch (System.Exception ex) { Log.Warning("onServerError 回调异常: {0}", ex.Message); }
+                    }
                     break;
                 case Transport.WebSocket:
                     try

@@ -133,9 +133,20 @@ namespace ReunionMovement.Core
         }
 
         /// <summary>
-        /// 将当前选项应用到游戏（分辨率、画质、音量等）
+        /// 将当前选项完整应用到游戏（分辨率、画质、音量等）——供加载/重置时全量应用。
+        /// 运行中单字段变更请使用 <see cref="ApplyOption{T}"/>（按字段类别走轻/重路径）。
         /// </summary>
         public static void ApplyOptions()
+        {
+            ApplyDisplayOptions();
+            ApplyLightOptions();
+        }
+
+        /// <summary>
+        /// 应用分辨率/画质等“重路径”设置。
+        /// Screen.SetResolution 会切换显示模式（移动端闪屏/卡顿），仅在相关字段变化时调用。
+        /// </summary>
+        private static void ApplyDisplayOptions()
         {
             try
             {
@@ -160,12 +171,27 @@ namespace ReunionMovement.Core
                 // 图形质量
                 int qualityIndex = Mathf.Clamp(currentOption.graphicsQuality, 0, QualitySettings.names.Length - 1);
                 QualitySettings.SetQualityLevel(qualityIndex, true);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("ApplyDisplayOptions 异常: {0}", ex);
+            }
+        }
 
+        /// <summary>
+        /// 应用音量/亮度等“轻路径”设置（无闪屏副作用，可随任意选项变更调用）。
+        /// </summary>
+        private static void ApplyLightOptions()
+        {
+            try
+            {
                 // 主音量（使用 AudioListener 作为全局主音量）
                 AudioListener.volume = currentOption.masterVolumeMuted ? 0f : currentOption.masterVolume;
 
-                // 自动暂停（如果为 true，启用 Unity 的 AudioListener.pause 行为；注意这会暂停所有音频）
-                AudioListener.pause = currentOption.autoPause;
+                // 自动暂停：仅同步当前暂停状态（前台不静音），
+                // 实际的"切后台暂停/回前台恢复"由 GameEngine.OnAppPause 驱动（见 GameEngineDriver.OnApplicationPause）。
+                // 修复：原先此处直接 AudioListener.pause = autoPause，开启选项即永久静音（语义错误）。
+                AudioListener.pause = GameEngine.IsApplicationPaused && currentOption.autoPause;
 
                 // 应用音乐和音效设置到 SoundSystem（如果已初始化）
                 var ss = SoundSystem.Instance;
@@ -185,7 +211,24 @@ namespace ReunionMovement.Core
             }
             catch (Exception ex)
             {
-                Log.Error("ApplyOptions 异常: {0}", ex);
+                Log.Error("ApplyLightOptions 异常: {0}", ex);
+            }
+        }
+
+        /// <summary>字段是否为需要走“重路径”的显示相关设置（变化时才会 SetResolution/SetQualityLevel）</summary>
+        private static bool IsHeavyDisplayField(string fieldName)
+        {
+            switch (fieldName)
+            {
+                case "resolutionWidth":
+                case "resolutionHeight":
+                case "fullscreen":
+                case "vsync":
+                case "framerate":
+                case "graphicsQuality":
+                    return true;
+                default:
+                    return false;
             }
         }
 
@@ -246,11 +289,11 @@ namespace ReunionMovement.Core
             {
                 var field = typeof(Option).GetField(key,
                     System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                object converted = null;
                 if (field != null)
                 {
                     try
                     {
-                        object converted;
                         if (field.FieldType.IsEnum)
                         {
                             // 枚举字段：支持 string / 同类型枚举 / 数值三种来源
@@ -274,10 +317,34 @@ namespace ReunionMovement.Core
                     Log.Warning("ApplyOption 未知字段: {0}", key);
                 }
 
-                // 持久化并应用（SetOption 对所有 key 仅调用一次）
-                SetOption(key, value);
+                // 持久化：使用按字段类型转换后的值（而非 value 的运行时类型）。
+                // 修复：枚举字段传 int 时若按 int 持久化，GetOption 的枚举分支按字符串读取会失败，
+                // 表现为“设置生效但不持久”；bool 字段传字符串同理。
+                if (converted != null)
+                {
+                    if (converted is bool b) SetOption(key, b);
+                    else if (converted is int i) SetOption(key, i);
+                    else if (converted is float f) SetOption(key, f);
+                    else if (converted is string s) SetOption(key, s);
+                    else if (converted is Enum e) SetOption(key, e);
+                }
+                else
+                {
+                    // 字段不存在时按原始值持久化（保持旧行为）
+                    SetOption(key, value);
+                }
                 PlayerPrefs.Save();
-                ApplyOptions();
+
+                // 仅显示相关字段变化才执行重路径（SetResolution + SetQualityLevel），
+                // 调音量不再闪屏/切换全屏（移动端卡顿、窗口状态破坏）
+                if (field != null && IsHeavyDisplayField(field.Name))
+                {
+                    ApplyDisplayOptions();
+                }
+                else
+                {
+                    ApplyLightOptions();
+                }
             }
             catch (Exception ex)
             {

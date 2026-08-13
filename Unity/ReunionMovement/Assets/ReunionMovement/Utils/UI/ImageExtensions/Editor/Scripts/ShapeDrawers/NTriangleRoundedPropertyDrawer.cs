@@ -5,8 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
+using ReunionMovement.UI.ImageExtensions;
 
-namespace ReunionMovement.UI.ImageExtensions
+namespace ReunionMovement.EditorTools.ImageExtensions
 {
     [CustomPropertyDrawer(typeof(NTriangleRoundedImg))]
     public class NTriangleRoundedPropertyDrawer : PropertyDrawer

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace ReunionMovement.UI.ImageExtensions.Editor
+namespace ReunionMovement.EditorTools.ImageExtensions
 {
     [CustomPropertyDrawer(typeof(SquircleImg))]
     public class SquirclePropertyDrawer : PropertyDrawer

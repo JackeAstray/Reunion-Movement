@@ -1,9 +1,14 @@
-﻿using System.Collections.Generic;
-using System.Threading;
+﻿using Cysharp.Threading.Tasks;
+using ReunionMovement.Core;
+using ReunionMovement.Core.Base;
+using System.Collections.Generic;
 
 namespace ReunionMovement.Common.Util
 {
-    public sealed class NetworkMgr : SingletonMgr<NetworkMgr>
+    /// <summary>
+    /// 网络通道管理器 —— 同时作为 MonoBehaviour 单例和 GameEngine 模块（ISystemUpdatable 驱动移除队列消费）。
+    /// </summary>
+    public sealed class NetworkMgr : SingletonMgr<NetworkMgr>, ICustomSystem, ISystemUpdatable
     {
         /// <summary>网络通道（KCP/Telepathy 的线程与连接）跨场景保持，避免切场景断开连接</summary>
         protected override bool IsPersistentAcrossScenes => true;
@@ -13,13 +18,7 @@ namespace ReunionMovement.Common.Util
         // 按名称索引（O(1) 查找，与 channelList 并行维护）
         Dictionary<string, INetworkChannel> channelIndex = new Dictionary<string, INetworkChannel>();
         List<INetworkChannel> channelDictRemove = new List<INetworkChannel>();
-        private List<INetworkChannel> tickSnapshot;  // TickUpdate 复用的快照列表（零分配）
-        private Thread netRun;
-        private volatile bool isRunning = false;
         private readonly object syncRoot = new object();
-
-        /// <summary>网络 tick 间隔（ms）。移动端建议 10-20ms，PC 可用 5ms。</summary>
-        private const int NetworkTickIntervalMs = 10;
 
         public int NetworkChannelCount
         {
@@ -63,7 +62,8 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 将 Channel 加入延迟删除队列，在下次 TickUpdate 时安全移除（避免在 TickRefresh 回调中直接修改列表）。
+        /// 将 Channel 加入延迟删除队列，在下次 Update（引擎模块或 MonoBehaviour 兜底）时安全移除
+        /// （避免在 TickRefresh 回调中直接修改列表）。
         /// </summary>
         /// <param name="channel">待移除的网络通道</param>
         public void ScheduleRemove(INetworkChannel channel)
@@ -189,6 +189,25 @@ namespace ReunionMovement.Common.Util
             }
         }
 
+        /// <summary>ICustomSystem 初始化进度（恒为 100，NetworkMgr 由 Awake 完成初始化）</summary>
+        public double InitProgress => 100;
+
+        /// <summary>
+        /// ICustomSystem 初始化（幂等）：Awake 已通过 OnInit(null) 完成，这里仅保证接口契约。
+        /// 注意：不能在此重复调用 OnInit 清理通道 —— NetworkMgr 跨场景/跨引擎重建存活，
+        /// 引擎重初始化时误清空会断开在途的网络连接。
+        /// </summary>
+        public UniTask Init()
+        {
+            return UniTask.CompletedTask;
+        }
+
+        /// <summary>ISystemUpdatable：GameEngine 运行时统一驱动移除队列消费</summary>
+        void ISystemUpdatable.Update(float logicTime, float realTime)
+        {
+            DrainRemoveQueue();
+        }
+
         public void OnInit(object createParam)
         {
             lock (syncRoot)
@@ -196,91 +215,6 @@ namespace ReunionMovement.Common.Util
                 channelList.Clear();
                 channelIndex.Clear();
                 channelDictRemove.Clear();
-            }
-        }
-
-        /// <summary>
-        /// 后台线程是否在驱动网络 Tick（供 UniversalNetworkBehaviour 判断是否还需自行 Tick）。
-        /// 双线程同时调用 kcp2k/Telepathy 的 Tick 是非线程安全的。
-        /// </summary>
-        public bool IsThreadRunning => isRunning && netRun != null;
-
-        /// <summary>
-        /// 开启Update线程
-        /// </summary>
-        public void StartThread()
-        {
-#if UNITY_WEBGL
-            Log.Error("WebGL不支持.Net多线程，跳过线程启动");
-            return;
-#else
-            if (netRun == null)
-            {
-                isRunning = true;
-                netRun = new Thread(new ThreadStart(ThreadOnUpdate)) { IsBackground = true };
-                netRun.Start();
-            }
-#endif
-        }
-
-        /// <summary>
-        /// Update线程 —— 以 NetworkTickIntervalMs 间隔驱动网络 Tick。
-        /// 不再使用 1ms 忙等，避免移动端 CPU 无法深度睡眠导致发热。
-        /// </summary>
-        private void ThreadOnUpdate()
-        {
-            while (isRunning)
-            {
-                try
-                {
-                    TickUpdate();
-                }
-                catch (System.Exception ex)
-                {
-                    Log.Warning("NetworkMgr.ThreadOnUpdate 捕获异常：" + ex);
-                }
-                Thread.Sleep(NetworkTickIntervalMs);
-            }
-        }
-
-        /// <summary>
-        /// Update只能利用单个CPU核心
-        /// </summary>
-        public void OnUpdate()
-        {
-            if (netRun == null)
-            {
-                TickUpdate();
-            }
-        }
-
-        private void TickUpdate()
-        {
-            DrainRemoveQueue();
-
-            lock (syncRoot)
-            {
-                // 复用 tick 快照列表（仅在扩容时分配）
-                // 无论 channelList 是否为空都刷新快照：否则所有通道移除后，
-                // tickSnapshot 残留已移除通道，它们仍会被 TickRefresh 持续驱动
-                if (tickSnapshot == null) tickSnapshot = new List<INetworkChannel>(channelList.Count);
-                tickSnapshot.Clear();
-                tickSnapshot.AddRange(channelList);
-            }
-
-            if (tickSnapshot != null && tickSnapshot.Count > 0)
-            {
-                for (int i = 0; i < tickSnapshot.Count; i++)
-                {
-                    try
-                    {
-                        tickSnapshot[i].TickRefresh();
-                    }
-                    catch (System.Exception ex)
-                    {
-                        Log.Warning("NetworkMgr.Update TickRefresh 错误：" + ex);
-                    }
-                }
             }
         }
 
@@ -312,33 +246,18 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 每帧消费延迟删除队列，防止 ScheduleRemove 的通道跨场景累积泄漏。
-        /// 注意：不在此处调用 TickUpdate()，避免与 UniversalNetworkBehaviour.Update 重复驱动 Tick。
+        /// MonoBehaviour Update 兜底：仅在 GameEngine 未运行时消费移除队列，
+        /// 引擎运行时会通过 ISystemUpdatable.Update 驱动，避免双重消费。
+        /// 注意：通道 Tick 由 UniversalNetworkBehaviour.Update 自行驱动，此处不重复。
         /// </summary>
         void Update()
         {
+            if (GameEngine.Current != null && GameEngine.Current.State == EngineState.Running) return;
             DrainRemoveQueue();
-        }
-
-        public void OnLateUpdate()
-        {
-
-        }
-
-        public void OnFixedUpdate()
-        {
-
         }
 
         public void OnTermination()
         {
-            isRunning = false;
-            if (netRun != null)
-            {
-                netRun.Join(100);
-                netRun = null;
-            }
-
             List<INetworkChannel> toClose;
             lock (syncRoot)
             {

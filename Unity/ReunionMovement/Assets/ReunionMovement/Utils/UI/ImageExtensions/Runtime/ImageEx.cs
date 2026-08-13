@@ -2,7 +2,6 @@ using System;
 using ReunionMovement.Common;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.UI.ImageExtensions;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -349,8 +348,9 @@ namespace ReunionMovement.UI.ImageExtensions
         private static readonly int samplingMode_Sp = Shader.PropertyToID("_SamplingMode");
         private static readonly int targetMode_Sp = Shader.PropertyToID("_TargetMode");
         private static readonly int detailMode_Sp = Shader.PropertyToID("_DetailMode");
-        private static readonly int blendType_Sp = Shader.PropertyToID("_BlendType");
-        private static readonly int gradientTexEnabled_Sp = Shader.PropertyToID("_GradientTexEnabled");
+        // 渐变开关必须与 shader 中的 [_Toggle] _EnableGradientTex 对齐；
+        // 旧名 "_GradientTexEnabled" 在 shader 中不存在，Shared 模式回读恒为 0 会清空共享材质的渐变纹理。
+        private static readonly int gradientTexEnabled_Sp = Shader.PropertyToID("_EnableGradientTex");
 
         // 独立颜色滤镜
         private static readonly int colorFilter_Sp = Shader.PropertyToID("_ColorFilter");
@@ -394,6 +394,9 @@ namespace ReunionMovement.UI.ImageExtensions
         // 混合模式
         private static readonly int srcBlend_Sp = Shader.PropertyToID("_SrcBlend");
         private static readonly int dstBlend_Sp = Shader.PropertyToID("_DstBlend");
+
+        // Init 幂等守卫：防止重复调用 ListenToComponentChanges(true) 造成事件重复订阅
+        private bool m_listeningToComponents = false;
 
         #endregion
 
@@ -2232,13 +2235,22 @@ namespace ReunionMovement.UI.ImageExtensions
             {
                 InitValuesFromSharedMaterial();
             }
-            ListenToComponentChanges(true);
+            // 幂等防护：Init() 是 public 可被外部重复调用，重复 += 会使每个 setter 触发 2+ 次脏标记
+            if (!m_listeningToComponents)
+            {
+                ListenToComponentChanges(true);
+                m_listeningToComponents = true;
+            }
             base.SetAllDirty();
         }
 
         protected override void OnDestroy()
         {
-            ListenToComponentChanges(false);
+            if (m_listeningToComponents)
+            {
+                ListenToComponentChanges(false);
+                m_listeningToComponents = false;
+            }
 
             // 销毁运行时创建的动态材质，避免长时间运行/切场景时材质泄漏
             if (dynamicMaterial != null)
@@ -2862,7 +2874,8 @@ namespace ReunionMovement.UI.ImageExtensions
             }
 
             // -------------------- 混合模式（BLEND TYPE） --------------------
-            mat.SetInt(blendType_Sp, (int)m_BlendType);
+            // 混合由 shader 的 Blend [_SrcBlend] [_DstBlend] 驱动；
+            // 旧代码额外写不存在的 "_BlendType" 属性，Shared 模式回读恒为 0 会覆盖共享材质的混合模式。
             {
                 var (src, dst) = ConvertBlendType(m_BlendType);
                 mat.SetInt(srcBlend_Sp, (int)src);
@@ -3087,7 +3100,8 @@ namespace ReunionMovement.UI.ImageExtensions
             m_GradientScale = mat.GetFloat(gradientScale_Sp);
             m_EnableGradientTex = mat.GetInt(gradientTexEnabled_Sp) == 1;
             m_GradientTex = mat.GetTexture(gradientTex_Sp);
-            m_BlendType = (BlendType)mat.GetInt(blendType_Sp);
+            // 由 shader 实际生效的 _SrcBlend/_DstBlend 反查混合模式（材质不存在 _BlendType 属性）
+            m_BlendType = BlendTypeFromBlendModes(mat.GetInt(srcBlend_Sp), mat.GetInt(dstBlend_Sp));
         }
 
         private static (UnityEngine.Rendering.BlendMode, UnityEngine.Rendering.BlendMode) ConvertBlendType(BlendType type)
@@ -3101,6 +3115,29 @@ namespace ReunionMovement.UI.ImageExtensions
                 BlendType.MultiplyAdditive => (UnityEngine.Rendering.BlendMode.DstColor, UnityEngine.Rendering.BlendMode.One),
                 _ => (UnityEngine.Rendering.BlendMode.SrcAlpha, UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha)
             };
+        }
+
+        /// <summary>
+        /// 由材质的 _SrcBlend/_DstBlend 反查 BlendType（ConvertBlendType 的逆映射）。
+        /// 未匹配任何预设组合时回退 AlphaBlend，避免 Shared 回读覆盖手改的混合模式。
+        /// </summary>
+        private static BlendType BlendTypeFromBlendModes(int src, int dst)
+        {
+            switch (src)
+            {
+                case (int)UnityEngine.Rendering.BlendMode.SrcAlpha when dst == (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha:
+                    return BlendType.AlphaBlend;
+                case (int)UnityEngine.Rendering.BlendMode.DstColor when dst == (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha:
+                    return BlendType.Multiply;
+                case (int)UnityEngine.Rendering.BlendMode.One when dst == (int)UnityEngine.Rendering.BlendMode.One:
+                    return BlendType.Additive;
+                case (int)UnityEngine.Rendering.BlendMode.OneMinusDstColor when dst == (int)UnityEngine.Rendering.BlendMode.One:
+                    return BlendType.SoftAdditive;
+                case (int)UnityEngine.Rendering.BlendMode.DstColor when dst == (int)UnityEngine.Rendering.BlendMode.One:
+                    return BlendType.MultiplyAdditive;
+                default:
+                    return BlendType.AlphaBlend;
+            }
         }
 
 #if UNITY_EDITOR

@@ -13,6 +13,9 @@ namespace ReunionMovement.Common.Util.HttpService
         // 防重入：Send() 只能调用一次，重复调用会覆盖请求跟踪并产生无效的第二次协程
         private bool sent;
 
+        /// <summary>底层 UWR 是否已释放（Abort 路径下防重复释放、防协程/进度轮询访问已释放对象）</summary>
+        internal bool IsDisposed { get; private set; }
+
         private event Action<float> onUploadProgress;
         private event Action<float> onDownloadProgress;
         private event Action<HttpResponse> onSuccess;
@@ -151,8 +154,9 @@ namespace ReunionMovement.Common.Util.HttpService
         /// <returns></returns>
         public IHttpRequest Send()
         {
-            // 防重入：重复 Send 会覆盖 HttpMgr 的请求跟踪条目（首条请求失去取消能力）
-            if (sent) return this;
+            // 防重入：重复 Send 会覆盖 HttpMgr 的请求跟踪条目（首条请求失去取消能力）；
+            // Abort 后也拦截：底层 UWR 已被 Dispose，继续 SetRequestHeader/发送会抛 InvalidOperationException
+            if (sent || IsDisposed) return this;
             sent = true;
 
             foreach (var header in headers)
@@ -167,9 +171,12 @@ namespace ReunionMovement.Common.Util.HttpService
         /// <summary>
         /// 释放底层 UnityWebRequest 原生资源。
         /// 取消路径（协程被 cts 掐断、using 不执行）由 HttpMgr.Abort 调用，防止原生泄漏。
+        /// 幂等：重复调用只释放一次。
         /// </summary>
         public void Dispose()
         {
+            if (IsDisposed) return;
+            IsDisposed = true;
             unityWebRequest?.Dispose();
         }
 
@@ -189,6 +196,10 @@ namespace ReunionMovement.Common.Util.HttpService
         /// </summary>
         public void UpdateProgress()
         {
+            // 防访问已释放的 UWR：Abort 路径下 HttpMgr.Update 的快照可能仍引用本请求，
+            // 对已 Dispose 的 UnityWebRequest 访问属性会抛 InvalidOperationException
+            if (IsDisposed) return;
+
             UpdateProgress(ref downloadProgress, unityWebRequest.downloadProgress, onDownloadProgress);
             UpdateProgress(ref uploadProgress, unityWebRequest.uploadProgress, onUploadProgress);
         }

@@ -73,6 +73,10 @@ namespace ReunionMovement.Common.Util
 
         public string Host { get; private set; }
 
+        /// <summary>已关闭标记：Close 后同帧 Tick 仍可能触发 handler，
+        /// 若直接 OnNext 已 Dispose 的 R3 Subject 会抛 ObjectDisposedException</summary>
+        private bool closed = true;
+
         protected static readonly KcpConfig DefaultConfig = new KcpConfig(
             // force NoDelay and minimum interval.
             // this way UpdateSeveralTimes() doesn't need to wait very long and
@@ -117,6 +121,7 @@ namespace ReunionMovement.Common.Util
         {
             this.Host = host;
             this.Port = port;
+            closed = false;
             client.Connect(Host, (ushort)port);
         }
 
@@ -155,6 +160,9 @@ namespace ReunionMovement.Common.Util
 
         public void Close()
         {
+            // 先标记关闭：Disconnect 后同帧 Tick 仍可能触发 handler，
+            // 此时 OnNext 已 Dispose 的 Subject 会抛 ObjectDisposedException
+            closed = true;
             client.Disconnect();
             // 清理 C# 事件处理器，避免 GC 无法回收订阅者
             onConnected = null;
@@ -174,11 +182,13 @@ namespace ReunionMovement.Common.Util
         }
         void OnDisconnectHandler()
         {
+            if (closed) return;
             onDisconnected?.Invoke();
             OnDisconnectedSubject.OnNext(Unit.Default);
         }
         void OnConnectHandler()
         {
+            if (closed) return;
             onConnected?.Invoke();
             OnConnectedSubject.OnNext(Unit.Default);
         }
@@ -188,6 +198,7 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         void OnReceiveDataHandler(ArraySegment<byte> arrSeg, KcpChannel channel)
         {
+            if (closed) return;
             var rcvLen = arrSeg.Count;
             if (rcvLen == 0) return;
 
@@ -200,6 +211,7 @@ namespace ReunionMovement.Common.Util
         }
         void OnErrorHandler(ErrorCode error, string reason)
         {
+            if (closed) return;
             var msg = $"{error}-{reason}";
             onError?.Invoke(msg);
             OnErrorSubject.OnNext(msg);

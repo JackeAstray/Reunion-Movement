@@ -28,6 +28,11 @@ namespace ReunionMovement.Core.UI
         // UI加载状态缓存（用于跟踪每个UI窗口的加载状态）
         private Dictionary<string, UILoadState> uiStateCache = new Dictionary<string, UILoadState>(32);
 
+        // 同名窗口并发加载去重：加载期间先登记 TCS，后续调用方等待同一任务，
+        // 避免双实例化 + uiStateCache.Add 键冲突抛异常导致孤儿窗口
+        private readonly Dictionary<string, UniTaskCompletionSource<UILoadState>> loadingWindows =
+            new Dictionary<string, UniTaskCompletionSource<UILoadState>>();
+
         #region R3 响应式事件（推荐新代码使用）
 
         /// <summary>UI 初始化完成事件</summary>
@@ -74,6 +79,12 @@ namespace ReunionMovement.Core.UI
             isInited = false;
             uiStateCache.Clear();
             uiControllerTypeCache.Clear();
+            // 取消在途的窗口加载（其完成回调会登记到已清空的缓存中）
+            foreach (var kvp in loadingWindows)
+            {
+                kvp.Value.TrySetCanceled();
+            }
+            loadingWindows.Clear();
             // 释放 R3 Subject（自动断开所有订阅）并置 null 以支持重初始化
             OnInitSubject?.Dispose();
             OnInitSubject = null;
@@ -319,44 +330,67 @@ namespace ReunionMovement.Core.UI
                 return existingState;
             }
 
-            GameObject prefab = null;
-            bool fromAddressables = false;
-
-            // 双轨：Addressables 优先
-            if (Config.AddressablesMode != AddressablesMode.Off)
+            // 并发去重：已有同名窗口在途加载，等待同一结果，避免双实例化与缓存键冲突
+            if (loadingWindows.TryGetValue(name, out var pending))
             {
-                prefab = await AddressableSystem.Instance.LoadAssetAsync<GameObject>(AddressableKeys.UIRoot + name);
-                fromAddressables = prefab != null;
-                if (prefab != null)
+                return await pending.Task;
+            }
+
+            var loadTcs = new UniTaskCompletionSource<UILoadState>();
+            loadingWindows[name] = loadTcs;
+            try
+            {
+                GameObject prefab = null;
+                bool fromAddressables = false;
+
+                // 双轨：Addressables 优先
+                if (Config.AddressablesMode != AddressablesMode.Off)
                 {
-                    Log.Debug("[UISystem] LoadWindowAsync({0}) 从 Addressables 加载成功: {1}", name, AddressableKeys.UIRoot + name);
+                    prefab = await AddressableSystem.Instance.LoadAssetAsync<GameObject>(AddressableKeys.UIRoot + name);
+                    fromAddressables = prefab != null;
+                    if (prefab != null)
+                    {
+                        Log.Debug("[UISystem] LoadWindowAsync({0}) 从 Addressables 加载成功: {1}", name, AddressableKeys.UIRoot + name);
+                    }
                 }
-            }
 
-            // 降级：Resources
-            if (prefab == null)
-            {
-                prefab = ResourcesSystem.Instance.Load<GameObject>(Config.UIPath + name);
-                if (prefab != null)
+                // 降级：Resources
+                if (prefab == null)
                 {
-                    Log.Debug("[UISystem] LoadWindowAsync({0}) 降级 Resources 加载成功: {1}", name, Config.UIPath + name);
+                    prefab = ResourcesSystem.Instance.Load<GameObject>(Config.UIPath + name);
+                    if (prefab != null)
+                    {
+                        Log.Debug("[UISystem] LoadWindowAsync({0}) 降级 Resources 加载成功: {1}", name, Config.UIPath + name);
+                    }
                 }
-            }
 
-            if (prefab == null)
+                if (prefab == null)
+                {
+                    Log.Error("[UISystem] LoadWindowAsync({0}) 加载失败（Addressables + Resources 均未命中）", name);
+                    loadTcs.TrySetResult(null);
+                    return null;
+                }
+
+                var uiObj = UnityEngine.Object.Instantiate(prefab);
+                // 实例化后释放源 Prefab 的 Addressables 引用（Resources 路径无引用计数，无需释放）
+                if (fromAddressables)
+                {
+                    AddressableSystem.Instance.ReleaseAsset(prefab);
+                }
+
+                var result = SetupLoadedWindow(uiObj, name, openWhenFinish, args);
+                loadTcs.TrySetResult(result);
+                return result;
+            }
+            catch (Exception ex)
             {
-                Log.Error("[UISystem] LoadWindowAsync({0}) 加载失败（Addressables + Resources 均未命中）", name);
-                return null;
+                loadTcs.TrySetException(ex);
+                throw;
             }
-
-            var uiObj = UnityEngine.Object.Instantiate(prefab);
-            // 实例化后释放源 Prefab 的 Addressables 引用（Resources 路径无引用计数，无需释放）
-            if (fromAddressables)
+            finally
             {
-                AddressableSystem.Instance.ReleaseAsset(prefab);
+                loadingWindows.Remove(name);
             }
-
-            return SetupLoadedWindow(uiObj, name, openWhenFinish, args);
         }
 
         /// <summary>
@@ -406,7 +440,15 @@ namespace ReunionMovement.Core.UI
 
             Log.Debug("OnInit UI {0}", uiBase.gameObject.name);
 
-            OnInitSubject.OnNext(uiBase);
+            // 订阅者异常隔离：坏订阅者不应中断 InitWindow 后续的开窗流程
+            try
+            {
+                OnInitSubject.OnNext(uiBase);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("OnInitSubject 订阅者异常（已隔离）: {0}", ex.Message);
+            }
 
             if (open)
             {
@@ -470,7 +512,15 @@ namespace ReunionMovement.Core.UI
                         uiBase.OnOpen(args);
                     }, $"OnOpen UI {uiBase.gameObject.name}");
 
-                    OnOpenSubject.OnNext(uiBase);
+                    // 订阅者异常隔离：坏订阅者不应中断重复打开流程
+                    try
+                    {
+                        OnOpenSubject.OnNext(uiBase);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error("OnOpenSubject 订阅者异常（已隔离）: {0}", ex.Message);
+                    }
                 });
                 return;
             }
@@ -486,7 +536,15 @@ namespace ReunionMovement.Core.UI
                     uiBase.OnOpen(args);
                 }, $"OnOpen UI {uiBase.gameObject.name}");
 
-                OnOpenSubject.OnNext(uiBase);
+                // 订阅者异常隔离：坏订阅者不应中断开窗流程
+                try
+                {
+                    OnOpenSubject.OnNext(uiBase);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("OnOpenSubject 订阅者异常（已隔离）: {0}", ex.Message);
+                }
             });
         }
 
@@ -617,7 +675,15 @@ namespace ReunionMovement.Core.UI
 
                     Log.Debug(string.Format("OnSet UI {0}, cost {1}", uiBase.gameObject.name, setElapsed));
 
-                    OnSetSubject.OnNext(uiBase);
+                    // 订阅者异常隔离：坏订阅者不应中断 SetWindow 流程
+                    try
+                    {
+                        OnSetSubject.OnNext(uiBase);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error("OnSetSubject 订阅者异常（已隔离）: {0}", ex.Message);
+                    }
                 });
             }
         }
@@ -660,7 +726,15 @@ namespace ReunionMovement.Core.UI
 
             uiState.uiWindow.OnClose();
 
-            OnCloseSubject.OnNext(uiState.uiWindow);
+            // 订阅者异常隔离：坏订阅者不应中断 CloseWindow 后续的窗口销毁
+            try
+            {
+                OnCloseSubject.OnNext(uiState.uiWindow);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("OnCloseSubject 订阅者异常（已隔离）: {0}", ex.Message);
+            }
 
             if (!uiState.isStaticUI)
             {

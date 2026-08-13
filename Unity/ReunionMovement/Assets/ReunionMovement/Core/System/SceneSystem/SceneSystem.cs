@@ -162,6 +162,12 @@ namespace ReunionMovement.Core.Scene
             beforeSceneLoadingCompletionCallback = null;
             sceneLoadingCompletionCallback = null;
             targetSceneName = null;
+            // 重置场景名缓存：引擎重建后场景已随引擎销毁卸载，残留的 currentSceneName
+            // 会让 LoadScene(同名) 误判“已加载”直接回调而跳过真实加载；
+            // previousSceneName 残留则使 LoadPreScene 跳向过期场景。
+            currentSceneName = null;
+            previousSceneName = null;
+            openLoad = false;
 
             // 释放 R3 Subject/ReactiveProperty（重置为 null 以便 Init 时重建）
             ProgressSubject?.Dispose();
@@ -464,8 +470,24 @@ namespace ReunionMovement.Core.Scene
             targetSceneName = null;
             // Clear() 可能已释放 Subject/ReactiveProperty（系统清理）,判空避免 NRE
             if (LoadState != null) LoadState.Value = SceneLoadState.Loaded;
-            SceneChangedSubject?.OnNext(currentSceneName);
-            SceneLoadedSubject?.OnNext(currentSceneName);
+            // 订阅者异常隔离：坏订阅者不应把“加载成功”沿调用链翻转成 Failed（LoadScene catch），
+            // 也不应阻断后续订阅者收到通知。
+            try
+            {
+                SceneChangedSubject?.OnNext(currentSceneName);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("SceneChangedSubject 订阅者异常（忽略）：{0}", ex);
+            }
+            try
+            {
+                SceneLoadedSubject?.OnNext(currentSceneName);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("SceneLoadedSubject 订阅者异常（忽略）：{0}", ex);
+            }
         }
 
         /// <summary>

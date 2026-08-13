@@ -1,6 +1,8 @@
 using System.Text;
+using UnityEngine;
+using UnityEngine.UI;
 
-namespace UnityEngine.UI.ImageExtensions
+namespace ReunionMovement.UI.ImageExtensions
 {
     /// <summary>
     /// 图像辅助类，提供用于生成精灵网格（包括填充与简单绘制）的实用函数。
@@ -47,7 +49,7 @@ namespace UnityEngine.UI.ImageExtensions
 
             Vector4 v = GetDrawingDimensions(preserveAspect, activeSprite, canvas, rectTransform);
             Vector4 uv = (activeSprite != null)
-                ? Sprites.DataUtility.GetOuterUV(activeSprite)
+                ? UnityEngine.Sprites.DataUtility.GetOuterUV(activeSprite)
                 : new Vector4(0, 0, 1, 1);
 
             Vector2 size = new Vector2(v.z - v.x, v.w - v.y);
@@ -101,7 +103,7 @@ namespace UnityEngine.UI.ImageExtensions
         {
             Vector4 v = GetDrawingDimensions(preserveAspect, activeSprite, canvas, rectTransform);
             Vector4 uv = (activeSprite != null)
-                ? Sprites.DataUtility.GetOuterUV(activeSprite)
+                ? UnityEngine.Sprites.DataUtility.GetOuterUV(activeSprite)
                 : new Vector4(0, 0, 1, 1);
             AddShadowQuad(vh, v, uv, color, shadowOffsetLocal, shadowScale, shadowFade);
         }
@@ -143,7 +145,7 @@ namespace UnityEngine.UI.ImageExtensions
             Vector4 fullBounds = v;
 
             Vector4 outer = activeSprite != null
-                ? Sprites.DataUtility.GetOuterUV(activeSprite)
+                ? UnityEngine.Sprites.DataUtility.GetOuterUV(activeSprite)
                 : new Vector4(0, 0, 1, 1);
 
             float tx0 = outer.x;
@@ -463,7 +465,7 @@ namespace UnityEngine.UI.ImageExtensions
             Canvas canvas,
             RectTransform rectTransform)
         {
-            var padding = activeSprite == null ? Vector4.zero : Sprites.DataUtility.GetPadding(activeSprite);
+            var padding = activeSprite == null ? Vector4.zero : UnityEngine.Sprites.DataUtility.GetPadding(activeSprite);
             var size = activeSprite == null
                 ? new Vector2(rectTransform.rect.width, rectTransform.rect.height)
                 : new Vector2(activeSprite.rect.width, activeSprite.rect.height);

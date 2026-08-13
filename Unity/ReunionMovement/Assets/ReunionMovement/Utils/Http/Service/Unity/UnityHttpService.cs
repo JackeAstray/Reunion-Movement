@@ -108,6 +108,13 @@ namespace ReunionMovement.Common.Util.HttpService
 
                 yield return unityWebRequest.SendWebRequest();
 
+                // 请求已被取消并释放（HttpMgr.Abort 路径下协程被 cts 掐断后仍可能恢复执行）：
+                // 直接结束协程，避免继续访问已 Dispose 的 UWR 抛异常、并刷出误导性的"SendAsync 异常"错误日志
+                if (unityHttpRequest.IsDisposed)
+                {
+                    yield break;
+                }
+
                 var response = new HttpResponse
                 {
                     url = unityWebRequest.url,

@@ -1,4 +1,5 @@
 using ReunionMovement.Common;
+using ReunionMovement.Common.Util;
 using Cysharp.Threading.Tasks;
 using System;
 using UnityEngine;
@@ -129,6 +130,9 @@ namespace ReunionMovement.Core
         /// </summary>
         private static async UniTask InitializeEngineAsync()
         {
+            // 启动早期启用全局错误捕获（崩溃日志落盘 + 可选上报），幂等
+            ErrorReporter.Initialize();
+
             // 若上次失败残留了 driver，先清理，避免重复 Driver
             if (driverGo != null)
             {

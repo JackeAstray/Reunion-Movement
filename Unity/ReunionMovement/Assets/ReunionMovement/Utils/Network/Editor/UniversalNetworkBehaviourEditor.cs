@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace ReunionMovement.Common.Util
+namespace ReunionMovement.Common.Util.EditorTools
 {
     [CustomEditor(typeof(UniversalNetworkBehaviour))]
     public class UniversalNetworkBehaviourEditor : Editor

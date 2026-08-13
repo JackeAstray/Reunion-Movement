@@ -35,6 +35,11 @@ namespace ReunionMovement.Core
             Engine?.OnAppFocus(focus);
         }
 
+        private void OnApplicationPause(bool pause)
+        {
+            Engine?.OnAppPause(pause);
+        }
+
         private void OnDestroy()
         {
             Engine?.Dispose();

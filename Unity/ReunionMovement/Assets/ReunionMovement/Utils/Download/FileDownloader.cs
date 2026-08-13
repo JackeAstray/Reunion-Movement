@@ -34,7 +34,7 @@ namespace ReunionMovement.Common.Util.Download
             Uris = uris?.ToArray() ?? Array.Empty<string>();
         }
 
-        internal readonly static SemaphoreLocker Locker = new SemaphoreLocker();
+        internal readonly SemaphoreLocker Locker = new SemaphoreLocker();
 
         internal int initialCount;
         internal int timeout = 6;
@@ -52,6 +52,9 @@ namespace ReunionMovement.Common.Util.Download
         internal string[] pendingUris = null;
         // 待处理 URI 的 FIFO 取队偏移量，代替每次 Skip().ToArray()。
         private int pendingOffset = 0;
+        // 被 Cancel(string uri) 标记为取消的 pendingUris 索引（按位置而非 URI 值，兼容重复 URI）。
+        // Cancel 只移除 executors 而不动 pendingUris，必须同步标记位置才能维持双队列 FIFO 对齐。
+        private readonly HashSet<int> cancelledPendingIndices = new HashSet<int>();
 
         #region Events/Actions
         public event Action OnDownloadsSuccess;
@@ -182,15 +185,27 @@ namespace ReunionMovement.Common.Util.Download
             // Uris 已在上方守卫保证非空非空数组，Clone 替代 LINQ ToArray
             pendingUris = (string[])Uris.Clone();
             pendingOffset = 0;
+            cancelledPendingIndices.Clear();
             numFilesRemaining = Uris.Length;
             startTime = Environment.TickCount;
             downloading = true;
+
+            // 二次 Download() 支持：上一轮下载结束后 executors 已被 Dispatch 清空，
+            // 通过 Uris setter 重建执行器队列（含 URI 过滤、事件订阅与请求头深拷贝），否则会卡死到超时。
+            if (executors.Count == 0)
+            {
+                executorsOld.Clear();
+                string[] currentUris = Uris;
+                Uris = currentUris;
+            }
 
             initialCount = Uris.Length;
             int threadCount = Math.Min(MaxConcurrency, numFilesRemaining);
             if (threadCount <= 0)
             {
                 Log.Error("{0}.错误：MaxConcurrency 需要大于 0", GetType().FullName);
+                // 回滚 downloading 状态，避免实例永久卡在 Downloading 状态无法再次调用
+                downloading = false;
                 return false;
             }
             var tasks = new List<UniTask<bool>>(threadCount);
@@ -205,12 +220,14 @@ namespace ReunionMovement.Common.Util.Download
             int maxWaitSeconds = Math.Max(30, Timeout * Uris.Length * 2);
             float waited = 0f;
             const float pollInterval = 0.1f;
+            bool timedOut = false;
 
             while (Downloading && !(DidError && !ContinueAfterFailure))
             {
                 if (waited >= maxWaitSeconds)
                 {
                     Log.Error("下载超时：已等待 {0} 秒，仍有 {1} 个文件未完成，强制取消下载", maxWaitSeconds, NumFilesRemaining);
+                    timedOut = true;
                     await Cancel();
                     break;
                 }
@@ -218,7 +235,9 @@ namespace ReunionMovement.Common.Util.Download
                 waited += pollInterval;
             }
 
-            return true;
+            // 返回真实结果：未超时 且（无失败 或 配置为容忍失败继续）才算成功。
+            // 修复：原先无条件 return true，超时/失败时调用方无法区分。
+            return !timedOut && (!DidError || ContinueAfterFailure);
         }
 
         /// <summary>
@@ -273,6 +292,15 @@ namespace ReunionMovement.Common.Util.Download
         /// </summary>
         internal UniTask<bool> Dispatch()
         {
+            // 跳过被 Cancel(string uri) 标记的位置，维持 pendingUris 与 executors 的 FIFO 对齐
+            // （Cancel 已从 executors 移除对应执行器并递减 numFilesRemaining，此处只推进偏移）
+            while (pendingUris != null && pendingOffset < pendingUris.Length &&
+                   cancelledPendingIndices.Contains(pendingOffset))
+            {
+                cancelledPendingIndices.Remove(pendingOffset);
+                pendingOffset++;
+            }
+
             if (pendingUris == null || pendingOffset >= pendingUris.Length)
             {
                 return ReturnFalseAsync();
@@ -311,6 +339,12 @@ namespace ReunionMovement.Common.Util.Download
                     n++;
                     treq.completed += (obj) =>
                     {
+                        // 取消后 HEAD 完成回调不再发起首块下载，避免取消后仍产生网络 IO 与文件写入
+                        if (!Downloading)
+                        {
+                            n--;
+                            return;
+                        }
                         var rv = idf.Download();
                         if (rv != null)
                         {
@@ -383,6 +417,7 @@ namespace ReunionMovement.Common.Util.Download
 
         internal async UniTask DispatchCompletion()
         {
+            bool invokeSuccess = false;
             await Locker.LockAsync(async () =>
             {
                 if (!Downloading)
@@ -399,11 +434,17 @@ namespace ReunionMovement.Common.Util.Download
                 }
                 else if (NumThreads == 0)
                 {
-                    OnDownloadsSuccess?.Invoke();
+                    invokeSuccess = true;
                     endTime = Environment.TickCount;
                     downloading = false;
                 }
             });
+
+            // 用户回调移出锁外：避免锁内执行用户代码导致的重入死锁（SemaphoreSlim 非可重入）
+            if (invokeSuccess)
+            {
+                OnDownloadsSuccess?.Invoke();
+            }
         }
 
         /// <summary>
@@ -413,6 +454,7 @@ namespace ReunionMovement.Common.Util.Download
         /// <returns></returns>
         internal async UniTask DispatchCompletion(IDownloadExecutor idf)
         {
+            bool invokeSuccess = false;
             await Locker.LockAsync(async () =>
             {
                 if (!Downloading)
@@ -423,6 +465,8 @@ namespace ReunionMovement.Common.Util.Download
 
                 if (idf.DidError)
                 {
+                    // 记录下载器级失败状态（Download() 据此返回结果，调用方可区分成败）
+                    didError = true;
                     numFilesRemaining = Math.Max(0, numFilesRemaining - 1);
                     if (ContinueAfterFailure && pendingOffset < pendingUris.Length)
                     {
@@ -447,12 +491,18 @@ namespace ReunionMovement.Common.Util.Download
                     }
                     else if (NumThreads == 0)
                     {
-                        OnDownloadsSuccess?.Invoke();
+                        invokeSuccess = true;
                         endTime = Environment.TickCount;
                         downloading = false;
                     }
                 }
             });
+
+            // 用户回调移出锁外（同上：避免锁内执行用户代码）
+            if (invokeSuccess)
+            {
+                OnDownloadsSuccess?.Invoke();
+            }
         }
 
         /// <summary>
@@ -505,12 +555,24 @@ namespace ReunionMovement.Common.Util.Download
         {
             OnCancelIndividual?.Invoke(uri);
 
-            var exec = FindExecutor(executors, uri);
-            if (exec != null)
+            int idx = FindExecutorIndex(executors, uri);
+            if (idx >= 0)
             {
+                var exec = executors[idx];
                 exec.Cancel();
-                executors.Remove(exec);
+                executors.RemoveAt(idx);
                 executorsOld.Add(exec);
+
+                // 关键修复：同步标记 pendingUris 对应位置为跳过，否则 Dispatch 取到的
+                // URI 与 executors[0] 错位 → 文件被写到错误执行器的路径/请求头，甚至卡死。
+                // executors 与 pendingUris[pendingOffset..] 严格对齐，故对应索引为 pendingOffset + idx。
+                int pendingIndex = pendingOffset + idx;
+                if (pendingUris != null && pendingIndex < pendingUris.Length)
+                {
+                    cancelledPendingIndices.Add(pendingIndex);
+                }
+                // 该 URI 的任务被终结（未分发即无在途 UWR，不会再有 completed 回调递减计数）
+                numFilesRemaining = Math.Max(0, numFilesRemaining - 1);
             }
             else if (FindExecutor(executorsOld, uri) == null)
             {
@@ -557,6 +619,7 @@ namespace ReunionMovement.Common.Util.Download
             startTime = 0;
             endTime = 0;
             pendingOffset = 0;
+            cancelledPendingIndices.Clear();
             pendingUris = Array.Empty<string>();
             downloadedUris = new List<string>();
             incompletedUris = new List<string>();
@@ -575,6 +638,16 @@ namespace ReunionMovement.Common.Util.Download
                 if (list[i].Uri == uri) return list[i];
             }
             return null;
+        }
+
+        /// <summary>在 executor 列表中按 URI 查找索引（Cancel 需要索引以标记 pendingUris 对应位置）</summary>
+        private static int FindExecutorIndex(List<IDownloadExecutor> list, string uri)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (list[i].Uri == uri) return i;
+            }
+            return -1;
         }
     }
 }

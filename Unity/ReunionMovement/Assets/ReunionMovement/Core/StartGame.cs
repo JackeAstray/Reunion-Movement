@@ -1,4 +1,6 @@
 ﻿using ReunionMovement.Common;
+using ReunionMovement.Common.Util;
+using ReunionMovement.Common.Util.HttpService;
 using ReunionMovement.Common.Util.Timer;
 using ReunionMovement.Core.Base;
 using ReunionMovement.Core.EventMessage;
@@ -26,13 +28,9 @@ namespace ReunionMovement.Core
         /// 注册所有游戏模块。列表顺序决定初始化顺序（先注册的先初始化）。
         /// ResourcesSystem 必须在最前面（其他模块依赖它加载资源）。
         /// </summary>
-        /// <summary>
-        /// 注册所有游戏模块。列表顺序决定初始化顺序（先注册的先初始化）。
-        /// ResourcesSystem 必须在最前面（其他模块依赖它加载资源）。
-        /// </summary>
         public override IList<ICustomSystem> CreateModules()
         {
-            var modules = new List<ICustomSystem>(11);
+            var modules = new List<ICustomSystem>(13);
 
             modules.Add(ResourcesSystem.Instance);    // 0: 资源加载（同步/兜底，最高依赖）
             modules.Add(AddressableSystem.Instance);  // 1: Addressables（受管异步/远程）【新增】
@@ -45,6 +43,8 @@ namespace ReunionMovement.Core
             modules.Add(UIInputSystem.Instance);      // 8: UI 输入（需要 Update 驱动导航）
             modules.Add(UIToolkitSystem.Instance);    // 9: UI Toolkit
             modules.Add(TerminalSystem.Instance);     // 10: 终端（需要 Update 检测按键）
+            modules.Add(NetworkMgr.Instance);         // 11: 网络通道管理（需要 Update 消费移除队列）
+            modules.Add(HttpMgr.Instance);            // 12: HTTP 请求（需要 Update 轮询进度）
 
             return modules;
         }
