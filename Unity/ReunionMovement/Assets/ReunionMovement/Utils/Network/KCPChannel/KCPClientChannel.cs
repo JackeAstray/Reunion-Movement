@@ -69,6 +69,8 @@ namespace ReunionMovement.Common.Util
 
         public bool IsConnect { get { return client.connected; } }
 
+        public bool IsOpen { get { return client.connected; } }
+
         public int Port { get; private set; }
 
         public string Host { get; private set; }

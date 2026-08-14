@@ -21,6 +21,11 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         bool IsConnect { get; }
         /// <summary>
+        /// 发生错误回调（连接失败/传输异常等）；
+        /// 注意：错误之后通常会伴随 OnDisconnected，自动重连逻辑应挂在 OnDisconnected 中处理。
+        /// </summary>
+        event Action<string> OnError;
+        /// <summary>
         /// 与服务器连接
         /// </summary>
         /// <param name="host">地址</param>

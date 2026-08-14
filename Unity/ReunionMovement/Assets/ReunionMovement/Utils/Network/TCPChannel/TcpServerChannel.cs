@@ -8,6 +8,7 @@ namespace ReunionMovement.Common.Util
         Server server;
 
         public bool Active { get { return server.Active; } }
+        public bool IsOpen { get { return server.Active; } }
         Action onAbort;
         public event Action OnAbort
         {
@@ -30,6 +31,9 @@ namespace ReunionMovement.Common.Util
             add { server.OnDisconnected += value; }
             remove { server.OnDisconnected -= value; }
         }
+
+        /// <summary>错误事件（Telepathy 无内建错误上报，服务中止时派发 -1）</summary>
+        public event Action<int, string> OnError;
 
         public string ChannelName { get; set; }
 
@@ -94,6 +98,9 @@ namespace ReunionMovement.Common.Util
             onDataReceived = null;
             onAbort?.Invoke();
             onAbort = null;
+            // Telepathy 无内建错误上报：服务中止时向错误订阅者派发全局错误（-1）
+            OnError?.Invoke(-1, "TCP 服务中止");
+            OnError = null;
         }
         void OnReceiveDataHandler(int conv, ArraySegment<byte> arrSeg)
         {

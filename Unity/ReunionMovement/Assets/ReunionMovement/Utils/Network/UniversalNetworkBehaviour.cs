@@ -1,10 +1,6 @@
-﻿using Cysharp.Threading.Tasks;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading;
 using UnityEngine;
-using Mirror.SimpleWeb;
 using UnityEngine.Events;
 
 namespace ReunionMovement.Common.Util
@@ -15,13 +11,14 @@ namespace ReunionMovement.Common.Util
     public class IntEvent : UnityEvent<int> { }
 
     /// <summary>
-    /// 通用网络组件：可在 Inspector 切换 客户端/服务端 与 传输类型（TCP / KCP / WebSocket）。
-    /// 设计为轻量可扩展的封装，示例用途；生产环境请根据需求扩展错误处理、重连、线程安全等。
+    /// 通用网络组件：可在 Inspector 切换 客户端/服务端 与 传输类型（TCP / KCP / WebSocket / RawTCP）。
+    /// 内部基于 NetworkClient / NetworkServer（状态机、自动重连、心跳、消息分发、RPC），
+    /// 高级用法可通过 Client / Server 属性直接访问底层 API。
     /// </summary>
     public partial class UniversalNetworkBehaviour : MonoBehaviour
     {
         public enum Mode { Client, Server }
-        public enum Transport { TCP, KCP, WebSocket }
+        public enum Transport { TCP, KCP, WebSocket, RawTCP }
 
         [Header("模式")]
         public Mode mode = Mode.Client;
@@ -31,6 +28,10 @@ namespace ReunionMovement.Common.Util
         public string channelName = "UNET_CHANNEL";
         public string host = "127.0.0.1";
         public int port = 7778;
+
+        [Header("协议")]
+        [Tooltip("消息帧格式：MessageId(默认) / LengthPrefixed / LengthPrefixedWithId / Passthrough；RawTCP 建议 LengthPrefixed")]
+        public NetworkCodecType codec = NetworkCodecType.MessageId;
 
         [Header("自动重连/心跳")]
         public bool autoReconnect = true;
@@ -70,24 +71,20 @@ namespace ReunionMovement.Common.Util
         public event Action<int, string> ServerError;
 
         // 服务器端连接跟踪
-        HashSet<int> clientIds = new HashSet<int>();
+        readonly HashSet<int> clientIds = new HashSet<int>();
 
-        // 客户端对象
-        TcpClientChannel tcpClient;
-        KcpClientChannel kcpClient;
-        SimpleWebClient swtClient;
+        // 底层高级客户端 / 服务端（由 StartClient / StartServer 创建）
+        NetworkClient networkClient;
+        NetworkServer networkServer;
 
-        // 服务端对象
-        TcpServerChannel tcpServer;
-        KcpServerChannel kcpServer;
-        SimpleWebServer swtServer;
+        /// <summary>底层客户端 API（未启动客户端时为 null；含消息分发、RPC、重连配置等高级能力）</summary>
+        public NetworkClient Client => networkClient;
 
-        // 内部状态
-        int reconnectAttempts = 0;
-        CancellationTokenSource reconnectCts;
-        CancellationTokenSource heartbeatCts;
-        // TCP 是否曾成功连接（用于区分"连接失败"与"正常断开",补齐 TCP 分支的 ClientError 契约）
-        bool tcpEverConnected;
+        /// <summary>底层服务端 API（未启动服务端时为 null）</summary>
+        public NetworkServer Server => networkServer;
+
+        /// <summary>服务端模式下已连接的客户端 ID 集合（只读）</summary>
+        public IReadOnlyCollection<int> ClientIds => clientIds;
 
         void Start()
         {
@@ -96,23 +93,10 @@ namespace ReunionMovement.Common.Util
 
         void Update()
         {
-            // 网络 Tick 始终在主线程驱动（NetworkMgr 无后台线程模式），
-            // 避免并发调用非线程安全的 kcp2k/Telepathy Tick 导致协议状态损坏
-            switch (transport)
-            {
-                case Transport.TCP:
-                    if (mode == Mode.Client && tcpClient != null) tcpClient.TickRefresh();
-                    if (mode == Mode.Server && tcpServer != null) tcpServer.TickRefresh();
-                    break;
-                case Transport.KCP:
-                    if (mode == Mode.Client && kcpClient != null) kcpClient.TickRefresh();
-                    if (mode == Mode.Server && kcpServer != null) kcpServer.TickRefresh();
-                    break;
-                case Transport.WebSocket:
-                    if (mode == Mode.Client && swtClient != null) swtClient.ProcessMessageQueue();
-                    if (mode == Mode.Server && swtServer != null) swtServer.ProcessMessageQueue();
-                    break;
-            }
+            // 网络 Tick 始终在主线程驱动（底层通道非线程安全），
+            // 事件（连接/断开/数据）在本帧内派发
+            if (networkClient != null) networkClient.Tick();
+            if (networkServer != null) networkServer.Tick();
         }
 
         void OnDestroy()
@@ -144,55 +128,30 @@ namespace ReunionMovement.Common.Util
         {
             Log.Info("停止所有网络连接...");
 
-            // 停止 UniTask 异步任务
-            reconnectCts?.Cancel();
-            reconnectCts?.Dispose();
-            reconnectCts = null;
-            heartbeatCts?.Cancel();
-            heartbeatCts?.Dispose();
-            heartbeatCts = null;
-            reconnectAttempts = 0;
-
-            // 客户端关闭并从 NetworkMgr 移除通道
-            if (tcpClient != null)
+            if (networkClient != null)
             {
-                SafeScheduleRemove(tcpClient);
-                try { tcpClient.Close(); } catch (System.Exception ex) { Log.Warning("TCP客户端关闭异常: {0}", ex.Message); }
-                tcpClient = null;
+                networkClient.Close();
+                networkClient = null;
             }
-            if (kcpClient != null)
+            if (networkServer != null)
             {
-                SafeScheduleRemove(kcpClient);
-                try { kcpClient.Close(); } catch (System.Exception ex) { Log.Warning("KCP客户端关闭异常: {0}", ex.Message); }
-                kcpClient = null;
+                networkServer.Stop();
+                networkServer = null;
             }
-            if (swtClient != null)
-            {
-                try { swtClient.Disconnect(); } catch (System.Exception ex) { Log.Warning("WS客户端断开异常: {0}", ex.Message); }
-                swtClient = null;
-            }
-
-            // 服务端关闭并从 NetworkMgr 移除通道
-            if (tcpServer != null)
-            {
-                SafeScheduleRemove(tcpServer);
-                try { tcpServer.Close(); } catch (System.Exception ex) { Log.Warning("TCP服务端关闭异常: {0}", ex.Message); }
-                tcpServer = null;
-            }
-            if (kcpServer != null)
-            {
-                SafeScheduleRemove(kcpServer);
-                try { kcpServer.Close(); } catch (System.Exception ex) { Log.Warning("KCP服务端关闭异常: {0}", ex.Message); }
-                kcpServer = null;
-            }
-            if (swtServer != null)
-            {
-                try { swtServer.Stop(); } catch (System.Exception ex) { Log.Warning("WS服务端停止异常: {0}", ex.Message); }
-                swtServer = null;
-            }
-
             clientIds.Clear();
         }
 
+        /// <summary>Inspector 枚举 → 底层传输类型</summary>
+        internal static NetworkTransportType ToTransportType(Transport transport)
+        {
+            switch (transport)
+            {
+                case Transport.KCP: return NetworkTransportType.Kcp;
+                case Transport.WebSocket: return NetworkTransportType.WebSocket;
+                case Transport.RawTCP: return NetworkTransportType.RawTcp;
+                default: return NetworkTransportType.Tcp;
+            }
+        }
     }
 }
+

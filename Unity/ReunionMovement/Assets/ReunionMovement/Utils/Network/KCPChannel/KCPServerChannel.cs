@@ -54,6 +54,8 @@ namespace ReunionMovement.Common.Util
 
         public bool Active { get { return server.IsActive(); } }
 
+        public bool IsOpen { get { return server.IsActive(); } }
+
         public string ChannelName { get; set; }
 
         public string Host { get { return server.IPAddress; } }
