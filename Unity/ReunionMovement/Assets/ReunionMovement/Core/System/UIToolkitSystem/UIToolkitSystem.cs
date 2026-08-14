@@ -123,9 +123,17 @@ namespace ReunionMovement.Core.UIToolkit
 
             // 关闭所有面板。快照遍历：OnClose 是用户代码，若面板在 OnClose 中调用 ClosePanel
             // 修改 panelInstances，foreach 会抛 InvalidOperationException。
+            // 逐面板隔离：单个面板 OnClose 异常不应中断整轮清理（否则缓存清空与 Subject 释放被跳过）。
             foreach (var kvp in new List<KeyValuePair<string, UIToolkitPanel>>(panelInstances))
             {
-                kvp.Value?.OnClose();
+                try
+                {
+                    kvp.Value?.OnClose();
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("[UIToolkitSystem] Clear 时面板 {0} OnClose 异常（已隔离）: {1}", kvp.Key, ex.Message);
+                }
             }
             panelInstances.Clear();
             panelStack.Clear();
@@ -386,7 +394,15 @@ namespace ReunionMovement.Core.UIToolkit
         {
             if (!panelInstances.TryGetValue(panelName, out var panel)) return;
 
-            panel.OnClose();
+            // 用户 OnClose 异常隔离：不应中断 Remove/栈重建/事件派发流程
+            try
+            {
+                panel.OnClose();
+            }
+            catch (Exception ex)
+            {
+                Log.Error("[UIToolkitSystem] 面板 {0} OnClose 异常（已隔离）: {1}", panelName, ex.Message);
+            }
             panelInstances.Remove(panelName);
 
             // 从栈中移除（先从栈中重建）

@@ -1,5 +1,4 @@
 ﻿using Cysharp.Threading.Tasks;
-using ReunionMovement.Core;
 using ReunionMovement.Core.Base;
 using System.Collections.Generic;
 
@@ -252,7 +251,9 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         void Update()
         {
-            if (GameEngine.Current != null && GameEngine.Current.State == EngineState.Running) return;
+            // 引擎运行中由 ISystemUpdatable.Update 驱动，避免双重消费；
+            // 引擎未运行才用 MonoBehaviour Update 兜底
+            if (ModuleRuntime.IsEngineRunning) return;
             DrainRemoveQueue();
         }
 

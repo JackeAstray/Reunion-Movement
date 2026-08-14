@@ -1,0 +1,14 @@
+{
+    "name": "ReunionMovement.GenerateScript.AutoScripts",
+    "rootNamespace": "ReunionMovement",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

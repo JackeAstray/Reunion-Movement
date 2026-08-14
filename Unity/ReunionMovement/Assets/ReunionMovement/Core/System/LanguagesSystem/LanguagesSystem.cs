@@ -48,6 +48,8 @@ namespace ReunionMovement.Core.Languages
 
         private LanguagesContainer languagesContainer;
         private Dictionary<int, LanguagesConfig> languagesDict;
+        /// <summary>已上报过的缺失 ID（首次 Log.Error，后续静默，防止缺项配表运行时刷屏）</summary>
+        private readonly HashSet<int> missingKeysReported = new HashSet<int>();
         // 多语言枚举 → 文本字段选择器（避免 switch-case，支持扩展新语言）
         private static readonly Dictionary<Multilingual, Func<LanguagesConfig, string>> languageSelectors =
             new Dictionary<Multilingual, Func<LanguagesConfig, string>>
@@ -64,6 +66,9 @@ namespace ReunionMovement.Core.Languages
 
             // 重建 R3 ReactiveProperty（Clear() 已 Dispose 并置 null，重初始化时必须重建）
             CurrentLanguage ??= new ReactiveProperty<Multilingual>(Multilingual.ZH_CN);
+
+            // 重建字典时清空缺失键缓存：配表更新后允许重新上报缺失
+            missingKeysReported.Clear();
 
             // 从ScriptableObjects中获取文本
             languagesContainer = ResourcesSystem.Instance.Load<LanguagesContainer>("ScriptableObjects/LanguagesContainer");
@@ -151,7 +156,11 @@ namespace ReunionMovement.Core.Languages
                 }
                 else
                 {
-                    Log.Error("未找到ID为{0}的语言配置", number);
+                    // 首次缺失才报错，后续同 ID 静默返回，防止运行时反复刷屏
+                    if (missingKeysReported.Add(number))
+                    {
+                        Log.Error("未找到ID为{0}的语言配置", number);
+                    }
                 }
             }
             else

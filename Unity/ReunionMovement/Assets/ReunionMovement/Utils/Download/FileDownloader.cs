@@ -189,6 +189,9 @@ namespace ReunionMovement.Common.Util.Download
             numFilesRemaining = Uris.Length;
             startTime = Environment.TickCount;
             downloading = true;
+            // 重置跨轮统计：否则二次 Download() 后成功/失败 URI 列表翻倍
+            downloadedUris.Clear();
+            incompletedUris.Clear();
 
             // 二次 Download() 支持：上一轮下载结束后 executors 已被 Dispatch 清空，
             // 通过 Uris setter 重建执行器队列（含 URI 过滤、事件订阅与请求头深拷贝），否则会卡死到超时。
@@ -357,14 +360,11 @@ namespace ReunionMovement.Common.Util.Download
                         else
                         {
                             Log.Warning("Download for {0} returned null，未启动下载流程", idf.Uri);
-                            // 本分支已完成一次 Head 请求（n++ 已配对），若不递减 n，
-                            // NumThreads 永不归零 → OnDownloadsSuccess 永不触发
                             n--;
-                            // 继续分发下一个待下载的 URI，维持任务队列
-                            if (pendingUris != null && pendingOffset < pendingUris.Length)
-                            {
-                                _ = Dispatch();
-                            }
+                            // 走统一完成处理：递减 numFilesRemaining 并继续分发/完成检测。
+                            // 修复：旧逻辑只 n-- + Dispatch，numFilesRemaining 不减 →
+                            // “文件已存在跳过下载”（UWRExecutor 续传）场景会让队列挂起到超时。
+                            _ = DispatchCompletion(idf);
                         }
                     };
                 }
@@ -431,6 +431,15 @@ namespace ReunionMovement.Common.Util.Download
                 if (pendingOffset < pendingUris.Length)
                 {
                     await Dispatch();
+                    // Dispatch 可能因尾部全是取消标记/执行器耗尽而直接返回 false，
+                    // 此时若所有在途请求也已结束，必须补一次完成判定，
+                    // 否则 OnDownloadsSuccess 永不触发、Download() 拖到超时强杀。
+                    if (pendingOffset >= pendingUris.Length && NumThreads == 0)
+                    {
+                        invokeSuccess = true;
+                        endTime = Environment.TickCount;
+                        downloading = false;
+                    }
                 }
                 else if (NumThreads == 0)
                 {
@@ -565,9 +574,25 @@ namespace ReunionMovement.Common.Util.Download
 
                 // 关键修复：同步标记 pendingUris 对应位置为跳过，否则 Dispatch 取到的
                 // URI 与 executors[0] 错位 → 文件被写到错误执行器的路径/请求头，甚至卡死。
-                // executors 与 pendingUris[pendingOffset..] 严格对齐，故对应索引为 pendingOffset + idx。
-                int pendingIndex = pendingOffset + idx;
-                if (pendingUris != null && pendingIndex < pendingUris.Length)
+                // 注意：executors[idx] 对应的是 pendingUris 中【第 idx 个未被取消标记的位置】，
+                // 不能直接用 pendingOffset + idx（更早的取消标记位置未消费时会错位，
+                // 连续取消多个 URI 时会把后一个 URI 标到已标记位置上导致漏标）。
+                int pendingIndex = -1;
+                if (pendingUris != null)
+                {
+                    int remaining = idx;
+                    for (int i = pendingOffset; i < pendingUris.Length; i++)
+                    {
+                        if (cancelledPendingIndices.Contains(i)) continue;
+                        if (remaining == 0)
+                        {
+                            pendingIndex = i;
+                            break;
+                        }
+                        remaining--;
+                    }
+                }
+                if (pendingIndex >= 0)
                 {
                     cancelledPendingIndices.Add(pendingIndex);
                 }

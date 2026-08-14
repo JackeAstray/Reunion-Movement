@@ -77,29 +77,16 @@ namespace ReunionMovement.Common.Util
         /// 若直接 OnNext 已 Dispose 的 R3 Subject 会抛 ObjectDisposedException</summary>
         private bool closed = true;
 
-        protected static readonly KcpConfig DefaultConfig = new KcpConfig(
-            // force NoDelay and minimum interval.
-            // this way UpdateSeveralTimes() doesn't need to wait very long and
-            // tests run a lot faster.
-            NoDelay: true,
-            // not all platforms support DualMode.
-            // run tests without it so they work on all platforms.
-            DualMode: false,
-            Interval: 1, // 1ms so at interval code at least runs.
-            Timeout: 2000,
-
-            // large window sizes so large messages are flushed with very few
-            // update calls. otherwise tests take too long.
-            SendWindowSize: Kcp.WND_SND * 1000,
-            ReceiveWindowSize: Kcp.WND_RCV * 1000,
-
-            // congestion window _heavily_ restricts send/recv window sizes
-            // sending a max sized message would require thousands of updates.
-            CongestionWindow: false,
-
-            // maximum retransmit attempts until dead_link detected
-            // default * 2 to check if configuration works
-            MaxRetransmits: Kcp.DEADLINK * 2
+        /// <summary>
+        /// 生产默认 KCP 配置：使用 kcp2k 构造函数的生产默认值
+        /// （Interval:10ms / Timeout:10000ms / 默认窗口 WND_SND·WND_RCV / MaxRetransmits:DEADLINK），
+        /// 仅覆盖 NoDelay 与 DualMode。原测试参数（Interval:1、Timeout:2000、窗口 ×1000，
+        /// 注释标注 "tests run a lot faster"）会导致毫秒级高频轮询与 2 秒误断死链，不适用于生产网络。
+        /// 每次创建通道时新建实例，避免多通道共享可变配置。
+        /// </summary>
+        protected static KcpConfig CreateDefaultConfig() => new KcpConfig(
+            NoDelay: true,   // 低延迟推荐开启
+            DualMode: false  // 部分平台不支持 IPv4+IPv6 双栈
         );
 
         public KcpClientChannel(string channelName)
@@ -113,7 +100,7 @@ namespace ReunionMovement.Common.Util
                 OnReceiveDataHandler,
                 OnDisconnectHandler,
                 OnErrorHandler,
-                DefaultConfig
+                CreateDefaultConfig()
             );
         }
 

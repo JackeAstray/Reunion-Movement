@@ -41,6 +41,9 @@ namespace ReunionMovement.Core
 
         /// <summary>需要每帧 Update 的模块（预过滤，避免空调用）</summary>
         private readonly List<ISystemUpdatable> updatableModules = new List<ISystemUpdatable>();
+
+        /// <summary>需要固定步长 FixedUpdate 的模块（预过滤，避免空调用）</summary>
+        private readonly List<ISystemFixedUpdatable> fixedUpdateModules = new List<ISystemFixedUpdatable>();
         #endregion
 
         #region 游戏入口
@@ -132,6 +135,7 @@ namespace ReunionMovement.Core
             IsApplicationQuit = false;
             IsApplicationFocus = true;
             IsAppPlaying = false;
+            ModuleRuntime.IsEngineRunning = false;
         }
 
         /// <summary>
@@ -162,6 +166,7 @@ namespace ReunionMovement.Core
 
             // 失败重试时清空上次已注册的更新模块，避免重复添加导致模块每帧被 Update 多次
             updatableModules.Clear();
+            fixedUpdateModules.Clear();
 
             try
             {
@@ -185,6 +190,7 @@ namespace ReunionMovement.Core
                 // 完成
                 State = EngineState.Running;
                 IsAppPlaying = true;
+                ModuleRuntime.IsEngineRunning = true;
 
                 var elapsed = Time.realtimeSinceStartup - t0;
                 Log.Debug("[GameEngine] 初始化完成，总耗时: {0:F3}s", elapsed);
@@ -203,6 +209,7 @@ namespace ReunionMovement.Core
             catch (Exception ex)
             {
                 State = EngineState.Failed;
+                ModuleRuntime.IsEngineRunning = false;
                 string errorMsg = ex.InnerException?.Message ?? ex.Message;
                 Log.Error("[GameEngine] 初始化失败: {0}\n{1}", errorMsg, ex.StackTrace);
                 // 清理已成功初始化的模块（资源/UI/音效等），
@@ -242,6 +249,12 @@ namespace ReunionMovement.Core
                 if (module is ISystemUpdatable updatable)
                 {
                     updatableModules.Add(updatable);
+                }
+
+                // 预过滤：记录需要固定步长更新的模块（ISystemFixedUpdatable）
+                if (module is ISystemFixedUpdatable fixedUpdatable)
+                {
+                    fixedUpdateModules.Add(fixedUpdatable);
                 }
 
 #if UNITY_EDITOR
@@ -324,6 +337,33 @@ namespace ReunionMovement.Core
             }
         }
 
+        /// <summary>固定步长更新（由 GameEngineDriver.FixedUpdate 调用）</summary>
+        internal void OnFixedUpdate(float fixedDeltaTime)
+        {
+            if (State != EngineState.Running) return;
+
+            // 倒序遍历以便安全移除已失效模块；逐模块隔离异常（与 OnUpdate 策略一致）
+            for (int i = fixedUpdateModules.Count - 1; i >= 0; i--)
+            {
+                var module = fixedUpdateModules[i];
+                try
+                {
+                    // fake-null 防护：MonoBehaviour 模块被意外销毁后引用非 null 但已失效
+                    if (module is UnityEngine.Object unityObj && unityObj == null)
+                    {
+                        Log.Warning("[GameEngine] 移除已销毁的 FixedUpdate 模块: {0}", module.GetType().Name);
+                        fixedUpdateModules.RemoveAt(i);
+                        continue;
+                    }
+                    module.FixedUpdate(fixedDeltaTime);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("[GameEngine] 模块 FixedUpdate 异常（已隔离）: {0}, {1}", module.GetType().Name, ex.Message);
+                }
+            }
+        }
+
         /// <summary>应用退出（由 GameEngineDriver 调用）</summary>
         internal void OnAppQuit()
         {
@@ -382,7 +422,9 @@ namespace ReunionMovement.Core
             ClearModuleData();
 
             State = EngineState.Disposed;
+            ModuleRuntime.IsEngineRunning = false;
             updatableModules.Clear();
+            fixedUpdateModules.Clear();
             modules = null;
             GameEntry = null;
             Current = null;

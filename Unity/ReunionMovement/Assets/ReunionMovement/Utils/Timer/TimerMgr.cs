@@ -138,7 +138,7 @@ namespace ReunionMovement.Common.Util.Timer
         {
             // 仅在 GameEngine 未运行时使用 MonoBehaviour Update 驱动
             // GameEngine 运行时会通过 ISystemUpdatable.Update 驱动，避免双重调用
-            if (GameEngine.Current == null || GameEngine.Current.State != EngineState.Running)
+            if (!ModuleRuntime.IsEngineRunning)
             {
                 TickTimers(Time.deltaTime);
             }

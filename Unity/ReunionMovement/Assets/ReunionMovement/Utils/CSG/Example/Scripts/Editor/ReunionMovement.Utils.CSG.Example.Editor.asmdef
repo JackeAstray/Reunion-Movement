@@ -1,0 +1,19 @@
+{
+    "name": "ReunionMovement.Utils.CSG.Example.Editor",
+    "rootNamespace": "ReunionMovement.Common.Util.Example.Editor",
+    "references": [
+        "ReunionMovement.Utils",
+        "ReunionMovement.Common"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

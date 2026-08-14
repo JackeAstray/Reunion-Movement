@@ -58,29 +58,16 @@ namespace ReunionMovement.Common.Util
 
         public string Host { get { return server.IPAddress; } }
 
-        protected static readonly KcpConfig DefaultConfig = new KcpConfig(
-            // 强制使用 NoDelay 并设置最小间隔。
-            // 这样 UpdateSeveralTimes() 不需要等待很长时间，
-            // 测试运行得更快。
-            NoDelay: true,
-            // 并非所有平台都支持 DualMode。
-            // 不启用它以便在所有平台上都能运行测试。
-            DualMode: false,
-            Interval: 1, // 1 毫秒，确保定期间隔代码至少会运行。
-            Timeout: 2000,
-
-            // 增大窗口大小使大型消息可以用很少的刷新调用被发送，
-            // 否则测试会花费太长时间。
-            SendWindowSize: Kcp.WND_SND * 1000,
-            ReceiveWindowSize: Kcp.WND_RCV * 1000,
-
-            // 拥塞窗口会严重限制发送/接收窗口大小，
-            // 发送最大长度消息将需要成千上万次更新。
-            CongestionWindow: false,
-
-            // 最大重传尝试次数，超过则被判定为 dead_link。
-            // 将默认值乘以 2 来检查配置是否正常工作。
-            MaxRetransmits: Kcp.DEADLINK * 2
+        /// <summary>
+        /// 生产默认 KCP 配置：使用 kcp2k 构造函数的生产默认值
+        /// （Interval:10ms / Timeout:10000ms / 默认窗口 WND_SND·WND_RCV / MaxRetransmits:DEADLINK），
+        /// 仅覆盖 NoDelay 与 DualMode。原测试参数（Interval:1、Timeout:2000、窗口 ×1000，
+        /// 注释标注 "测试运行得更快"）会导致毫秒级高频轮询与 2 秒误断死链，不适用于生产网络。
+        /// 每次创建通道时新建实例，避免多通道共享可变配置。
+        /// </summary>
+        protected static KcpConfig CreateDefaultConfig() => new KcpConfig(
+            NoDelay: true,   // 低延迟推荐开启
+            DualMode: false  // 部分平台不支持 IPv4+IPv6 双栈
         );
 
         public KcpServerChannel(string channelName, ushort port)
@@ -96,7 +83,7 @@ namespace ReunionMovement.Common.Util
                 OnReceiveDataHandler,
                 (connectionId) => onDisconnected?.Invoke(connectionId),
                 OnErrorHandler,
-                DefaultConfig
+                CreateDefaultConfig()
             );
         }
 

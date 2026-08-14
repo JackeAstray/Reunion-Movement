@@ -143,6 +143,11 @@ namespace ReunionMovement.Core.Sound
                     soundConfigDict[config.Number] = config;
                 }
                 audioClipCache = new Dictionary<string, AudioClip>();
+                // 兜底同步 LRU 结构：手工连续 Init（不经 Clear）时旧链表/节点会残留，
+                // 在途任务写入新字典时产生重复 LinkedList 节点、驱逐顺序错乱
+                audioClipCacheOrder?.Clear();
+                audioClipCacheNodes?.Clear();
+                addressableClips.Clear();
             }
 
             CreatePools();
@@ -459,9 +464,12 @@ namespace ReunionMovement.Core.Sound
         /// 播放声音
         /// </summary>
         /// <param name="index">声音配置索引</param>
-        /// <param name="emitter">声音发射器</param>
+        /// <param name="emitter">声音发射器（3D 音效时建议传入，决定声源位置）</param>
         /// <param name="loop">是否循环</param>
-        public async UniTask PlaySfx(int index, Transform emitter = null, bool loop = false, float? volume = null, float pitch = 1f)
+        /// <param name="volume">音量（null 用全局设置）</param>
+        /// <param name="pitch">音高</param>
+        /// <param name="spatialBlend">3D 空间混合（0=纯 2D，1=纯 3D；>0 时未传 emitter 会在原点播放）</param>
+        public async UniTask PlaySfx(int index, Transform emitter = null, bool loop = false, float? volume = null, float pitch = 1f, float spatialBlend = 0f)
         {
             try
             {
@@ -478,11 +486,16 @@ namespace ReunionMovement.Core.Sound
                                 go.transform.SetParent(emitter);
                                 go.transform.localPosition = Vector3.zero;
                             }
+                            else if (spatialBlend > 0f)
+                            {
+                                // 3D 音效未指定发射器：提示并保持在世界原点播放
+                                Log.Warning("PlaySfx: 索引 {0} 的 spatialBlend>0 但未传 emitter，将在世界原点播放 3D 音效", index);
+                            }
                             SoundItem soundObj = go.GetComponent<SoundItem>();
                             if (soundObj != null)
                             {
                                 float effectiveVolume = volume ?? GameOption.CurrentOption.sfxVolume;
-                                soundObj.Processing(clip, emitter, loop, effectiveVolume, GameOption.CurrentOption.sfxMuted, pitch);
+                                soundObj.Processing(clip, emitter, loop, effectiveVolume, GameOption.CurrentOption.sfxMuted, pitch, spatialBlend);
                             }
                             else
                             {

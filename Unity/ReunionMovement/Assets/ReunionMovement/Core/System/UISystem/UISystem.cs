@@ -330,10 +330,13 @@ namespace ReunionMovement.Core.UI
                 return existingState;
             }
 
-            // 并发去重：已有同名窗口在途加载，等待同一结果，避免双实例化与缓存键冲突
+            // 并发去重：已有同名窗口在途加载，等待同一结果，避免双实例化与缓存键冲突。
+            // Clear() 会 TrySetCanceled 在途加载任务：按“加载失败”语义返回 null，
+            // 不向调用方抛 OperationCanceledException（SuppressCancellationThrow 返回 (IsCanceled, Result) 元组）。
             if (loadingWindows.TryGetValue(name, out var pending))
             {
-                return await pending.Task;
+                var (_, result) = await pending.Task.SuppressCancellationThrow();
+                return result;
             }
 
             var loadTcs = new UniTaskCompletionSource<UILoadState>();
@@ -352,6 +355,15 @@ namespace ReunionMovement.Core.UI
                     {
                         Log.Debug("[UISystem] LoadWindowAsync({0}) 从 Addressables 加载成功: {1}", name, AddressableKeys.UIRoot + name);
                     }
+                }
+
+                // Clear() 防护：await 期间系统可能被清理（UI 根节点已销毁、缓存已清空），
+                // 继续 Instantiate + 登记会把孤儿窗口写进新缓存或触发空引用
+                if (uiRoot == null)
+                {
+                    Log.Warning("[UISystem] LoadWindowAsync({0}) 中止：加载期间系统已清理", name);
+                    loadTcs.TrySetResult(null);
+                    return null;
                 }
 
                 // 降级：Resources

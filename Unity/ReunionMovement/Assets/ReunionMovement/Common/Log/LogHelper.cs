@@ -57,6 +57,8 @@ namespace ReunionMovement.Common
         private static int s_pendingWrites;
         /// <summary>每 N 条日志 flush 一次（平衡同步 IO 开销与日志丢失风险）</summary>
         private const int FileLogFlushInterval = 50;
+        /// <summary>日志文件保留数量（超出后按时间删除最旧的，防止无限增长耗尽存储）</summary>
+        private const int MaxLogFiles = 10;
 
         /// <summary>
         /// 是否启用文件日志输出。
@@ -96,6 +98,10 @@ namespace ReunionMovement.Common
                     s_logFilePath = Path.Combine(Application.persistentDataPath,
                         $"game_log_{DateTime.Now:yyyyMMdd_HHmmss}.log");
                     s_fileWriter = new StreamWriter(s_logFilePath, append: true) { AutoFlush = false };
+                    CleanupOldLogs(s_logFilePath);
+                    // 托管异常发生时立即落盘：崩溃/未捕获异常场景不保证走 OnApplicationQuit，
+                    // 逐条 flush 可最大限度保留崩溃前日志
+                    Application.logMessageReceived += OnLogMessageForFlush;
                 }
                 catch
                 {
@@ -124,6 +130,41 @@ namespace ReunionMovement.Common
                     }
                 }
                 catch { }
+            }
+        }
+
+        /// <summary>
+        /// 日志轮转：文件名内嵌时间戳（game_log_yyyyMMdd_HHmmss.log），字典序即时间序；
+        /// 仅保留最新 MaxLogFiles 个，防止日志无限增长耗尽存储。
+        /// </summary>
+        private static void CleanupOldLogs(string currentLogPath)
+        {
+            try
+            {
+                var dir = Path.GetDirectoryName(currentLogPath);
+                if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) return;
+                var files = Directory.GetFiles(dir, "game_log_*.log");
+                if (files.Length <= MaxLogFiles) return;
+                Array.Sort(files, (a, b) => string.CompareOrdinal(b, a)); // 倒序：最新在前
+                for (int i = MaxLogFiles; i < files.Length; i++)
+                {
+                    try { File.Delete(files[i]); } catch { /* 占用/权限失败忽略 */ }
+                }
+            }
+            catch
+            {
+                // 轮转失败不影响日志功能
+            }
+        }
+
+        /// <summary>
+        /// 托管异常（未捕获异常/崩溃前最后日志）即时落盘，缩小正常退出才能 flush 的窗口。
+        /// </summary>
+        private static void OnLogMessageForFlush(string logString, string stackTrace, LogType type)
+        {
+            if (type == LogType.Exception || type == LogType.Assert)
+            {
+                FlushFileLog();
             }
         }
 

@@ -1,5 +1,4 @@
 ﻿using Cysharp.Threading.Tasks;
-using ReunionMovement.Core;
 using ReunionMovement.Core.Base;
 using System;
 using System.Collections.Generic;
@@ -26,6 +25,19 @@ namespace ReunionMovement.Common.Util.HttpService
         private IReadOnlyDictionary<string, string> superHeadersReadOnlyCache;
         /// <summary>Update 进度轮询的复用快照数组（仅在扩容时分配，避免每帧分配）</summary>
         private IHttpRequest[] updateSnapshot = System.Array.Empty<IHttpRequest>();
+
+        /// <summary>并发上限：在途请求数达到上限后新请求进入等待队列按 FIFO 派发；<=0 表示不限</summary>
+        public int MaxConcurrentRequests = 8;
+
+        /// <summary>等待派发的请求队列（并发上限生效时使用）</summary>
+        private struct PendingHttpRequest
+        {
+            public IHttpRequest Request;
+            public Action<HttpResponse> OnSuccess;
+            public Action<HttpResponse> OnError;
+            public Action<HttpResponse> OnNetworkError;
+        }
+        private readonly Queue<PendingHttpRequest> pendingRequests = new Queue<PendingHttpRequest>();
 
         protected override void Awake()
         {
@@ -274,9 +286,93 @@ namespace ReunionMovement.Common.Util.HttpService
             Action<HttpResponse> onError = null,
             Action<HttpResponse> onNetworkError = null)
         {
+            // 并发上限：超限请求入队，待在途请求完成后按 FIFO 派发（避免无限开连接压垮网络层）
+            if (MaxConcurrentRequests > 0 && httpRequests.Count >= MaxConcurrentRequests)
+            {
+                Log.Debug("HttpMgr 并发上限 {0} 已达，请求 {1} 进入等待队列（队列长度 {2}）",
+                    MaxConcurrentRequests, request.GetType().Name, pendingRequests.Count + 1);
+                pendingRequests.Enqueue(new PendingHttpRequest
+                {
+                    Request = request,
+                    OnSuccess = onSuccess,
+                    OnError = onError,
+                    OnNetworkError = onNetworkError,
+                });
+                return;
+            }
+
             var cts = new CancellationTokenSource();
             httpRequests[request] = cts;
             SendAsync(request, cts, onSuccess, onError, onNetworkError).Forget();
+        }
+
+        /// <summary>
+        /// 带重试发送：网络错误（连接失败/超时）时按指数退避重试，HTTP 错误（4xx/5xx）不重试。
+        /// 通过 requestFactory 每次重试新建请求（UnityHttpRequest 的 UWR 不可重复发送）。
+        /// </summary>
+        /// <param name="requestFactory">请求工厂（每次重试都会重新调用）</param>
+        /// <param name="maxRetries">网络错误最大重试次数（总发送次数 = maxRetries + 1）</param>
+        /// <param name="retryDelaySeconds">首次重试等待秒数（指数退避 ×2）</param>
+        public void SendWithRetry(Func<IHttpRequest> requestFactory, int maxRetries = 3, float retryDelaySeconds = 1f,
+            Action<HttpResponse> onSuccess = null, Action<HttpResponse> onError = null, Action<HttpResponse> onNetworkError = null)
+        {
+            if (requestFactory == null)
+            {
+                throw new ArgumentException("requestFactory 不能为 null");
+            }
+            SendWithRetryAsync(requestFactory, Mathf.Max(0, maxRetries), Mathf.Max(0f, retryDelaySeconds),
+                onSuccess, onError, onNetworkError).Forget();
+        }
+
+        /// <summary>带重试发送的实现（UniTask 驱动，指数退避）</summary>
+        private async UniTaskVoid SendWithRetryAsync(Func<IHttpRequest> requestFactory, int maxRetries, float retryDelaySeconds,
+            Action<HttpResponse> onSuccess, Action<HttpResponse> onError, Action<HttpResponse> onNetworkError)
+        {
+            float delay = retryDelaySeconds;
+            for (int attempt = 0; attempt <= maxRetries; attempt++)
+            {
+                IHttpRequest request;
+                try
+                {
+                    request = requestFactory();
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("HttpMgr.SendWithRetry 创建请求失败: {0}", ex.Message);
+                    return;
+                }
+
+                // 单次尝试的结果信号（回调只转发一次，避免重复触发）
+                var tcs = new UniTaskCompletionSource<HttpResponse>();
+                bool networkFailed = false;
+                try
+                {
+                    Send(request,
+                        resp => { networkFailed = false; tcs.TrySetResult(resp); },
+                        resp => { networkFailed = false; tcs.TrySetResult(resp); },
+                        resp => { networkFailed = true; tcs.TrySetResult(resp); });
+
+                    var resp = await tcs.Task;
+                    if (!networkFailed || attempt >= maxRetries)
+                    {
+                        // 最终结果：按类别转发回调
+                        if (networkFailed) onNetworkError?.Invoke(resp);
+                        else if (resp.isSuccessful) onSuccess?.Invoke(resp);
+                        else onError?.Invoke(resp);
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("HttpMgr.SendWithRetry 第 {0} 次尝试异常: {1}", attempt + 1, ex.Message);
+                    if (attempt >= maxRetries) return;
+                }
+
+                // 网络错误且未耗尽重试：指数退避后重试
+                Log.Warning("HttpMgr.SendWithRetry 网络错误，{0}s 后重试（{1}/{2}）", delay, attempt + 1, maxRetries);
+                await UniTask.Delay(TimeSpan.FromSeconds(delay), ignoreTimeScale: true);
+                delay *= 2f;
+            }
         }
 
         /// <summary>
@@ -302,6 +398,26 @@ namespace ReunionMovement.Common.Util.HttpService
             {
                 // 请求完成：释放 CTS（Abort 路径的 Cancel+Dispose 与这里幂等，可重复调用）
                 cts.Dispose();
+                // 释放并发名额后，从等待队列派发下一个请求
+                TryDispatchNext();
+            }
+        }
+
+        /// <summary>从等待队列派发请求（在途数低于并发上限时按 FIFO 顺序逐个发送）</summary>
+        private void TryDispatchNext()
+        {
+            while (pendingRequests.Count > 0
+                   && (MaxConcurrentRequests <= 0 || httpRequests.Count < MaxConcurrentRequests))
+            {
+                var pending = pendingRequests.Dequeue();
+                // 排队期间被 Abort 释放的请求直接跳过（UnityHttpRequest.Dispose 后不可再发送）
+                if (pending.Request is UnityHttpRequest unityReq && unityReq.IsDisposed)
+                {
+                    continue;
+                }
+                var cts = new CancellationTokenSource();
+                httpRequests[pending.Request] = cts;
+                SendAsync(pending.Request, cts, pending.OnSuccess, pending.OnError, pending.OnNetworkError).Forget();
             }
         }
 
@@ -311,7 +427,9 @@ namespace ReunionMovement.Common.Util.HttpService
         /// </summary>
         public void Update()
         {
-            if (GameEngine.Current != null && GameEngine.Current.State == EngineState.Running) return;
+            // 引擎运行中由 ISystemUpdatable.Update 驱动，避免双重轮询；
+            // 引擎未运行（含运行前/销毁后）才用 MonoBehaviour Update 兜底
+            if (ModuleRuntime.IsEngineRunning) return;
             UpdateProgressPump();
         }
 
@@ -354,6 +472,10 @@ namespace ReunionMovement.Common.Util.HttpService
             // 取消路径下协程被 cts 掐断,UnityHttpService.Send 的 using 不会执行 → UWR 原生资源泄漏。
             // 在此显式 Dispose（正常完成路径由协程 using 负责,幂等）
             (request as IDisposable)?.Dispose();
+
+            // 若请求仍在等待队列中：已 Dispose 的请求会在派发时被跳过（见 TryDispatchNext），
+            // 此处顺带派发队列，避免名额空置
+            TryDispatchNext();
         }
     }
 }
