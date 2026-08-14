@@ -149,11 +149,27 @@ namespace ReunionMovement.UI.RippleAnimation
             if (!RenderOnTop)
             { ThisRipple.transform.SetAsFirstSibling(); }
 
-            //将波纹设置在正确的位置
+            //将波纹设置在正确的位置（屏幕坐标 → 父 RectTransform 本地坐标，兼容 Camera/WorldSpace 画布）
             if (StartAtCenter)
             { ThisRipple.transform.localPosition = new Vector2(0f, 0f); }
             else
-            { ThisRipple.transform.position = Position; }
+            {
+                var parentRt = transform as RectTransform;
+                var canvas = parentRt != null ? parentRt.GetComponentInParent<Canvas>() : null;
+                if (parentRt != null &&
+                    RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                        parentRt, Position,
+                        canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null,
+                        out var localPos))
+                {
+                    ThisRipple.transform.localPosition = localPos;
+                }
+                else
+                {
+                    // 兜底：异常挂载（无 RectTransform）时按屏幕坐标直接赋值（Overlay 画布下等价）
+                    ThisRipple.transform.position = Position;
+                }
+            }
 
             //在Ripple中设置参数并重置视觉状态（对象池复用后 Start 不会再次执行）
             var ripple = ThisRipple.GetComponent<Ripple>();

@@ -47,6 +47,12 @@ namespace ReunionMovement
             {
                 GetComponent();
             }
+            // 销毁旧根节点：仅 Clear 列表会泄漏 GameObject 与 Toggle 监听（数据刷新即累积泄漏）
+            for (int i = 0; i < treeRootNodes.Count; i++)
+            {
+                var oldNode = treeRootNodes[i];
+                if (oldNode != null) Destroy(oldNode.gameObject);
+            }
             treeRootNodes.Clear();
             foreach (var item in rootData)
             {

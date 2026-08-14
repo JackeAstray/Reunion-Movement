@@ -196,6 +196,17 @@ namespace ReunionMovement.Common.Util
 
         private void OnDestroy()
         {
+            // 取消在途动画：否则销毁后异步循环继续每帧访问已销毁对象，持续刷 MissingReferenceException
+            targetPosCts?.Cancel();
+            cameraViewCts?.Cancel();
+            cameraZoomCts?.Cancel();
+            targetPosCts?.Dispose();
+            cameraViewCts?.Dispose();
+            cameraZoomCts?.Dispose();
+            targetPosCts = null;
+            cameraViewCts = null;
+            cameraZoomCts = null;
+
             enhancedTouchRefCount = Mathf.Max(0, enhancedTouchRefCount - 1);
             if (enhancedTouchRefCount == 0)
             {

@@ -1,4 +1,5 @@
 ﻿using ReunionMovement.Common;
+using ReunionMovement.Common.Util;
 using System;
 using UnityEngine;
 using ReunionMovement.Core.Sound;
@@ -49,22 +50,8 @@ namespace ReunionMovement.Core
             #endregion
 
             #region UI 输入
-            // 键盘导航 —— 上
-            public string uiNavUp = "w";
-            // 键盘导航 —— 下
-            public string uiNavDown = "s";
-            // 键盘导航 —— 左
-            public string uiNavLeft = "a";
-            // 键盘导航 —— 右
-            public string uiNavRight = "d";
-            // 键盘提交/确认
-            public string uiSubmit = "enter";
-            // 键盘取消/返回
-            public string uiCancel = "escape";
-            // 切换到 UI 控制模式
-            public string uiToggleToUI = "tab";
-            // 退出 UI 控制模式
-            public string uiToggleToGameplay = "escape";
+            // 注意：按键绑定已收敛到 UIInputSystem.CurrentBinding（ui_bind_* PlayerPrefs 键），
+            // 此处不再保留重复字段 —— 避免两套配置源并存导致"改了字段但绑定不生效"的隐蔽陷阱。
             #endregion
         }
 
@@ -86,9 +73,14 @@ namespace ReunionMovement.Core
         /// <param name="forceReload">强制重新从 PlayerPrefs 读取（例如恢复默认后重新加载）</param>
         public static void LoadOptions(bool forceReload = false)
         {
+            // 守卫与标记放在 #if 之外：WebGL 目标下字段仍被读取，避免 CS0414 且保持幂等语义
             if (isLoaded && !forceReload) return;
             isLoaded = true;
 
+#if UNITY_WEBGL
+            // 与 SaveOptions 对称：WebGL 的 PlayerPrefs 为异步 IndexedDB，同步读取不可靠，跳过实际读取
+            return;
+#else
             const string jsonKey = "game_options_json";
             if (PlayerPrefs.HasKey(jsonKey))
             {
@@ -112,6 +104,7 @@ namespace ReunionMovement.Core
             // 无存档或反序列化失败，使用默认选项
             currentOption = new Option();
             ApplyOptions();
+#endif
         }
 
         /// <summary>
@@ -164,8 +157,17 @@ namespace ReunionMovement.Core
                 // - Screen.fullScreen → 需要用户手势触发，不能代码强制
                 // 因此跳过分辨率/全屏/垂直同步相关设置
 #else
-                // 分辨率与全屏
-                Screen.SetResolution(currentOption.resolutionWidth, currentOption.resolutionHeight, currentOption.fullscreen);
+                // 分辨率与全屏：ResolutionMgr 存在时作为唯一的分辨率应用入口，
+                // 避免两套系统启动时各自 SetResolution 一次互相覆盖
+                if (ResolutionMgr.IsInitialized)
+                {
+                    ResolutionMgr.Instance.ApplyResolutionFromOptions(
+                        currentOption.resolutionWidth, currentOption.resolutionHeight, currentOption.fullscreen);
+                }
+                else
+                {
+                    Screen.SetResolution(currentOption.resolutionWidth, currentOption.resolutionHeight, currentOption.fullscreen);
+                }
 
                 // 垂直同步
                 QualitySettings.vSyncCount = currentOption.vsync ? 1 : 0;
@@ -221,7 +223,7 @@ namespace ReunionMovement.Core
             }
         }
 
-        /// <summary>字段是否为需要走“重路径”的显示相关设置（变化时才会 SetResolution/SetQualityLevel）</summary>
+        /// <summary>字段是否为需要走“重路径”的显示相关设置（变化时才会 SetResolution/SetQualityLevel）。仅被已废弃的 ApplyOption 使用。</summary>
         private static bool IsHeavyDisplayField(string fieldName)
         {
             switch (fieldName)
@@ -239,13 +241,10 @@ namespace ReunionMovement.Core
         }
 
         /// <summary>
-        /// 获取单个选项
+        /// 获取单个选项（已废弃：全项目零调用点，与 JSON 存档体系并存易造成读写不一致）。
+        /// 运行中单字段修改请直接修改 <see cref="CurrentOption"/> 字段后调用 SaveOptions()。
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="key"></param>
-        /// <param name="defaultValue"></param>
-        /// <returns></returns>
-        /// <exception cref="NotSupportedException"></exception>
+        [Obsolete("已废弃：设置持久化统一走 SaveOptions/LoadOptions 的 JSON 体系")]
         public static T GetOption<T>(string key, T defaultValue)
         {
             return defaultValue switch
@@ -264,12 +263,9 @@ namespace ReunionMovement.Core
         }
 
         /// <summary>
-        /// 设置单个选项
+        /// 设置单个选项（已废弃：全项目零调用点，与 JSON 存档体系并存易造成读写不一致）。
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        /// <exception cref="NotSupportedException"></exception>
+        [Obsolete("已废弃：设置持久化统一走 SaveOptions/LoadOptions 的 JSON 体系")]
         public static void SetOption<T>(string key, T value)
         {
             switch (value)
@@ -285,8 +281,9 @@ namespace ReunionMovement.Core
         }
 
         /// <summary>
-        /// 设置单个选项并立即应用
+        /// 设置单个选项并立即应用（已废弃：全项目零调用点；反射按字段名定位，重命名即静默失效）。
         /// </summary>
+        [Obsolete("已废弃：设置持久化统一走 SaveOptions/LoadOptions 的 JSON 体系")]
         public static void ApplyOption<T>(string key, T value)
         {
             // 用反射按字段名更新 currentOption（字段名与 key 约定一致，见 Option 定义）。

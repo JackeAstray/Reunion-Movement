@@ -10,7 +10,8 @@ namespace ReunionMovement.Common.Util
     [DisallowMultipleComponent]
     public class AspectUtility : MonoBehaviour
     {
-        private static Camera backgroundCam;
+        // 实例字段：原为 static，多场景多实例共享时实例 A 销毁会连带销毁实例 B 的底衬相机
+        private Camera backgroundCam;
         private Camera cameraObj;
 
         // 上次的屏幕宽度和高度
@@ -84,7 +85,7 @@ namespace ReunionMovement.Common.Util
 
         private void OnDestroy()
         {
-            // 清理静态引用，防止场景卸载后保留已销毁对象的引用
+            // 清理本实例的底衬相机引用
             if (backgroundCam != null)
             {
                 Destroy(backgroundCam.gameObject);

@@ -1,5 +1,6 @@
 //此脚本是由工具自动生成，请勿手动创建
 
+using Cysharp.Threading.Tasks;
 using ReunionMovement.Common;
 using ReunionMovement.Common.Util;
 using ReunionMovement.Core.Terminal;
@@ -13,8 +14,8 @@ namespace ReunionMovement.Core.UI
 {
     public class TerminalUIPlane : UIController
     {
-        string openWindow = "TerminalUIPlane";
-        string closeWindow = "TerminalUIPlane";
+        string openWindow = UINames.Terminal;
+        string closeWindow = UINames.Terminal;
 
         string command;
         public Button clear;    //清除
@@ -25,6 +26,8 @@ namespace ReunionMovement.Core.UI
         public GameObject itemGo;
         // 终端条目的最大数量，防止无限增长导致内存泄漏
         private const int MaxTerminalItems = 100;
+        // 布局重建合批标记：高频刷屏时每条日志都 ForceRebuildLayoutImmediate 是 O(n²)，合并到下一帧执行
+        private bool layoutRebuildPending = false;
 
         public override void OnInit()
         {
@@ -45,12 +48,22 @@ namespace ReunionMovement.Core.UI
 
             clear.onClick.AddListener(() =>
             {
-                root.ClearChild();
+                // 清屏时必须跳过模板 itemGo：模板销毁后 Instantiate(itemGo) 抛 MissingReferenceException，终端永久失效
+                for (int i = root.transform.childCount - 1; i >= 0; i--)
+                {
+                    var child = root.transform.GetChild(i);
+                    if (child.gameObject == itemGo) continue;
+                    Destroy(child.gameObject);
+                }
+                if (root.TryGetComponent<RectTransform>(out var rootRt))
+                {
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(rootRt);
+                }
             });
 
             close.onClick.AddListener(() =>
             {
-                UISystem.Instance.CloseWindow("TerminalUIPlane");
+                UISystem.Instance.CloseWindow(UINames.Terminal);
             });
 
             input.onEndEdit.AddListener(OnEndEdit);
@@ -160,8 +173,20 @@ namespace ReunionMovement.Core.UI
                 terminalItem.SetText(str);
             }
 
-            // root 可能缺少 RectTransform（异常 Prefab），TryGetComponent 避免 NRE
-            if (root.TryGetComponent<RectTransform>(out var rootRt))
+            // 限帧合并布局重建：本帧只排一次，避免高频刷屏时的 O(n²) 全量重建
+            if (!layoutRebuildPending)
+            {
+                layoutRebuildPending = true;
+                RebuildLayoutNextFrameAsync().Forget();
+            }
+        }
+
+        /// <summary>下一帧统一重建一次布局（合批）</summary>
+        private async UniTaskVoid RebuildLayoutNextFrameAsync()
+        {
+            await UniTask.Yield(PlayerLoopTiming.PostLateUpdate);
+            layoutRebuildPending = false;
+            if (root != null && root.TryGetComponent<RectTransform>(out var rootRt))
             {
                 LayoutRebuilder.ForceRebuildLayoutImmediate(rootRt);
             }

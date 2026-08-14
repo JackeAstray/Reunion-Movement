@@ -119,7 +119,11 @@ namespace ReunionMovement.Common.Util.Timer
                 timer.Update(deltaTime);
                 if (timer.state == Timer.TimerState.Finished || timer.state == Timer.TimerState.Cancelled)
                 {
-                    toRemove.Add(timer);
+                    // 防御：快照中同一实例可能因回调重入被多次标记，Contains 防止重复添加
+                    if (!toRemove.Contains(timer))
+                    {
+                        toRemove.Add(timer);
+                    }
                 }
             }
 

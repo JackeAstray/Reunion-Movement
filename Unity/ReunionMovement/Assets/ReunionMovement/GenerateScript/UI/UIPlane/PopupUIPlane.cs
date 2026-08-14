@@ -13,8 +13,8 @@ namespace ReunionMovement.Core.UI
 {
     public class PopupUIPlane : UIController
     {
-        string openWindow = "PopupUIPlane";
-        string closeWindow = "PopupUIPlane";
+        string openWindow = UINames.Popup;
+        string closeWindow = UINames.Popup;
 
         public TextMeshProUGUI titleStr;
         public TextMeshProUGUI containerStr;
@@ -60,40 +60,40 @@ namespace ReunionMovement.Core.UI
                     Log.Error("PopupUIPlane: 未传入任何参数，窗口内容为空。");
                     break;
                 case 1:
-                    if (containerStr != null) containerStr.text = args[0] as string;
+                    if (containerStr != null) containerStr.text = args[0]?.ToString();
                     break;
                 case 2:
-                    if (titleStr != null) titleStr.text = args[0] as string;
-                    if (containerStr != null) containerStr.text = args[1] as string;
+                    if (titleStr != null) titleStr.text = args[0]?.ToString();
+                    if (containerStr != null) containerStr.text = args[1]?.ToString();
                     break;
                 case 3:
-                    if (titleStr != null) titleStr.text = args[0] as string;
-                    if (containerStr != null) containerStr.text = args[1] as string;
-                    if (confirmStr != null) confirmStr.text = args[2] as string;
+                    if (titleStr != null) titleStr.text = args[0]?.ToString();
+                    if (containerStr != null) containerStr.text = args[1]?.ToString();
+                    if (confirmStr != null) confirmStr.text = args[2]?.ToString();
                     if (confirmBtn != null) confirmBtn.gameObject.SetActive(true);
                     break;
                 case 4:
-                    if (titleStr != null) titleStr.text = args[0] as string;
-                    if (containerStr != null) containerStr.text = args[1] as string;
-                    if (confirmStr != null) confirmStr.text = args[2] as string;
-                    if (cancelStr != null) cancelStr.text = args[3] as string;
+                    if (titleStr != null) titleStr.text = args[0]?.ToString();
+                    if (containerStr != null) containerStr.text = args[1]?.ToString();
+                    if (confirmStr != null) confirmStr.text = args[2]?.ToString();
+                    if (cancelStr != null) cancelStr.text = args[3]?.ToString();
                     if (confirmBtn != null) confirmBtn.gameObject.SetActive(true);
                     if (cancelBtn != null) cancelBtn.gameObject.SetActive(true);
                     break;
                 case 5:
-                    if (titleStr != null) titleStr.text = args[0] as string;
-                    if (containerStr != null) containerStr.text = args[1] as string;
-                    if (confirmStr != null) confirmStr.text = args[2] as string;
-                    if (cancelStr != null) cancelStr.text = args[3] as string;
+                    if (titleStr != null) titleStr.text = args[0]?.ToString();
+                    if (containerStr != null) containerStr.text = args[1]?.ToString();
+                    if (confirmStr != null) confirmStr.text = args[2]?.ToString();
+                    if (cancelStr != null) cancelStr.text = args[3]?.ToString();
                     confirmAction = args[4] as Action;
                     if (confirmBtn != null) confirmBtn.gameObject.SetActive(true);
                     if (cancelBtn != null) cancelBtn.gameObject.SetActive(true);
                     break;
                 case 6:
-                    if (titleStr != null) titleStr.text = args[0] as string;
-                    if (containerStr != null) containerStr.text = args[1] as string;
-                    if (confirmStr != null) confirmStr.text = args[2] as string;
-                    if (cancelStr != null) cancelStr.text = args[3] as string;
+                    if (titleStr != null) titleStr.text = args[0]?.ToString();
+                    if (containerStr != null) containerStr.text = args[1]?.ToString();
+                    if (confirmStr != null) confirmStr.text = args[2]?.ToString();
+                    if (cancelStr != null) cancelStr.text = args[3]?.ToString();
                     confirmAction = args[4] as Action;
                     cancelAction = args[5] as Action;
                     if (confirmBtn != null) confirmBtn.gameObject.SetActive(true);
@@ -110,7 +110,6 @@ namespace ReunionMovement.Core.UI
                 cancelBtn.onClick.AddListener(() =>
                 {
                     cancelAction?.Invoke();
-                    closeWindow = "PopupUIPlane";
                     CloseWindow();
                 });
             }
@@ -121,7 +120,6 @@ namespace ReunionMovement.Core.UI
                 confirmBtn.onClick.AddListener(() =>
                 {
                     confirmAction?.Invoke();
-                    closeWindow = "PopupUIPlane";
                     CloseWindow();
                 });
             }
@@ -131,7 +129,6 @@ namespace ReunionMovement.Core.UI
                 closeBtn.onClick.RemoveAllListeners();
                 closeBtn.onClick.AddListener(() =>
                 {
-                    closeWindow = "PopupUIPlane";
                     CloseWindow();
                 });
             }

@@ -126,12 +126,16 @@ namespace ReunionMovement.Common.Util.Timer
 
             OnTick?.Invoke(time);
 
+            // OnTick 回调内可能调用 Cancel()：状态已变为 Cancelled 时不得继续触发完成分支
+            if (state != TimerState.Running) return;
+
             if ((isCountingDown && time <= 0f) || (!isCountingDown && elapsed >= duration))
             {
                 loopCount++;
                 if (isLoop && (maxLoop == 0 || loopCount < maxLoop))
                 {
-                    elapsed = 0f;
+                    // 保留溢出量避免长帧累积漂移（原实现归零会丢弃 elapsed-duration）
+                    elapsed = duration > 0f ? Mathf.Repeat(elapsed, duration) : 0f;
                     OnLoopCompleted?.Invoke(loopCount);
                 }
                 else

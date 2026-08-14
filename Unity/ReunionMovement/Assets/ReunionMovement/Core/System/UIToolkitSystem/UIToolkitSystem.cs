@@ -53,6 +53,10 @@ namespace ReunionMovement.Core.UIToolkit
         /// <summary>面板栈（用于层级管理、返回栈等）</summary>
         private readonly Stack<UIToolkitPanel> panelStack = new Stack<UIToolkitPanel>();
 
+        /// <summary>在途异步打开信号（并发去重：同名面板等待同一结果，避免双方各自实例化产生孤儿面板）</summary>
+        private readonly Dictionary<string, UniTaskCompletionSource<UIToolkitPanel>> loadingPanelTcs
+            = new Dictionary<string, UniTaskCompletionSource<UIToolkitPanel>>();
+
         /// <summary>面板 UXML 资源缓存（面板名 → VisualTreeAsset）</summary>
         private readonly Dictionary<string, VisualTreeAsset> panelAssetCache
             = new Dictionary<string, VisualTreeAsset>(32);
@@ -137,6 +141,13 @@ namespace ReunionMovement.Core.UIToolkit
             }
             panelInstances.Clear();
             panelStack.Clear();
+
+            // 完成并清空在途打开信号：等待中的 OpenPanelAsync 恢复后经 RootVisualElement==null 校验返回 null
+            foreach (var kvp in loadingPanelTcs)
+            {
+                kvp.Value.TrySetResult(null);
+            }
+            loadingPanelTcs.Clear();
             panelAssetCache.Clear();
             panelStyleCache.Clear();
 
@@ -179,9 +190,11 @@ namespace ReunionMovement.Core.UIToolkit
 
             if (panelSettings == null)
             {
-                // 没有 PanelSettings 资源 → 尝试用 Unity 内置默认值
-                Log.Warning("[UIToolkitSystem] 未找到 PanelSettings，将使用运行时默认设置。" +
-                    $"请在 Resources/{PANEL_SETTINGS_PATH} 下创建 PanelSettings 资源以获得更好的效果。");
+                // 没有 PanelSettings 资源 → 运行时新建兜底。
+                // 注意：Unity 6 下 CreateInstance 的 PanelSettings 无主题样式表时 UI 不渲染，
+                // 该降级路径实际不可用，必须报 Error 提示创建资源。
+                Log.Error("[UIToolkitSystem] 未找到 PanelSettings 资源（Resources/{0}），UI Toolkit 面板将无法渲染。" +
+                    "请在 Resources/{0} 下创建 PanelSettings 并绑定 Theme Style Sheet。", PANEL_SETTINGS_PATH);
                 panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
             }
 
@@ -216,10 +229,10 @@ namespace ReunionMovement.Core.UIToolkit
                 return;
             }
 
-            // 无可用主题 → 用户需在 Editor 中手动设置
-            Log.Warning(
-                "[UIToolkitSystem] ⚠ PanelSettings 缺少 Theme Style Sheet，UI 可能渲染异常！\n" +
-                "  → 解决方法：在 Unity Editor 中选中 GlobalPanelSettings 资源，\n" +
+            // 无可用主题 → 运行时 UI 整体不可见（非“渲染异常”级别），必须报错
+            Log.Error(
+                "[UIToolkitSystem] PanelSettings 缺少 Theme Style Sheet，UI Toolkit 面板将不渲染！\n" +
+                "  → 解决方法：在 Unity Editor 中选中 PanelSettings 资源，\n" +
                 "  → 将 Theme Style Sheet 字段设置为 Unity 默认主题文件。\n" +
                 "  → 默认主题通常位于：Packages/com.unity.ui/... 或创建一个 .tss 文件放入 Resources/UI/UIToolkit/GlobalTheme.tss");
         }
@@ -325,55 +338,83 @@ namespace ReunionMovement.Core.UIToolkit
                 return existing as T;
             }
 
-            // 异步加载 UXML
-            if (!panelAssetCache.TryGetValue(panelName, out var asset))
+            // 并发去重：同名面板正在加载中时等待同一结果（避免双方各自实例化产生孤儿面板）
+            if (loadingPanelTcs.TryGetValue(panelName, out var pending))
             {
-                asset = await ResourcesSystem.Instance
-                    .LoadAsync<VisualTreeAsset>($"{UXML_PATH_PREFIX}{panelName}", isCache: true);
+                var (_, concurrentPanel) = await pending.Task.SuppressCancellationThrow();
+                return concurrentPanel as T;
+            }
+
+            var myTcs = new UniTaskCompletionSource<UIToolkitPanel>();
+            loadingPanelTcs[panelName] = myTcs;
+            UIToolkitPanel result = null;
+            try
+            {
+                // 异步加载 UXML（缓存优先）
+                if (!panelAssetCache.TryGetValue(panelName, out var asset))
+                {
+                    asset = await ResourcesSystem.Instance
+                        .LoadAsync<VisualTreeAsset>($"{UXML_PATH_PREFIX}{panelName}", isCache: true);
+                    if (asset != null)
+                    {
+                        panelAssetCache[panelName] = asset;
+                    }
+                }
+
                 if (asset == null)
                 {
                     Log.Error("[UIToolkitSystem] 无法加载 UXML: Resources/{0}{1}", UXML_PATH_PREFIX, panelName);
                     return null;
                 }
-                panelAssetCache[panelName] = asset;
-            }
 
-            // await 期间系统可能被 Clear() 清理，恢复后需重新校验，避免 RootVisualElement 为 null 时 NRE
-            if (RootVisualElement == null)
+                // await 期间系统可能被 Clear() 清理，恢复后需重新校验
+                if (RootVisualElement == null)
+                {
+                    Log.Error("[UIToolkitSystem] OpenPanelAsync 失败：等待资源加载期间系统已清理");
+                    return null;
+                }
+
+                // 双重检查：await 期间另一调用可能已完成创建
+                if (panelInstances.TryGetValue(panelName, out var concurrent))
+                {
+                    concurrent.OnOpen(data);
+                    SafeOpenNotify(concurrent);
+                    result = concurrent;
+                    return concurrent as T;
+                }
+
+                // 实例化面板
+                var panel = new T();
+                panel.Initialize(panelName, asset, RootVisualElement, this);
+
+                // 异步加载面板样式
+                await LoadPanelStyleAsync(panelName, panel.Root);
+
+                // 样式加载期间再次校验（Clear 或重复打开）
+                if (RootVisualElement == null || panel.Root == null)
+                {
+                    Log.Error("[UIToolkitSystem] OpenPanelAsync 失败：样式加载期间系统已清理");
+                    return null;
+                }
+
+                panelInstances[panelName] = panel;
+                panelStack.Push(panel);
+
+                panel.OnOpen(data);
+                SafeOpenNotify(panel);
+
+                Log.Debug("[UIToolkitSystem] 打开面板: {0}", panelName);
+                result = panel;
+                return panel as T;
+            }
+            finally
             {
-                Log.Error("[UIToolkitSystem] OpenPanelAsync 失败：等待资源加载期间系统已清理");
-                return null;
+                if (loadingPanelTcs.TryGetValue(panelName, out var cur) && ReferenceEquals(cur, myTcs))
+                {
+                    loadingPanelTcs.Remove(panelName);
+                }
+                myTcs.TrySetResult(result);
             }
-            // 并发打开同一面板：另一调用已在 await 期间完成创建，直接复用
-            if (panelInstances.TryGetValue(panelName, out var concurrent))
-            {
-                concurrent.OnOpen(data);
-                SafeOpenNotify(concurrent);
-                return concurrent as T;
-            }
-
-            // 实例化面板
-            var panel = new T();
-            panel.Initialize(panelName, asset, RootVisualElement, this);
-
-            // 异步加载面板样式
-            await LoadPanelStyleAsync(panelName, panel.Root);
-
-            // 样式加载期间再次校验（Clear 或重复打开）
-            if (RootVisualElement == null || panel.Root == null)
-            {
-                Log.Error("[UIToolkitSystem] OpenPanelAsync 失败：样式加载期间系统已清理");
-                return null;
-            }
-
-            panelInstances[panelName] = panel;
-            panelStack.Push(panel);
-
-            panel.OnOpen(data);
-            SafeOpenNotify(panel);
-
-            Log.Debug("[UIToolkitSystem] 打开面板: {0}", panelName);
-            return panel;
         }
 
         /// <summary>
