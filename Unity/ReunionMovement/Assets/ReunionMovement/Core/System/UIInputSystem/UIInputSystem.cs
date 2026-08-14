@@ -213,6 +213,18 @@ namespace ReunionMovement.Core.UIInput
             CancelSubject?.Dispose();
             CancelSubject = null;
 
+            // 销毁 Instantiate 克隆的 InputActionAsset：LoadInputActionsAsync 每次克隆一份，
+            // 不销毁会随 Init/Clear 循环泄漏 ScriptableObject（不随场景卸载，驻留到 UnloadUnusedAssets）
+            if (inputActions != null)
+            {
+                if (inputModule != null && inputModule.actionsAsset == inputActions)
+                {
+                    inputModule.actionsAsset = null;
+                }
+                UnityEngine.Object.Destroy(inputActions);
+                inputActions = null;
+            }
+
             isInited = false;
         }
         #endregion
@@ -230,25 +242,50 @@ namespace ReunionMovement.Core.UIInput
             if (inputModule != null && inputModule.actionsAsset != null)
             {
                 inputActions = UnityEngine.Object.Instantiate(inputModule.actionsAsset);
-                return;
-            }
-
-            // 否则通过 ResourcesSystem 加载（需放在 Resources 文件夹下）
-            var loaded = ResourcesSystem.Instance.Load<InputActionAsset>("InputSystem_Actions");
-            if (loaded != null)
-            {
-                inputActions = UnityEngine.Object.Instantiate(loaded);
-                if (inputModule != null)
-                {
-                    inputModule.actionsAsset = inputActions;
-                }
             }
             else
             {
-                Log.Warning("UIInputSystem: 无法加载 InputSystem_Actions.inputactions，键盘导航将依赖默认绑定");
+                // 否则通过 ResourcesSystem 加载（需放在 Resources 文件夹下）
+                var loaded = ResourcesSystem.Instance.Load<InputActionAsset>("InputSystem_Actions");
+                if (loaded != null)
+                {
+                    inputActions = UnityEngine.Object.Instantiate(loaded);
+                    if (inputModule != null)
+                    {
+                        inputModule.actionsAsset = inputActions;
+                    }
+                }
+                else
+                {
+                    Log.Warning("UIInputSystem: 无法加载 InputSystem_Actions.inputactions，键盘导航将依赖默认绑定");
+                }
             }
 
+            // 恢复官方格式绑定快照（InputActionAsset.ToJson/LoadFromJson，完整保留手柄/composite override）
+            RestoreBindingsFromAssetJson();
+
             await UniTask.CompletedTask;
+        }
+
+        /// <summary>
+        /// 从官方 JSON 快照恢复 InputActionAsset 绑定覆盖（Input System 标准持久化方案）。
+        /// 快照不存在时静默跳过；恢复后 Init 的 ApplyBindingsToActions 仍会用 CurrentBinding 覆盖
+        /// （两者来源一致，不会打架）。
+        /// </summary>
+        private void RestoreBindingsFromAssetJson()
+        {
+            if (inputActions == null) return;
+            string json = PlayerPrefs.GetString("ui_bind_asset_json", null);
+            if (string.IsNullOrEmpty(json)) return;
+            try
+            {
+                inputActions.LoadFromJson(json);
+                Log.Debug("UIInputSystem: 已从官方 JSON 快照恢复绑定覆盖");
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("UIInputSystem: 绑定 JSON 快照恢复失败（将使用 PlayerPrefs 简化字段）: {0}", ex.Message);
+            }
         }
 
         /// <summary>
@@ -574,7 +611,10 @@ namespace ReunionMovement.Core.UIInput
 
             ApplyBindingsToActions();
             SaveBindings();
-            BindingChangedSubject.OnNext(CurrentBinding);
+            // Clear 后 Subject 为 null，判空避免 NRE（与 StartRebind 回调中的 ?. 一致）
+            BindingChangedSubject?.OnNext(CurrentBinding);
+
+            WarnBindingConflicts();
         }
 
         /// <summary>
@@ -585,8 +625,42 @@ namespace ReunionMovement.Core.UIInput
             CurrentBinding = new UIInputBinding();
             ApplyBindingsToActions();
             SaveBindings();
-            BindingChangedSubject.OnNext(CurrentBinding);
+            BindingChangedSubject?.OnNext(CurrentBinding);
             Log.Debug("UIInputSystem: 按键绑定已重置为默认值");
+        }
+
+        /// <summary>
+        /// 检测并告警按键冲突：同一按键绑定到多个操作（Submit/Cancel/切换键等）时提示，
+        /// 避免玩家按键互相覆盖导致输入行为异常。
+        /// </summary>
+        private void WarnBindingConflicts()
+        {
+            // 简易分组：keyName → 绑定该键的操作名列表（低频调用，分配可接受）
+            var map = new Dictionary<string, List<string>>();
+            void Register(string keyName, string actionName)
+            {
+                if (string.IsNullOrEmpty(keyName)) return;
+                if (!map.TryGetValue(keyName, out var list))
+                {
+                    list = new List<string>(2);
+                    map[keyName] = list;
+                }
+                list.Add(actionName);
+            }
+
+            Register(CurrentBinding.submit, "Submit");
+            Register(CurrentBinding.cancel, "Cancel");
+            Register(CurrentBinding.toggleToUI, "ToggleToUI");
+            Register(CurrentBinding.toggleToGameplay, "ToggleToGameplay");
+
+            foreach (var kv in map)
+            {
+                if (kv.Value.Count > 1)
+                {
+                    Log.Warning("UIInputSystem: 按键 [{0}] 同时绑定到 {1}，存在冲突，可能导致输入行为异常",
+                        kv.Key, string.Join("/", kv.Value));
+                }
+            }
         }
 
         #endregion
@@ -614,7 +688,9 @@ namespace ReunionMovement.Core.UIInput
         }
 
         /// <summary>
-        /// 保存按键绑定到 PlayerPrefs
+        /// 保存按键绑定到 PlayerPrefs（简化字段 + 官方 JSON 快照双写）。
+        /// 官方 JSON 快照（InputActionAsset.ToJson）完整保留手柄/composite override，
+        /// 供 LoadInputActionsAsync 恢复；简化字段保持向后兼容。
         /// </summary>
         public void SaveBindings()
         {
@@ -628,6 +704,24 @@ namespace ReunionMovement.Core.UIInput
             PlayerPrefs.SetString("ui_bind_cancel_display", CurrentBinding.cancelDisplayName);
             PlayerPrefs.SetString("ui_bind_toggle_ui", CurrentBinding.toggleToUI);
             PlayerPrefs.SetString("ui_bind_toggle_gameplay", CurrentBinding.toggleToGameplay);
+
+            // 官方 JSON 快照：重置时删除（ResetBindings 后不应残留旧覆盖）
+            if (inputActions != null)
+            {
+                try
+                {
+                    PlayerPrefs.SetString("ui_bind_asset_json", inputActions.ToJson());
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning("UIInputSystem: 绑定 JSON 快照保存失败: {0}", ex.Message);
+                }
+            }
+            else
+            {
+                PlayerPrefs.DeleteKey("ui_bind_asset_json");
+            }
+
             PlayerPrefs.Save();
         }
 

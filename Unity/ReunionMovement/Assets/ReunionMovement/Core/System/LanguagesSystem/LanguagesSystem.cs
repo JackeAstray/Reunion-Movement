@@ -149,7 +149,11 @@ namespace ReunionMovement.Core.Languages
                     // 使用字典映射代替 switch-case，便于扩展新语言
                     if (languageSelectors.TryGetValue(multilingual, out var selector))
                     {
-                        return selector(language);
+                        string text = selector(language);
+                        if (!string.IsNullOrEmpty(text)) return text;
+                        // 语言回退：目标语言缺失时回退中文，避免 UIText 显示空白
+                        if (!string.IsNullOrEmpty(language.ZH_CN)) return language.ZH_CN;
+                        return string.Empty;
                     }
                     // 默认返回中文
                     return language.ZH_CN;

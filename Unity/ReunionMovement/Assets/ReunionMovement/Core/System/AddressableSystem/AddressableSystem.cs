@@ -54,6 +54,13 @@ namespace ReunionMovement.Core.Resources
         private int loadCount;      // 累计加载/实例化次数
         private int releaseCount;   // 累计释放次数
         private int activeCount;    // 当前未释放数（load - release）
+
+        // 实例句柄表：InstantiateAsync 成功后登记，ReleaseInstance 优先按句柄释放。
+        // 目的：实例已被 Destroy 时 Unity 的 == null 短路会让 ReleaseInstance 无法查找句柄，
+        // 通过本表仍可正确释放 Addressables 引用计数（对象池销毁/场景卸载免底路径）。
+        private readonly Dictionary<GameObject, AsyncOperationHandle<GameObject>> instanceHandles
+            = new Dictionary<GameObject, AsyncOperationHandle<GameObject>>();
+        private readonly object instanceHandleLock = new object();
         #endregion
 
         /// <summary>
@@ -167,6 +174,28 @@ namespace ReunionMovement.Core.Resources
         {
             Log.Debug("AddressableSystem 清除数据");
             pendingUpdateCatalogs.Clear();
+
+            // 释放所有未配对释放的实例句柄，避免直接清零统计掩盖泄漏
+            lock (instanceHandleLock)
+            {
+                foreach (var kv in instanceHandles)
+                {
+                    if (kv.Value.IsValid())
+                    {
+                        try { Addressables.Release(kv.Value); } catch { }
+                        releaseCount++;
+                    }
+                }
+                instanceHandles.Clear();
+            }
+
+            // 加载/释放不平衡告警（正常应为 0；>0 说明存在泄漏调用方）
+            if (loadCount > releaseCount)
+            {
+                Log.Warning("AddressableSystem Clear: 存在 {0} 个未释放的资源（load={1}, release={2}）",
+                    loadCount - releaseCount, loadCount, releaseCount);
+            }
+
             loadCount = 0;
             releaseCount = 0;
             activeCount = 0;
@@ -260,6 +289,10 @@ namespace ReunionMovement.Core.Resources
                 }
                 Interlocked.Increment(ref loadCount);
                 Interlocked.Increment(ref activeCount);
+                lock (instanceHandleLock)
+                {
+                    instanceHandles[go] = handle;
+                }
                 return go;
             }
             catch (OperationCanceledException)
@@ -279,7 +312,9 @@ namespace ReunionMovement.Core.Resources
         /// <summary>释放 Addressables 加载的资源（与 LoadAssetAsync 成对）</summary>
         public void ReleaseAsset<T>(T asset) where T : Object
         {
-            if (asset == null) return;
+            // 仅真 null 跳过（(object) 判空绕开 Unity == 重载）：
+            // 已 Destroy 的资产也尝试释放，避免假 null 短路导致引用计数永久泄漏
+            if ((object)asset == null) return;
             try
             {
                 Addressables.Release(asset);
@@ -295,12 +330,38 @@ namespace ReunionMovement.Core.Resources
         /// <summary>释放 Addressables 实例化的 GameObject（与 InstantiateAsync 成对）</summary>
         public void ReleaseInstance(GameObject instance)
         {
-            if (instance == null) return;
+            // 仅真 null 跳过：已 Destroy 的实例（假 null）仍需释放句柄，否则引用计数永久泄漏
+            if ((object)instance == null) return;
+
+            AsyncOperationHandle<GameObject> handle = default;
+            bool hasTracked = false;
+            lock (instanceHandleLock)
+            {
+                hasTracked = instanceHandles.TryGetValue(instance, out handle);
+                if (hasTracked) instanceHandles.Remove(instance);
+            }
+
             try
             {
-                Addressables.ReleaseInstance(instance);
-                Interlocked.Increment(ref releaseCount);
-                Interlocked.Decrement(ref activeCount);
+                if (hasTracked)
+                {
+                    // 优先按句柄释放：实例已被 Destroy 也能正确释放（表项在 Destroy 前登记）
+                    if (handle.IsValid()) Addressables.Release(handle);
+                    Interlocked.Increment(ref releaseCount);
+                    Interlocked.Decrement(ref activeCount);
+                }
+                else if (instance != null)
+                {
+                    // 未经本系统 InstantiateAsync 创建（旧调用方）：回退标准释放
+                    Addressables.ReleaseInstance(instance);
+                    Interlocked.Increment(ref releaseCount);
+                    Interlocked.Decrement(ref activeCount);
+                }
+                else
+                {
+                    // 已销毁且无句柄记录：无法匹配句柄，仅告警（避免静默泄漏）
+                    Log.Warning("AddressableSystem.ReleaseInstance: 实例已销毁且无句柄记录，无法释放（请确保实例经 InstantiateAsync 创建）");
+                }
             }
             catch (Exception ex)
             {

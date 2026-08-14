@@ -54,6 +54,9 @@ namespace ReunionMovement.Core.UI
             if (confirmBtn != null) confirmBtn.gameObject.SetActive(false);
             if (cancelBtn != null) cancelBtn.gameObject.SetActive(false);
 
+            // args 可能为 null（OpenWindow 无参调用），与 TerminalUIPlane.OnSet 的判空保护保持一致
+            if (args == null) args = Array.Empty<object>();
+
             switch (args.Length)
             {
                 case 0:

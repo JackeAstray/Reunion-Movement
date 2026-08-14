@@ -27,9 +27,20 @@ namespace ReunionMovement.Common
 
                 lock (instanceLock)
                 {
+                    if (instance != null) return instance;
+                }
+
+                // 锁外创建：AddComponent 会同步触发子类 Awake（用户代码），
+                // 持锁执行用户代码可能形成锁序环（Awake 内再访问其他单例/等待工作线程）。
+                // 并发重复创建由 Awake→setter 的重复检测销毁多余实例。
+                var created = CreateInstance();
+
+                lock (instanceLock)
+                {
+                    // 正常路径 Awake/setter 已写入 instance（并触发创建事件）；此处兜底处理极端未写入场景
                     if (instance == null)
                     {
-                        instance = CreateInstance();
+                        instance = created;
                     }
                 }
                 return instance;
@@ -93,17 +104,40 @@ namespace ReunionMovement.Common
         /// <summary>
         /// 对象销毁时清空 instance，避免场景卸载后
         /// instance 仍指向已销毁对象（fake null）导致 MissingReferenceException。
+        /// 场景卸载自然销毁与手动 DestroyInstance 语义一致：锁外补发 OnInstanceDestroyed，
+        /// 依赖该事件做清理的订阅者不再被漏执行。
         /// </summary>
         protected virtual void OnDestroy()
         {
+            bool wasInstance = false;
             lock (instanceLock)
             {
                 // 仅当当前对象就是单例实例时才清空，避免误清新实例
                 if (instance == this as T)
                 {
                     instance = null;
+                    wasInstance = true;
                 }
             }
+            if (wasInstance)
+            {
+                OnInstanceDestroyed?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// 复位跨 Play 会话静态状态（关闭 Domain Reload 时静态字段与事件订阅会跨会话残留）。
+        /// 由 Bootstrap 的 RuntimeInitializeOnLoadMethod(SubsystemRegistration) 调用，
+        /// 需对每个具体单例类各调用一次（泛型静态字段按 T 独立）。
+        /// </summary>
+        public static void ResetStatics()
+        {
+            lock (instanceLock)
+            {
+                instance = null;
+            }
+            OnInstanceCreated = null;
+            OnInstanceDestroyed = null;
         }
 
         /// <summary>手动销毁单例</summary>

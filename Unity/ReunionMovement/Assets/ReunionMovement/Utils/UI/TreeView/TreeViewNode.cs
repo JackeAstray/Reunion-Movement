@@ -180,8 +180,9 @@ namespace ReunionMovement
             SetColor(data.layer);
             SetDisplayDecorate(data.displayDecorate);
 
-            // 清空旧的子节点引用（新数据将重新生成）
-            children.Clear();
+            // 回收旧的已展开子节点：走与 CloseChildren 相同的路径（移除监听 + 递归回收 + 推回对象池），
+            // 裸 Clear() 会使子节点 GameObject 变孤儿且 Toggle 监听残留，多次 Refresh 持续泄漏
+            CloseChildren();
         }
 
         /// <summary>

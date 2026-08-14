@@ -37,7 +37,8 @@ namespace ReunionMovement.Common.Util
         public Direction direction = Direction.Vertical;
         // 数据总条数
         public int totalCount = 0;
-        // 项间距
+        // 项间距（不得使 itemSize + spacing <= 0，否则滚动计算除零）
+        [Range(0f, 500f)]
         public float spacing = 0f;
         // 是否自动计算 extraBuffer（开启时会覆盖 Inspector 中的值）
         public bool autoCalculateExtraBuffer = true;
@@ -52,7 +53,8 @@ namespace ReunionMovement.Common.Util
         // 启用各方向的拉动触发
         public bool enablePullStart = true; // 对竖直为下拉刷新、横向为左拉刷新（视 content 起始端）
         public bool enablePullEnd = true;   // 对竖直为上拉加载、横向为右拉加载（视 content 末端）
-        // 判定阈值（像素）
+        // 判定阈值（像素，须 > 0，否则进度计算除零）
+        [Range(1f, 1000f)]
         public float pullThreshold = 50f;
         // 回调事件
         public UnityEvent onPullStart; // 下拉刷新 / 左拉刷新
@@ -157,6 +159,9 @@ namespace ReunionMovement.Common.Util
         void OnDisable()
         {
             scrollRect.onValueChanged.RemoveListener(OnScroll);
+            // 组件在拖拽中途被禁用（窗口关闭等）时 OnEndDrag 不会到达：
+            // 复位拖拽标记，避免重新启用后 OnScroll 每帧误跑指示器逻辑
+            isDragging = false;
         }
 
         void OnDestroy()
@@ -331,16 +336,18 @@ namespace ReunionMovement.Common.Util
             }
 
             int newFirst = 0;
+            // 运行时钳制：spacing 可能被外部赋负值使步长 <=0，FloorToInt 与循环重心化会除零/溢出
+            float step = Mathf.Max(0.001f, itemSize + spacing);
             if (direction == Direction.Vertical)
             {
                 // content.anchoredPosition.y 为滚动偏移（默认顶部为0向下是正）
                 float y = content.anchoredPosition.y;
-                newFirst = Mathf.FloorToInt(y / (itemSize + spacing));
+                newFirst = Mathf.FloorToInt(y / step);
             }
             else
             {
                 float x = -content.anchoredPosition.x; // 横向滚动时 anchoredPosition.x 方向与偏移反向
-                newFirst = Mathf.FloorToInt(x / (itemSize + spacing));
+                newFirst = Mathf.FloorToInt(x / step);
             }
 
             int effectiveTotal = enableLooping && totalCount > 0 ? totalCount * LOOP_CYCLES : totalCount;
@@ -358,7 +365,7 @@ namespace ReunionMovement.Common.Util
                     if (currentFirstIndex < firstBoundary)
                     {
                         // 向右移动一个 cycle 以回到中间
-                        float shift = totalCount * (itemSize + spacing);
+                        float shift = totalCount * step;
 
                         isRecentering = true;
                         StopScrollCoroutineIfAny();
@@ -381,7 +388,7 @@ namespace ReunionMovement.Common.Util
                     else if (currentFirstIndex >= secondBoundary)
                     {
                         // 向左移动一个 cycle
-                        float shift = totalCount * (itemSize + spacing);
+                        float shift = totalCount * step;
 
                         isRecentering = true;
                         StopScrollCoroutineIfAny();
@@ -403,8 +410,9 @@ namespace ReunionMovement.Common.Util
                     }
                 }
 
-                // 当不是由分页主动设置时，也可以计算当前页（用于初始化或直接滚动后的回调）
-                if (enablePaging && itemsPerPage > 0 && !enableLooping)
+                // 当不是由分页主动设置时，也可以计算当前页（用于初始化或直接滚动后的回调）。
+                // 拖拽中（未松手吸附）不通知：整数除法会产生中间页号导致指示器抖动，吸附完成时统一通知
+                if (enablePaging && itemsPerPage > 0 && !enableLooping && !isDragging)
                 {
                     int page = currentFirstIndex / itemsPerPage;
                     if (page != currentPage)
@@ -431,7 +439,7 @@ namespace ReunionMovement.Common.Util
                     // 仅在未进入刷新动作时更新进度
                     if (!isActionInProgressStart && pullStartIndicatorComp != null)
                     {
-                        float progress = Mathf.Clamp01(-offset / pullThreshold);
+                        float progress = Mathf.Clamp01(-offset / Mathf.Max(1f, pullThreshold));
                         pullStartIndicatorComp.OnPulling(progress);
                     }
                 }
@@ -448,7 +456,7 @@ namespace ReunionMovement.Common.Util
                     ShowPullEndIndicator();
                     if (!isActionInProgressEnd && pullEndIndicatorComp != null)
                     {
-                        float progress = Mathf.Clamp01((offset - maxOffset) / pullThreshold);
+                        float progress = Mathf.Clamp01((offset - maxOffset) / Mathf.Max(1f, pullThreshold));
                         pullEndIndicatorComp.OnPulling(progress);
                     }
                 }
@@ -634,14 +642,15 @@ namespace ReunionMovement.Common.Util
                 float offset = (direction == Direction.Vertical) ? content.anchoredPosition.y : -content.anchoredPosition.x;
 
                 // 如果用户触发了拉动刷新/加载（越界超过阈值），不进行分页吸附（让外部处理）
-                if (offset < -pullThreshold || offset > maxOffset + pullThreshold)
+                float threshold = Mathf.Max(1f, pullThreshold);
+                if (offset < -threshold || offset > maxOffset + threshold)
                 {
                     return;
                 }
 
                 // 以 itemsPerPage 和 itemSize 计算页大小（像素）
                 int safeItemsPerPage = Mathf.Max(1, itemsPerPage);
-                float pageSizePixels = safeItemsPerPage * (itemSize + spacing);
+                float pageSizePixels = Mathf.Max(0.001f, safeItemsPerPage * (itemSize + spacing));
 
                 // 计算最接近的页
                 int pageIndex = Mathf.RoundToInt(offset / pageSizePixels);
@@ -661,7 +670,8 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         void TryTriggerPullOnRelease()
         {
-            if (totalCount == 0) return;
+            // 注意：不再因 totalCount==0 提前返回——空列表下拉加载首屏数据是核心使用场景
+            // （content 小于 viewport 时 Elastic 模式仍可拉出负偏移）
 
             // 在循环模式下禁用拉动刷新/加载以避免与循环重心化逻辑冲突
             if (enableLooping) return;
@@ -671,9 +681,10 @@ namespace ReunionMovement.Common.Util
             float maxOffset = Mathf.Max(0f, contentSize - viewSize);
 
             float offset = (direction == Direction.Vertical) ? content.anchoredPosition.y : -content.anchoredPosition.x;
+            float threshold = Mathf.Max(1f, pullThreshold);
 
             // 起始端（顶部/左侧）超出
-            if (offset < -pullThreshold && enablePullStart && !isActionInProgressStart)
+            if (offset < -threshold && enablePullStart && !isActionInProgressStart)
             {
                 isActionInProgressStart = true;
                 // 显示起始端指示器（如果设置了预制体）
@@ -683,7 +694,7 @@ namespace ReunionMovement.Common.Util
                 onPullStart?.Invoke();
             }
             // 末端（底部/右侧）超出
-            else if (offset > maxOffset + pullThreshold && enablePullEnd && !isActionInProgressEnd)
+            else if (offset > maxOffset + threshold && enablePullEnd && !isActionInProgressEnd)
             {
                 isActionInProgressEnd = true;
                 // 显示末端指示器（如果设置了预制体）

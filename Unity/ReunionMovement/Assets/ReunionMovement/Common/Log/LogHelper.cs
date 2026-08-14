@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using Cysharp.Text;
 using ReunionMovement.Common;
 using UnityEngine;
@@ -73,6 +74,30 @@ namespace ReunionMovement.Common
             lock (s_fileLogLock)
             {
                 try { s_fileWriter?.Flush(); } catch { }
+            }
+        }
+
+        /// <summary>
+        /// 关闭文件日志：退订 logMessageReceived、Flush 并关闭写入器。
+        /// 由引擎 OnAppQuit 调用。修复：此前回调永不退订、StreamWriter 永不关闭，
+        /// 编辑器关闭 Domain Reload 时长会话文件句柄与静态回调持续泄漏。
+        /// 调用后若再次写日志会自动重新初始化（新会话新文件）。
+        /// </summary>
+        public static void Shutdown()
+        {
+            lock (s_fileLogLock)
+            {
+                if (!s_fileLogInitialized) return;
+                try
+                {
+                    Application.logMessageReceived -= OnLogMessageForFlush;
+                    s_fileWriter?.Flush();
+                    s_fileWriter?.Dispose();
+                }
+                catch { /* 关闭失败忽略 */ }
+                s_fileWriter = null;
+                s_pendingWrites = 0;
+                s_fileLogInitialized = false;
             }
         }
 
@@ -263,7 +288,8 @@ namespace ReunionMovement.Common
         private static void WriteToFileLine(LogLevel level, LogChannel channel, string message)
         {
             if (!EnableFileLog) return;
-            EnsureFileLogReady();
+            // 快速路径：已初始化时跳过 EnsureFileLogReady 的锁（每条日志原本两次加锁）
+            if (!Volatile.Read(ref s_fileLogInitialized)) EnsureFileLogReady();
             if (s_fileWriter == null) return;
 
             string channelStr = channel != LogChannel.General

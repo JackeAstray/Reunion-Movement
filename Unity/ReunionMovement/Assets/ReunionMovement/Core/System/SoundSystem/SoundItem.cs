@@ -47,7 +47,15 @@ namespace ReunionMovement.Core.Sound
             }
             else
             {
-                transform.parent = SoundSystem.Instance.sfxRoot.transform;
+                // sfxRoot 可能已被 SoundSystem.Clear() 销毁并置 null（在途 PlaySfx 的 await 恢复交错）：
+                // 判空并回收对象，避免 NRE 且防止已 Spawn 对象成为泄漏条目
+                var root = SoundSystem.Instance.sfxRoot;
+                if (root == null)
+                {
+                    SoundSystem.Instance.Recycle(gameObject);
+                    return;
+                }
+                transform.parent = root.transform;
             }
 
             transform.localPosition = Vector3.zero;

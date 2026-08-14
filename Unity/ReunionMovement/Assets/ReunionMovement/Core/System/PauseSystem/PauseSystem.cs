@@ -3,6 +3,7 @@ using R3;
 using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ReunionMovement.Core.Pause
@@ -37,6 +38,18 @@ namespace ReunionMovement.Core.Pause
         /// <summary>全局音频暂停是否由本系统设置（恢复时据此判断是否还原，避免覆盖 autoPause 的状态）</summary>
         private bool audioPausedByUs = false;
 
+        /// <summary>进入暂停前的外部时间缩放（慢动作等特效），恢复时还原而非无条件覆盖为 1</summary>
+        private float timeScaleBeforePause = 1f;
+
+        /// <summary>全局暂停原因键（SetPaused/TogglePause 兼容旧语义时使用）</summary>
+        private static readonly object GlobalPauseReason = new object();
+
+        /// <summary>
+        /// 暂停原因集合：多系统可同时请求暂停（各自携带原因对象），
+        /// 全部原因释放后才真正恢复——一方误释放不会打断其他系统的暂停。
+        /// </summary>
+        private readonly HashSet<object> pauseReasons = new HashSet<object>();
+
         public UniTask Init()
         {
             initProgress = 0;
@@ -51,16 +64,51 @@ namespace ReunionMovement.Core.Pause
         }
 
         /// <summary>
-        /// 设置暂停状态（幂等：同状态重复调用无副作用）。
+        /// 设置暂停状态（兼容旧 API，幂等：同状态重复调用无副作用）。
+        /// 等价于 RequestPause(全局键)/ReleasePause(全局键)。
+        /// 多个系统同时暂停时推荐使用 <see cref="RequestPause"/>/<see cref="ReleasePause"/> 携带各自原因对象。
         /// </summary>
         public void SetPaused(bool paused)
         {
+            if (paused) RequestPause(GlobalPauseReason);
+            else ReleasePause(GlobalPauseReason);
+        }
+
+        /// <summary>
+        /// 请求暂停：注册一个暂停原因（同一 reason 重复注册幂等）。
+        /// 只有所有原因都被 ReleasePause 释放后才真正恢复游戏。
+        /// </summary>
+        /// <param name="reason">原因标识对象（如请求暂停的系统实例；null 使用全局键）</param>
+        public void RequestPause(object reason)
+        {
             if (!isInited)
             {
-                Log.Warning("[PauseSystem] 系统未初始化，SetPaused 被忽略");
+                Log.Warning("[PauseSystem] 系统未初始化，RequestPause 被忽略");
                 return;
             }
-            if (IsPaused.Value == paused) return;
+            if (reason == null) reason = GlobalPauseReason;
+
+            if (pauseReasons.Count == 0)
+            {
+                ApplyPausedState(true);
+            }
+            pauseReasons.Add(reason);
+        }
+
+        /// <summary>释放一个暂停原因：全部原因释放后恢复游戏。</summary>
+        public void ReleasePause(object reason)
+        {
+            if (reason == null) reason = GlobalPauseReason;
+            if (pauseReasons.Remove(reason) && pauseReasons.Count == 0)
+            {
+                ApplyPausedState(false);
+            }
+        }
+
+        /// <summary>实际应用暂停/恢复状态（IsPaused 值变化时执行 timeScale/音频切换）</summary>
+        private void ApplyPausedState(bool paused)
+        {
+            if (IsPaused == null || IsPaused.Value == paused) return;
 
             try
             {
@@ -71,7 +119,16 @@ namespace ReunionMovement.Core.Pause
                 Log.Error("[PauseSystem] 订阅者异常（不影响暂停状态）: {0}", ex.Message);
             }
 
-            Time.timeScale = paused ? 0f : 1f;
+            // 进入暂停前记住外部时间缩放，恢复时还原（避免覆盖慢动作等特效设置的时间缩放）
+            if (paused)
+            {
+                timeScaleBeforePause = Time.timeScale;
+                Time.timeScale = 0f;
+            }
+            else
+            {
+                Time.timeScale = timeScaleBeforePause > 0f ? timeScaleBeforePause : 1f;
+            }
 
             if (pauseAudioOnPause)
             {
@@ -102,13 +159,23 @@ namespace ReunionMovement.Core.Pause
             if (IsPaused != null && IsPaused.Value)
             {
                 IsPaused.Value = false;
-                Time.timeScale = 1f;
+                Time.timeScale = timeScaleBeforePause > 0f ? timeScaleBeforePause : 1f;
             }
             if (audioPausedByUs)
             {
                 audioPausedByUs = false;
                 AudioListener.pause = false;
             }
+
+            timeScaleBeforePause = 1f;
+
+            // 清空全部暂停原因（引擎重建后重新计票）
+            pauseReasons.Clear();
+
+            // 释放 R3 对象并置 null：否则已销毁组件的订阅仍被 ReactiveProperty 持有（订阅者泄漏），
+            // 且与项目其他系统（UIInputSystem/LanguagesSystem）的 Clear 模式保持一致；Init 中 ??= 会重建
+            IsPaused?.Dispose();
+            IsPaused = null;
 
             isInited = false;
             initProgress = 0;

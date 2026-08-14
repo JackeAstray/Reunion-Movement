@@ -4,7 +4,9 @@ using ReunionMovement.Core.Resources;
 using Cysharp.Threading.Tasks;
 using R3;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace ReunionMovement.Core.EventMessage
 {
@@ -44,9 +46,11 @@ namespace ReunionMovement.Core.EventMessage
     }
 
     /// <summary>
-    /// 事件消息系统 —— 基于 R3 Subject&lt;T&gt; 的类型安全事件总线
+    /// 事件消息系统 —— 基于 R3 Subject&lt;T&gt; 的类型安全事件总线。
+    /// 主线程分发 + 后台线程自动入队（ISystemUpdatable.Update 排空），
+    /// 网络/下载回调线程可直接 DispatchEvent 而无需手动切主线程。
     /// </summary>
-    public class EventMessageSystem : ICustomSystem, ISystemDisposable
+    public class EventMessageSystem : ICustomSystem, ISystemDisposable, ISystemUpdatable
     {
         #region 单例与初始化
         private static readonly Lazy<EventMessageSystem> instance = new(() => new EventMessageSystem());
@@ -76,60 +80,149 @@ namespace ReunionMovement.Core.EventMessage
         private readonly Dictionary<(EventMessageType, System.Type), object> typedTrackers
             = new Dictionary<(EventMessageType, System.Type), object>();
 
+        /// <summary>
+        /// 字典访问锁：网络/下载回调线程可能 DispatchEvent，主线程同时订阅/清除会损坏字典。
+        /// 只保护字典结构，OnNext 在锁外执行（R3 Subject 内部自带并发保护）。
+        /// </summary>
+        private readonly object syncGate = new object();
+
+        // ============================================================
+        //  主线程投递队列（后台线程 DispatchEvent 自动入队，Update 排空）
+        // ============================================================
+        private readonly struct QueuedEvent
+        {
+            public readonly EventMessageType type;
+            public readonly EventData data;
+            public QueuedEvent(EventMessageType type, EventData data) { this.type = type; this.data = data; }
+        }
+
+        private readonly struct QueuedTypedEvent
+        {
+            public readonly (EventMessageType, System.Type) key;
+            public readonly object data;
+            public QueuedTypedEvent((EventMessageType, System.Type) key, object data) { this.key = key; this.data = data; }
+        }
+
+        private readonly ConcurrentQueue<QueuedEvent> pendingEvents = new ConcurrentQueue<QueuedEvent>();
+        private readonly ConcurrentQueue<QueuedTypedEvent> pendingTypedEvents = new ConcurrentQueue<QueuedTypedEvent>();
+
+        /// <summary>泛型通道的主线程调度器（key → 转回强类型并 OnNext），与 typedSubjects 同生命周期</summary>
+        private readonly Dictionary<(EventMessageType, System.Type), Action<object>> typedDispatchers
+            = new Dictionary<(EventMessageType, System.Type), Action<object>>();
+
+        /// <summary>待分发队列上限（防止系统停摆时后台事件无限堆积）</summary>
+        private const int MaxPendingEvents = 1024;
+
+        /// <summary>主线程 ID（Init 记录；0=未初始化，视为主线程以保持旧同步语义）</summary>
+        private int mainThreadId;
+
+        private bool IsMainThread => mainThreadId == 0 || Thread.CurrentThread.ManagedThreadId == mainThreadId;
+
+        /// <summary>包装单个监听器：异常只影响自身，不中断后续订阅者（Subject.OnNext 同步传播异常会中断订阅链）</summary>
+        private static void SafeInvoke(EventMessageType type, Action<EventData> listener, EventData data)
+        {
+            try
+            {
+                listener(data);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("EventMessageSystem 监听器异常（已隔离，不影响其他订阅者）: {0}, {1}", type, ex.Message);
+            }
+        }
+
+        /// <summary>泛型通道的单监听器异常隔离（与 SafeInvoke 对应）</summary>
+        private static void SafeInvokeTyped<T>(EventMessageType type, Action<EventData<T>> listener, EventData<T> data)
+        {
+            try
+            {
+                listener(data);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("EventMessageSystem 监听器异常（已隔离，不影响其他订阅者）: {0}, {1}", type, ex.Message);
+            }
+        }
+
         public UniTask Init()
         {
             initProgress = 100;
             isInited = true;
-            Log.Debug("EventMessageSystem 初始化完成 (R3)");
+            mainThreadId = Thread.CurrentThread.ManagedThreadId;
+            Log.Debug("EventMessageSystem 初始化完成 (R3 + 主线程投递队列)");
             return UniTask.CompletedTask;
+        }
+
+        /// <summary>
+        /// 主线程排空投递队列（由 GameEngine 以 ISystemUpdatable 驱动）。
+        /// 后台线程入队的事件在此按序同步分发，订阅者运行在主线程。
+        /// </summary>
+        public void Update(float logicTime, float realTime)
+        {
+            while (pendingEvents.TryDequeue(out var e))
+            {
+                DispatchEventCore(e.type, e.data);
+            }
+            while (pendingTypedEvents.TryDequeue(out var e))
+            {
+                DispatchTypedCore(e.key, e.data);
+            }
         }
 
         public void Clear()
         {
             Log.Debug("EventMessageSystem 清除数据");
 
-            // 释放所有订阅追踪
-            foreach (var kvp in subscriptionTrackers)
+            lock (syncGate)
             {
-                foreach (var disposable in kvp.Value.Values)
+                // 释放所有订阅追踪
+                foreach (var kvp in subscriptionTrackers)
                 {
-                    disposable?.Dispose();
-                }
-                kvp.Value.Clear();
-            }
-            subscriptionTrackers.Clear();
-
-            // 释放泛型零装箱通道的订阅追踪
-            // typedTrackers 的 value 是 Dictionary<Action<EventData<T>>, IDisposable>，
-            // 必须遍历内层字典的 Values 逐一 Dispose，不能直接将 Dictionary 当作 IDisposable。
-            foreach (var obj in typedTrackers.Values)
-            {
-                if (obj is System.Collections.IDictionary dict)
-                {
-                    foreach (var disposable in dict.Values)
+                    foreach (var disposable in kvp.Value.Values)
                     {
-                        if (disposable is IDisposable disp) disp.Dispose();
+                        disposable?.Dispose();
                     }
-                    dict.Clear();
+                    kvp.Value.Clear();
                 }
-            }
-            typedTrackers.Clear();
+                subscriptionTrackers.Clear();
 
-            foreach (var kvp in eventSubjects)
-            {
-                // OnCompleted 而非 Dispose：通知旧订阅者流结束。
-                // 已完成 Subject 再 Subscribe 不会抛 ObjectDisposedException（Dispose 会抛）。
-                kvp.Value?.OnCompleted();
-            }
-            eventSubjects.Clear();
+                // 释放泛型零装箱通道的订阅追踪
+                // typedTrackers 的 value 是 Dictionary<Action<EventData<T>>, IDisposable>，
+                // 必须遍历内层字典的 Values 逐一 Dispose，不能直接将 Dictionary 当作 IDisposable。
+                foreach (var obj in typedTrackers.Values)
+                {
+                    if (obj is System.Collections.IDictionary dict)
+                    {
+                        foreach (var disposable in dict.Values)
+                        {
+                            if (disposable is IDisposable disp) disp.Dispose();
+                        }
+                        dict.Clear();
+                    }
+                }
+                typedTrackers.Clear();
 
-            // 释放泛型零装箱 Subjects（泛型无法直接调用 OnCompleted，保持 Dispose；
-            // 通过 AddEventListenerTyped 追踪的订阅已在上方释放）
-            foreach (var obj in typedSubjects.Values)
-            {
-                if (obj is IDisposable disp) disp.Dispose();
+                foreach (var kvp in eventSubjects)
+                {
+                    // OnCompleted 而非 Dispose：通知旧订阅者流结束。
+                    // 已完成 Subject 再 Subscribe 不会抛 ObjectDisposedException（Dispose 会抛）。
+                    kvp.Value?.OnCompleted();
+                }
+                eventSubjects.Clear();
+
+                // 释放泛型零装箱 Subjects（泛型无法直接调用 OnCompleted，保持 Dispose；
+                // 通过 AddEventListenerTyped 追踪的订阅已在上方释放）
+                foreach (var obj in typedSubjects.Values)
+                {
+                    if (obj is IDisposable disp) disp.Dispose();
+                }
+                typedSubjects.Clear();
+                typedDispatchers.Clear();
+
+                // 清空待投递队列（避免残留闭包引用旧数据）
+                while (pendingEvents.TryDequeue(out _)) { }
+                while (pendingTypedEvents.TryDequeue(out _)) { }
             }
-            typedSubjects.Clear();
 
             isInited = false;
         }
@@ -139,12 +232,15 @@ namespace ReunionMovement.Core.EventMessage
         /// </summary>
         private Subject<EventData> GetOrCreateSubject(EventMessageType type)
         {
-            if (!eventSubjects.TryGetValue(type, out var subject))
+            lock (syncGate)
             {
-                subject = new Subject<EventData>();
-                eventSubjects[type] = subject;
+                if (!eventSubjects.TryGetValue(type, out var subject))
+                {
+                    subject = new Subject<EventData>();
+                    eventSubjects[type] = subject;
+                }
+                return subject;
             }
-            return subject;
         }
 
         /// <summary>
@@ -152,12 +248,15 @@ namespace ReunionMovement.Core.EventMessage
         /// </summary>
         private Dictionary<Action<EventData>, IDisposable> GetOrCreateTracker(EventMessageType type)
         {
-            if (!subscriptionTrackers.TryGetValue(type, out var tracker))
+            lock (syncGate)
             {
-                tracker = new Dictionary<Action<EventData>, IDisposable>(4);
-                subscriptionTrackers[type] = tracker;
+                if (!subscriptionTrackers.TryGetValue(type, out var tracker))
+                {
+                    tracker = new Dictionary<Action<EventData>, IDisposable>(4);
+                    subscriptionTrackers[type] = tracker;
+                }
+                return tracker;
             }
-            return tracker;
         }
 
         #region 公共 API（保持向后兼容）
@@ -171,14 +270,18 @@ namespace ReunionMovement.Core.EventMessage
         {
             if (listenerFunc == null) return;
 
-            var subject = GetOrCreateSubject(type);
-            var tracker = GetOrCreateTracker(type);
+            lock (syncGate)
+            {
+                var subject = GetOrCreateSubject(type);
+                var tracker = GetOrCreateTracker(type);
 
-            // O(1) 查重，避免重复订阅同一 handler
-            if (tracker.ContainsKey(listenerFunc)) return;
+                // O(1) 查重，避免重复订阅同一 handler
+                if (tracker.ContainsKey(listenerFunc)) return;
 
-            var disposable = subject.Subscribe(data => listenerFunc(data));
-            tracker[listenerFunc] = disposable;
+                // 逐监听器异常隔离：SafeInvoke 保证单个坏监听器不中断其他订阅者
+                var disposable = subject.Subscribe(data => SafeInvoke(type, listenerFunc, data));
+                tracker[listenerFunc] = disposable;
+            }
         }
 
         /// <summary>
@@ -190,11 +293,14 @@ namespace ReunionMovement.Core.EventMessage
         {
             if (listenerFunc == null) return;
 
-            if (subscriptionTrackers.TryGetValue(type, out var tracker)
-                && tracker.TryGetValue(listenerFunc, out var disposable))
+            lock (syncGate)
             {
-                disposable?.Dispose();
-                tracker.Remove(listenerFunc);
+                if (subscriptionTrackers.TryGetValue(type, out var tracker)
+                    && tracker.TryGetValue(listenerFunc, out var disposable))
+                {
+                    disposable?.Dispose();
+                    tracker.Remove(listenerFunc);
+                }
             }
         }
 
@@ -206,38 +312,38 @@ namespace ReunionMovement.Core.EventMessage
         /// <param name="data">事件数据</param>
         public void DispatchEvent<T>(EventMessageType eventType, T eventData)
         {
-            if (eventSubjects.TryGetValue(eventType, out var subject))
-            {
-                try
-                {
-                    subject.OnNext(new EventData(eventType, eventData));
-                }
-                catch (Exception ex)
-                {
-                    // 事件总线不信任订阅者：坏监听器不应中断分发调用方（如场景加载/战斗流程）
-                    Log.Error("DispatchEvent 监听器异常（已隔离）: {0}, {1}", eventType, ex.Message);
-                }
-            }
+            DispatchEvent(eventType, (object)eventData);
         }
 
         /// <summary>
-        /// 分发事件
+        /// 分发事件（主线程同步分发；后台线程自动入队由主线程 Update 分发）。
         /// </summary>
         /// <param name="eventType">事件类型</param>
         /// <param name="eventData">事件数据</param>
         public void DispatchEvent(EventMessageType eventType, object eventData)
         {
-            if (eventSubjects.TryGetValue(eventType, out var subject))
+            if (IsMainThread)
             {
-                try
-                {
-                    subject.OnNext(new EventData(eventType, eventData));
-                }
-                catch (Exception ex)
-                {
-                    Log.Error("DispatchEvent 监听器异常（已隔离）: {0}, {1}", eventType, ex.Message);
-                }
+                DispatchEventCore(eventType, new EventData(eventType, eventData));
+                return;
             }
+            // 后台线程：入队待主线程分发（避免非主线程触碰 Unity 对象/字典）
+            if (pendingEvents.Count >= MaxPendingEvents)
+            {
+                pendingEvents.TryDequeue(out _);
+            }
+            pendingEvents.Enqueue(new QueuedEvent(eventType, new EventData(eventType, eventData)));
+        }
+
+        /// <summary>主通道核心分发（调用方已确认主线程；订阅者由 SafeInvoke 隔离，异常不传播）</summary>
+        private void DispatchEventCore(EventMessageType eventType, EventData data)
+        {
+            Subject<EventData> subject;
+            lock (syncGate)
+            {
+                if (!eventSubjects.TryGetValue(eventType, out subject)) return;
+            }
+            subject.OnNext(data);
         }
 
         /// <summary>
@@ -247,23 +353,28 @@ namespace ReunionMovement.Core.EventMessage
         public void ClearEventTypeListeners(EventMessageType type)
         {
             bool removedAny = false;
-            if (subscriptionTrackers.TryGetValue(type, out var tracker))
+            lock (syncGate)
             {
-                foreach (var disposable in tracker.Values)
+                if (subscriptionTrackers.TryGetValue(type, out var tracker))
                 {
-                    disposable?.Dispose();
+                    foreach (var disposable in tracker.Values)
+                    {
+                        disposable?.Dispose();
+                    }
+                    tracker.Clear();
+                    subscriptionTrackers.Remove(type);
+                    removedAny = true;
                 }
-                tracker.Clear();
-                subscriptionTrackers.Remove(type);
-                removedAny = true;
-            }
 
-            if (eventSubjects.TryGetValue(type, out var subject))
-            {
-                subject?.Dispose();
-                eventSubjects.Remove(type);
-                Log.Debug("清除事件类型 {0} 的所有监听器", type);
-                removedAny = true;
+                if (eventSubjects.TryGetValue(type, out var subject))
+                {
+                    // 与 Clear() 语义一致：OnCompleted 而非 Dispose。
+                    // 外部持有旧 AsObservable 引用再 Subscribe 不会抛 ObjectDisposedException
+                    subject?.OnCompleted();
+                    eventSubjects.Remove(type);
+                    Log.Debug("清除事件类型 {0} 的所有监听器", type);
+                    removedAny = true;
+                }
             }
 
             // 仅当两个字典都不存在该类型时才告警（避免误报）
@@ -313,13 +424,18 @@ namespace ReunionMovement.Core.EventMessage
         private Subject<EventData<T>> GetOrCreateTypedSubject<T>(EventMessageType type)
         {
             var key = (type, typeof(T));
-            if (typedSubjects.TryGetValue(key, out var obj) && obj is Subject<EventData<T>> existing)
+            lock (syncGate)
             {
-                return existing;
+                if (typedSubjects.TryGetValue(key, out var obj) && obj is Subject<EventData<T>> existing)
+                {
+                    return existing;
+                }
+                var subject = new Subject<EventData<T>>();
+                typedSubjects[key] = subject;
+                // 注册主线程调度器：后台线程入队的 object 数据在主线程转回强类型并分发
+                typedDispatchers[key] = data => subject.OnNext(new EventData<T>(type, (T)data));
+                return subject;
             }
-            var subject = new Subject<EventData<T>>();
-            typedSubjects[key] = subject;
-            return subject;
         }
 
         /// <summary>
@@ -328,13 +444,16 @@ namespace ReunionMovement.Core.EventMessage
         private Dictionary<Action<EventData<T>>, IDisposable> GetOrCreateTypedTracker<T>(EventMessageType type)
         {
             var key = (type, typeof(T));
-            if (typedTrackers.TryGetValue(key, out var obj) && obj is Dictionary<Action<EventData<T>>, IDisposable> existing)
+            lock (syncGate)
             {
-                return existing;
+                if (typedTrackers.TryGetValue(key, out var obj) && obj is Dictionary<Action<EventData<T>>, IDisposable> existing)
+                {
+                    return existing;
+                }
+                var tracker = new Dictionary<Action<EventData<T>>, IDisposable>(4);
+                typedTrackers[key] = tracker;
+                return tracker;
             }
-            var tracker = new Dictionary<Action<EventData<T>>, IDisposable>(4);
-            typedTrackers[key] = tracker;
-            return tracker;
         }
 
         /// <summary>
@@ -347,13 +466,17 @@ namespace ReunionMovement.Core.EventMessage
         {
             if (listenerFunc == null) return;
 
-            var subject = GetOrCreateTypedSubject<T>(type);
-            var tracker = GetOrCreateTypedTracker<T>(type);
+            lock (syncGate)
+            {
+                var subject = GetOrCreateTypedSubject<T>(type);
+                var tracker = GetOrCreateTypedTracker<T>(type);
 
-            if (tracker.ContainsKey(listenerFunc)) return;
+                if (tracker.ContainsKey(listenerFunc)) return;
 
-            var disposable = subject.Subscribe(data => listenerFunc(data));
-            tracker[listenerFunc] = disposable;
+                // 逐监听器异常隔离（与主通道一致）
+                var disposable = subject.Subscribe(data => SafeInvokeTyped(type, listenerFunc, data));
+                tracker[listenerFunc] = disposable;
+            }
         }
 
         /// <summary>
@@ -364,12 +487,15 @@ namespace ReunionMovement.Core.EventMessage
             if (listenerFunc == null) return;
 
             var key = (type, typeof(T));
-            if (typedTrackers.TryGetValue(key, out var obj)
-                && obj is Dictionary<Action<EventData<T>>, IDisposable> tracker
-                && tracker.TryGetValue(listenerFunc, out var disposable))
+            lock (syncGate)
             {
-                disposable?.Dispose();
-                tracker.Remove(listenerFunc);
+                if (typedTrackers.TryGetValue(key, out var obj)
+                    && obj is Dictionary<Action<EventData<T>>, IDisposable> tracker
+                    && tracker.TryGetValue(listenerFunc, out var disposable))
+                {
+                    disposable?.Dispose();
+                    tracker.Remove(listenerFunc);
+                }
             }
         }
 
@@ -381,19 +507,28 @@ namespace ReunionMovement.Core.EventMessage
         /// <param name="eventData">事件数据</param>
         public void DispatchEventTyped<T>(EventMessageType eventType, T eventData)
         {
-            var key = (eventType, typeof(T));
-            if (typedSubjects.TryGetValue(key, out var obj)
-                && obj is Subject<EventData<T>> subject)
+            if (IsMainThread)
             {
-                try
-                {
-                    subject.OnNext(new EventData<T>(eventType, eventData));
-                }
-                catch (Exception ex)
-                {
-                    Log.Error("DispatchEventTyped 监听器异常（已隔离）: {0}, {1}", eventType, ex.Message);
-                }
+                DispatchTypedCore((eventType, typeof(T)), eventData);
+                return;
             }
+            // 后台线程：入队待主线程分发
+            if (pendingTypedEvents.Count >= MaxPendingEvents)
+            {
+                pendingTypedEvents.TryDequeue(out _);
+            }
+            pendingTypedEvents.Enqueue(new QueuedTypedEvent((eventType, typeof(T)), eventData));
+        }
+
+        /// <summary>泛型通道核心分发（调用方已确认主线程）</summary>
+        private void DispatchTypedCore((EventMessageType, System.Type) key, object data)
+        {
+            Action<object> dispatcher;
+            lock (syncGate)
+            {
+                if (!typedDispatchers.TryGetValue(key, out dispatcher)) return;
+            }
+            dispatcher(data);
         }
 
         /// <summary>

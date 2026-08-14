@@ -91,10 +91,10 @@ namespace ReunionMovement.Common.Util.Timer
                 timers[i].Resume();
         }
 
-        /// <summary>可选：清空所有计时器</summary>
+        /// <summary>清空所有计时器（与 Clear() 语义一致：逐个 Cancel 触发 OnCancelled 后清空）</summary>
         public void ClearAll()
         {
-            timers.Clear();
+            CancelAllTimers();
         }
 
         /// <summary>
@@ -116,7 +116,18 @@ namespace ReunionMovement.Common.Util.Timer
             for (int i = 0; i < tickSnapshot.Count; i++)
             {
                 var timer = tickSnapshot[i];
-                timer.Update(deltaTime);
+                try
+                {
+                    timer.Update(deltaTime);
+                }
+                catch (Exception ex)
+                {
+                    // 回调异常隔离：OnTick/OnCompleted 订阅者抛异常不中断本帧其余计时器，
+                    // 且必须保证下方 Finished/Cancelled 标记与移除逻辑执行（否则完成计时器永久残留列表）
+                    Log.Warning("TimerMgr: 计时器回调异常（已隔离并取消该计时器）: {0}", ex.Message);
+                    try { timer.Cancel(); }
+                    catch (Exception ex2) { Log.Warning("TimerMgr: OnCancelled 回调异常（已隔离）: {0}", ex2.Message); }
+                }
                 if (timer.state == Timer.TimerState.Finished || timer.state == Timer.TimerState.Cancelled)
                 {
                     // 防御：快照中同一实例可能因回调重入被多次标记，Contains 防止重复添加
