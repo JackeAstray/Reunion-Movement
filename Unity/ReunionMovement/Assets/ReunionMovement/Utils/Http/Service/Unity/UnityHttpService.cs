@@ -13,8 +13,9 @@ namespace ReunionMovement.Common.Util.HttpService
         /// <summary>
         /// 默认请求超时（秒）。UnityWebRequest.timeout 默认为 0（永不超时），
         /// 服务器无响应时请求会永久挂起，故未显式设置超时时使用此默认值。
+        /// 约定收口于 ReunionMovement.Common.Util.HttpDefaults（与 Utils/Download 下载体系共享）。
         /// </summary>
-        public const int DefaultTimeoutSeconds = 15;
+        public const int DefaultTimeoutSeconds = HttpDefaults.DefaultRequestTimeoutSeconds;
 
         public IHttpRequest Get(string uri)
         {

@@ -1,56 +1,9 @@
-﻿using Cysharp.Threading.Tasks;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System;
 
 namespace ReunionMovement.Common.Util.Download
 {
     /// <summary>
-    /// UniTask 扩展（零 GC）
-    /// </summary>
-    public static class TaskExtensions
-    {
-        public static async UniTask<TV> Then<T, TV>(this UniTask<T> task, Func<T, TV> then)
-        {
-            var result = await task;
-            return then(result);
-        }
-    }
-
-    /// <summary>
-    /// 下载执行器扩展
-    /// </summary>
-    public static class IDownloadExecutorExtensions
-    {
-        /// <summary>
-        /// 将两个IDownloadExecutor数组合并
-        /// </summary>
-        public static IDownloadExecutor[] Add(this IDownloadExecutor[] arr1, IDownloadExecutor[] arr2)
-        {
-            arr1 ??= Array.Empty<IDownloadExecutor>();
-            arr2 ??= Array.Empty<IDownloadExecutor>();
-            var result = new IDownloadExecutor[arr1.Length + arr2.Length];
-            Array.Copy(arr1, 0, result, 0, arr1.Length);
-            Array.Copy(arr2, 0, result, arr1.Length, arr2.Length);
-            return result;
-        }
-
-        /// <summary>
-        /// 出队列（移除第一个元素）
-        /// </summary>
-        public static IDownloadExecutor[] Dequeue(this IDownloadExecutor[] arr)
-        {
-            arr ??= Array.Empty<IDownloadExecutor>();
-            if (arr.Length <= 1) return Array.Empty<IDownloadExecutor>();
-            var result = new IDownloadExecutor[arr.Length - 1];
-            Array.Copy(arr, 1, result, 0, arr.Length - 1);
-            return result;
-        }
-    }
-
-    /// <summary>
-    /// string[]扩展
+    /// string[] 扩展（仅保留有调用点的成员；Then/Dequeue/执行器数组合并等无调用点成员已删除）
     /// </summary>
     public static class Extensions
     {
@@ -72,18 +25,6 @@ namespace ReunionMovement.Common.Util.Download
             var result = new string[arr1.Length + arr2.Length];
             Array.Copy(arr1, 0, result, 0, arr1.Length);
             Array.Copy(arr2, 0, result, arr1.Length, arr2.Length);
-            return result;
-        }
-
-        /// <summary>
-        /// 出队列（移除第一个元素）
-        /// </summary>
-        public static string[] Dequeue(this string[] arr)
-        {
-            arr ??= Array.Empty<string>();
-            if (arr.Length <= 1) return Array.Empty<string>();
-            var result = new string[arr.Length - 1];
-            Array.Copy(arr, 1, result, 0, arr.Length - 1);
             return result;
         }
     }

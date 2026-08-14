@@ -401,7 +401,12 @@ namespace ReunionMovement.Core.UI
             }
             finally
             {
-                loadingWindows.Remove(name);
+                // 仅移除自己的条目：Clear() 后可能有新的同名加载登记了新 TCS，
+                // 无条件 Remove 会误删新条目导致其等待者永久挂起
+                if (loadingWindows.TryGetValue(name, out var cur) && ReferenceEquals(cur, loadTcs))
+                {
+                    loadingWindows.Remove(name);
+                }
             }
         }
 

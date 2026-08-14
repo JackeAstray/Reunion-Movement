@@ -38,13 +38,13 @@ namespace ReunionMovement.Common.Util
 
         // ---- R3 Subject（推荐使用，支持操作符组合和自动取消订阅）----
         /// <summary>连接成功（R3 Subject）</summary>
-        public Subject<Unit> OnConnectedSubject { get; } = new Subject<Unit>();
+        public Subject<Unit> OnConnectedSubject { get; private set; } = new Subject<Unit>();
         /// <summary>断开连接（R3 Subject）</summary>
-        public Subject<Unit> OnDisconnectedSubject { get; } = new Subject<Unit>();
+        public Subject<Unit> OnDisconnectedSubject { get; private set; } = new Subject<Unit>();
         /// <summary>收到数据（R3 Subject）</summary>
-        public Subject<byte[]> OnDataReceivedSubject { get; } = new Subject<byte[]>();
+        public Subject<byte[]> OnDataReceivedSubject { get; private set; } = new Subject<byte[]>();
         /// <summary>发生错误（R3 Subject）</summary>
-        public Subject<string> OnErrorSubject { get; } = new Subject<string>();
+        public Subject<string> OnErrorSubject { get; private set; } = new Subject<string>();
 
         public event Action OnConnected
         {
@@ -76,6 +76,10 @@ namespace ReunionMovement.Common.Util
         /// <summary>已关闭标记：Close 后同帧 Tick 仍可能触发 handler，
         /// 若直接 OnNext 已 Dispose 的 R3 Subject 会抛 ObjectDisposedException</summary>
         private bool closed = true;
+
+        /// <summary>Close() 已 Dispose 四个 Subject 的标记：同实例重连前据此重建 Subject，
+        /// 否则连接回调 OnNext 已 Dispose 的 Subject 会抛 ObjectDisposedException</summary>
+        private bool subjectsDisposed = false;
 
         /// <summary>
         /// 生产默认 KCP 配置：使用 kcp2k 构造函数的生产默认值
@@ -109,6 +113,18 @@ namespace ReunionMovement.Common.Util
             this.Host = host;
             this.Port = port;
             closed = false;
+
+            // 同实例重连：Close() 已 Dispose 四个 Subject，重建后才能安全 OnNext；
+            // 外部订阅者需在重连后重新 Subscribe（旧流已结束）
+            if (subjectsDisposed)
+            {
+                OnConnectedSubject = new Subject<Unit>();
+                OnDisconnectedSubject = new Subject<Unit>();
+                OnDataReceivedSubject = new Subject<byte[]>();
+                OnErrorSubject = new Subject<string>();
+                subjectsDisposed = false;
+            }
+
             client.Connect(Host, (ushort)port);
         }
 
@@ -166,6 +182,7 @@ namespace ReunionMovement.Common.Util
             OnDisconnectedSubject.Dispose();
             OnDataReceivedSubject.Dispose();
             OnErrorSubject.Dispose();
+            subjectsDisposed = true;
         }
         void OnDisconnectHandler()
         {

@@ -37,7 +37,7 @@ namespace ReunionMovement.Common.Util.Download
         internal readonly SemaphoreLocker Locker = new SemaphoreLocker();
 
         internal int initialCount;
-        internal int timeout = 6;
+        internal int timeout = HttpDefaults.DefaultChunkTimeoutSeconds;
         internal int maxConcurrency = 4;
         internal bool abandonOnFailure = true;
         internal bool continueAfterFailure = false;
@@ -634,7 +634,7 @@ namespace ReunionMovement.Common.Util.Download
                 return;
             }
             downloading = false;
-            timeout = 6;
+            timeout = HttpDefaults.DefaultChunkTimeoutSeconds;
             maxConcurrency = 4;
             abandonOnFailure = true;
             continueAfterFailure = false;

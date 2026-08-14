@@ -22,7 +22,7 @@ namespace ReunionMovement.Common.Util.Download
 
         internal long bytesDownloaded;
         internal float progress = 0f;
-        internal int timeout = 6;
+        internal int timeout = HttpDefaults.DefaultChunkTimeoutSeconds;
         internal string uri = null;
 
         internal string downloadPath;

@@ -25,7 +25,9 @@ namespace ReunionMovement.Common.Util.Download
     }
 
     /// <summary>
-    /// HTTP请求帮助类
+    /// HTTP请求帮助类 —— 文件下载体系（Utils/Download）的底层请求封装。
+    /// 与通用业务请求体系（Utils/Http 的 HttpMgr/UnityHttpService）分工不同，超时与错误约定统一收口于
+    /// ReunionMovement.Common.Util.HttpDefaults。错误约定：不抛异常，通过 didError 标记表达。
     /// </summary>
     public static class HTTPHelper
     {
@@ -36,7 +38,7 @@ namespace ReunionMovement.Common.Util.Download
         /// <param name="headers"></param>
         /// <param name="timeoutSeconds"></param>
         /// <returns></returns>
-        public static async UniTask<HTTPResponse> Get(string uri, Dictionary<string, string> headers = null, int timeoutSeconds = 3)
+        public static async UniTask<HTTPResponse> Get(string uri, Dictionary<string, string> headers = null, int timeoutSeconds = HttpDefaults.DefaultMetadataTimeoutSeconds)
         {
             var resp = new HTTPResponse();
 
@@ -51,7 +53,15 @@ namespace ReunionMovement.Common.Util.Download
                     }
                 }
 
-                await req.SendWebRequest();
+                // 注意：内置 ToUniTask 在错误时抛 UnityWebRequestException，这里按原契约吞掉异常，
+                // 由下方 req.result / req.error 统一收集错误信息（保持“错误不抛出、didError 标记”语义）。
+                try
+                {
+                    await req.SendWebRequest();
+                }
+                catch (UnityWebRequestException)
+                {
+                }
 
                 resp.responseText = req.result == UnityWebRequest.Result.Success
                     ? req.downloadHandler.text
@@ -64,7 +74,8 @@ namespace ReunionMovement.Common.Util.Download
         }
 
         /// <summary>
-        /// 从Uri获取相对路径
+        /// 从Uri获取相对路径（已做路径遍历防护）。
+        /// 解码后逐段过滤：丢弃空段、"." 与 ".." 段，防止 "%2e%2e" 编码绕过写出下载目录。
         /// </summary>
         /// <param name="uri"></param>
         /// <returns></returns>
@@ -78,8 +89,17 @@ namespace ReunionMovement.Common.Util.Download
             try
             {
                 var u = new Uri(uri);
-                // 去掉开头的斜杠
-                return Uri.UnescapeDataString(u.AbsolutePath.TrimStart('/'));
+                // 去掉开头的斜杠；先解码让编码的穿越段（%2e%2e）暴露，再逐段过滤
+                string decoded = Uri.UnescapeDataString(u.AbsolutePath.TrimStart('/'));
+                var segments = decoded.Split('/');
+                var safeSegments = new List<string>(segments.Length);
+                foreach (var seg in segments)
+                {
+                    if (string.IsNullOrEmpty(seg) || seg == ".") continue;
+                    if (seg == "..") continue; // 丢弃目录穿越段
+                    safeSegments.Add(seg);
+                }
+                return string.Join("/", safeSegments);
             }
             catch
             {
@@ -135,7 +155,7 @@ namespace ReunionMovement.Common.Util.Download
         /// <param name="headers"></param>
         /// <param name="timeoutSeconds"></param>
         /// <returns></returns>
-        public static UnityWebRequestAsyncOperation Head(ref UnityWebRequest req, string uri, Dictionary<string, string> headers = null, int timeoutSeconds = 3)
+        public static UnityWebRequestAsyncOperation Head(ref UnityWebRequest req, string uri, Dictionary<string, string> headers = null, int timeoutSeconds = HttpDefaults.DefaultMetadataTimeoutSeconds)
         {
             req = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbHEAD)
             {
@@ -182,7 +202,7 @@ namespace ReunionMovement.Common.Util.Download
             bool abandonOnFailure = false,
             bool append = false,
             Dictionary<string, string> headers = null,
-            int timeoutSeconds = 3
+            int timeoutSeconds = HttpDefaults.DefaultMetadataTimeoutSeconds
         )
         {
             path ??= Application.persistentDataPath;
