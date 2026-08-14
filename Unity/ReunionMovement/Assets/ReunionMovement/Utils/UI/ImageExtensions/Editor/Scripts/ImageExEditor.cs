@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
 using ReunionMovement.UI.ImageExtensions;
+using ReunionMovement.Common;
 
 namespace ReunionMovement.EditorTools.ImageExtensions
 {
@@ -28,6 +29,9 @@ namespace ReunionMovement.EditorTools.ImageExtensions
         private SerializedProperty spShadowMirrorScale, spShadowMirrorOffset;
         private SerializedProperty spShadowMirrorShowSource;
         private SerializedProperty spShadowMirrorTintMix;
+
+        // 非法 DrawShape 值限频告警标记（Inspector 绘制路径不抛异常）
+        private bool m_invalidShapeLogged;
         private SerializedProperty spShadowColorFilter, spShadowColorGlow;
 
         private SerializedProperty spMaterialSettings, spMaterial, spImageType;
@@ -270,7 +274,13 @@ namespace ReunionMovement.EditorTools.ImageExtensions
                             break;
 
                         default:
-                            throw new ArgumentOutOfRangeException();
+                            // 非法枚举值（旧序列化残留）：跳过绘制而非抛异常，避免 Inspector 中断；限频告警
+                            if (!m_invalidShapeLogged)
+                            {
+                                m_invalidShapeLogged = true;
+                                Log.Warning("ImageEx.DrawShape 存在非法值 {0}，已跳过形状参数绘制", spShape.enumValueIndex);
+                            }
+                            break;
                     }
                 }
 

@@ -396,6 +396,9 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        // 非法 imageType 值限频告警标记（Unity 反序列化路径不抛异常，防场景/预制体加载中断）
+        private bool m_invalidTypeNormalizedLogged;
+
         /// <summary>
         /// 图像的类型。仅支持两种类型。简单和填充。
         /// 默认值和回退值为“简单”。
@@ -420,7 +423,15 @@ namespace ReunionMovement.UI.ImageExtensions
                         newType = Type.Simple;
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException(value.ToString(), value, null);
+                        // 非法枚举值（旧版本序列化残留）：归一化为 Simple 而非抛异常，
+                        // 避免 Unity 反序列化/属性设置路径中断
+                        newType = Type.Simple;
+                        if (!m_invalidTypeNormalizedLogged)
+                        {
+                            m_invalidTypeNormalizedLogged = true;
+                            Log.Warning("ImageEx.type 存在非法值 {0}，已归一化为 Simple", value);
+                        }
+                        break;
                 }
 
                 if (imageType != newType)

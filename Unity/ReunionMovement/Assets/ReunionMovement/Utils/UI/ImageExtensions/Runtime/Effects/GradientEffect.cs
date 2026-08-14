@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using ReunionMovement.Common;
 
 namespace ReunionMovement.UI.ImageExtensions
 {
@@ -39,6 +40,8 @@ namespace ReunionMovement.UI.ImageExtensions
         private static readonly int[] GradientColorIds = BuildGradientIds("_GradientColor");
         private static readonly int[] GradientAlphaIds = BuildGradientIds("_GradientAlpha");
         private static readonly int[] CornerGradientColorIds = BuildGradientIds("_CornerGradientColor");
+        // 非法渐变类型限频告警标记（struct 无实例状态，用静态标记）
+        private static int s_invalidGradientTypeLogged = -1;
 
         private static int[] BuildGradientIds(string prefix)
         {
@@ -292,7 +295,13 @@ namespace ReunionMovement.UI.ImageExtensions
                     material.EnableKeyword("GRADIENT_CORNER");
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    // 非法枚举值（如旧版本序列化残留）：不抛异常，避免打断渲染；静态标记限频告警
+                    if (s_invalidGradientTypeLogged != (int)gradientType)
+                    {
+                        s_invalidGradientTypeLogged = (int)gradientType;
+                        Log.Warning("GradientEffect.gradientType 存在非法值 {0}，已跳过渐变关键字", (int)gradientType);
+                    }
+                    break;
             }
 
 

@@ -483,13 +483,23 @@ namespace ReunionMovement.UI.ImageExtensions
                         color, fillMethod, fillAmount, fillOrigin, fillClockwise, falloffDistance);
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    // 非法 imageType（理论上 setter 已归一化，此处兜底防旧序列化残留）：
+                    // 不抛异常，回退 Simple 渲染，避免打断网格重建；限频告警
+                    if (!m_invalidImageTypeLogged)
+                    {
+                        m_invalidImageTypeLogged = true;
+                        Log.Warning("ImageEx.imageType 存在非法值 {0}，回退 Simple 渲染", (int)type);
+                    }
+                    goto case Type.Simple;
             }
         }
 
         // 关键字掩码缓存（Dynamic 模式性能优化）：掩码与材质未变化时跳过 ~60 次 DisableKeyword 调用
         private int appliedKeywordMask = -1;
         private Material appliedKeywordMaterial;
+        // 非法枚举值限频告警标记（渲染路径不抛异常，防 ArgumentOutOfRangeException 打断 Canvas 重建）
+        private bool m_invalidDrawShapeLogged;
+        private bool m_invalidImageTypeLogged;
 
         /// <summary>
         /// 计算当前期望的关键字掩码。
@@ -803,6 +813,7 @@ namespace ReunionMovement.UI.ImageExtensions
 
             switch (DrawShape)
             {
+                case DrawShape.None: break; // 无形状：不启用任何形状关键字
                 case DrawShape.Circle: mat.EnableKeyword("CIRCLE"); break;
                 case DrawShape.Triangle: mat.EnableKeyword("TRIANGLE"); break;
                 case DrawShape.Rectangle: mat.EnableKeyword("RECTANGLE"); break;
@@ -815,7 +826,14 @@ namespace ReunionMovement.UI.ImageExtensions
                 case DrawShape.BlobbyCross: mat.EnableKeyword("BLOBBYCROSS"); break;
                 case DrawShape.Squircle: mat.EnableKeyword("SQUIRCLE"); break;
                 case DrawShape.NTriangleRounded: mat.EnableKeyword("NTRIANGLE_ROUNDED"); break;
-                default: throw new ArgumentOutOfRangeException();
+                default:
+                    // 非法枚举值（如旧版本序列化残留）：不抛异常，避免打断 Canvas 重建；限频告警
+                    if (!m_invalidDrawShapeLogged)
+                    {
+                        m_invalidDrawShapeLogged = true;
+                        Log.Warning("ImageEx.DrawShape 存在非法值 {0}，已跳过形状关键字", (int)DrawShape);
+                    }
+                    break;
             }
 
             switch (m_ToneFilter)
