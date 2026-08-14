@@ -6,6 +6,7 @@ namespace ReunionMovement.Common.Util
     /// <summary>
     /// 性能监控 —— 每秒采样一次 FPS 与托管内存，超阈值时告警（防抖：同一指标只告警一次，恢复后允许再次告警）。
     /// 用法：PerformanceMonitor.Instance 读取当前指标 / 订阅告警事件；阈值可在 Inspector 或代码配置。
+    /// FPS 采样单一权威：FPSCounter 等显示组件直接从 Instance.CurrentFps 读取，不再各自计数。
     /// 注意：独立 1s 节流轮询，属于监控工具（与 ScreenLogger 同类），刻意不接入 GameEngine 模块调度。
     /// </summary>
     public class PerformanceMonitor : SingletonMgr<PerformanceMonitor>

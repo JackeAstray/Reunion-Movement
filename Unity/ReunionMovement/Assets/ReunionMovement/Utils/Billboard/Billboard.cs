@@ -21,8 +21,7 @@ namespace ReunionMovement.Common.Util
         public BillboardType billboardType = BillboardType.Mode1;
         Quaternion originalRotation;
         private float lastErrorLogTime = -999f;
-        private float lastCameraRetryTime = -999f;
-        private const float CameraRetryInterval = 2f; // Camera.main 重试间隔
+        private CameraMainRetry cameraRetry = new CameraMainRetry(-999f);
 
         void Start()
         {
@@ -38,10 +37,9 @@ namespace ReunionMovement.Common.Util
         void Update()
         {
             // 如果目标引用丢失，限流重试获取主相机（Camera.main 内部是 FindGameObjectsWithTag，极慢）
-            if (targetTF == null && Time.time - lastCameraRetryTime > CameraRetryInterval)
+            if (targetTF == null)
             {
-                lastCameraRetryTime = Time.time;
-                var cam = Camera.main;
+                var cam = cameraRetry.TryGetCamera();
                 if (cam != null)
                     targetTF = cam.transform;
             }

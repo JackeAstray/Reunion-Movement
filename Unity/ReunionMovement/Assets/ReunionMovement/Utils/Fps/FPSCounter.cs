@@ -5,7 +5,9 @@ using Cysharp.Text;
 namespace ReunionMovement.Common.Util
 {
     /// <summary>
-    /// FPS计数器工具（使用 TextMeshPro 替代旧版 OnGUI）
+    /// FPS计数器工具（使用 TextMeshPro 替代旧版 OnGUI）。
+    /// FPS 采样单一权威：不再自行每帧计数，直接读取 PerformanceMonitor.Instance.CurrentFps
+    /// （PerformanceMonitor 每 1s 采样并附带低帧率/内存告警），本类只负责节流显示与阈值着色。
     /// </summary>
     public class FPSCounter : MonoBehaviour
     {
@@ -28,8 +30,6 @@ namespace ReunionMovement.Common.Util
         [SerializeField]
         private float idleTime = 2f;
         private float elapsed;
-        private int frames;
-        private float fps;
 
         private Color goodColor = new Color(0.5f, 1f, 0f);
         private Color okColor = new Color(1f, 0.8f, 0f);
@@ -100,13 +100,13 @@ namespace ReunionMovement.Common.Util
             }
 
             elapsed += Time.deltaTime;
-            ++frames;
 
             if (elapsed >= updateInterval)
             {
-                fps = frames / elapsed;
                 elapsed = 0;
-                frames = 0;
+
+                // FPS 采样由 PerformanceMonitor 统一完成（1s 采样 + 告警），此处只读取结果做显示
+                float fps = PerformanceMonitor.Instance.CurrentFps;
 
                 if (fpsText != null)
                 {

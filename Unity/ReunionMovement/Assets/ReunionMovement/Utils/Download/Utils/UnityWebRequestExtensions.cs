@@ -1,36 +1,23 @@
 ﻿using Cysharp.Threading.Tasks;
-using System;
-using System.Runtime.CompilerServices;
 using UnityEngine.Networking;
 
 namespace ReunionMovement.Common.Util.Download
 {
     /// <summary>
-    /// UnityWebRequest扩展（UniTask 零 GC）
+    /// UnityWebRequest 扩展 —— await UnityWebRequestAsyncOperation 的零分配实现。
+    /// 直接复用 UniTask 内置的 UnityWebRequestAsyncOperationConfiguredSource（池化）与 ToUniTask，
+    /// 无闭包、无 async 状态机分配（旧实现 UniTask.Create(async ...) 每次 await 均分配）。
+    /// 注意：网络错误（ConnectionError/DataProcessingError/ProtocolError）会抛 UnityWebRequestException，
+    /// 需要“错误不抛出”语义时在调用侧捕获（见 HTTPHelper.Get）。
     /// </summary>
     public static class UnityWebRequestExtensions
     {
         /// <summary>
-        /// 将UnityWebRequest转换为字符串
+        /// 将 UnityWebRequestAsyncOperation 转为可 await（转发 UniTask 内置零分配实现）
         /// </summary>
-        public static string ToString(this UnityWebRequest uwr)
+        public static UniTask<UnityWebRequest>.Awaiter GetAwaiter(this UnityWebRequestAsyncOperation reqOp)
         {
-            if (uwr == null)
-                return "UnityWebRequest: null";
-
-            return $"TYPE: {uwr.method}\nURL: {uwr.url}\nURI: {uwr.uri}\nResponseCode: {uwr.responseCode}\nError: {uwr.error}";
-        }
-
-        /// <summary>
-        /// 将UnityWebRequestAsyncOperation转换为UniTask awaiter（零 GC）
-        /// </summary>
-        public static UniTask<UnityWebRequest.Result>.Awaiter GetAwaiter(this UnityWebRequestAsyncOperation reqOp)
-        {
-            return UniTask.Create(async () =>
-            {
-                var uwr = await reqOp.ToUniTask();
-                return uwr.result;
-            }).GetAwaiter();
+            return reqOp.ToUniTask().GetAwaiter();
         }
     }
 }

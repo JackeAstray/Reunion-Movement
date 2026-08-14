@@ -81,6 +81,14 @@ namespace ReunionMovement.Core.UIToolkit
         protected virtual void OnBind() { }
 
         /// <summary>
+        /// 解绑 UI 元素 —— 与 OnBind 对称，在 OnClose 末尾自动调用。
+        /// 子类在此处释放 OnBind 中建立的订阅（R3 Disposable、VisualElement 事件回调等），
+        /// 避免面板关闭/系统清理后订阅泄漏。
+        /// 关闭后若再次打开会走新实例（ClosePanel 已从字典移除），无需重新绑定。
+        /// </summary>
+        protected virtual void OnUnbind() { }
+
+        /// <summary>
         /// 打开面板时调用
         /// </summary>
         /// <param name="data">外部传入的数据（可选）</param>
@@ -97,6 +105,8 @@ namespace ReunionMovement.Core.UIToolkit
         {
             IsOpen = false;
             Root.RemoveFromHierarchy();
+            // 与 OnBind 对称的解绑钩子：释放 OnBind 中建立的订阅，防止泄漏
+            OnUnbind();
         }
 
         #endregion

@@ -25,8 +25,7 @@ namespace ReunionMovement.Common.Util
         private Canvas canvas;
         private Camera mainCamera;
         private bool isActive;
-        private float cameraRetryTimer;
-        private const float CameraRetryInterval = 2f;
+        private CameraMainRetry cameraRetry = new CameraMainRetry(-999f);
 
         private void Awake()
         {
@@ -45,12 +44,7 @@ namespace ReunionMovement.Common.Util
             // 相机引用丢失时每帧 Camera.main 很慢（内部 FindGameObjectsWithTag），限流重试
             if (mainCamera == null)
             {
-                cameraRetryTimer += Time.deltaTime;
-                if (cameraRetryTimer >= CameraRetryInterval)
-                {
-                    cameraRetryTimer = 0f;
-                    mainCamera = Camera.main;
-                }
+                mainCamera = cameraRetry.TryGetCamera();
             }
             Setup();
         }
