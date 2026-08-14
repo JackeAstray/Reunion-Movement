@@ -73,6 +73,15 @@ namespace ReunionMovement.Core.Sound
         private Dictionary<GameObject, IObjectPool<GameObject>> pooledObjects = new Dictionary<GameObject, IObjectPool<GameObject>>();
         //生成对象池 特效
         private Dictionary<GameObject, GameObject> sfxObjects = new Dictionary<GameObject, GameObject>();
+
+        /// <summary>
+        /// 同一音效的最小重触发间隔（秒，0=禁用）：快速连点/高频触发时静默丢弃密集重放，
+        /// 防止瞬时叠加 20+ 个同声源（音量叠加削顶、AudioSource 耗尽）。
+        /// </summary>
+        public float minSfxRetriggerInterval = 0.05f;
+
+        /// <summary>音效最近播放时间（path → unscaledTime），配合 minSfxRetriggerInterval 限流</summary>
+        private readonly Dictionary<string, float> lastSfxPlayTimes = new Dictionary<string, float>();
         // 淡入淡出状态机（由 Update 驱动，配合 UniTaskCompletionSource 实现零 GC）
         private enum FadeState { None, FadingIn, FadingOut }
         private FadeState fadeState = FadeState.None;
@@ -274,6 +283,7 @@ namespace ReunionMovement.Core.Sound
             audioClipLoading?.Clear();
             soundConfigDict?.Clear();
             soundConfigContainer = null;
+            lastSfxPlayTimes.Clear();
             // 重置音效 prefab 缓存，避免重 Init 时误用旧引用
             cachedSfxPrefab = null;
 
@@ -339,8 +349,11 @@ namespace ReunionMovement.Core.Sound
         {
             if (soundConfigDict != null && soundConfigDict.TryGetValue(index, out SoundConfig soundConfig))
             {
+                // 与 PlaySwitch 共用版本号：并发 PlayMusic/PlaySwitch 时最新调用优先，旧链 await 恢复后退出
+                int version = ++musicSwitchVersion;
                 currentMusicIndex = index;
                 AudioClip audioClip = await GetAudioClipAsync(soundConfig.Path, soundConfig.Name);
+                if (version != musicSwitchVersion) return; // 已被更新的 PlayMusic/PlaySwitch 取代
                 if (audioClip != null)
                 {
                     EnsureAudioSource();
@@ -475,8 +488,22 @@ namespace ReunionMovement.Core.Sound
             {
                 if (soundConfigDict != null && soundConfigDict.TryGetValue(index, out SoundConfig soundConfig))
                 {
+                    // 同音效限流：在 await 之前判断，防止连点瞬间叠发多个加载协程与同声源实例
+                    if (minSfxRetriggerInterval > 0f && !string.IsNullOrEmpty(soundConfig.Path))
+                    {
+                        float now = Time.unscaledTime;
+                        if (lastSfxPlayTimes.TryGetValue(soundConfig.Path, out float last)
+                            && now - last < minSfxRetriggerInterval)
+                        {
+                            return;
+                        }
+                        lastSfxPlayTimes[soundConfig.Path] = now;
+                    }
+
                     AudioClip clip = await GetAudioClipAsync(soundConfig.Path, soundConfig.Name);
-                    if (clip != null && cachedSfxPrefab != null)
+                    // await 恢复后复查：Clear() 可能已销毁 sfxRoot（代次校验已让 clip 为 null，
+                    // 但 cachedSfxPrefab/sfxRoot 仍需检查，否则 Spawn 访问 sfxRoot.transform 抛 NRE）
+                    if (clip != null && cachedSfxPrefab != null && sfxRoot != null && isInited)
                     {
                         GameObject go = Spawn(cachedSfxPrefab);
                         if (go != null)
@@ -1126,16 +1153,30 @@ namespace ReunionMovement.Core.Sound
                     if (fromAddressables) addressableClips.Add(fullPath);
                     else addressableClips.Remove(fullPath);
 
-                    // LRU 驱逐：缓存满时移除最久未使用的条目（链表头部）
-                    if (audioClipCache.Count >= MaxAudioClipCacheSize && audioClipCacheOrder.First != null)
+                    // LRU 驱逐：缓存满时移除最久未使用的条目（链表头部），
+                    // 跳过正在播放的 clip（BGM/活跃 SFX），避免卸载后播放中断
+                    if (audioClipCache.Count >= MaxAudioClipCacheSize)
                     {
-                        var oldestNode = audioClipCacheOrder.First;
-                        string evicted = oldestNode.Value;
-                        AudioClip evictedClip = audioClipCache[evicted];
-                        audioClipCache.Remove(evicted);
-                        audioClipCacheNodes.Remove(evicted);
-                        audioClipCacheOrder.RemoveFirst();
-                        ReleaseClip(evicted, evictedClip);
+                        LinkedListNode<string> oldestNode = audioClipCacheOrder.First;
+                        int scanned = 0;
+                        while (oldestNode != null && scanned < audioClipCacheOrder.Count)
+                        {
+                            audioClipCache.TryGetValue(oldestNode.Value, out AudioClip oldestClip);
+                            if (!IsClipInUse(oldestClip)) break;
+                            oldestNode = oldestNode.Next;
+                            scanned++;
+                        }
+                        // 全部在用则驱逐最旧条目保底（避免缓存无限增长，极端情况可接受）
+                        if (oldestNode == null) oldestNode = audioClipCacheOrder.First;
+                        if (oldestNode != null)
+                        {
+                            string evicted = oldestNode.Value;
+                            AudioClip evictedClip = audioClipCache[evicted];
+                            audioClipCache.Remove(evicted);
+                            audioClipCacheNodes.Remove(evicted);
+                            audioClipCacheOrder.Remove(oldestNode);
+                            ReleaseClip(evicted, evictedClip);
+                        }
                     }
                     audioClipCache[fullPath] = clip;
                     var node = audioClipCacheOrder.AddLast(fullPath);
@@ -1174,6 +1215,23 @@ namespace ReunionMovement.Core.Sound
             }
             // 联动 ResourcesSystem 递减引用计数并卸载底层 AudioClip，真正释放内存
             ResourcesSystem.Instance.DeleteAssetCache(fullPath);
+        }
+
+        /// <summary>
+        /// 判断 clip 是否正在被播放（BGM 源或任意活跃 SFX 对象引用）。
+        /// 驱逐前调用：正在播放的 clip 被卸载会导致声音中断。
+        /// </summary>
+        private bool IsClipInUse(AudioClip clip)
+        {
+            if (clip == null) return false;
+            if (source != null && source.clip == clip) return true;
+            foreach (var obj in sfxObjects.Values)
+            {
+                if (obj == null) continue;
+                var src = obj.GetComponent<AudioSource>();
+                if (src != null && src.clip == clip) return true;
+            }
+            return false;
         }
     }
 

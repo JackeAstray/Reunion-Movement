@@ -80,6 +80,12 @@ namespace ReunionMovement
         /// <param name="parent">新的父节点</param>
         public void SetParent(TreeViewData parent)
         {
+            // 挂到自身：无操作（不触发同父短路时 childNodes.Add(this) 会形成自环）
+            if (parent == this) return;
+
+            // 循环检测：新父节点不能是自身的后代，否则 childNodes 成环 → ResetChildren 无限递归栈溢出（IL2CPP 直接崩溃）
+            if (IsDescendantOf(parent)) return;
+
             // 如果已经是同一个父节点，无需操作
             if (this.parent == parent) return;
 
@@ -96,6 +102,22 @@ namespace ReunionMovement
 
             // 递归修正所有后代节点的 parent 和 layer
             ResetChildren(this);
+        }
+
+        /// <summary>
+        /// 判断指定节点是否是自身的后代（沿其 parent 链向上能否到达自身）。
+        /// 供 SetParent 循环检测使用。
+        /// </summary>
+        private bool IsDescendantOf(TreeViewData ancestor)
+        {
+            if (ancestor == null) return false;
+            var p = ancestor.parent;
+            while (p != null)
+            {
+                if (ReferenceEquals(p, this)) return true;
+                p = p.parent;
+            }
+            return false;
         }
 
         /// <summary>
@@ -204,7 +226,8 @@ namespace ReunionMovement
         {
             TreeViewData other = obj as TreeViewData;
             if (other == null) return false;
-            return other.name.Equals(name) && other.layer.Equals(layer);
+            // name 是公有可变字段可能为 null，用 string.Equals 避免 NRE（与 GetHashCode 的 null 防护一致）
+            return string.Equals(other.name, name) && other.layer.Equals(layer);
         }
 
         /// <summary>

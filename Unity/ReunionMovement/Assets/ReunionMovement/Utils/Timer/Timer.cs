@@ -20,8 +20,13 @@ namespace ReunionMovement.Common.Util.Timer
         public float elapsed { get; private set; }
         // 是否为倒计时
         public bool isCountingDown { get; private set; }
-        // 时间缩放
-        public float timeScale { get; set; } = 1f;
+        // 时间缩放（钳制负值：负值会使计时倒退永不完成）
+        private float _timeScale = 1f;
+        public float timeScale
+        {
+            get => _timeScale;
+            set => _timeScale = value < 0f ? 0f : value;
+        }
         // 是否循环
         public bool isLoop { get; private set; }
         // 已循环次数
@@ -39,6 +44,9 @@ namespace ReunionMovement.Common.Util.Timer
         public event Action OnCancelled;
         // 参数为当前已用时间或剩余时间
         public event Action<float> OnTick;
+
+        /// <summary>生命周期绑定目标（Attach 后目标销毁时计时器自动取消，防回调打到已销毁对象）</summary>
+        private UnityEngine.Object attachedTarget;
 
         /// <summary>
         /// 创建一个新的计时器实例
@@ -111,10 +119,29 @@ namespace ReunionMovement.Common.Util.Timer
         }
 
         /// <summary>
+        /// 绑定生命周期目标：目标（GameObject/Component）被销毁后计时器自动取消，
+        /// 避免回调继续访问已销毁对象。
+        /// </summary>
+        public void Attach(GameObject target) => attachedTarget = target;
+
+        /// <summary>绑定生命周期目标（Component 重载）</summary>
+        public void Attach(Component target) => attachedTarget = target;
+
+        /// <summary>解除生命周期绑定</summary>
+        public void Detach() => attachedTarget = null;
+
+        /// <summary>
         /// 每帧调用，deltaTime为Time.deltaTime
         /// </summary>
         public void Update(float deltaTime)
         {
+            // 生命周期绑定检查：(object) 判真 null，Unity 重载 == 判已销毁（fake null）
+            if ((object)attachedTarget != null && attachedTarget == null)
+            {
+                Cancel();
+                return;
+            }
+
             if (state != TimerState.Running)
             {
                 return;
@@ -124,7 +151,8 @@ namespace ReunionMovement.Common.Util.Timer
 
             float time = isCountingDown ? duration - elapsed : elapsed;
 
-            OnTick?.Invoke(time);
+            // 长帧超调时倒计时可能为负：对外钳制到 0，避免 UI 显示 "-0.0s"
+            OnTick?.Invoke(Mathf.Max(0f, time));
 
             // OnTick 回调内可能调用 Cancel()：状态已变为 Cancelled 时不得继续触发完成分支
             if (state != TimerState.Running) return;

@@ -1,5 +1,8 @@
 using ReunionMovement.Common;
 using ReunionMovement.Common.Util;
+using ReunionMovement.Common.Util.Download;
+using ReunionMovement.Common.Util.HttpService;
+using ReunionMovement.Common.Util.Timer;
 using Cysharp.Threading.Tasks;
 using System;
 using UnityEngine;
@@ -60,6 +63,16 @@ namespace ReunionMovement.Core
             IsTestScene = false;
             driverGo = null;
             GameEngine.ResetStaticState();
+
+            // 复位 MonoBehaviour 单例的跨会话静态状态（关闭 Domain Reload 时静态字段与事件订阅残留，
+            // 上一会话对象仍是订阅者会导致新会话回调到已销毁对象）
+            HttpMgr.ResetStatics();
+            NetworkMgr.ResetStatics();
+            TimerMgr.ResetStatics();
+            DownloadMgr.ResetStatics();
+            DeadlineMgr.ResetStatics();
+            PerformanceMonitor.ResetStatics();
+            ResolutionMgr.ResetStatics();
         }
 
         /// <summary>
