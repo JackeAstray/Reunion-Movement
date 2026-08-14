@@ -295,18 +295,24 @@ namespace ReunionMovement.Common.Util
 
                 // 在程序化设置位置时忽略 OnScroll 回调以避免重入
                 isRecentering = true;
-                if (direction == Direction.Vertical)
+                try
                 {
-                    pos.y = startFirst * (itemSize + spacing);
+                    if (direction == Direction.Vertical)
+                    {
+                        pos.y = startFirst * (itemSize + spacing);
+                    }
+                    else
+                    {
+                        pos.x = -startFirst * (itemSize + spacing);
+                    }
+                    content.anchoredPosition = pos;
+                    if (scrollRect != null) scrollRect.velocity = Vector2.zero;
+                    RefreshVisible();
                 }
-                else
+                finally
                 {
-                    pos.x = -startFirst * (itemSize + spacing);
+                    isRecentering = false;
                 }
-                content.anchoredPosition = pos;
-                if (scrollRect != null) scrollRect.velocity = Vector2.zero;
-                RefreshVisible();
-                isRecentering = false;
             }
         }
         /// <summary>
@@ -599,6 +605,8 @@ namespace ReunionMovement.Common.Util
         public void OnBeginDrag(PointerEventData eventData)
         {
             isDragging = true;
+            // 用户开始拖拽：中断进行中的平滑滚动 tween，避免两者抢写 content.anchoredPosition
+            StopScrollCoroutineIfAny();
         }
 
         public void OnEndDrag(PointerEventData eventData)
@@ -891,15 +899,21 @@ namespace ReunionMovement.Common.Util
                 StopScrollCoroutineIfAny();
                 // 在程序化设置位置时忽略 OnScroll 回调
                 isRecentering = true;
-                content.anchoredPosition = targetPos;
-                // 停止惯性
-                if (scrollRect != null)
+                try
                 {
-                    scrollRect.velocity = Vector2.zero;
+                    content.anchoredPosition = targetPos;
+                    // 停止惯性
+                    if (scrollRect != null)
+                    {
+                        scrollRect.velocity = Vector2.zero;
+                    }
+                    currentFirstIndex = targetFirst;
+                    RefreshVisible();
                 }
-                currentFirstIndex = targetFirst;
-                RefreshVisible();
-                isRecentering = false;
+                finally
+                {
+                    isRecentering = false;
+                }
 
                 // 更新 page 并通知（循环模式下不启用 page 回调）
                 if (enablePaging && itemsPerPage > 0 && !enableLooping)
@@ -986,14 +1000,20 @@ namespace ReunionMovement.Common.Util
                 if (ct.IsCancellationRequested) return;
 
                 // 最终确定位置
-                // 在程序化设置位置时忽略 OnScroll 回调
+                // 在程序化设置位置时忽略 OnScroll 回调（try/finally 防用户 BindItem 异常卡死标志）
                 isRecentering = true;
-                content.anchoredPosition = targetAnchoredPos;
-                currentFirstIndex = finalFirstIndex;
-                RefreshVisible();
-                // 更新指示器位置（若存在）
-                UpdatePullIndicatorPositions();
-                isRecentering = false;
+                try
+                {
+                    content.anchoredPosition = targetAnchoredPos;
+                    currentFirstIndex = finalFirstIndex;
+                    RefreshVisible();
+                    // 更新指示器位置（若存在）
+                    UpdatePullIndicatorPositions();
+                }
+                finally
+                {
+                    isRecentering = false;
+                }
 
                 // 更新 page 并通知
                 if (enablePaging && itemsPerPage > 0 && !enableLooping)
@@ -1026,6 +1046,9 @@ namespace ReunionMovement.Common.Util
             // 重新从 dataSource 更新 totalCount，并重建池和刷新视图
             totalCount = dataSource?.GetItemCount() ?? totalCount;
             Build();
+            // 重置拉动动作状态：数据重建后旧的在途标记若残留，会永久禁用下拉/上拉触发
+            isActionInProgressStart = false;
+            isActionInProgressEnd = false;
             ForceRefresh();
         }
     }

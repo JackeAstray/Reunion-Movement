@@ -9,8 +9,8 @@ namespace ReunionMovement.Core.UI
 {
     public class CharacterSelectUIPlane : UIController
     {
-        string openWindow = "CharacterSelectUIPlane";
-        string closeWindow = "CharacterSelectUIPlane";
+        string openWindow = UINames.CharacterSelect;
+        string closeWindow = UINames.CharacterSelect;
 
         public override void OnInit()
         {

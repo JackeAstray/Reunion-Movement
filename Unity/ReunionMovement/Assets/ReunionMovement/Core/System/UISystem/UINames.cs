@@ -14,5 +14,8 @@ namespace ReunionMovement.Core.UI
 
         /// <summary>终端控制台</summary>
         public const string Terminal = "TerminalUIPlane";
+
+        /// <summary>角色选择界面</summary>
+        public const string CharacterSelect = "CharacterSelectUIPlane";
     }
 }

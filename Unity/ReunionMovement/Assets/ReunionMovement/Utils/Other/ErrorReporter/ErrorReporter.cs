@@ -34,6 +34,9 @@ namespace ReunionMovement.Common.Util
         /// <summary>错误上报事件（订阅者可自行处理：弹窗 / 额外上报渠道）</summary>
         public static event Action<string> ErrorReported;
 
+        /// <summary>派发重入防护：订阅者内部再 LogError 时直接写缓冲，避免无限递归</summary>
+        private static bool isDispatching = false;
+
         /// <summary>上报载荷（POST JSON）</summary>
         [Serializable]
         private class ErrorReportPayload
@@ -61,6 +64,8 @@ namespace ReunionMovement.Common.Util
                 Debug.LogWarning($"[ErrorReporter] 创建日志目录失败: {ex.Message}");
             }
 
+            // 防重复订阅：域重载关闭时 static IsInitialized 跨会话保持，但订阅会失效
+            Application.logMessageReceived -= OnLogMessageReceived;
             Application.logMessageReceived += OnLogMessageReceived;
             Debug.Log("[ErrorReporter] 全局错误捕获已启用");
         }
@@ -99,13 +104,23 @@ namespace ReunionMovement.Common.Util
                 Debug.LogWarning($"[ErrorReporter] 写入日志文件失败: {ex.Message}");
             }
 
+            // 重入防护：订阅者内部再触发错误日志时直接返回，防止 logMessageReceived 无限递归
+            if (isDispatching) return;
+            isDispatching = true;
             try
             {
-                ErrorReported?.Invoke(entry);
+                try
+                {
+                    ErrorReported?.Invoke(entry);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[ErrorReporter] 上报订阅者异常: {ex.Message}");
+                }
             }
-            catch (Exception ex)
+            finally
             {
-                Debug.LogWarning($"[ErrorReporter] 上报订阅者异常: {ex.Message}");
+                isDispatching = false;
             }
         }
 

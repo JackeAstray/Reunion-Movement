@@ -13,11 +13,15 @@ namespace ReunionMovement.Core.UI
 {
     public class StartGameUIPlane : UIController
     {
-        string openWindow = "StartGameUIPlane";
-        string closeWindow = "StartGameUIPlane";
+        string openWindow = UINames.StartGame;
+        string closeWindow = UINames.StartGame;
 
         public ImageEx logo1;
         public ImageEx logo2;
+
+        // 无目标 DOTween（DOTween.To(getter, setter, ...)）不受 logo.DOKill() 控制，必须持有引用手动 Kill
+        private Tween logo1TransitionTween;
+        private Tween logo2TransitionTween;
 
         private bool _initialized = false;
 
@@ -43,6 +47,8 @@ namespace ReunionMovement.Core.UI
             // 先杀残留动画，避免重复打开/重复 OnInit 时动画叠加
             logo1.DOKill();
             logo2.DOKill();
+            logo1TransitionTween?.Kill();
+            logo2TransitionTween?.Kill();
 
             logo1.DOFade(1, 0.45f).OnComplete(() =>
             {
@@ -53,8 +59,10 @@ namespace ReunionMovement.Core.UI
 
                     _ = SoundSystem.Instance.PlaySfx(300015);
 
-                    DOTween.To(() => logo1.TransitionRate, x => logo1.TransitionRate = x, 1f, 1f).SetEase(Ease.Linear);
-                    DOTween.To(() => logo2.TransitionRate, x => logo2.TransitionRate = x, 1f, 0.9f).SetEase(Ease.Linear);
+                    logo1TransitionTween?.Kill();
+                    logo2TransitionTween?.Kill();
+                    logo1TransitionTween = DOTween.To(() => logo1.TransitionRate, x => logo1.TransitionRate = x, 1f, 1f).SetEase(Ease.Linear);
+                    logo2TransitionTween = DOTween.To(() => logo2.TransitionRate, x => logo2.TransitionRate = x, 1f, 0.9f).SetEase(Ease.Linear);
                 });
             });
         }
@@ -76,9 +84,11 @@ namespace ReunionMovement.Core.UI
 
         private void OnDestroy()
         {
-            // 清理 DOTween 动画，防止对象销毁后访问
+            // 清理 DOTween 动画，防止对象销毁后访问（含无目标 tween）
             logo1?.DOKill();
             logo2?.DOKill();
+            logo1TransitionTween?.Kill();
+            logo2TransitionTween?.Kill();
         }
 
         //打开窗口

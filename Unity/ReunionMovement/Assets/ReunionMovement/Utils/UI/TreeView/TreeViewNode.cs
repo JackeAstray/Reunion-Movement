@@ -126,11 +126,18 @@ namespace ReunionMovement
         private void ResetComponent()
         {
             // 重置 Container 的水平偏移
-            container.localPosition = new Vector3(0, container.localPosition.y, 0);
+            if (container != null)
+            {
+                container.localPosition = new Vector3(0, container.localPosition.y, 0);
+            }
 
-            // 箭头默认指向右侧（折叠状态）
-            toggleTransform.localEulerAngles = new Vector3(0, 0, 90);
-            toggleTransform.GetComponent<Image>().sprite = arrow;
+            // 箭头默认指向右侧（折叠状态）；Icon 节点缺失时跳过（GetComponent 校验漏了 Icon 会 NRE）
+            if (toggleTransform != null)
+            {
+                toggleTransform.localEulerAngles = new Vector3(0, 0, 90);
+                var arrowImage = toggleTransform.GetComponent<Image>();
+                if (arrowImage != null) arrowImage.sprite = arrow;
+            }
         }
 
         /// <summary>
@@ -160,9 +167,10 @@ namespace ReunionMovement
                 0, 0);
 
             // 叶子节点（无子节点）显示透明占位图代替箭头
-            if (data.childNodes.Count.Equals(0))
+            if (data.childNodes.Count.Equals(0) && toggleTransform != null)
             {
-                toggleTransform.GetComponent<Image>().sprite = transparent;
+                var arrowImage = toggleTransform.GetComponent<Image>();
+                if (arrowImage != null) arrowImage.sprite = transparent;
             }
 
             // 缓存点击回调

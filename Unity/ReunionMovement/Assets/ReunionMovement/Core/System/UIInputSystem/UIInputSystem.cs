@@ -224,10 +224,12 @@ namespace ReunionMovement.Core.UIInput
         /// </summary>
         private async UniTask LoadInputActionsAsync()
         {
-            // 尝试从 UISystem 的 InputSystemUIInputModule 获取已赋值的 actions
+            // 尝试从 UISystem 的 InputSystemUIInputModule 获取已赋值的 actions。
+            // 与 Resources 路径一致：Instantiate 克隆后使用，避免 ApplyBindingOverride/AddBinding
+            // 直接修改共享资产（域重载关闭时跨 Play 会话残留、其他系统共用该资产被污染）。
             if (inputModule != null && inputModule.actionsAsset != null)
             {
-                inputActions = inputModule.actionsAsset;
+                inputActions = UnityEngine.Object.Instantiate(inputModule.actionsAsset);
                 return;
             }
 
@@ -264,7 +266,8 @@ namespace ReunionMovement.Core.UIInput
                 EnsureNavigateBindings();
                 // Submit: 确保 Enter + NumpadEnter 都可用
                 EnsureSubmitBindings();
-                // Cancel
+                // 应用自定义 Submit/Cancel 覆盖（此前遗漏 Submit → SetBinding/交互重绑定不生效、重启后丢失）
+                ApplyBindingOverride("UI", "Submit", CurrentBinding.submit);
                 ApplyBindingOverride("UI", "Cancel", CurrentBinding.cancel);
             }
             catch (Exception ex)
@@ -353,11 +356,32 @@ namespace ReunionMovement.Core.UIInput
             var action = inputActions.FindAction($"{actionMap}/{actionName}");
             if (action == null) return;
 
-            // 找到键盘 binding 并覆盖
+            // 完整路径（如 "<Gamepad>/buttonSouth"，交互式重绑定手柄产生）按路径处理：
+            // 覆盖同设备的已有绑定，否则追加
+            if (bindingKey.StartsWith("<"))
+            {
+                int close = bindingKey.IndexOf('>');
+                string device = close > 0 ? bindingKey.Substring(0, close + 1) : bindingKey;
+                for (int i = 0; i < action.bindings.Count; i++)
+                {
+                    var binding = action.bindings[i];
+                    if (!binding.isComposite && !binding.isPartOfComposite
+                        && binding.path != null && binding.path.StartsWith(device, StringComparison.Ordinal))
+                    {
+                        action.ApplyBindingOverride(i, bindingKey);
+                        return;
+                    }
+                }
+                action.AddBinding(bindingKey);
+                return;
+            }
+
+            // 键盘按键名（如 "enter"）：覆盖第一个键盘绑定
             for (int i = 0; i < action.bindings.Count; i++)
             {
                 var binding = action.bindings[i];
-                if (!binding.isComposite && !binding.isPartOfComposite && binding.path.Contains("Keyboard"))
+                if (!binding.isComposite && !binding.isPartOfComposite
+                    && binding.path != null && binding.path.Contains("Keyboard"))
                 {
                     action.ApplyBindingOverride(i, $"<Keyboard>/{bindingKey}");
                     return;
@@ -418,10 +442,9 @@ namespace ReunionMovement.Core.UIInput
             };
             activeRebindCancelCallback = guardedCancel;
 
-            // 对键盘设备执行重绑定
+            // 交互式重绑定：允许键盘与手柄（Submit/Cancel 支持手柄按键）；排除指针/触屏等非按键设备
             var rebindOperation = action.PerformInteractiveRebinding()
                 .WithControlsExcluding("<Mouse>/")
-                .WithControlsExcluding("<Gamepad>/")
                 .WithControlsExcluding("<Joystick>/")
                 .WithControlsExcluding("<XRController>/")
                 .WithControlsExcluding("<Touchscreen>/")
@@ -442,7 +465,8 @@ namespace ReunionMovement.Core.UIInput
                     SaveBindings();
 
                     onComplete?.Invoke(keyName);
-                    BindingChangedSubject.OnNext(CurrentBinding);
+                    // Clear() 可能已 Dispose 并置 null Subject，判空避免 NRE
+                    BindingChangedSubject?.OnNext(CurrentBinding);
 
                     operation.Dispose();
                 })
@@ -488,12 +512,16 @@ namespace ReunionMovement.Core.UIInput
         /// </summary>
         private void UpdateBindingFromRebind(string actionName, string controlPath, string displayName)
         {
-            // 从 controlPath 中提取按键名称，如 "<Keyboard>/a" -> "a"
+            // 键盘按键提取尾段（如 "<Keyboard>/a" → "a"，与 SetBinding/历史存档格式一致）；
+            // 非键盘控件（如手柄）保留完整路径（如 "<Gamepad>/buttonSouth"），ApplyBindingOverride 按路径处理
             var keyName = controlPath;
-            var slashIndex = controlPath.LastIndexOf('/');
-            if (slashIndex >= 0)
+            if (controlPath.Contains("<Keyboard>"))
             {
-                keyName = controlPath.Substring(slashIndex + 1);
+                var slashIndex = controlPath.LastIndexOf('/');
+                if (slashIndex >= 0)
+                {
+                    keyName = controlPath.Substring(slashIndex + 1);
+                }
             }
 
             switch (actionName)
@@ -1017,8 +1045,19 @@ namespace ReunionMovement.Core.UIInput
             // 避免 Gameplay 模式下关窗误弹栈导致焦点栈错位（Pop 多于 Push）。
             if (currentMode != UIControlMode.UIControl) return;
 
-            // 延迟一帧恢复焦点，确保关闭的 UI 已完全移除
-            // 使用 Unity 的延迟调用
+            // 延迟一帧恢复焦点：当帧窗口尚未完全从 EventSystem 注销，
+            // 立即恢复可能被 InputSystemUIInputModule 当帧的导航状态覆写
+            if (focusStack.Count > 0)
+            {
+                RestoreFocusNextFrameAsync().Forget();
+            }
+        }
+
+        /// <summary>延迟一帧恢复焦点（延迟期间若模式切换/Clear 则放弃恢复）</summary>
+        private async UniTaskVoid RestoreFocusNextFrameAsync()
+        {
+            await UniTask.Yield(PlayerLoopTiming.Update);
+            if (currentMode != UIControlMode.UIControl) return;
             if (focusStack.Count > 0)
             {
                 RestorePreviousFocus();
@@ -1174,8 +1213,10 @@ namespace ReunionMovement.Core.UIInput
             {
                 return UISystem.Instance != null && UISystem.Instance.HasAnyOpenWindow();
             }
-            catch
+            catch (Exception ex)
             {
+                // 记录异常而非静默吞掉：极端时序（引擎重建中）下可能抛错，至少留痕
+                Log.Warning("UIInputSystem.HasOpenUI 访问异常（按无窗口处理）: {0}", ex.Message);
                 return false;
             }
         }

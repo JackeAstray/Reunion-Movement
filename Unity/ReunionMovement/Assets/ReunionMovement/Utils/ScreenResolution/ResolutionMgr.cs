@@ -141,7 +141,8 @@ namespace ReunionMovement.Common.Util
             bool found = false;
             if (Screen.fullScreenMode != FullScreenMode.Windowed)
             {
-                currWindowedRes = windowedResolutions.Count - 1;
+                // 列表可能为空（Count-1=-1），clamp 防止越界与语义错误
+                currWindowedRes = Mathf.Max(0, windowedResolutions.Count - 1);
                 for (int i = 0; i < fullscreenResolutions.Count; i++)
                 {
                     if (Mathf.Approximately(fullscreenResolutions[i].x, Screen.width) &&
@@ -154,12 +155,16 @@ namespace ReunionMovement.Common.Util
                 }
                 if (!found)
                 {
-                    SetResolution(fullscreenResolutions.Count - 1, true);
+                    // 启动时不擅自切换用户当前分辨率（与 GameOption.ApplyDisplayOptions 双权威会互相覆盖）；
+                    // 仅记录最接近的索引，实际切换由 GameOption/用户显式调用驱动
+                    currFullscreenRes = Mathf.Max(0, fullscreenResolutions.Count - 1);
+                    Log.Debug("ResolutionMgr: 当前分辨率不在预设列表中，记录索引而不切换");
                 }
             }
             else
             {
-                currFullscreenRes = fullscreenResolutions.Count - 1;
+                // 列表可能为空（Count-1=-1），clamp 防止越界与语义错误
+                currFullscreenRes = Mathf.Max(0, fullscreenResolutions.Count - 1);
                 for (int i = 0; i < windowedResolutions.Count; i++)
                 {
                     if (Mathf.Approximately(windowedResolutions[i].x, Screen.width) &&
@@ -171,7 +176,11 @@ namespace ReunionMovement.Common.Util
                     }
                 }
                 if (!found)
-                    SetResolution(windowedResolutions.Count - 1, false);
+                {
+                    // 启动时不擅自切换用户当前分辨率（与 GameOption.ApplyDisplayOptions 双权威会互相覆盖）
+                    currWindowedRes = Mathf.Max(0, windowedResolutions.Count - 1);
+                    Log.Debug("ResolutionMgr: 当前分辨率不在预设列表中，记录索引而不切换");
+                }
             }
         }
 
@@ -200,6 +209,35 @@ namespace ReunionMovement.Common.Util
 
             float heightFullscreen = Mathf.Round(width / screenAspect);
             AddUniqueResolution(fullscreenResolutions, new Vector2(width, heightFullscreen));
+        }
+
+        /// <summary>
+        /// 从 GameOption 的分辨率配置应用显示设置 —— ResolutionMgr 存在时作为唯一的分辨率应用入口，
+        /// 避免 GameOption.ApplyDisplayOptions 与 InitResolutions 两套系统各自 SetResolution 互相覆盖。
+        /// 预设列表中不存在目标分辨率时选择最接近项（避免切换到一个不稳定的分辨率）。
+        /// </summary>
+        public void ApplyResolutionFromOptions(int width, int height, bool fullscreen)
+        {
+            var list = fullscreen ? fullscreenResolutions : windowedResolutions;
+            if (list == null || list.Count == 0)
+            {
+                // 列表尚未初始化：回退直接设置（保证用户设置不丢失）
+                Screen.SetResolution(width, height, fullscreen);
+                return;
+            }
+
+            int best = 0;
+            float bestDist = float.MaxValue;
+            for (int i = 0; i < list.Count; i++)
+            {
+                float dist = Mathf.Abs(list[i].x - width) + Mathf.Abs(list[i].y - height);
+                if (dist < bestDist)
+                {
+                    bestDist = dist;
+                    best = i;
+                }
+            }
+            SetResolution(best, fullscreen);
         }
 
         /// <summary>

@@ -1,0 +1,35 @@
+{
+    "name": "ReunionMovement.Tests",
+    "rootNamespace": "ReunionMovement.Tests",
+    "references": [
+        "ReunionMovement.Base",
+        "ReunionMovement.Common",
+        "ReunionMovement.Utils",
+        "ReunionMovement.Core",
+        "ReunionMovement.GenerateScript.AutoScripts",
+        "UniTask",
+        "UniTask.Addressables",
+        "UnityEngine.UI",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "Unity.Addressables",
+        "Unity.ResourceManager",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
