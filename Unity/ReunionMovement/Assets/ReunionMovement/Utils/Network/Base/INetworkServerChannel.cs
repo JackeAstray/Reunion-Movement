@@ -17,6 +17,10 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         event Action<int, byte[]> OnDataReceived;
         /// <summary>
+        /// 错误回调（连接 ID；全局错误如启动失败为 -1）；
+        /// </summary>
+        event Action<int, string> OnError;
+        /// <summary>
         /// server是否处于活动状态；
         /// </summary>
         bool Active { get; }

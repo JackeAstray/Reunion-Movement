@@ -19,6 +19,10 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         string ChannelName { get; set; }
         /// <summary>
+        /// 通道是否处于打开状态（客户端=已连接 / 服务端=监听中）；
+        /// </summary>
+        bool IsOpen { get; }
+        /// <summary>
         /// 终结通道；
         /// </summary>
         void Close();

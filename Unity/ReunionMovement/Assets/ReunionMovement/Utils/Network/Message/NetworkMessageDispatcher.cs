@@ -48,8 +48,21 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         public bool Dispatch(byte[] frame)
         {
-            if (!NetworkMessageCodec.TryDecode(frame, out ushort id, out var payload)) return false;
+            if (!MessageIdCodec.Instance.TryDecode(frame, 0, frame?.Length ?? 0, out var id, out var payload)) return false;
+            return DispatchCore(id, payload);
+        }
 
+        /// <summary>
+        /// 按已解码的（消息 ID + 负载段）分发 —— 由上层编解码层（NetworkClient / NetworkServer）调用。
+        /// 返回是否成功分发（未注册 ID 返回 false）。
+        /// </summary>
+        public bool Dispatch(ushort messageId, ArraySegment<byte> payload)
+        {
+            return DispatchCore(messageId, payload);
+        }
+
+        bool DispatchCore(ushort id, ArraySegment<byte> payload)
+        {
             if (handlers.TryGetValue(id, out var handler))
             {
                 try

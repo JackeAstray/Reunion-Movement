@@ -9,10 +9,25 @@ namespace ReunionMovement.Common.Util.EditorTools
         public override void OnInspectorGUI()
         {
             var t = target as UniversalNetworkBehaviour;
+            serializedObject.Update();
             DrawDefaultInspector();
+            serializedObject.ApplyModifiedProperties();
 
             GUILayout.Space(8);
             GUILayout.Label("快速控制", EditorStyles.boldLabel);
+
+            if (Application.isPlaying)
+            {
+                if (t.Client != null)
+                {
+                    EditorGUILayout.LabelField("客户端状态", t.Client.State.ToString());
+                }
+                if (t.Server != null)
+                {
+                    EditorGUILayout.LabelField("服务端状态",
+                        t.Server.IsActive ? $"运行中（{t.Server.ClientCount} 个连接）" : "未运行");
+                }
+            }
 
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("启动"))
