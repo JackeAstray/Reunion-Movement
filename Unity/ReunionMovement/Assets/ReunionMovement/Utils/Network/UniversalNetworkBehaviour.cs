@@ -262,10 +262,8 @@ namespace ReunionMovement.Common.Util
                         Log.Info("TCP 客户端已连接");
                         reconnectAttempts = 0;
                         tcpEverConnected = true;
-                        ClientConnected?.Invoke();
-                        onClientConnected?.Invoke();
-                        // 无条件重建心跳：先取消旧心跳，避免旧协程退出时清空 heartbeatCts
-                        // 导致心跳停摆，或重连后多个心跳协程并发发包
+                        // 先重建心跳再触发用户事件：若订阅者在事件内调用 StopAll，
+                        // 事件后才新建的 CTS 不会被字段追踪 → 僵尸心跳协程永久空转
                         if (enableHeartbeat)
                         {
                             heartbeatCts?.Cancel();
@@ -273,6 +271,8 @@ namespace ReunionMovement.Common.Util
                             heartbeatCts = new CancellationTokenSource();
                             HeartbeatRoutineAsync(heartbeatCts, heartbeatCts.Token).Forget();
                         }
+                        ClientConnected?.Invoke();
+                        onClientConnected?.Invoke();
                     };
                     tcpClient.OnDataReceived += (data) =>
                     {
@@ -308,10 +308,7 @@ namespace ReunionMovement.Common.Util
                     {
                         Log.Info("KCP 客户端已连接");
                         reconnectAttempts = 0;
-                        ClientConnected?.Invoke();
-                        onClientConnected?.Invoke();
-                        // 无条件重建心跳：先取消旧心跳，避免旧协程退出时清空 heartbeatCts
-                        // 导致心跳停摆，或重连后多个心跳协程并发发包
+                        // 先重建心跳再触发用户事件（同上：防事件内 StopAll 后僵尸心跳）
                         if (enableHeartbeat)
                         {
                             heartbeatCts?.Cancel();
@@ -319,6 +316,8 @@ namespace ReunionMovement.Common.Util
                             heartbeatCts = new CancellationTokenSource();
                             HeartbeatRoutineAsync(heartbeatCts, heartbeatCts.Token).Forget();
                         }
+                        ClientConnected?.Invoke();
+                        onClientConnected?.Invoke();
                     };
                     kcpClient.OnDataReceived += (data) =>
                     {
@@ -354,10 +353,7 @@ namespace ReunionMovement.Common.Util
                         {
                             Log.Info("WebSocket 客户端已连接");
                             reconnectAttempts = 0;
-                            ClientConnected?.Invoke();
-                            onClientConnected?.Invoke();
-                            // 无条件重建心跳：先取消旧心跳，避免旧协程退出时清空 heartbeatCts
-                            // 导致心跳停摆，或重连后多个心跳协程并发发包
+                            // 先重建心跳再触发用户事件（同上：防事件内 StopAll 后僵尸心跳）
                             if (enableHeartbeat)
                             {
                                 heartbeatCts?.Cancel();
@@ -365,6 +361,8 @@ namespace ReunionMovement.Common.Util
                                 heartbeatCts = new CancellationTokenSource();
                                 HeartbeatRoutineAsync(heartbeatCts, heartbeatCts.Token).Forget();
                             }
+                            ClientConnected?.Invoke();
+                            onClientConnected?.Invoke();
                         };
                         swtClient.onDisconnect += () =>
                         {

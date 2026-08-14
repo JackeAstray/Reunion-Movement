@@ -1,0 +1,21 @@
+{
+    "name": "ReunionMovement.Utils.UI.ButtonExtensions.Animated.Editor",
+    "rootNamespace": "ReunionMovement.UI.ButtonExtensions.Editor",
+    "references": [
+        "ReunionMovement.Utils",
+        "ReunionMovement.Common",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

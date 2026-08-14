@@ -1,0 +1,22 @@
+{
+    "name": "ReunionMovement.Utils.UI.ImageExtensions.Editor",
+    "rootNamespace": "ReunionMovement.UI.ImageExtensions.Editor",
+    "references": [
+        "ReunionMovement.Utils",
+        "ReunionMovement.Common",
+        "ReunionMovement.Core",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

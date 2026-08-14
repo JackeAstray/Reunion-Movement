@@ -15,19 +15,6 @@ using Object = UnityEngine.Object;
 namespace ReunionMovement.Core.Resources
 {
     /// <summary>
-    /// Addressables 运行模式（由 GameConfig 配置）
-    /// </summary>
-    public enum AddressablesMode
-    {
-        /// <summary>完全关闭 Addressables（纯 Resources 降级模式）</summary>
-        Off = 0,
-        /// <summary>仅本地 Bundle（无远程更新）</summary>
-        LocalOnly = 1,
-        /// <summary>本地 + 远程（支持 CDN 热更）</summary>
-        Remote = 2,
-    }
-
-    /// <summary>
     /// Addressables 远程更新检查结果
     /// </summary>
     public struct AddressableUpdateResult

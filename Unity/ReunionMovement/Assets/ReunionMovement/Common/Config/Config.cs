@@ -1,5 +1,4 @@
 using ReunionMovement.Common;
-using ReunionMovement.Core.Resources;
 using UnityEngine;
 
 namespace ReunionMovement

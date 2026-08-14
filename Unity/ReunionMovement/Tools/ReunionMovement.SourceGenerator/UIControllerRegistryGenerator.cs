@@ -50,7 +50,6 @@ namespace ReunionMovement.SourceGenerator
             sb.AppendLine("        private static readonly Dictionary<string, Type> s_map = new Dictionary<string, Type>(StringComparer.Ordinal)");
             sb.AppendLine("        {");
 
-            bool any = false;
             foreach (var type in EnumerateNamedTypes(context.Compilation))
             {
                 if (!InheritsFrom(type, uiControllerSymbol)) continue;
@@ -59,7 +58,6 @@ namespace ReunionMovement.SourceGenerator
 
                 string fullName = type.ToDisplayString();
                 sb.AppendLine($"            {{ \"{type.Name}\", typeof({fullName}) }},");
-                any = true;
             }
 
             sb.AppendLine("        };");
@@ -69,11 +67,13 @@ namespace ReunionMovement.SourceGenerator
             sb.AppendLine("    }");
             sb.AppendLine("}");
 
-            if (any)
-            {
-                context.AddSource("ReunionMovement.UIControllerRegistry.g.cs",
-                    SourceText.From(sb.ToString(), Encoding.UTF8));
-            }
+            // 注意：即使条目为空也必须生成类（空注册表）：
+            // 1) UIController 子类可能位于其他程序集（如预定义 Assembly-CSharp 中的 GenerateScript/UI），
+            //    本编译扫描不到子类，但 UISystem.CreateUIController 仍引用 UIControllerRegistry.TryGet，
+            //    空注册表 + UISystem 的反射回退保证跨程序集 UI 控制器正常加载。
+            // 2) 与 TerminalCommandRegistryGenerator 保持一致（空表也生成）。
+            context.AddSource("ReunionMovement.UIControllerRegistry.g.cs",
+                SourceText.From(sb.ToString(), Encoding.UTF8));
         }
 
         private static bool InheritsFrom(INamedTypeSymbol type, INamedTypeSymbol baseType)

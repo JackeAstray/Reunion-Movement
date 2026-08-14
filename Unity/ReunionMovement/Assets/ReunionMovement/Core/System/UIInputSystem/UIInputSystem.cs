@@ -60,6 +60,9 @@ namespace ReunionMovement.Core.UIInput
         /// <summary>进行中的重绑定操作（持有引用以便 CancelRebind 能真正取消底层监听）</summary>
         private InputActionRebindingExtensions.RebindingOperation activeRebindOperation;
 
+        /// <summary>进行中的重绑定取消回调（幂等包装，保证外部 CancelRebind 与操作自身 OnCancel 都只触发一次用户回调）</summary>
+        private Action activeRebindCancelCallback;
+
         /// <summary>当前 UI 控制模式</summary>
         private UIControlMode currentMode = UIControlMode.Gameplay;
 
@@ -405,6 +408,16 @@ namespace ReunionMovement.Core.UIInput
 
             isRebinding = true;
 
+            // 幂等包装：操作自身 OnCancel 与外部 CancelRebind 都可能触发，保证用户 onCancel 恰好一次
+            bool cancelInvoked = false;
+            Action guardedCancel = () =>
+            {
+                if (cancelInvoked) return;
+                cancelInvoked = true;
+                onCancel?.Invoke();
+            };
+            activeRebindCancelCallback = guardedCancel;
+
             // 对键盘设备执行重绑定
             var rebindOperation = action.PerformInteractiveRebinding()
                 .WithControlsExcluding("<Mouse>/")
@@ -418,6 +431,7 @@ namespace ReunionMovement.Core.UIInput
                 {
                     isRebinding = false;
                     activeRebindOperation = null;
+                    activeRebindCancelCallback = null;
 
                     // 更新 CurrentBinding
                     var newKey = operation.selectedControl.path;
@@ -436,7 +450,10 @@ namespace ReunionMovement.Core.UIInput
                 {
                     isRebinding = false;
                     activeRebindOperation = null;
-                    onCancel?.Invoke();
+                    // 通过幂等包装调用用户取消回调（先取出并清空，防重入）
+                    var cancelCb = activeRebindCancelCallback;
+                    activeRebindCancelCallback = null;
+                    cancelCb?.Invoke();
                     operation.Dispose();
                 });
 
@@ -445,13 +462,20 @@ namespace ReunionMovement.Core.UIInput
         }
 
         /// <summary>
-        /// 取消当前重绑定（真正 Dispose 底层 operation，停止监听按键）
+        /// 取消当前重绑定（真正 Dispose 底层 operation，停止监听按键）。
+        /// 注意：部分 Unity 版本 Dispose 进行中的 operation 不会触发 OnCancel 回调，
+        /// 因此这里在 Dispose 后兜底调用取消回调 —— guardedCancel 幂等守卫保证恰好一次。
         /// </summary>
         public void CancelRebind()
         {
-            activeRebindOperation?.Dispose();
+            var operation = activeRebindOperation;
             activeRebindOperation = null;
+            var cancelCb = activeRebindCancelCallback;
+            activeRebindCancelCallback = null;
             isRebinding = false;
+
+            operation?.Dispose();
+            cancelCb?.Invoke();
         }
 
         /// <summary>

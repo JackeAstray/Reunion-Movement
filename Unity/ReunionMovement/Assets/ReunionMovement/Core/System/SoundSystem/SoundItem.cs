@@ -1,6 +1,5 @@
 using Cysharp.Threading.Tasks;
 using System.Threading;
-using Unity.Mathematics;
 using UnityEngine;
 
 namespace ReunionMovement.Core.Sound
@@ -32,7 +31,8 @@ namespace ReunionMovement.Core.Sound
         /// <param name="volume">音量</param>
         /// <param name="mute">是否静音</param>
         /// <param name="pitch">音高</param>
-        public void Processing(AudioClip audioClip, Transform emitter, bool loop, float volume, bool mute, float pitch = 1f)
+        /// <param name="spatialBlend">3D 空间混合（0=纯 2D，1=纯 3D）</param>
+        public void Processing(AudioClip audioClip, Transform emitter, bool loop, float volume, bool mute, float pitch = 1f, float spatialBlend = 0f)
         {
             if (audioClip == null)
             {
@@ -57,6 +57,8 @@ namespace ReunionMovement.Core.Sound
             source.loop = loop;
             source.mute = mute;
             source.pitch = pitch;
+            // 3D 音效：设置空间混合比（AudioListener 相对位置与衰减曲线决定音量/声像）
+            source.spatialBlend = Mathf.Clamp01(spatialBlend);
 
             // 使用 PlayScheduled 替代 Play，消除 Unity 音频线程调度抖动
             // 调度到当前 DSP 时间 + 20ms，确保音频线程有足够时间处理

@@ -5,6 +5,7 @@ using Cysharp.Threading.Tasks;
 using R3;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine.AddressableAssets;
 using UnityEngine.Events;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -54,6 +55,12 @@ namespace ReunionMovement.Core.Scene
         private string previousSceneName = null;                          // 上一个场景名
         private int isLoadingAtomic = 0;                                  // 原子操作：0=空闲, 1=加载中（Interlocked）
         private const string loadSceneName = "LoadingScene";              // 加载场景名字
+
+        /// <summary>在途加载完成信号（排队等待者 await 后重试获取加载锁）</summary>
+        private UniTaskCompletionSource currentLoadTcs;
+
+        /// <summary>场景加载超时（秒），超时后中止等待并标记失败；<=0 表示不超时</summary>
+        public float sceneLoadTimeoutSeconds = 60f;
         // 场景切换时不隐藏的窗口名称集合（由 LoadScene 调用方在切换前注册）
         private readonly HashSet<string> excludeFromSceneHide = new HashSet<string>();
 
@@ -225,35 +232,47 @@ namespace ReunionMovement.Core.Scene
         /// <param name="slcc">场景加载完成回调</param>
         public async UniTask LoadScene(string levelName, bool openLoad = false, UnityAction bslcc = null, UnityAction slcc = null)
         {
-            // 原子操作：防止并发加载（即使在异步上下文中也能安全防护）
-            if (System.Threading.Interlocked.CompareExchange(ref isLoadingAtomic, 1, 0) != 0)
+            // 原子操作：防止并发加载。与旧行为不同，并发调用不再被静默丢弃——
+            // 而是排队等待在途加载完成后再执行，保证调用方的加载请求与回调不丢失。
+            while (Interlocked.CompareExchange(ref isLoadingAtomic, 1, 0) != 0)
             {
-                Log.Warning("场景加载被拒绝：当前正在加载 {0}，无法同时加载 {1}", targetSceneName, levelName);
-                return;
+                Log.Debug("场景 {0} 排队等待在途加载完成...", levelName);
+                var pending = currentLoadTcs;
+                if (pending != null)
+                {
+                    await pending.Task;
+                }
+                else
+                {
+                    // TCS 尚未就绪（极小窗口），让出一帧重试
+                    await UniTask.Yield(PlayerLoopTiming.Update);
+                }
             }
 
-            // 目标场景已加载：直接回调
-            if (currentSceneName == levelName)
-            {
-                System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
-                bslcc?.Invoke();
-                slcc?.Invoke();
-                return;
-            }
-            // Clear() 可能已置空 LoadState（系统清理），判空避免 NRE
-            if (LoadState != null) LoadState.Value = SceneLoadState.Loading;
-            // 开始加载
-            sceneLoadingCompletionCallback = slcc;
-            beforeSceneLoadingCompletionCallback = bslcc;
-            targetSceneName = levelName;
-            previousSceneName = currentSceneName;
-            currentSceneName = loadSceneName;
-            this.openLoad = openLoad;
-
-            HideUIWindowsOnSceneChange();
+            var myTcs = new UniTaskCompletionSource();
+            currentLoadTcs = myTcs;
 
             try
             {
+                // 目标场景已加载：直接回调
+                if (currentSceneName == levelName)
+                {
+                    bslcc?.Invoke();
+                    slcc?.Invoke();
+                    return;
+                }
+                // Clear() 可能已置空 LoadState（系统清理），判空避免 NRE
+                if (LoadState != null) LoadState.Value = SceneLoadState.Loading;
+                // 开始加载
+                sceneLoadingCompletionCallback = slcc;
+                beforeSceneLoadingCompletionCallback = bslcc;
+                targetSceneName = levelName;
+                previousSceneName = currentSceneName;
+                currentSceneName = loadSceneName;
+                this.openLoad = openLoad;
+
+                HideUIWindowsOnSceneChange();
+
                 if (openLoad)
                 {
                     await OnLoadingSceneAsync(loadSceneName, LoadSceneMode.Single);
@@ -270,8 +289,12 @@ namespace ReunionMovement.Core.Scene
             }
             finally
             {
-                // 确保无论成功、失败还是异常，都能重置加载锁，防止后续加载被永久阻塞
-                System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
+                // 队列释放：仅当自己仍是"在途加载"时才清空信号，避免误清新排队者的 TCS
+                if (ReferenceEquals(currentLoadTcs, myTcs)) currentLoadTcs = null;
+                // 无论成功、失败、异常还是超时都释放加载锁，防止后续加载被永久阻塞
+                Interlocked.Exchange(ref isLoadingAtomic, 0);
+                myTcs.TrySetResult();
+
                 // 加载未完成时修正状态（Clear() 可能已置空 LoadState，判空避免 NRE）
                 if (LoadState != null && LoadState.Value != SceneLoadState.Loaded)
                 {
@@ -311,21 +334,21 @@ namespace ReunionMovement.Core.Scene
         /// 通过 Addressables 加载目标场景（地址 Remote/Scenes/{name}），成功返回 true。
         /// 切换前先卸载旧 Addressable 场景（释放 Bundle）；进度映射为 0.15~1.0，与 SceneManager 流程对齐。
         /// </summary>
-        private async UniTask<bool> LoadTargetSceneViaAddressablesAsync(string levelName, LoadSceneMode loadSceneMode)
+        private async UniTask<bool> LoadTargetSceneViaAddressablesAsync(string levelName, LoadSceneMode loadSceneMode, CancellationToken ct = default)
         {
             try
             {
                 // 释放上一个 Addressable 场景，避免 Bundle 泄漏
                 if (loadedSceneInstance.Scene.IsValid())
                 {
-                    await AddressableSystem.Instance.UnloadSceneAsync(loadedSceneInstance);
+                    await AddressableSystem.Instance.UnloadSceneAsync(loadedSceneInstance, ct: ct);
                     loadedSceneInstance = default;
                 }
 
                 // 进度映射：Addressables 0~1 → SceneSystem 0.15~1.0（与 SceneManager 流程起始回调点对齐）
                 var progress = new Progress<float>(p => CallbackProgress(0.15f + 0.85f * Mathf.Clamp01(p)));
                 var sceneInstance = await AddressableSystem.Instance.LoadSceneAsync(
-                    AddressableKeys.SceneRoot + levelName, loadSceneMode, progress);
+                    AddressableKeys.SceneRoot + levelName, loadSceneMode, progress, ct);
                 if (!sceneInstance.Scene.IsValid())
                 {
                     return false;
@@ -365,8 +388,20 @@ namespace ReunionMovement.Core.Scene
                 return;
             }
 
+            // 过渡场景超时保护：加载卡死时不再无限等待
+            float timeoutDeadline = sceneLoadTimeoutSeconds > 0
+                ? Time.realtimeSinceStartup + sceneLoadTimeoutSeconds
+                : float.PositiveInfinity;
+
             while (!async.isDone)
             {
+                if (Time.realtimeSinceStartup > timeoutDeadline)
+                {
+                    Log.Error("过渡场景 {0} 加载超时（>{1}s），跳过等待", loadSceneName, sceneLoadTimeoutSeconds);
+                    ExecuteBslcc();
+                    CallbackProgress(0);
+                    return;
+                }
                 await UniTask.Yield(PlayerLoopTiming.Update);
             }
 
@@ -386,7 +421,23 @@ namespace ReunionMovement.Core.Scene
                 && AddressableSystem.Instance.isInited
                 && AddressableKeyExists(AddressableKeys.SceneRoot + levelName, typeof(SceneInstance)))
             {
-                if (await LoadTargetSceneViaAddressablesAsync(levelName, loadSceneMode))
+                bool loaded = false;
+                // 超时保护：CancelAfter 触发的取消会经由 autoReleaseWhenCanceled 释放句柄，防泄漏
+                var timeoutCts = new CancellationTokenSource();
+                if (sceneLoadTimeoutSeconds > 0)
+                {
+                    timeoutCts.CancelAfter(TimeSpan.FromSeconds(sceneLoadTimeoutSeconds));
+                }
+                try
+                {
+                    loaded = await LoadTargetSceneViaAddressablesAsync(levelName, loadSceneMode, timeoutCts.Token);
+                }
+                finally
+                {
+                    timeoutCts.Dispose();
+                }
+
+                if (loaded)
                 {
                     return;
                 }
@@ -402,7 +453,6 @@ namespace ReunionMovement.Core.Scene
                 // 触发并清空所有回调，避免泄漏
                 ExecuteBslcc();
                 ExecuteSlcc();
-                System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
                 targetSceneName = null;
                 // 以实际激活场景修正（openLoad 模式下过渡场景可能已激活，不能回滚成 previousSceneName）
                 currentSceneName = SceneManager.GetActiveScene().name;
@@ -416,6 +466,11 @@ namespace ReunionMovement.Core.Scene
                 async.allowSceneActivation = false;
             }
 
+            // 超时截止时间（统一供进度等待与激活等待两阶段使用）
+            float timeoutDeadline = sceneLoadTimeoutSeconds > 0
+                ? Time.realtimeSinceStartup + sceneLoadTimeoutSeconds
+                : float.PositiveInfinity;
+
             CallbackProgress(0.15f);
             await UniTask.Delay((int)(startProgressWaitingTime * 1000));
 
@@ -424,6 +479,11 @@ namespace ReunionMovement.Core.Scene
             int frameCounter = 0;
             while (async.progress < 0.9f)
             {
+                if (Time.realtimeSinceStartup > timeoutDeadline)
+                {
+                    HandleSceneLoadTimeout(async, levelName);
+                    return;
+                }
                 if (++frameCounter >= frameSkip)
                 {
                     CallbackProgress(async.progress);
@@ -443,6 +503,11 @@ namespace ReunionMovement.Core.Scene
 
             while (!async.isDone)
             {
+                if (Time.realtimeSinceStartup > timeoutDeadline)
+                {
+                    HandleSceneLoadTimeout(async, levelName);
+                    return;
+                }
                 await UniTask.Yield(PlayerLoopTiming.Update);
             }
 
@@ -461,11 +526,31 @@ namespace ReunionMovement.Core.Scene
         }
 
         /// <summary>
+        /// 场景加载超时处理：记录失败状态并触发回调。SceneManager 的 AsyncOperation 无法真正中止，
+        /// 放行激活让其自行完成，避免半加载操作永久驻留内存；
+        /// 实际激活场景的状态修正由 LoadScene 的 finally 完成。
+        /// </summary>
+        private void HandleSceneLoadTimeout(AsyncOperation async, string levelName)
+        {
+            Log.Error("场景 {0} 加载超时（>{1}s），已中止等待", levelName, sceneLoadTimeoutSeconds);
+            if (LoadState != null) LoadState.Value = SceneLoadState.Failed;
+            // 放行激活：Unity 无法取消 SceneManager 场景加载，阻塞激活会永久驻留内存
+            if (Application.platform != RuntimePlatform.WebGLPlayer)
+            {
+                async.allowSceneActivation = true;
+            }
+            ExecuteBslcc();
+            ExecuteSlcc();
+        }
+
+        /// <summary>
         /// 加载下一场景完成回调
         /// </summary>
         private void OnTargetSceneLoaded()
         {
-            System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
+            // 注意：加载锁（isLoadingAtomic）统一由 LoadScene 的 finally 释放，
+            // 此处不再提前重置 —— 否则排队中的第二个 LoadScene 会提前进入，
+            // 与 finally 的 currentLoadTcs 清理产生竞态。
             currentSceneName = targetSceneName;
             targetSceneName = null;
             // Clear() 可能已释放 Subject/ReactiveProperty（系统清理）,判空避免 NRE

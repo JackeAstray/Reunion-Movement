@@ -590,6 +590,8 @@ namespace ReunionMovement.UI.ImageExtensions
             get => customTime;
             set
             {
+                // 值相等守卫：动画每帧写同值时不再置脏（停止的动画自动归零重写开销）
+                if (Mathf.Approximately(customTime, value)) return;
                 customTime = value;
                 if (m_Material == material)
                 {
@@ -1103,7 +1105,9 @@ namespace ReunionMovement.UI.ImageExtensions
             get => m_ToneIntensity;
             set
             {
-                m_ToneIntensity = Mathf.Clamp01(value);
+                float clamped = Mathf.Clamp01(value);
+                if (Mathf.Approximately(m_ToneIntensity, clamped)) return;
+                m_ToneIntensity = clamped;
                 SetMaterialDirty();
             }
         }
@@ -1191,7 +1195,9 @@ namespace ReunionMovement.UI.ImageExtensions
             get => m_ColorIntensity;
             set
             {
-                m_ColorIntensity = Mathf.Clamp01(value);
+                float clamped = Mathf.Clamp01(value);
+                if (Mathf.Approximately(m_ColorIntensity, clamped)) return;
+                m_ColorIntensity = clamped;
                 SetMaterialDirty();
             }
         }
@@ -1234,7 +1240,9 @@ namespace ReunionMovement.UI.ImageExtensions
             get => m_EdgeWidth;
             set
             {
-                m_EdgeWidth = Mathf.Clamp01(value);
+                float clamped = Mathf.Clamp01(value);
+                if (Mathf.Approximately(m_EdgeWidth, clamped)) return;
+                m_EdgeWidth = clamped;
                 SetMaterialDirty();
             }
         }
@@ -1338,7 +1346,9 @@ namespace ReunionMovement.UI.ImageExtensions
             get => m_SamplingIntensity;
             set
             {
-                m_SamplingIntensity = Mathf.Clamp01(value);
+                float clamped = Mathf.Clamp01(value);
+                if (Mathf.Approximately(m_SamplingIntensity, clamped)) return;
+                m_SamplingIntensity = clamped;
                 SetMaterialDirty();
             }
         }
@@ -1448,7 +1458,13 @@ namespace ReunionMovement.UI.ImageExtensions
         public float DetailIntensity
         {
             get => m_DetailIntensity;
-            set { m_DetailIntensity = Mathf.Clamp01(value); SetMaterialDirty(); }
+            set
+            {
+                float clamped = Mathf.Clamp01(value);
+                if (Mathf.Approximately(m_DetailIntensity, clamped)) return;
+                m_DetailIntensity = clamped;
+                SetMaterialDirty();
+            }
         }
 
         public Vector2 DetailThreshold
@@ -1481,7 +1497,13 @@ namespace ReunionMovement.UI.ImageExtensions
         public float GradientOffset
         {
             get => m_GradientOffset;
-            set { m_GradientOffset = Mathf.Clamp(value, -1f, 1f); SetMaterialDirty(); }
+            set
+            {
+                float clamped = Mathf.Clamp(value, -1f, 1f);
+                if (Mathf.Approximately(m_GradientOffset, clamped)) return;
+                m_GradientOffset = clamped;
+                SetMaterialDirty();
+            }
         }
 
         public float GradientScale
@@ -1524,6 +1546,7 @@ namespace ReunionMovement.UI.ImageExtensions
             get => blurIntensity;
             set
             {
+                if (Mathf.Approximately(blurIntensity, value)) return;
                 blurIntensity = value;
                 SetMaterialDirty();
             }
@@ -1615,6 +1638,7 @@ namespace ReunionMovement.UI.ImageExtensions
             get => transitionRate;
             set
             {
+                if (Mathf.Approximately(transitionRate, value)) return;
                 transitionRate = value;
                 SetMaterialDirty();
             }
@@ -2487,7 +2511,8 @@ namespace ReunionMovement.UI.ImageExtensions
                 InitValuesFromSharedMaterial();
             }
 
-            // 关键字掩码缓存：掩码与材质未变化时跳过 ~60 次 DisableKeyword 调用。
+            // 关键字掩码缓存：掩码与材质未变化时跳过全部关键字调用
+            // （DisableAll ~51 次 + ApplyActiveKeywords 的 Enable/Disable）。
             // 仅 Dynamic 模式生效——共享材质由多个实例共同写入，不做缓存以保持原语义。
             int keywordMask = ComputeKeywordMask();
             if (m_Material != null || appliedKeywordMaterial != mat || appliedKeywordMask != keywordMask)
@@ -2495,6 +2520,7 @@ namespace ReunionMovement.UI.ImageExtensions
                 // Shared 模式：检测多实例串扰（不同 keywordMask 共用同一材质）并告警一次
                 DiagnoseSharedMaterialContention(m_Material, keywordMask);
                 DisableAllMaterialKeywords(mat);
+                ApplyActiveKeywords(mat);
                 appliedKeywordMask = keywordMask;
                 appliedKeywordMaterial = mat;
             }
@@ -2577,88 +2603,6 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.SetInt(shadowColorFilter_Sp, (int)shadowColorFilter);
             mat.SetInt(shadowColorGlow_Sp, shadowColorGlow ? 1 : 0);
 
-            switch (transitionMode)
-            {
-                case TransitionMode.None:
-                    mat.DisableKeyword("TRANSITION_FADE");
-                    mat.DisableKeyword("TRANSITION_CUTOFF");
-                    mat.DisableKeyword("TRANSITION_DISSOLVE");
-                    mat.DisableKeyword("TRANSITION_SHINY");
-                    mat.DisableKeyword("TRANSITION_MASK");
-                    mat.DisableKeyword("TRANSITION_MELT");
-                    mat.DisableKeyword("TRANSITION_BURN");
-                    mat.DisableKeyword("TRANSITION_PATTERN");
-                    mat.DisableKeyword("TRANSITION_BLAZE");
-                    break;
-                case TransitionMode.Fade:
-                    mat.EnableKeyword("TRANSITION_FADE");
-                    break;
-                case TransitionMode.Cutoff:
-                    mat.EnableKeyword("TRANSITION_CUTOFF");
-                    break;
-                case TransitionMode.Dissolve:
-                    mat.EnableKeyword("TRANSITION_DISSOLVE");
-                    break;
-                case TransitionMode.Shiny:
-                    mat.EnableKeyword("TRANSITION_SHINY");
-                    break;
-                case TransitionMode.Mask:
-                    mat.EnableKeyword("TRANSITION_MASK");
-                    break;
-                case TransitionMode.Melt:
-                    mat.EnableKeyword("TRANSITION_MELT");
-                    break;
-                case TransitionMode.Burn:
-                    mat.EnableKeyword("TRANSITION_BURN");
-                    break;
-                case TransitionMode.Pattern:
-                    mat.EnableKeyword("TRANSITION_PATTERN");
-                    break;
-                case TransitionMode.Blaze:
-                    mat.EnableKeyword("TRANSITION_BLAZE");
-                    break;
-            }
-
-            switch (blurType)
-            {
-                case BlurType.None:
-                    mat.DisableKeyword("BLUR_FAST");
-                    mat.DisableKeyword("BLUR_MEDIUM");
-                    mat.DisableKeyword("BLUR_DETAIL");
-                    break;
-                case BlurType.Fast:
-                    mat.EnableKeyword("BLUR_FAST");
-                    break;
-                case BlurType.Medium:
-                    mat.EnableKeyword("BLUR_MEDIUM");
-                    break;
-                case BlurType.Detail:
-                    mat.EnableKeyword("BLUR_DETAIL");
-                    break;
-            }
-
-            if (strokeWidth > 0 && outlineWidth > 0)
-            {
-                mat.EnableKeyword("OUTLINED_STROKE");
-            }
-            else
-            {
-                if (strokeWidth > 0)
-                {
-                    mat.EnableKeyword("STROKE");
-                }
-                else if (outlineWidth > 0)
-                {
-                    mat.EnableKeyword("OUTLINED");
-                }
-                else
-                {
-                    mat.DisableKeyword("OUTLINED_STROKE");
-                    mat.DisableKeyword("STROKE");
-                    mat.DisableKeyword("OUTLINED");
-                }
-            }
-
             if (DrawShape != DrawShape.None)
             {
                 // 下限钳到 0.001 避免 FalloffDistance=0 时除零得 +∞
@@ -2682,63 +2626,6 @@ namespace ReunionMovement.UI.ImageExtensions
             gradientEffect.ModifyMaterial(ref mat);
 
 
-            switch (DrawShape)
-            {
-                case DrawShape.None:
-                    mat.DisableKeyword("CIRCLE");
-                    mat.DisableKeyword("TRIANGLE");
-                    mat.DisableKeyword("RECTANGLE");
-                    mat.DisableKeyword("PENTAGON");
-                    mat.DisableKeyword("HEXAGON");
-                    mat.DisableKeyword("CHAMFERBOX");
-                    mat.DisableKeyword("QUADRILATERAL");
-                    mat.DisableKeyword("NSTAR_POLYGON");
-                    mat.DisableKeyword("HEART");
-                    mat.DisableKeyword("BLOBBYCROSS");
-                    mat.DisableKeyword("SQUIRCLE");
-                    mat.DisableKeyword("NTRIANGLE_ROUNDED");
-                    break;
-                case DrawShape.Circle:
-                    mat.EnableKeyword("CIRCLE");
-                    break;
-                case DrawShape.Triangle:
-                    mat.EnableKeyword("TRIANGLE");
-                    break;
-                case DrawShape.Rectangle:
-                    mat.EnableKeyword("RECTANGLE");
-                    break;
-                case DrawShape.Pentagon:
-                    mat.EnableKeyword("PENTAGON");
-                    break;
-                case DrawShape.NStarPolygon:
-                    mat.EnableKeyword("NSTAR_POLYGON");
-                    break;
-                case DrawShape.Hexagon:
-                    mat.EnableKeyword("HEXAGON");
-                    break;
-                case DrawShape.ChamferBox:
-                    mat.EnableKeyword("CHAMFERBOX");
-                    break;
-                case DrawShape.Quadrilateral:
-                    mat.EnableKeyword("QUADRILATERAL");
-                    break;
-                case DrawShape.Heart:
-                    mat.EnableKeyword("HEART");
-                    break;
-                case DrawShape.BlobbyCross:
-                    mat.EnableKeyword("BLOBBYCROSS");
-                    break;
-                case DrawShape.Squircle:
-                    mat.EnableKeyword("SQUIRCLE");
-                    break;
-                case DrawShape.NTriangleRounded:
-                    mat.EnableKeyword("NTRIANGLE_ROUNDED");
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-
             mat.SetInt(drawShape_Sp, (int)DrawShape);
             mat.SetInt(flipHorizontal_Sp, flipHorizontal ? 1 : 0);
             mat.SetInt(flipVertical_Sp, flipVertical ? 1 : 0);
@@ -2749,36 +2636,12 @@ namespace ReunionMovement.UI.ImageExtensions
             // -------------------- 色调滤镜（TONE） --------------------
             mat.SetFloat(toneIntensity_Sp, m_ToneIntensity);
             mat.SetInt(toneFilter_Sp, (int)m_ToneFilter);
-            switch (m_ToneFilter)
-            {
-                case ToneFilter.None:
-                    break;
-                case ToneFilter.Grayscale:
-                    mat.EnableKeyword("TONE_GRAYSCALE");
-                    break;
-                case ToneFilter.Sepia:
-                    mat.EnableKeyword("TONE_SEPIA");
-                    break;
-                case ToneFilter.Negative:
-                    mat.EnableKeyword("TONE_NEGATIVE");
-                    break;
-                case ToneFilter.Retro:
-                    mat.EnableKeyword("TONE_RETRO");
-                    break;
-                case ToneFilter.Posterize:
-                    mat.EnableKeyword("TONE_POSTERIZE");
-                    break;
-            }
 
             // -------------------- 独立颜色滤镜（COLOR FILTER） --------------------
             mat.SetInt(colorFilter_Sp, (int)m_ColorFilterMode);
             mat.SetColor(colorValue_Sp, m_ColorValue);
             mat.SetFloat(colorIntensity_Sp, m_ColorIntensity);
             mat.SetInt(colorGlow_Sp, m_ColorGlow ? 1 : 0);
-            if (m_ColorFilterMode != ColorMode.None)
-            {
-                mat.EnableKeyword("COLOR_FILTER");
-            }
 
             // -------------------- 边缘效果（EDGE） --------------------
             mat.SetFloat(edgeWidth_Sp, m_EdgeWidth);
@@ -2789,53 +2652,16 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.SetFloat(edgeShinyWidth_Sp, m_EdgeShinyWidth);
             mat.SetFloat(edgeShinyAutoPlaySpeed_Sp, m_EdgeShinyAutoPlaySpeed);
             mat.SetInt(edgeMode_Sp, (int)m_EdgeMode);
-            switch (m_EdgeMode)
-            {
-                case EdgeMode.None:
-                    break;
-                case EdgeMode.Plain:
-                    mat.EnableKeyword("EDGE_PLAIN");
-                    break;
-                case EdgeMode.Shiny:
-                    mat.EnableKeyword("EDGE_SHINY");
-                    break;
-            }
 
             // -------------------- 采样增强（SAMPLING） --------------------
             mat.SetFloat(samplingIntensity_Sp, m_SamplingIntensity);
             mat.SetInt(samplingMode_Sp, (int)m_SamplingMode);
-            switch (m_SamplingMode)
-            {
-                case SamplingFilter.Pixelation:
-                    mat.EnableKeyword("SAMPLING_PIXELATION");
-                    break;
-                case SamplingFilter.RgbShift:
-                    mat.EnableKeyword("SAMPLING_RGB_SHIFT");
-                    break;
-                case SamplingFilter.EdgeLuminance:
-                    mat.EnableKeyword("SAMPLING_EDGE_LUMINANCE");
-                    break;
-                case SamplingFilter.EdgeAlpha:
-                    mat.EnableKeyword("SAMPLING_EDGE_ALPHA");
-                    break;
-            }
 
             // -------------------- 目标模式（TARGET） --------------------
             mat.SetColor(targetColor_Sp, m_TargetColor);
             mat.SetFloat(targetRange_Sp, m_TargetRange);
             mat.SetFloat(targetSoftness_Sp, m_TargetSoftness);
             mat.SetInt(targetMode_Sp, (int)m_TargetMode);
-            switch (m_TargetMode)
-            {
-                case TargetMode.None:
-                    break;
-                case TargetMode.Hue:
-                    mat.EnableKeyword("TARGET_HUE");
-                    break;
-                case TargetMode.Luminance:
-                    mat.EnableKeyword("TARGET_LUMINANCE");
-                    break;
-            }
 
             // -------------------- 图案区域（PATTERN AREA） --------------------
             mat.SetInt(patternArea_Sp, (int)m_PatternArea);
@@ -2847,7 +2673,6 @@ namespace ReunionMovement.UI.ImageExtensions
             {
                 mat.SetTexture(gradientTex_Sp, m_GradientTex);
                 mat.SetInt(gradientTexEnabled_Sp, 1);
-                mat.EnableKeyword("GRADIENT_TEXTURE");
             }
             else
             {
@@ -2863,15 +2688,6 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.SetVector(detailThreshold_Sp, m_DetailThreshold);
             mat.SetColor(detailColor_Sp, m_DetailColor);
             mat.SetInt(detailMode_Sp, (int)m_DetailMode);
-            switch (m_DetailMode)
-            {
-                case DetailFilter.Masking: mat.EnableKeyword("DETAIL_MASKING"); break;
-                case DetailFilter.Multiply: mat.EnableKeyword("DETAIL_MULTIPLY"); break;
-                case DetailFilter.Additive: mat.EnableKeyword("DETAIL_ADDITIVE"); break;
-                case DetailFilter.Subtractive: mat.EnableKeyword("DETAIL_SUBTRACTIVE"); break;
-                case DetailFilter.Replace: mat.EnableKeyword("DETAIL_REPLACE"); break;
-                case DetailFilter.MultiplyAdditive: mat.EnableKeyword("DETAIL_MULTIPLY_ADDITIVE"); break;
-            }
 
             // -------------------- 混合模式（BLEND TYPE） --------------------
             // 混合由 shader 的 Blend [_SrcBlend] [_DstBlend] 驱动；
@@ -2894,14 +2710,119 @@ namespace ReunionMovement.UI.ImageExtensions
         }
 
         /// <summary>
+        /// 应用当前状态对应的全部 Enable 关键字（须在 DisableAllMaterialKeywords 之后调用）。
+        /// 与关键字掩码缓存配合：掩码与材质未变化时整体跳过，
+        /// 消除动画期间每帧 ~15-30 次字符串关键字查找（None 分支的 Disable 由 DisableAll 覆盖，不重复）。
+        /// </summary>
+        private void ApplyActiveKeywords(Material mat)
+        {
+            switch (transitionMode)
+            {
+                case TransitionMode.Fade: mat.EnableKeyword("TRANSITION_FADE"); break;
+                case TransitionMode.Cutoff: mat.EnableKeyword("TRANSITION_CUTOFF"); break;
+                case TransitionMode.Dissolve: mat.EnableKeyword("TRANSITION_DISSOLVE"); break;
+                case TransitionMode.Shiny: mat.EnableKeyword("TRANSITION_SHINY"); break;
+                case TransitionMode.Mask: mat.EnableKeyword("TRANSITION_MASK"); break;
+                case TransitionMode.Melt: mat.EnableKeyword("TRANSITION_MELT"); break;
+                case TransitionMode.Burn: mat.EnableKeyword("TRANSITION_BURN"); break;
+                case TransitionMode.Pattern: mat.EnableKeyword("TRANSITION_PATTERN"); break;
+                case TransitionMode.Blaze: mat.EnableKeyword("TRANSITION_BLAZE"); break;
+            }
+
+            switch (blurType)
+            {
+                case BlurType.Fast: mat.EnableKeyword("BLUR_FAST"); break;
+                case BlurType.Medium: mat.EnableKeyword("BLUR_MEDIUM"); break;
+                case BlurType.Detail: mat.EnableKeyword("BLUR_DETAIL"); break;
+            }
+
+            if (strokeWidth > 0 && outlineWidth > 0)
+            {
+                mat.EnableKeyword("OUTLINED_STROKE");
+            }
+            else if (strokeWidth > 0)
+            {
+                mat.EnableKeyword("STROKE");
+            }
+            else if (outlineWidth > 0)
+            {
+                mat.EnableKeyword("OUTLINED");
+            }
+
+            switch (DrawShape)
+            {
+                case DrawShape.Circle: mat.EnableKeyword("CIRCLE"); break;
+                case DrawShape.Triangle: mat.EnableKeyword("TRIANGLE"); break;
+                case DrawShape.Rectangle: mat.EnableKeyword("RECTANGLE"); break;
+                case DrawShape.Pentagon: mat.EnableKeyword("PENTAGON"); break;
+                case DrawShape.NStarPolygon: mat.EnableKeyword("NSTAR_POLYGON"); break;
+                case DrawShape.Hexagon: mat.EnableKeyword("HEXAGON"); break;
+                case DrawShape.ChamferBox: mat.EnableKeyword("CHAMFERBOX"); break;
+                case DrawShape.Quadrilateral: mat.EnableKeyword("QUADRILATERAL"); break;
+                case DrawShape.Heart: mat.EnableKeyword("HEART"); break;
+                case DrawShape.BlobbyCross: mat.EnableKeyword("BLOBBYCROSS"); break;
+                case DrawShape.Squircle: mat.EnableKeyword("SQUIRCLE"); break;
+                case DrawShape.NTriangleRounded: mat.EnableKeyword("NTRIANGLE_ROUNDED"); break;
+                default: throw new ArgumentOutOfRangeException();
+            }
+
+            switch (m_ToneFilter)
+            {
+                case ToneFilter.Grayscale: mat.EnableKeyword("TONE_GRAYSCALE"); break;
+                case ToneFilter.Sepia: mat.EnableKeyword("TONE_SEPIA"); break;
+                case ToneFilter.Negative: mat.EnableKeyword("TONE_NEGATIVE"); break;
+                case ToneFilter.Retro: mat.EnableKeyword("TONE_RETRO"); break;
+                case ToneFilter.Posterize: mat.EnableKeyword("TONE_POSTERIZE"); break;
+            }
+
+            if (m_ColorFilterMode != ColorMode.None)
+            {
+                mat.EnableKeyword("COLOR_FILTER");
+            }
+
+            switch (m_EdgeMode)
+            {
+                case EdgeMode.Plain: mat.EnableKeyword("EDGE_PLAIN"); break;
+                case EdgeMode.Shiny: mat.EnableKeyword("EDGE_SHINY"); break;
+            }
+
+            switch (m_SamplingMode)
+            {
+                case SamplingFilter.Pixelation: mat.EnableKeyword("SAMPLING_PIXELATION"); break;
+                case SamplingFilter.RgbShift: mat.EnableKeyword("SAMPLING_RGB_SHIFT"); break;
+                case SamplingFilter.EdgeLuminance: mat.EnableKeyword("SAMPLING_EDGE_LUMINANCE"); break;
+                case SamplingFilter.EdgeAlpha: mat.EnableKeyword("SAMPLING_EDGE_ALPHA"); break;
+            }
+
+            switch (m_TargetMode)
+            {
+                case TargetMode.Hue: mat.EnableKeyword("TARGET_HUE"); break;
+                case TargetMode.Luminance: mat.EnableKeyword("TARGET_LUMINANCE"); break;
+            }
+
+            if (m_EnableGradientTex && m_GradientTex != null)
+            {
+                mat.EnableKeyword("GRADIENT_TEXTURE");
+            }
+
+            switch (m_DetailMode)
+            {
+                case DetailFilter.Masking: mat.EnableKeyword("DETAIL_MASKING"); break;
+                case DetailFilter.Multiply: mat.EnableKeyword("DETAIL_MULTIPLY"); break;
+                case DetailFilter.Additive: mat.EnableKeyword("DETAIL_ADDITIVE"); break;
+                case DetailFilter.Subtractive: mat.EnableKeyword("DETAIL_SUBTRACTIVE"); break;
+                case DetailFilter.Replace: mat.EnableKeyword("DETAIL_REPLACE"); break;
+                case DetailFilter.MultiplyAdditive: mat.EnableKeyword("DETAIL_MULTIPLY_ADDITIVE"); break;
+            }
+        }
+
+        /// <summary>
         /// 禁用所有材质关键字
         /// </summary>
         /// <param name="mat"></param>
         private void DisableAllMaterialKeywords(Material mat)
         {
-            mat.DisableKeyword("PROCEDURAL");
-            mat.DisableKeyword("HYBRID");
-
+            // 已移除 shader 中不存在的无效关键字：PROCEDURAL / HYBRID / ROUNDED_CORNERS
             mat.DisableKeyword("CIRCLE");
             mat.DisableKeyword("TRIANGLE");
             mat.DisableKeyword("RECTANGLE");
@@ -2918,8 +2839,6 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.DisableKeyword("STROKE");
             mat.DisableKeyword("OUTLINED");
             mat.DisableKeyword("OUTLINED_STROKE");
-
-            mat.DisableKeyword("ROUNDED_CORNERS");
 
             mat.DisableKeyword("GRADIENT_LINEAR");
             mat.DisableKeyword("GRADIENT_CORNER");

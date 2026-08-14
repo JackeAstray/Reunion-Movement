@@ -33,8 +33,13 @@ namespace ReunionMovement.Core.Languages
             // 先订阅初始化广播，再检查引擎是否已运行：
             // 若先检查后订阅，引擎在检查与订阅之间完成初始化（OnInitializedSubject 已广播、无重放），
             // 事件会被错过，文本永不更新。
-            initSubscription = GameEngine.OnInitializedSubject
-                .Subscribe(_ => OnGameInitFinished());
+            // 注意：引擎 Dispose 后 static Subject 会被置 null（重建前），
+            // 此时直接订阅会 NRE，判空跳过（本组件随场景重建后重新 Start）。
+            var initSubject = GameEngine.OnInitializedSubject;
+            if (initSubject != null)
+            {
+                initSubscription = initSubject.Subscribe(_ => OnGameInitFinished());
+            }
 
             if (GameEngine.Current != null && GameEngine.Current.State == EngineState.Running)
             {
@@ -59,8 +64,16 @@ namespace ReunionMovement.Core.Languages
                 return;
             }
 
+            // 语言系统 Clear() 后 CurrentLanguage 为 null（未重新 Init），判空避免 NRE
+            var currentLanguage = LanguagesSystem.Instance.CurrentLanguage;
+            if (currentLanguage == null)
+            {
+                Log.Warning("UIText: LanguagesSystem 已清理（CurrentLanguage 为 null），跳过语言订阅");
+                return;
+            }
+
             // 使用 R3 订阅语言切换 —— 自动处理订阅生命周期
-            languageSubscription = LanguagesSystem.Instance.CurrentLanguage
+            languageSubscription = currentLanguage
                 .Subscribe(_ => GetTextLanguage());
 
             // 首次更新文本

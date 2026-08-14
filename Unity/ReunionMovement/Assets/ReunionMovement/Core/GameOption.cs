@@ -119,6 +119,11 @@ namespace ReunionMovement.Core
         /// </summary>
         public static void SaveOptions()
         {
+#if UNITY_WEBGL
+            // WebGL 上 LoadOptions 被跳过（PlayerPrefs 为异步 IndexedDB，同步读写不可靠），
+            // 保存同样跳过，避免写入"永远读不回来"的设置造成行为不一致。
+            return;
+#else
             const string jsonKey = "game_options_json";
             try
             {
@@ -130,6 +135,7 @@ namespace ReunionMovement.Core
             {
                 Log.Error("保存 GameOption 失败: {0}", ex.Message);
             }
+#endif
         }
 
         /// <summary>

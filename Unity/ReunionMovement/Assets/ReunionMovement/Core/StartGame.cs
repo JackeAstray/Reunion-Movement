@@ -5,6 +5,7 @@ using ReunionMovement.Common.Util.Timer;
 using ReunionMovement.Core.Base;
 using ReunionMovement.Core.EventMessage;
 using ReunionMovement.Core.Languages;
+using ReunionMovement.Core.Pause;
 using ReunionMovement.Core.Resources;
 using ReunionMovement.Core.Scene;
 using ReunionMovement.Core.Sound;
@@ -30,21 +31,22 @@ namespace ReunionMovement.Core
         /// </summary>
         public override IList<ICustomSystem> CreateModules()
         {
-            var modules = new List<ICustomSystem>(13);
+            var modules = new List<ICustomSystem>(14);
 
             modules.Add(ResourcesSystem.Instance);    // 0: 资源加载（同步/兜底，最高依赖）
             modules.Add(AddressableSystem.Instance);  // 1: Addressables（受管异步/远程）【新增】
             modules.Add(SceneSystem.Instance);        // 2: 场景管理
             modules.Add(EventMessageSystem.Instance); // 3: 事件总线
             modules.Add(LanguagesSystem.Instance);    // 4: 多语言
-            modules.Add(SoundSystem.Instance);        // 5: 音频（需要 Update 驱动淡入淡出）
-            modules.Add(TimerMgr.Instance);           // 6: 计时器（需要 Update 驱动）
-            modules.Add(UISystem.Instance);           // 7: UI 管理
-            modules.Add(UIInputSystem.Instance);      // 8: UI 输入（需要 Update 驱动导航）
-            modules.Add(UIToolkitSystem.Instance);    // 9: UI Toolkit
-            modules.Add(TerminalSystem.Instance);     // 10: 终端（需要 Update 检测按键）
-            modules.Add(NetworkMgr.Instance);         // 11: 网络通道管理（需要 Update 消费移除队列）
-            modules.Add(HttpMgr.Instance);            // 12: HTTP 请求（需要 Update 轮询进度）
+            modules.Add(PauseSystem.Instance);        // 5: 暂停管理（Time.timeScale 统一切换）【新增】
+            modules.Add(SoundSystem.Instance);        // 6: 音频（需要 Update 驱动淡入淡出）
+            modules.Add(TimerMgr.Instance);           // 7: 计时器（需要 Update 驱动）
+            modules.Add(UISystem.Instance);           // 8: UI 管理
+            modules.Add(UIInputSystem.Instance);      // 9: UI 输入（需要 Update 驱动导航）
+            modules.Add(UIToolkitSystem.Instance);    // 10: UI Toolkit
+            modules.Add(TerminalSystem.Instance);     // 11: 终端（需要 Update 检测按键）
+            modules.Add(NetworkMgr.Instance);         // 12: 网络通道管理（需要 Update 消费移除队列）
+            modules.Add(HttpMgr.Instance);            // 13: HTTP 请求（需要 Update 轮询进度）
 
             return modules;
         }

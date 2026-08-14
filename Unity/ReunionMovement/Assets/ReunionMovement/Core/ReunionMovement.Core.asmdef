@@ -1,0 +1,26 @@
+{
+    "name": "ReunionMovement.Core",
+    "rootNamespace": "ReunionMovement.Core",
+    "references": [
+        "ReunionMovement.Base",
+        "ReunionMovement.Common",
+        "ReunionMovement.Utils",
+        "ReunionMovement.GenerateScript.AutoScripts",
+        "UniTask",
+        "UniTask.Addressables",
+        "UnityEngine.UI",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "Unity.Addressables",
+        "Unity.ResourceManager"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
