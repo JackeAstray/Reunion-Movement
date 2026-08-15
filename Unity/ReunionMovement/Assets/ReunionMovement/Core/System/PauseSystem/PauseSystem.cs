@@ -149,7 +149,12 @@ namespace ReunionMovement.Core.Pause
         }
 
         /// <summary>切换暂停状态</summary>
-        public void TogglePause() => SetPaused(!IsPaused.Value);
+        public void TogglePause()
+        {
+            // Clear 后 IsPaused 为 null（引擎已销毁）：视为未暂停，切换为暂停。
+            // 直接访问 IsPaused.Value 会 NRE（残留 UI 回调在引擎重建间隙触发）。
+            SetPaused(!(IsPaused != null && IsPaused.Value));
+        }
 
         public void Clear()
         {

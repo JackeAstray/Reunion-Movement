@@ -91,6 +91,18 @@ namespace ReunionMovement.Common.Util.Download
         public abstract bool Paused { get; }
 
         /// <summary>
+        /// 暂停下载：中止在途请求但保留已完成部分（供 Resume 断点续传），不触发错误/取消事件。
+        /// 返回是否成功进入暂停。
+        /// </summary>
+        public abstract bool Pause();
+
+        /// <summary>
+        /// 恢复下载：退出暂停状态；具体重发由下载管理器重新调用 Download() 并接线完成回调。
+        /// 返回是否需要重新发起下载。
+        /// </summary>
+        public abstract bool Resume();
+
+        /// <summary>
         /// 是否在下载失败时放弃
         /// </summary>
         public abstract bool AbandonOnFailure { get; set; }
@@ -109,6 +121,11 @@ namespace ReunionMovement.Common.Util.Download
         /// 是否正在下载
         /// </summary>
         public bool Downloading => StartTime != 0;
+
+        /// <summary>
+        /// 是否已被取消（幂等取消标志，供下载管理器判定在途任务是否已中止）
+        /// </summary>
+        public virtual bool IsCanceled => false;
 
         /// <summary>
         /// 下载的结束时间

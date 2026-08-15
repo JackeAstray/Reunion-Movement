@@ -150,7 +150,6 @@ namespace ReunionMovement.Common.Util.Download
                     idf.TryMultipartDownload = tryMultipartDownload;
                     idf.InitialChunkSize = MultipartChunkSize;
                     newExecutors.Add(idf);
-                    PendingURIS?.Add(str);
 
                     if (idf is UWRExecutor uwr)
                     {

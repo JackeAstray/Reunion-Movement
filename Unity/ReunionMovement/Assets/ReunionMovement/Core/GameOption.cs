@@ -1,5 +1,6 @@
 ﻿using ReunionMovement.Common;
 using ReunionMovement.Common.Util;
+using ReunionMovement.Core.Languages;
 using System;
 using UnityEngine;
 using ReunionMovement.Core.Sound;
@@ -372,5 +373,69 @@ namespace ReunionMovement.Core
                 Log.Error("ResetOptions 异常: {0}", ex);
             }
         }
+
+        #region 安全设置入口（修改即钳制 + 应用 + 持久化）
+        // 直接修改 CurrentOption 的裸字段只改内存：必须记得手动 SaveOptions() + ApplyLightOptions()。
+        // 以下入口一步到位，设置面板 UI 应优先使用，避免“改了字段但未生效/未保存”的陷阱。
+
+        /// <summary>设置主音量（0~1）：钳制、应用 AudioListener、持久化</summary>
+        public static void SetMasterVolume(float volume)
+        {
+            currentOption.masterVolume = Mathf.Clamp01(volume);
+            AudioListener.volume = currentOption.masterVolumeMuted ? 0f : currentOption.masterVolume;
+            SaveOptions();
+        }
+
+        /// <summary>设置主音量静音</summary>
+        public static void SetMasterMuted(bool muted)
+        {
+            currentOption.masterVolumeMuted = muted;
+            AudioListener.volume = muted ? 0f : currentOption.masterVolume;
+            SaveOptions();
+        }
+
+        /// <summary>设置音乐音量（0~1）：钳制、应用到 SoundSystem、持久化</summary>
+        public static void SetMusicVolume(float volume)
+        {
+            currentOption.musicVolume = Mathf.Clamp01(volume);
+            SoundSystem.Instance?.SetMusicProperties(currentOption.musicVolume, currentOption.musicMuted);
+            SaveOptions();
+        }
+
+        /// <summary>设置音乐静音</summary>
+        public static void SetMusicMuted(bool muted)
+        {
+            currentOption.musicMuted = muted;
+            SoundSystem.Instance?.SetMusicProperties(currentOption.musicVolume, currentOption.musicMuted);
+            SaveOptions();
+        }
+
+        /// <summary>设置音效音量（0~1）：钳制、应用到全部活跃音效、持久化</summary>
+        public static void SetSfxVolume(float volume)
+        {
+            currentOption.sfxVolume = Mathf.Clamp01(volume);
+            SoundSystem.Instance?.SetSfxProperties(currentOption.sfxVolume, currentOption.sfxMuted);
+            SaveOptions();
+        }
+
+        /// <summary>设置音效静音</summary>
+        public static void SetSfxMuted(bool muted)
+        {
+            currentOption.sfxMuted = muted;
+            SoundSystem.Instance?.SetSfxProperties(currentOption.sfxVolume, currentOption.sfxMuted);
+            SaveOptions();
+        }
+
+        /// <summary>
+        /// 设置语言：写回 GameOption、立即应用到 LanguagesSystem（UIText/UISprite 自动刷新）、持久化。
+        /// 语言系统未初始化时仅持久化（SetMultilingual 内部判空忽略）。
+        /// </summary>
+        public static void SetLanguage(Multilingual language)
+        {
+            currentOption.language = language;
+            LanguagesSystem.Instance.SetMultilingual(language);
+            SaveOptions();
+        }
+        #endregion
     }
 }

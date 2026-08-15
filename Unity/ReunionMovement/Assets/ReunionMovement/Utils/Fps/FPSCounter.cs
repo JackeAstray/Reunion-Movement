@@ -95,11 +95,12 @@ namespace ReunionMovement.Common.Util
 
             if (idleTime > 0)
             {
-                idleTime -= Time.deltaTime;
+                // unscaledDeltaTime：暂停（timeScale=0）期间倒计时与刷新不冻结
+                idleTime -= Time.unscaledDeltaTime;
                 return;
             }
 
-            elapsed += Time.deltaTime;
+            elapsed += Time.unscaledDeltaTime;
 
             if (elapsed >= updateInterval)
             {

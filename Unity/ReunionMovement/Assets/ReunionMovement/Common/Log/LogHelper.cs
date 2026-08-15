@@ -67,6 +67,12 @@ namespace ReunionMovement.Common
         public static bool EnableFileLog { get; set; } = true;
 
         /// <summary>
+        /// 文件日志是否附带堆栈（崩溃后定位用）。开启后每条日志抓取 Environment.StackTrace，
+        /// 开销较大，建议仅调试构建/排查崩溃时按需开启。
+        /// </summary>
+        public static bool IncludeStackTraceInFileLog = false;
+
+        /// <summary>
         /// 立即将缓冲的日志写入磁盘（应用退出/崩溃前调用，避免丢失日志）。
         /// </summary>
         public static void FlushFileLog()
@@ -297,6 +303,14 @@ namespace ReunionMovement.Common
                 : "";
             string line = ZString.Format("[{0:HH:mm:ss.fff}] [{1}] {2}{3}{4}",
                 DateTime.Now, level, channelStr, message, Environment.NewLine);
+            if (IncludeStackTraceInFileLog)
+            {
+                string stack = Environment.StackTrace;
+                if (!string.IsNullOrEmpty(stack))
+                {
+                    line += stack + Environment.NewLine;
+                }
+            }
             WriteLineToFile(line);
         }
 

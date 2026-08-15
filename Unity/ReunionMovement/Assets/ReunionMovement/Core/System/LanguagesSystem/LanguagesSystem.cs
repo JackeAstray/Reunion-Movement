@@ -46,10 +46,16 @@ namespace ReunionMovement.Core.Languages
             }
         }
 
+        /// <summary>语言系统就绪通知（每次 Init 完成时广播；Clear 不销毁，作为 UIText 等组件的稳定重订阅源）</summary>
+        private readonly Subject<Unit> onReadySubject = new Subject<Unit>();
+        public Observable<Unit> OnReady => onReadySubject;
+
         private LanguagesContainer languagesContainer;
         private Dictionary<int, LanguagesConfig> languagesDict;
         /// <summary>已上报过的缺失 ID（首次 Log.Error，后续静默，防止缺项配表运行时刷屏）</summary>
         private readonly HashSet<int> missingKeysReported = new HashSet<int>();
+        /// <summary>容器为空错误是否已上报（Init 失败后每次 GetTextById 都走此分支，防刷屏）</summary>
+        private bool containerEmptyReported;
         // 多语言枚举 → 文本字段选择器（避免 switch-case，支持扩展新语言）
         private static readonly Dictionary<Multilingual, Func<LanguagesConfig, string>> languageSelectors =
             new Dictionary<Multilingual, Func<LanguagesConfig, string>>
@@ -69,6 +75,7 @@ namespace ReunionMovement.Core.Languages
 
             // 重建字典时清空缺失键缓存：配表更新后允许重新上报缺失
             missingKeysReported.Clear();
+            containerEmptyReported = false;
 
             // 从ScriptableObjects中获取文本
             languagesContainer = ResourcesSystem.Instance.Load<LanguagesContainer>("ScriptableObjects/LanguagesContainer");
@@ -88,12 +95,26 @@ namespace ReunionMovement.Core.Languages
                         Log.Warning("LanguagesSystem: configs 中存在空项，已跳过");
                         continue;
                     }
+                    // 重复 Number 键静默覆盖会导致文本被悄悄替换、排查困难，此处显式告警
+                    if (languagesDict.ContainsKey(lang.Number))
+                    {
+                        Log.Error("LanguagesSystem: 配表存在重复 Number={0}，后写配置已覆盖先写，请检查 LanguagesContainer", lang.Number);
+                    }
                     languagesDict[lang.Number] = lang;
                 }
             }
 
             initProgress = 100;
             isInited = true;
+            // 广播就绪：UIText 等组件据此重绑最新 CurrentLanguage（覆盖 Clear→Init 重订阅场景）
+            try
+            {
+                onReadySubject.OnNext(Unit.Default);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("LanguagesSystem OnReady 订阅者异常（已隔离）: {0}", ex.Message);
+            }
             Log.Debug("LanguagesSystem 初始化完成");
             return UniTask.CompletedTask;
         }
@@ -169,10 +190,36 @@ namespace ReunionMovement.Core.Languages
             }
             else
             {
-                Log.Error("LanguagesContainer或configs为空");
+                // 首次才报错：Init 失败（容器缺失）后 languagesDict 为 null，
+                // 每次 GetTextById 都会走此分支，高频调用下会刷屏
+                if (!containerEmptyReported)
+                {
+                    containerEmptyReported = true;
+                    Log.Error("LanguagesContainer或configs为空");
+                }
             }
 
             return string.Empty; // 如果未找到对应的文本，返回空字符串
+        }
+
+        /// <summary>
+        /// 根据ID获取文本并格式化插值（如“已击杀 {0} 个敌人”）。
+        /// 文本缺失时返回空字符串（格式化不生效）。
+        /// </summary>
+        public string GetTextById(int number, params object[] args)
+        {
+            string text = GetTextById(number);
+            if (string.IsNullOrEmpty(text)) return string.Empty;
+            try
+            {
+                return args != null && args.Length > 0 ? string.Format(text, args) : text;
+            }
+            catch (FormatException ex)
+            {
+                // 配表占位符与参数不匹配：返回原文并告警（避免异常传播到 UI 刷新链）
+                Log.Warning("LanguagesSystem.GetTextById({0}) 格式化失败: {1}", number, ex.Message);
+                return text;
+            }
         }
     }
 }

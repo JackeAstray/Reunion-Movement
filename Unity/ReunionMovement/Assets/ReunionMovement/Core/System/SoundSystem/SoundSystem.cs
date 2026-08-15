@@ -62,8 +62,7 @@ namespace ReunionMovement.Core.Sound
         private readonly Dictionary<string, LinkedListNode<string>> audioClipCacheNodes
             = new Dictionary<string, LinkedListNode<string>>();
         // 并发加载去重：同一路径加载在途时复用同一个 TCS（防止重复加载同一 clip）
-        private readonly Dictionary<string, UniTaskCompletionSource<AudioClip>> audioClipLoading
-            = new Dictionary<string, UniTaskCompletionSource<AudioClip>>();
+        private readonly SingleFlightLoader<AudioClip> audioClipLoadGate = new SingleFlightLoader<AudioClip>();
         // 从 Addressables 加载的 clip 来源记录（用于按来源正确释放：Addressables.Release vs Resources 卸载）
         private readonly HashSet<string> addressableClips = new HashSet<string>();
 
@@ -73,6 +72,11 @@ namespace ReunionMovement.Core.Sound
         private Dictionary<GameObject, IObjectPool<GameObject>> pooledObjects = new Dictionary<GameObject, IObjectPool<GameObject>>();
         //生成对象池 特效
         private Dictionary<GameObject, GameObject> sfxObjects = new Dictionary<GameObject, GameObject>();
+        // sfxObjects 的平行缓存（obj → AudioSource）：Spawn 时登记，IsClipInUse 驱逐扫描 O(1) 无需 GetComponent
+        private readonly Dictionary<GameObject, AudioSource> sfxSources = new Dictionary<GameObject, AudioSource>();
+        // 上次清扫已销毁对象残留的时间（低频清扫，避免逐帧遍历字典）
+        private float lastSfxCleanupTime = -1f;
+        private const float SfxCleanupInterval = 10f;
 
         /// <summary>
         /// 同一音效的最小重触发间隔（秒，0=禁用）：快速连点/高频触发时静默丢弃密集重放，
@@ -149,6 +153,11 @@ namespace ReunionMovement.Core.Sound
                 soundConfigDict = new Dictionary<int, SoundConfig>(soundConfigContainer.configs.Count);
                 foreach (var config in soundConfigContainer.configs)
                 {
+                    if (soundConfigDict.ContainsKey(config.Number))
+                    {
+                        // 配表重复 ID 静默覆盖会无告警换音，排查困难；与 LanguagesSystem 告警策略一致
+                        Log.Error("SoundSystem: 声音配置重复 Number={0}（后者覆盖前者），请检查配表", config.Number);
+                    }
                     soundConfigDict[config.Number] = config;
                 }
                 audioClipCache = new Dictionary<string, AudioClip>();
@@ -252,6 +261,8 @@ namespace ReunionMovement.Core.Sound
                     UnityEngine.Object.Destroy(sfxObj);
             }
             sfxObjects.Clear();
+            sfxSources.Clear();
+            lastSfxCleanupTime = -1f;
 
             // 停止音乐并释放 AudioSource
             if (source != null)
@@ -280,7 +291,8 @@ namespace ReunionMovement.Core.Sound
             addressableClips.Clear();
             audioClipCacheOrder?.Clear();
             audioClipCacheNodes?.Clear();
-            audioClipLoading?.Clear();
+            // 取消在途加载的等待方（SingleFlightLoader 的 CancelAll 语义）
+            audioClipLoadGate?.CancelAll();
             soundConfigDict?.Clear();
             soundConfigContainer = null;
             lastSfxPlayTimes.Clear();
@@ -803,6 +815,14 @@ namespace ReunionMovement.Core.Sound
         {
             if (prefab == null) return null;
 
+            // 低频清扫：emitter 销毁连带子对象销毁后，sfxObjects/sfxSources 残留 fake-null 键，
+            // 长期运行字典缓慢膨胀且计数失真（逐帧遍历字典成本高，故按固定间隔执行）
+            if (Time.unscaledTime - lastSfxCleanupTime > SfxCleanupInterval)
+            {
+                lastSfxCleanupTime = Time.unscaledTime;
+                CleanupDestroyedSfxObjects();
+            }
+
             if (!pooledObjects.TryGetValue(prefab, out var pool))
             {
                 // 如果没有为该预制件创建池，则动态创建一个
@@ -816,6 +836,9 @@ namespace ReunionMovement.Core.Sound
             obj.transform.localRotation = rotation;
 
             sfxObjects[obj] = prefab;
+            // 平行缓存 AudioSource：IsClipInUse 驱逐扫描无需每对象 GetComponent
+            var src = obj.GetComponent<AudioSource>();
+            if (src != null) sfxSources[obj] = src;
             return obj;
         }
 
@@ -835,18 +858,29 @@ namespace ReunionMovement.Core.Sound
         /// <param name="obj"></param>
         public void Recycle(GameObject obj)
         {
+            // fake-null 防护：对象已被销毁（如 emitter 销毁连带子对象销毁）时，不能把假 null 对象
+            // 交给 ObjectPool.Release（collectionCheck 会抛异常），直接清扫字典残留
+            if (obj == null)
+            {
+                CleanupDestroyedSfxObjects();
+                return;
+            }
+
             if (sfxObjects.TryGetValue(obj, out GameObject prefab))
             {
                 if (pooledObjects.TryGetValue(prefab, out var pool))
                 {
                     pool.Release(obj);
                     sfxObjects.Remove(obj);
+                    sfxSources.Remove(obj);
                 }
                 else
                 {
                     // 如果没有对应的池，直接销毁
                     Log.Warning("没有找到预制件 {0} 对应的对象池，直接销毁对象。", prefab.name);
                     UnityEngine.Object.Destroy(obj);
+                    sfxObjects.Remove(obj);
+                    sfxSources.Remove(obj);
                 }
             }
             else
@@ -854,6 +888,31 @@ namespace ReunionMovement.Core.Sound
                 // 如果对象不在生成池中，则直接销毁
                 Log.Warning("对象 {0} 不在生成池中，直接销毁。", obj.name);
                 UnityEngine.Object.Destroy(obj);
+            }
+        }
+
+        /// <summary>
+        /// 清扫 sfxObjects/sfxSources 中已销毁对象（fake-null 键）的残留条目。
+        /// 低频调用（Spawn 每 10s 触发一次 / Recycle 遇假 null 对象 / Clear）。
+        /// </summary>
+        private void CleanupDestroyedSfxObjects()
+        {
+            if (sfxObjects.Count == 0) return;
+            List<GameObject> deadKeys = null;
+            foreach (var kvp in sfxObjects)
+            {
+                if (kvp.Key == null)
+                {
+                    (deadKeys ?? (deadKeys = new List<GameObject>())).Add(kvp.Key);
+                }
+            }
+            if (deadKeys != null)
+            {
+                foreach (var key in deadKeys)
+                {
+                    sfxObjects.Remove(key);
+                    sfxSources.Remove(key);
+                }
             }
         }
 
@@ -1089,22 +1148,13 @@ namespace ReunionMovement.Core.Sound
             }
 
             // 并发去重：同一路径的加载在途时复用同一个 TCS，多个调用方 await 各自的 Task
-            if (audioClipLoading.TryGetValue(fullPath, out var pendingTcs))
+            // （SingleFlightLoader 统一管理单飞/摘除；系统 Clear 时 CancelAll 取消等待方）
+            return await audioClipLoadGate.RunAsync(fullPath, async () =>
             {
-                return await pendingTcs.Task;
-            }
-
-            var tcs = new UniTaskCompletionSource<AudioClip>();
-            audioClipLoading[fullPath] = tcs;
-            try
-            {
+                var tcs = new UniTaskCompletionSource<AudioClip>();
                 _ = LoadAudioClipAndCacheAsync(fullPath, tcs);
                 return await tcs.Task;
-            }
-            finally
-            {
-                audioClipLoading.Remove(fullPath);
-            }
+            });
         }
 
         /// <summary>
@@ -1225,10 +1275,10 @@ namespace ReunionMovement.Core.Sound
         {
             if (clip == null) return false;
             if (source != null && source.clip == clip) return true;
-            foreach (var obj in sfxObjects.Values)
+            // 直接查平行缓存的 AudioSource（Spawn 时登记），O(1) 无 GetComponent；
+            // 已销毁对象在字典中为 fake-null，src == null 自动跳过（低频清扫清理键）
+            foreach (var src in sfxSources.Values)
             {
-                if (obj == null) continue;
-                var src = obj.GetComponent<AudioSource>();
                 if (src != null && src.clip == clip) return true;
             }
             return false;

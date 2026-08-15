@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
 
 namespace ReunionMovement.UI.RippleAnimation
 {
@@ -100,7 +101,9 @@ namespace ReunionMovement.UI.RippleAnimation
             if (Pointer.current != null && Pointer.current.press.wasPressedThisFrame)
             {
                 var pos = Pointer.current.position.ReadValue();
-                if (!OnUIOnly || IsOnUIElement(pos))
+                // 顶层命中检测：叠层窗口（弹窗）场景下，点击上层按钮不得穿透触发底层波纹；
+                // 多个 UIRipple 实例也不会再同帧全部响应同一次点击
+                if (!OnUIOnly || IsOnUIElementAndTopmost(pos))
                 {
                     CreateRipple(pos);
                 }
@@ -225,5 +228,29 @@ namespace ReunionMovement.UI.RippleAnimation
             // rect 为相对 pivot 的局部矩形，localPoint 同为本地坐标，直接包含判断（自动兼容 pivot）
             return rt.rect.Contains(localPoint);
         }
+
+        /// <summary>
+        /// 是否点击在本元素上且未被上层 UI 遮挡：用 EventSystem 射线确认最顶层命中为本元素子树。
+        /// 叠层窗口（弹窗）场景下仅坐标判断会让上层点击穿透触发底层波纹。
+        /// </summary>
+        public bool IsOnUIElementAndTopmost(Vector2 position)
+        {
+            if (!IsOnUIElement(position)) return false;
+
+            var eventSystem = EventSystem.current;
+            // 无 EventSystem（纯手势/非 UI 场景）：退回坐标判断
+            if (eventSystem == null) return true;
+
+            var pointerData = new PointerEventData(eventSystem) { position = position };
+            s_RaycastResults.Clear();
+            eventSystem.RaycastAll(pointerData, s_RaycastResults);
+            if (s_RaycastResults.Count == 0) return false;
+            // RaycastAll 结果按深度排序，[0] 为最顶层命中
+            var top = s_RaycastResults[0];
+            return top.gameObject != null && top.gameObject.transform.IsChildOf(transform);
+        }
+
+        /// <summary>RaycastAll 结果复用缓冲（主线程调用，静态共享零分配）</summary>
+        private static readonly List<RaycastResult> s_RaycastResults = new List<RaycastResult>();
     }
 }

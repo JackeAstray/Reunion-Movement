@@ -96,12 +96,25 @@ namespace ReunionMovement
             this.parent = parent;
             this.layer = parent != null ? parent.layer + 1 : 0;
 
-            // 确保自身已加入新父节点的子节点列表
-            if (parent != null && !parent.childNodes.Contains(this))
+            // 确保自身已加入新父节点的子节点列表。
+            // 引用比较：Equals 按 name+layer 值相等，同名同层的兄弟节点会被 Contains 误判为已存在，
+            // 导致新子节点静默丢失
+            if (parent != null && !ContainsReference(parent.childNodes, this))
                 parent.childNodes.Add(this);
 
             // 递归修正所有后代节点的 parent 和 layer
             ResetChildren(this);
+        }
+
+        /// <summary>按引用（ReferenceEquals）判断列表是否包含指定节点，供结构操作使用（值相等语义会误判同名兄弟节点）</summary>
+        private static bool ContainsReference(List<TreeViewData> list, TreeViewData node)
+        {
+            if (list == null || node == null) return false;
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (ReferenceEquals(list[i], node)) return true;
+            }
+            return false;
         }
 
         /// <summary>
@@ -150,7 +163,15 @@ namespace ReunionMovement
         public void RemoveChild(TreeViewData child)
         {
             if (child == null) return;
-            childNodes.Remove(child);
+            // 引用比较移除：Equals 按 name+layer 值相等，Remove(child) 可能删错同名同层的兄弟节点
+            for (int i = childNodes.Count - 1; i >= 0; i--)
+            {
+                if (ReferenceEquals(childNodes[i], child))
+                {
+                    childNodes.RemoveAt(i);
+                    break;
+                }
+            }
             if (child.parent == this)
                 child.parent = null;
         }

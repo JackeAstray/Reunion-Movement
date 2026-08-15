@@ -44,7 +44,10 @@ namespace ReunionMovement.Common.Util
         {
             sampleTimer += Time.unscaledDeltaTime;
             frameCount++;
-            if (sampleTimer < sampleInterval) return;
+            // 钳制采样间隔：sampleInterval<=0 时原判断永不成立 → CurrentFps 恒 0，
+            // 下游 FPSCounter 会一直显示红色 "FPS: 0"
+            float effectiveInterval = Mathf.Max(0.05f, sampleInterval);
+            if (sampleTimer < effectiveInterval) return;
 
             // 采样（unscaledDeltaTime：不受 timeScale 影响）
             CurrentFps = frameCount / Mathf.Max(sampleTimer, 0.0001f);

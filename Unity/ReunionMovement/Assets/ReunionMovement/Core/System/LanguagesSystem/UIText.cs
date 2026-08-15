@@ -25,6 +25,7 @@ namespace ReunionMovement.Core.Languages
         /// <summary>R3 订阅管理器 —— OnDestroy 时自动取消所有订阅</summary>
         private IDisposable languageSubscription;
         private IDisposable initSubscription;
+        private IDisposable readySubscription;
         /// <summary>初始化完成回调是否已执行（防止订阅+直接调用双路径重复初始化）</summary>
         private bool isInitFinished;
 
@@ -41,6 +42,11 @@ namespace ReunionMovement.Core.Languages
                 initSubscription = initSubject.Subscribe(_ => OnGameInitFinished());
             }
 
+            // 语言系统就绪订阅（OnReady 是稳定实例 Subject，Clear 不销毁）：
+            // 覆盖“引擎运行中语言系统 Clear→Init，旧 CurrentLanguage 订阅已失效”的场景，
+            // 否则本组件标记 isInitFinished 后永不重订阅，文本永久停留在旧语言。
+            readySubscription = LanguagesSystem.Instance.OnReady.Subscribe(_ => OnLanguageReady());
+
             if (GameEngine.Current != null && GameEngine.Current.State == EngineState.Running)
             {
                 OnGameInitFinished();
@@ -54,34 +60,53 @@ namespace ReunionMovement.Core.Languages
         {
             // 幂等：订阅路径与 Running 直调路径可能同时命中，避免重复初始化/重复订阅
             if (isInitFinished) return;
-            isInitFinished = true;
 
             tmpTextComponent = GetComponent<TMP_Text>();
             textComponent = GetComponent<Text>();
             if (tmpTextComponent == null && textComponent == null)
             {
+                // 组件配置缺失：标记完成，避免每次广播重试刷屏
+                isInitFinished = true;
                 Log.Error("UIText组件需要绑定TMP_Text或Text组件");
                 return;
             }
 
-            // 语言系统 Clear() 后 CurrentLanguage 为 null（未重新 Init），判空避免 NRE
+            // 语言系统 Clear() 后 CurrentLanguage 为 null（未重新 Init）：保持“未完成”状态，
+            // 等待 OnLanguageReady（语言系统重新 Init 广播）或引擎再次初始化广播时重试。
+            // 注意：isInitFinished 必须保持 false，否则重建后永不重订阅。
             var currentLanguage = LanguagesSystem.Instance.CurrentLanguage;
             if (currentLanguage == null)
             {
-                Log.Warning("UIText: LanguagesSystem 已清理（CurrentLanguage 为 null），跳过语言订阅");
+                Log.Warning("UIText: LanguagesSystem 已清理（CurrentLanguage 为 null），等待其重新初始化");
                 return;
             }
 
-            // 使用 R3 订阅语言切换 —— 自动处理订阅生命周期
-            languageSubscription = currentLanguage
-                .Subscribe(_ => GetTextLanguage());
-
-            // 首次更新文本
-            GetTextLanguage();
+            isInitFinished = true;
+            BindLanguage(currentLanguage);
 
             // 初始化完成后释放 initSubscription（仅需一次）
             initSubscription?.Dispose();
             initSubscription = null;
+        }
+
+        /// <summary>
+        /// 语言系统重新就绪：重绑最新 CurrentLanguage 并刷新文本。
+        /// （覆盖 Clear→Init 场景：旧 ReactiveProperty 已在 Clear 时 Dispose，订阅自动失效）
+        /// </summary>
+        private void OnLanguageReady()
+        {
+            var currentLanguage = LanguagesSystem.Instance.CurrentLanguage;
+            if (currentLanguage == null) return;
+            isInitFinished = true;
+            BindLanguage(currentLanguage);
+        }
+
+        /// <summary>绑定语言订阅并首次更新文本（重复调用安全：旧订阅先 Dispose）</summary>
+        private void BindLanguage(ReactiveProperty<Multilingual> currentLanguage)
+        {
+            languageSubscription?.Dispose();
+            languageSubscription = currentLanguage.Subscribe(_ => GetTextLanguage());
+            GetTextLanguage();
         }
 
         private void OnDestroy()
@@ -91,6 +116,8 @@ namespace ReunionMovement.Core.Languages
             languageSubscription = null;
             initSubscription?.Dispose();
             initSubscription = null;
+            readySubscription?.Dispose();
+            readySubscription = null;
         }
 
         /// <summary>

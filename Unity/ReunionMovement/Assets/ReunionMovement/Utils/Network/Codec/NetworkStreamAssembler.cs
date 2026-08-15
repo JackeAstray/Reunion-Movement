@@ -17,6 +17,7 @@ namespace ReunionMovement.Common.Util
         readonly int maxBufferSize;
         byte[] buffer = Array.Empty<byte>();
         int count;
+        int lastDecodeFailWarnTicks;
 
         /// <summary>当前缓冲的半帧字节数（仅流模式使用）</summary>
         public int BufferedBytes => count;
@@ -60,6 +61,15 @@ namespace ReunionMovement.Common.Util
             {
                 if (!codec.TryGetFrameLength(buffer, offset, count - offset, out int frameLength))
                 {
+                    // 半帧等待。内存 DoS 防护：累积字节已超过上限仍无法提取完整帧，
+                    // 说明帧头声明的长度必然超限（恶意端发伪长度头 + 持续灌小块数据），
+                    // 此时若继续等待 EnsureCapacity 将无限翻倍直至 OOM，必须立即重置。
+                    if (count - offset > maxBufferSize)
+                    {
+                        Log.Warning("[NetworkStreamAssembler] 声明的帧长度超过缓冲上限 {0}（疑似恶意帧头），重置缓冲", maxBufferSize);
+                        count = 0;
+                        return;
+                    }
                     break; // 半帧：等待后续数据
                 }
                 if (frameLength <= 0 || frameLength > maxBufferSize)
@@ -74,7 +84,14 @@ namespace ReunionMovement.Common.Util
                 }
                 else
                 {
-                    Log.Warning("[NetworkStreamAssembler] 解码失败，跳过 {0} 字节", frameLength);
+                    // 低频告警：恶意端持续灌负长度头（LengthPrefixedCodec 每 4 字节返回一次
+                    // 非法帧长）时，此处会每 4 字节触发一次，需节流防日志刷屏 DoS
+                    int now = Environment.TickCount;
+                    if (unchecked(now - lastDecodeFailWarnTicks) > 1000)
+                    {
+                        lastDecodeFailWarnTicks = now;
+                        Log.Warning("[NetworkStreamAssembler] 解码失败，跳过 {0} 字节", frameLength);
+                    }
                 }
                 offset += frameLength;
             }

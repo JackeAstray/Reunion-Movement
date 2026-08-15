@@ -208,7 +208,8 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 截断字符串变成数组
+        /// 截断字符串变成数组（去 LINQ 版：单次遍历 + 直接类型转换，热路径零闭包分配）。
+        /// 转换失败项记录 Error 并跳过（原实现直接抛异常中断整批解析）。
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="str"></param>
@@ -226,10 +227,23 @@ namespace ReunionMovement.Common.Util
                 return new List<T>();
             }
 
-            return str.Split(args)
-                    .Where(s => !string.IsNullOrWhiteSpace(s))
-                    .Select(s => (T)Convert.ChangeType(s.Trim(), typeof(T)))
-                    .ToList();
+            string[] parts = str.Split(args);
+            var result = new List<T>(parts.Length);
+            Type targetType = typeof(T);
+            for (int i = 0; i < parts.Length; i++)
+            {
+                string trimmed = parts[i].Trim();
+                if (string.IsNullOrEmpty(trimmed)) continue; // 与 IsNullOrWhiteSpace 语义一致（Trim 后空）
+                try
+                {
+                    result.Add((T)Convert.ChangeType(trimmed, targetType));
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("StringSplit<{0}> 转换失败: '{1}'（{2}），已跳过该项", targetType.Name, trimmed, ex.Message);
+                }
+            }
+            return result;
         }
 
         /// <summary>

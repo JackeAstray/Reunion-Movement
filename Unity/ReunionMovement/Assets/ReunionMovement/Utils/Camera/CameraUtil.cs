@@ -62,6 +62,8 @@ namespace ReunionMovement.Common.Util
         private Vector2 twoFingerPanDelta;
         private float twoFingerPinchDelta;
         private const float twoFingerGestureEpsilon = 0.01f;
+        // 本帧是否已通过旋转/缩放更新过位置（避免 Update 末尾重复 UpdatePosition 双 Raycast）
+        private bool positionUpdatedThisFrame;
         #endregion
 
         [Space(10)]

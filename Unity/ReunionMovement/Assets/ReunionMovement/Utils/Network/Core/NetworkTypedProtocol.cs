@@ -12,9 +12,16 @@ namespace ReunionMovement.Common.Util
         readonly Dictionary<Type, ushort> typeToId = new Dictionary<Type, ushort>();
         readonly Dictionary<ushort, Type> idToType = new Dictionary<ushort, Type>();
 
-        /// <summary>注册类型与消息 ID 的绑定；ID 冲突或类型重复注册返回 false</summary>
+        /// <summary>注册类型与消息 ID 的绑定；ID 冲突、类型重复注册或使用保留系统 ID 返回 false</summary>
         public bool Register<T>(ushort messageId)
         {
+            // 保留 ID 拦截：PING/PONG/RPC 帧与业务消息混用会静默冲突，注册前必须拦截
+            if (NetworkConstants.IsReservedMessageId(messageId))
+            {
+                Log.Error("[NetworkTypedProtocol] 消息 ID {0} 是系统保留 ID（0xFFFB~0xFFFF：ACK/PING/PONG/RPC 帧），禁止业务注册", messageId);
+                return false;
+            }
+
             var type = typeof(T);
             if (idToType.TryGetValue(messageId, out var existing))
             {

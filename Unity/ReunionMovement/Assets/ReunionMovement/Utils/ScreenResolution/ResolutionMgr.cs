@@ -29,7 +29,23 @@ namespace ReunionMovement.Common.Util
 
         // 可配置参数
         [Header("分辨率设置")]
-        public AspectRatio aspectRatio = AspectRatio.AspectRatio_16_9;
+        [SerializeField] private AspectRatio aspectRatioValue = AspectRatio.AspectRatio_16_9;
+        /// <summary>
+        /// 目标纵横比枚举。setter 钩子：运行中修改会立即重算 targetAspectRatio 并生效
+        /// （此前为 public 裸字段，运行中赋值不生效，只有 Start 时应用一次）。
+        /// </summary>
+        public AspectRatio aspectRatio
+        {
+            get => aspectRatioValue;
+            set
+            {
+                if (aspectRatioValue != value)
+                {
+                    aspectRatioValue = value;
+                    SetAspectRatio(value);
+                }
+            }
+        }
         public bool fixedAspectRatio = true;
 
         // 目标纵横比
@@ -96,12 +112,21 @@ namespace ReunionMovement.Common.Util
                 if (isFullScreen)
                 {
                     var r = Screen.currentResolution;
-                    Screen.fullScreenMode = FullScreenMode.Windowed;
-                    await UniTask.Yield(PlayerLoopTiming.Update);
-                    await UniTask.Yield(PlayerLoopTiming.Update);
-                    displayResolution = Screen.currentResolution;
-                    Screen.SetResolution(r.width, r.height, FullScreenMode.FullScreenWindow);
-                    await UniTask.Yield(PlayerLoopTiming.Update);
+                    // 优先用 Screen.resolutions 查询：避免"全屏→窗口→全屏"切换造成启动可见闪烁
+                    var resolutions = Screen.resolutions;
+                    if (resolutions != null && resolutions.Length > 0)
+                    {
+                        displayResolution = resolutions[resolutions.Length - 1];
+                    }
+                    else
+                    {
+                        Screen.fullScreenMode = FullScreenMode.Windowed;
+                        await UniTask.Yield(PlayerLoopTiming.Update);
+                        await UniTask.Yield(PlayerLoopTiming.Update);
+                        displayResolution = Screen.currentResolution;
+                        Screen.SetResolution(r.width, r.height, FullScreenMode.FullScreenWindow);
+                        await UniTask.Yield(PlayerLoopTiming.Update);
+                    }
                 }
                 else
                 {

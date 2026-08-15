@@ -135,8 +135,16 @@ namespace ReunionMovement.Core.Terminal
         /// <param name="str"></param>
         public void ParseCommand(string allCommand)
         {
-            string remaining = allCommand;
             arguments.Clear();
+
+            // 空输入防护：allCommand 为 null 时 `null != ""` 成立进入循环，
+            // ParseArgument 内 TrimStart 会 NRE（终端 UI 传入空输入时触发）
+            if (string.IsNullOrEmpty(allCommand))
+            {
+                return;
+            }
+
+            string remaining = allCommand;
 
             while (remaining != "")
             {
@@ -228,7 +236,15 @@ namespace ReunionMovement.Core.Terminal
                 return;
             }
 
-            command.proc(arguments);
+            try
+            {
+                command.proc(arguments);
+            }
+            catch (Exception ex)
+            {
+                // 单命令异常隔离：不得中断输入链路与后续命令（原直接调用，异常会沿解析栈传播）
+                ErrorLog("命令 {0} 执行异常: {1}", command_name, ex.Message);
+            }
         }
 
         /// <summary>
@@ -406,13 +422,39 @@ namespace ReunionMovement.Core.Terminal
         }
 
         /// <summary>
-        /// 将字符串解析成命令
+        /// 将字符串解析成命令参数。
+        /// 支持双引号包裹带空格参数（如 cmd "hello world"）；未闭合引号时取整段剩余。
         /// </summary>
         /// <param name="s"></param>
         /// <returns></returns>
         CommandArg ParseArgument(ref string s)
         {
             var arg = new CommandArg();
+
+            // 跳过前导空白（同时保证外层 while 循环必然前进，不会在纯空白输入上死循环）
+            s = s.TrimStart();
+            if (s.Length == 0)
+            {
+                arg.String = "";
+                return arg;
+            }
+
+            // 引号包裹：支持带空格参数
+            if (s[0] == '"')
+            {
+                int endQuote = s.IndexOf('"', 1);
+                if (endQuote >= 0)
+                {
+                    arg.String = s.Substring(1, endQuote - 1);
+                    s = s.Substring(endQuote + 1);
+                    return arg;
+                }
+                // 未闭合引号：整段剩余作为参数
+                arg.String = s.Substring(1);
+                s = "";
+                return arg;
+            }
+
             int space_index = s.IndexOf(' ');
 
             if (space_index >= 0)

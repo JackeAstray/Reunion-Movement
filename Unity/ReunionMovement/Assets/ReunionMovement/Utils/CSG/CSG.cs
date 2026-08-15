@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -59,8 +60,10 @@ namespace ReunionMovement.Common.Util
         /// <returns>如果操作成功，则生成一个新网格，如果发生错误，则返回null</returns>
         public static Model Union(GameObject lhs, GameObject rhs)
         {
-            Model csg_model_a = new Model(lhs);
-            Model csg_model_b = new Model(rhs);
+            Model csg_model_a = CreateModelOrNull(lhs);
+            if (csg_model_a == null) return null;
+            Model csg_model_b = CreateModelOrNull(rhs);
+            if (csg_model_b == null) return null;
 
             Node a = new Node(csg_model_a.ToPolygons());
             Node b = new Node(csg_model_b.ToPolygons());
@@ -78,8 +81,10 @@ namespace ReunionMovement.Common.Util
         /// <returns>如果操作成功，则生成一个新网格，如果发生错误，则为null</returns>
         public static Model Subtract(GameObject lhs, GameObject rhs)
         {
-            Model csg_model_a = new Model(lhs);
-            Model csg_model_b = new Model(rhs);
+            Model csg_model_a = CreateModelOrNull(lhs);
+            if (csg_model_a == null) return null;
+            Model csg_model_b = CreateModelOrNull(rhs);
+            if (csg_model_b == null) return null;
 
             Node a = new Node(csg_model_a.ToPolygons());
             Node b = new Node(csg_model_b.ToPolygons());
@@ -97,8 +102,10 @@ namespace ReunionMovement.Common.Util
         /// <returns>如果操作成功，则生成一个新网格，如果发生错误，则为null</returns>
         public static Model Intersect(GameObject lhs, GameObject rhs)
         {
-            Model csg_model_a = new Model(lhs);
-            Model csg_model_b = new Model(rhs);
+            Model csg_model_a = CreateModelOrNull(lhs);
+            if (csg_model_a == null) return null;
+            Model csg_model_b = CreateModelOrNull(rhs);
+            if (csg_model_b == null) return null;
 
             Node a = new Node(csg_model_a.ToPolygons());
             Node b = new Node(csg_model_b.ToPolygons());
@@ -106,6 +113,35 @@ namespace ReunionMovement.Common.Util
             List<Polygon> polygons = Node.Intersect(a, b).AllPolygons();
 
             return new Model(polygons);
+        }
+
+        /// <summary>
+        /// 构建输入模型：与文档一致，输入对象缺少 MeshFilter/sharedMesh 或 MeshRenderer 时返回 null，
+        /// 而不是抛 ArgumentNullException（文档承诺"发生错误返回 null"）。
+        /// </summary>
+        private static Model CreateModelOrNull(GameObject go)
+        {
+            if (go == null)
+            {
+                Log.Error("CSG 输入对象为 null");
+                return null;
+            }
+            var filter = go.GetComponent<MeshFilter>();
+            var renderer = go.GetComponent<MeshRenderer>();
+            if (filter == null || filter.sharedMesh == null || renderer == null)
+            {
+                Log.Error("CSG 输入对象缺少 MeshFilter/sharedMesh 或 MeshRenderer: {0}", go.name);
+                return null;
+            }
+            try
+            {
+                return new Model(go);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("CSG 构建输入模型失败: {0}", ex.Message);
+                return null;
+            }
         }
     }
 }

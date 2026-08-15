@@ -59,6 +59,8 @@ namespace ReunionMovement
 
         /// <summary>Container 子物体的 Transform，容纳 Toggle、Text、Placeholder 等</summary>
         private Transform container;
+        /// <summary>Container 的 RectTransform 缓存（Insert 缩进计算使用，避免每次 GetComponent）</summary>
+        private RectTransform containerRect;
 
         /// <summary>当前已展开的子节点 GameObject 列表，用于回收管理</summary>
         private List<GameObject> children = new List<GameObject>();
@@ -68,25 +70,26 @@ namespace ReunionMovement
 
         /// <summary>
         /// 懒加载方式获取并缓存当前节点所需的全部 UI 组件引用。
-        /// 仅在首次调用时执行查找，后续调用直接返回（通过 myTransform != null 判断）。
+        /// 仅在首次调用时执行查找，后续调用直接返回 true（通过 myTransform != null 判断）。
         /// 查找路径基于固定的节点预制体层级结构；
-        /// 结构不完整时输出明确错误并禁用节点，避免后续链式调用 NRE。
+        /// 结构不完整时输出明确错误并禁用节点，返回 false 由调用方短路，避免后续链式调用 NRE。
         /// </summary>
-        private void GetComponent()
+        private bool TryCacheComponents()
         {
             // 已缓存过则跳过，避免重复查找
-            if (myTransform != null) return;
+            if (myTransform != null) return true;
 
             myTransform = this.transform;
             bg = myTransform.GetComponent<Image>();
             container = myTransform.Find("Container");
+            containerRect = container != null ? container.GetComponent<RectTransform>() : null;
 
             // Container 缺失：后续所有 Find 都会 NRE，直接降级
             if (container == null)
             {
                 Debug.LogError($"TreeViewNode: 节点 '{myTransform.name}' 缺少 'Container' 子物体，节点已禁用。请检查预制体结构。", this);
                 enabled = false;
-                return;
+                return false;
             }
 
             // Container 下的 UI 元素
@@ -102,7 +105,7 @@ namespace ReunionMovement
                 Debug.LogError($"TreeViewNode: 节点 '{myTransform.name}' 的 Container 结构不完整" +
                     $"（Toggle={toggle != null}，Text={text != null}，Placeholder={placeholder != null}），节点已禁用。请检查预制体结构。", this);
                 enabled = false;
-                return;
+                return false;
             }
 
             // Toggle 中的箭头图标
@@ -117,6 +120,7 @@ namespace ReunionMovement
                 if (uiTree != null) break;
                 search = search.parent;
             }
+            return true;
         }
 
         /// <summary>
@@ -148,7 +152,8 @@ namespace ReunionMovement
         /// <param name="data">要填充的树节点数据</param>
         public void Insert(TreeViewData data)
         {
-            GetComponent();
+            // 数据为空或组件缓存失败（预制体结构不完整/节点被禁用）时短路，避免 NRE
+            if (data == null || !TryCacheComponents()) return;
 
             // 先移除旧监听，防止重复注册导致多次回调
             RemoveListener();
@@ -161,9 +166,10 @@ namespace ReunionMovement
             // 注册 Toggle 值变化回调
             toggle.onValueChanged.AddListener(OpenOrClose);
 
-            // 根据层级计算水平缩进偏移
+            // 根据层级计算水平缩进偏移（RectTransform 已缓存于 TryCacheComponents，避免每次 Insert GetComponent）
+            float indentStep = containerRect != null ? containerRect.sizeDelta.y : 0f;
             container.localPosition += new Vector3(
-                container.GetComponent<RectTransform>().sizeDelta.y * treeData.layer,
+                indentStep * treeData.layer,
                 0, 0);
 
             // 叶子节点（无子节点）显示透明占位图代替箭头
@@ -340,9 +346,14 @@ namespace ReunionMovement
                 CloseChildren();
 
             // 旋转箭头：展开时指向下方 (0°)，折叠时指向右侧 (90°)
-            toggleTransform.localEulerAngles = isOn
-                ? new Vector3(0, 0, 0)
-                : new Vector3(0, 0, 90);
+            // 预制体缺 "Icon" 子物体时 toggleTransform 为 null（TryCacheComponents 不校验），
+            // 判空与 ResetComponent 分支保持一致，避免点击展开/折叠即 NRE
+            if (toggleTransform != null)
+            {
+                toggleTransform.localEulerAngles = isOn
+                    ? new Vector3(0, 0, 0)
+                    : new Vector3(0, 0, 90);
+            }
 
             // 触发节点点击回调
             action?.Invoke(treeData);
@@ -354,7 +365,11 @@ namespace ReunionMovement
         /// </summary>
         private void OpenChildren()
         {
-            children = uiTree.Pop(treeData.childNodes, transform.GetSiblingIndex());
+            // uiTree 可能为 null（节点脱离 TreeView 使用/组件缓存失败路径），判空避免 NRE
+            if (uiTree != null)
+            {
+                children = uiTree.Pop(treeData.childNodes, transform.GetSiblingIndex());
+            }
         }
 
         /// <summary>
@@ -376,8 +391,11 @@ namespace ReunionMovement
                 }
             }
 
-            // 将所有子节点 GameObject 回收到对象池
-            uiTree.Push(children);
+            // 将所有子节点 GameObject 回收到对象池（uiTree 为 null 时直接丢弃引用，防 NRE）
+            if (uiTree != null)
+            {
+                uiTree.Push(children);
+            }
             children.Clear();
         }
 

@@ -71,7 +71,12 @@ namespace ReunionMovement
         public static bool Enable_LOG
         {
             get => Cfg?.enableLog ?? true;
-            set { if (Cfg != null) Cfg.enableLog = value; }
+            set
+            {
+                if (Cfg != null) Cfg.enableLog = value;
+                // 配置资产缺失时写入被静默丢弃：告警提示配置未被持久化到 ScriptableObject
+                else Log.Warning("Config: GameConfig 未加载，Enable_LOG={0} 仅本次运行生效", value);
+            }
         }
 
         public static bool Enable_Debug_LOG

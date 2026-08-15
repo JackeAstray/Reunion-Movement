@@ -129,17 +129,22 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 服务器收到客户端数据时调用，默认回显给发送者；可重写或订阅扩展。
+        /// 服务器收到客户端数据时调用；可重写或订阅扩展。
         /// 注意：payload 为按编解码器解码后的负载（不含帧头）。
+        /// 回显为可配置调试行为（echoToSender，默认关闭，避免高频消息流量翻倍）。
         /// </summary>
         void OnServerDataReceived(int clientId, byte[] payload)
         {
             var s = Encoding.UTF8.GetString(payload);
-            Log.Info("服务器收到来自 {0} 的消息 ({1})：{2}", clientId, transport, s);
+            // 高频消息逐条 Info 会刷屏：降为 Debug（调试构建才输出）
+            Log.Debug("服务器收到来自 {0} 的消息 ({1})：{2}", clientId, transport, s);
             ServerDataReceived?.Invoke(clientId, payload);
             try { onServerDataReceived?.Invoke(s); } catch (System.Exception ex) { Log.Warning("onServerDataReceived 回调异常: {0}", ex.Message); }
-            // 默认回显
-            SendToClientBytes(clientId, payload);
+            // 可选回显（默认关闭）
+            if (echoToSender)
+            {
+                SendToClientBytes(clientId, payload);
+            }
         }
         #endregion
     }

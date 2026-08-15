@@ -198,7 +198,9 @@ namespace ReunionMovement.UI.ImageExtensions
                     if (rawT >= 1f) { rawT = 1f; m_Playing = false; m_Completed = true; OnCompleted?.Invoke(); }
                     break;
                 case WrapMode.Loop:
-                    rawT = rawT % 1f;
+                    // 必须用未钳制的 m_Time 计算循环相位：rawT 已被 Clamp01 恒为 1，
+                    // 1 % 1 = 0 会在第一周期结束后跳回起点并永久冻结
+                    rawT = (m_Time / duration) % 1f;
                     break;
                 case WrapMode.PingPong:
                 {
@@ -221,7 +223,8 @@ namespace ReunionMovement.UI.ImageExtensions
                 }
                 case WrapMode.PingPongLoop:
                 {
-                    float loop = rawT % 2f;
+                    // 同样必须用未钳制的 m_Time：rawT 恒 ≤1 时 loop 永远 ≤1，回程分支不可达
+                    float loop = (m_Time / duration) % 2f;
                     rawT = loop > 1f ? 2f - loop : loop;
                     break;
                 }

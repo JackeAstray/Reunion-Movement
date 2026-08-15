@@ -23,6 +23,10 @@ namespace ReunionMovement.UI.ImageExtensions
         private ImageExPreset m_TransferPreset; // 复用的中转预设（避免每帧 CreateInstance/DestroyImmediate）
         private ImageExPreset m_LastApplied;    // 上次应用状态快照（内容级变化检测，无变化则跳过 Apply）
 
+        /// <summary>自动同步节流间隔（秒）</summary>
+        private const float AutoSyncInterval = 0.1f;
+        private float m_NextSyncTime;
+
         public SourceType Source
         {
             get => m_SourceType;
@@ -81,7 +85,11 @@ namespace ReunionMovement.UI.ImageExtensions
 #if UNITY_EDITOR
             if (!m_SyncInEditMode && !Application.isPlaying) return;
 #endif
-            // Apply 内部做内容级变化检测：源未变化时不触发 SetMaterialDirty，零开销
+            // 降频同步：即便 Apply 内部有内容级变化检测，每帧仍有 ReadFrom 全字段拷贝 + SameAs
+            // 全字段比较的固定开销（多 Replica 时成倍）；0.1s 节流视觉无感知，需要即时刷新直接调 Apply()
+            float now = Application.isPlaying ? Time.unscaledTime : Time.realtimeSinceStartup;
+            if (m_NextSyncTime > now) return;
+            m_NextSyncTime = now + AutoSyncInterval;
             Apply();
         }
 

@@ -54,7 +54,7 @@ namespace ReunionMovement.Tests
 
             timer.Update(2.5f); // 单帧跨越 2 次循环 + 0.5 溢出
 
-            Assert.AreEqual(1, loopCompleted, "单帧至多推进一次循环（长帧多循环为已知限制）");
+            Assert.AreEqual(2, loopCompleted, "长帧跨越的周期应逐次补发 OnLoopCompleted（2026-08-15 已修复多循环限制）");
             Assert.AreEqual(0.5f, timer.elapsed, 0.001f, "溢出量应保留而非归零");
         }
 

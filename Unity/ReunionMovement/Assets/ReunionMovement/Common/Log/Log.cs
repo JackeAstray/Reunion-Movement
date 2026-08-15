@@ -100,6 +100,15 @@ namespace ReunionMovement.Common
                 GameLogger.Debug(format, args);
         }
 
+        [Conditional("UNITY_EDITOR")]
+        [Conditional("DEVELOPMENT_BUILD")]
+        [HideInCallstack]
+        public static void Debug(string format, LogChannel channel, params object[] args)
+        {
+            if (IsEnabled(Config.Enable_Debug_LOG, channel))
+                GameLogger.Debug((object)string.Format(format, args), channel);
+        }
+
         // ============================================================
         //  Info — Release 构建中完全剔除（0GC）
         // ============================================================
@@ -167,6 +176,15 @@ namespace ReunionMovement.Common
                 GameLogger.Info(format, args);
         }
 
+        [Conditional("UNITY_EDITOR")]
+        [Conditional("DEVELOPMENT_BUILD")]
+        [HideInCallstack]
+        public static void Info(string format, LogChannel channel, params object[] args)
+        {
+            if (IsEnabled(Config.Enable_Info_LOG, channel))
+                GameLogger.Info((object)string.Format(format, args), channel);
+        }
+
         // ============================================================
         //  Warning — 始终开启，提供 format 重载降低分配
         // ============================================================
@@ -220,6 +238,13 @@ namespace ReunionMovement.Common
                 GameLogger.Warning(format, args);
         }
 
+        [HideInCallstack]
+        public static void Warning(string format, LogChannel channel, params object[] args)
+        {
+            if (IsEnabled(Config.Enable_Warning_LOG, channel))
+                GameLogger.Warning((object)string.Format(format, args), channel);
+        }
+
         // ============================================================
         //  Error — 始终开启，提供 format 重载降低分配
         // ============================================================
@@ -271,6 +296,13 @@ namespace ReunionMovement.Common
         {
             if (IsEnabled(Config.Enable_Error_LOG, LogChannel.General))
                 GameLogger.Error(format, args);
+        }
+
+        [HideInCallstack]
+        public static void Error(string format, LogChannel channel, params object[] args)
+        {
+            if (IsEnabled(Config.Enable_Error_LOG, channel))
+                GameLogger.Error((object)string.Format(format, args), channel);
         }
 
         // ============================================================

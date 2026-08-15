@@ -18,6 +18,12 @@ namespace ReunionMovement.Common.Util
     {
         public const int DefaultReceiveChunkSize = 1 << 16; // 64KB
 
+        /// <summary>发送超时（毫秒）：对端停止读取时防止主线程被 NetworkStream.Write 无限阻塞</summary>
+        public const int DefaultSendTimeoutMs = 10000;
+
+        /// <summary>事件队列上限：主线程停摆时后台接收仍在入队，超限丢弃最旧事件防内存无界增长</summary>
+        private const int MaxPendingEvents = 1024;
+
         enum EventType { Connected, Data, Disconnected, Error }
 
         TcpClient socket;
@@ -25,9 +31,19 @@ namespace ReunionMovement.Common.Util
         Thread recvThread;
         volatile bool running;
         volatile bool connected;
+        // 连接代次：同一实例重连时递增。旧接收线程醒来后据此判定自身已过期并直接退出，
+        // 防止旧线程复用新 stream（双线程抢读/数据交错）并排入虚假的 Error/Disconnected 事件。
+        int generation;
         readonly ConcurrentQueue<(EventType type, byte[] data, string message)> events = new ConcurrentQueue<(EventType type, byte[] data, string message)>();
         readonly object sendLock = new object();
         readonly int receiveChunkSize;
+
+        /// <summary>有界入队：超限时丢弃最旧事件（并发下的近似判断即可，多丢少丢一条无碍）</summary>
+        private void EnqueueEvent((EventType type, byte[] data, string message) ev)
+        {
+            if (events.Count >= MaxPendingEvents) events.TryDequeue(out _);
+            events.Enqueue(ev);
+        }
 
         public string ChannelName { get; set; }
 
@@ -58,69 +74,82 @@ namespace ReunionMovement.Common.Util
 
             Host = host;
             Port = port;
+            // 新代次必须先递增、再置 running=true：旧 recvThread 被 CloseSocket 的 Dispose 唤醒后，
+            // 若恰落在两句之间且 running 已为 true 而代次未变，会对已释放的旧 stream 读取并向
+            // 新连接注入伪造的 Error/Disconnected 事件（窄窗口但真实存在）
+            int gen = Interlocked.Increment(ref generation);
             running = true;
             connected = false;
             try
             {
                 socket = new TcpClient();
                 socket.NoDelay = true;
-                _ = ConnectAsync(socket, host, port);
+                // 防止对端停止读取时发送缓冲填满导致主线程无限阻塞
+                socket.SendTimeout = DefaultSendTimeoutMs;
+                _ = ConnectAsync(socket, host, port, gen);
             }
             catch (Exception ex)
             {
-                events.Enqueue((EventType.Error, null, "TCP 连接失败: " + ex.Message));
-                events.Enqueue((EventType.Disconnected, null, null));
+                EnqueueEvent((EventType.Error, null, "TCP 连接失败: " + ex.Message));
+                EnqueueEvent((EventType.Disconnected, null, null));
             }
         }
 
-        async Task ConnectAsync(TcpClient client, string host, int port)
+        async Task ConnectAsync(TcpClient client, string host, int port, int gen)
         {
             try
             {
                 await client.ConnectAsync(host, port).ConfigureAwait(false);
-                if (!running || !ReferenceEquals(client, socket))
+                // 代次校验：等待期间已再次重连（gen 过期）或 socket 被替换时放弃本次连接
+                if (!running || gen != generation || !ReferenceEquals(client, socket))
                 {
                     TryClose(client);
                     return;
                 }
                 stream = client.GetStream();
                 connected = true;
-                events.Enqueue((EventType.Connected, null, null));
-                recvThread = new Thread(ReceiveLoop) { IsBackground = true, Name = "RawTcpClient.Recv" };
+                EnqueueEvent((EventType.Connected, null, null));
+                recvThread = new Thread(() => ReceiveLoop(stream, gen)) { IsBackground = true, Name = "RawTcpClient.Recv" };
                 recvThread.Start();
             }
             catch (Exception ex)
             {
-                events.Enqueue((EventType.Error, null, "TCP 连接失败: " + ex.Message));
-                events.Enqueue((EventType.Disconnected, null, null));
+                if (running && gen == generation)
+                {
+                    EnqueueEvent((EventType.Error, null, "TCP 连接失败: " + ex.Message));
+                    EnqueueEvent((EventType.Disconnected, null, null));
+                }
             }
         }
 
-        void ReceiveLoop()
+        void ReceiveLoop(NetworkStream localStream, int gen)
         {
             var buffer = new byte[receiveChunkSize];
             try
             {
-                while (running)
+                // 关键：读局部 stream 引用（不被重连覆盖到新 stream）+ 代次校验。
+                // 旧线程因 CloseSocket 的 Dispose 从 Read 唤醒后，若已发生重连（代次不匹配）
+                // 立即退出，不会排入伪造的“接收异常/断开”事件。
+                while (running && gen == generation)
                 {
-                    int n = stream.Read(buffer, 0, buffer.Length);
+                    int n = localStream.Read(buffer, 0, buffer.Length);
                     if (n <= 0) break;
                     var copy = new byte[n];
                     Buffer.BlockCopy(buffer, 0, copy, 0, n);
-                    events.Enqueue((EventType.Data, copy, null));
+                    EnqueueEvent((EventType.Data, copy, null));
                 }
             }
             catch (Exception ex)
             {
-                if (running)
+                if (running && gen == generation)
                 {
-                    events.Enqueue((EventType.Error, null, "接收异常: " + ex.Message));
+                    EnqueueEvent((EventType.Error, null, "接收异常: " + ex.Message));
                 }
             }
-            if (running)
+            if (running && gen == generation)
             {
                 connected = false;
-                events.Enqueue((EventType.Disconnected, null, null));
+                EnqueueEvent((EventType.Disconnected, null, null));
             }
         }
 
@@ -130,20 +159,28 @@ namespace ReunionMovement.Common.Util
             while (processed < 512 && events.TryDequeue(out var ev))
             {
                 processed++;
-                switch (ev.type)
+                try
                 {
-                    case EventType.Connected:
-                        OnConnected?.Invoke();
-                        break;
-                    case EventType.Data:
-                        OnDataReceived?.Invoke(ev.data);
-                        break;
-                    case EventType.Disconnected:
-                        OnDisconnected?.Invoke();
-                        break;
-                    case EventType.Error:
-                        OnError?.Invoke(ev.message);
-                        break;
+                    switch (ev.type)
+                    {
+                        case EventType.Connected:
+                            OnConnected?.Invoke();
+                            break;
+                        case EventType.Data:
+                            OnDataReceived?.Invoke(ev.data);
+                            break;
+                        case EventType.Disconnected:
+                            OnDisconnected?.Invoke();
+                            break;
+                        case EventType.Error:
+                            OnError?.Invoke(ev.message);
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // 订阅者异常隔离：与项目其他用户事件派发一致，不中断剩余事件
+                    Log.Warning("[RawTcpClientChannel] {0} 事件订阅者异常（已隔离）: {1}", ev.type, ex.Message);
                 }
             }
         }

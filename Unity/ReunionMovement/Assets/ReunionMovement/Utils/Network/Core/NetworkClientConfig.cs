@@ -55,6 +55,7 @@ namespace ReunionMovement.Common.Util
 
         public float heartbeatInterval = 5f;
 
+        [Tooltip("已废弃（2026-08-15）：心跳改用保留 ID 的 PING/PONG 协议帧，不再发送文本心跳。字段保留以兼容旧 Inspector 数据")]
         public string heartbeatText = "PING";
 
         [Tooltip("死链判定：超过此时长未收到任何数据则断开并重连；0 = 不启用")]

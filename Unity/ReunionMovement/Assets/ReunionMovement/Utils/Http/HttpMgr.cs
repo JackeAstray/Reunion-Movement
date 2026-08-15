@@ -29,6 +29,9 @@ namespace ReunionMovement.Common.Util.HttpService
         /// <summary>并发上限：在途请求数达到上限后新请求进入等待队列按 FIFO 派发；<=0 表示不限</summary>
         public int MaxConcurrentRequests = 8;
 
+        /// <summary>等待队列上限：超出后新请求被直接拒绝（onError 429）；<=0 表示不限（防恶意调用无限排队）</summary>
+        public int MaxPendingRequests = 256;
+
         /// <summary>等待派发的请求队列（并发上限生效时使用）</summary>
         private struct PendingHttpRequest
         {
@@ -289,6 +292,20 @@ namespace ReunionMovement.Common.Util.HttpService
             // 并发上限：超限请求入队，待在途请求完成后按 FIFO 派发（避免无限开连接压垮网络层）
             if (MaxConcurrentRequests > 0 && httpRequests.Count >= MaxConcurrentRequests)
             {
+                // 等待队列上限：恶意/异常调用无限排队会内存无界增长，超限直接拒绝并回调错误
+                if (MaxPendingRequests > 0 && pendingRequests.Count >= MaxPendingRequests)
+                {
+                    Log.Error("HttpMgr 等待队列已达上限 {0}，拒绝新请求 {1}", MaxPendingRequests, request.GetType().Name);
+                    onError?.Invoke(new HttpResponse
+                    {
+                        isSuccessful = false,
+                        isHttpError = true,
+                        statusCode = 429,
+                        error = "请求等待队列已满"
+                    });
+                    return;
+                }
+
                 Log.Debug("HttpMgr 并发上限 {0} 已达，请求 {1} 进入等待队列（队列长度 {2}）",
                     MaxConcurrentRequests, request.GetType().Name, pendingRequests.Count + 1);
                 pendingRequests.Enqueue(new PendingHttpRequest
@@ -351,6 +368,26 @@ namespace ReunionMovement.Common.Util.HttpService
                         resp => { networkFailed = false; tcs.TrySetResult(resp); },
                         resp => { networkFailed = false; tcs.TrySetResult(resp); },
                         resp => { networkFailed = true; tcs.TrySetResult(resp); });
+
+                    // Abort 悬挂防护：请求被外部 HttpMgr.Abort 时回调不会触发（协程被括断），
+                    // tcs 永不完成 → 裸 await 永久挂起。与“请求已释放”竞速，及时终结本次尝试。
+                    await UniTask.WhenAny(
+                        tcs.Task,
+                        UniTask.WaitUntil(() => request is UnityHttpRequest ur && ur.IsDisposed));
+
+                    // 请求被外部 Abort（tcs 未完成但底层已释放）：尊重放弃语义，不再重试
+                    if (request is UnityHttpRequest disposedReq && disposedReq.IsDisposed
+                        && tcs.Task.Status != UniTaskStatus.Succeeded)
+                    {
+                        Log.Warning("HttpMgr.SendWithRetry 请求被外部 Abort，停止重试");
+                        onError?.Invoke(new HttpResponse
+                        {
+                            isSuccessful = false,
+                            isHttpError = true,
+                            error = "请求已被取消"
+                        });
+                        return;
+                    }
 
                     var resp = await tcs.Task;
                     if (!networkFailed || attempt >= maxRetries)
@@ -446,8 +483,13 @@ namespace ReunionMovement.Common.Util.HttpService
             {
                 updateSnapshot = new IHttpRequest[requests.Count];
             }
-            requests.CopyTo(updateSnapshot, 0);
             int count = requests.Count;
+            // 收缩：峰值并发过后回收过大快照（防止一次突发 500 并发后永久持有大数组）
+            if (updateSnapshot.Length > count * 2 + 8)
+            {
+                updateSnapshot = new IHttpRequest[count];
+            }
+            requests.CopyTo(updateSnapshot, 0);
             for (int i = 0; i < count; i++)
             {
                 (updateSnapshot[i] as IUpdateProgress)?.UpdateProgress();

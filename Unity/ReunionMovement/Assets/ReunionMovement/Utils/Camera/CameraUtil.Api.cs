@@ -70,7 +70,9 @@ namespace ReunionMovement.Common.Util
                 rotY = Mathf.Clamp(y, minRotY, maxRotY);
                 Quaternion addRot = Quaternion.Euler(0f, rotX, 0f);
                 destRot = addRot * Quaternion.Euler(rotY, 0f, 0f);
-                csmoCamera.transform.localEulerAngles = destRot.eulerAngles;
+                // 与动画路径一致写世界旋转：原写 localEulerAngles，相机父节点带旋转时
+                // 同一视角的瞬间设置与动画设置结果不一致（父旋转被二次应用）
+                csmoCamera.transform.rotation = destRot;
                 UpdatePosition();
             }
             else

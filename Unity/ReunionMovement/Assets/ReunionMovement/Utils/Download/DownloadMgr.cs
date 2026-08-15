@@ -315,7 +315,15 @@ namespace ReunionMovement.Common.Util.Download
             {
                 byte[] imageBytes = File.ReadAllBytes(filePath);
                 texture = new Texture2D(2, 2);
-                texture.LoadImage(imageBytes);
+                // 必须检查 LoadImage 结果：损坏文件会返回 false（texture 保持 2×2 默认），
+                // 不检查会把坏图当成功塞进缓存
+                if (!texture.LoadImage(imageBytes))
+                {
+                    UnityEngine.Object.Destroy(texture);
+                    texture = null;
+                    Log.Warning("图片解码失败（文件损坏或格式不支持）: {0}", filePath);
+                    return false;
+                }
                 // 设置一个名称以帮助调试和跟踪
                 try { texture.name = Path.GetFileName(filePath); } catch (System.Exception) { /* 设置名称失败不影响加载流程 */ }
                 return true;

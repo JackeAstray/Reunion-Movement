@@ -186,14 +186,21 @@ namespace ReunionMovement.UI.Select
 
             if (columns > 1)
             {
-                // 矩阵模式：左右/上下同时响应（各轴独立判定死区）
-                if (Mathf.Abs(dir.x) >= navigateDeadzone)
+                // 矩阵模式：主轴优先。斜向摇杆推入时横纵同时过死区，旧实现一次斜推触发
+                // MoveHorizontal + MoveVertical 两步（两次 SetIndex + 两次全量 Refresh）。
+                // 仅响应绝对值较大的轴，两轴相等时优先横向。
+                float ax = Mathf.Abs(dir.x);
+                float ay = Mathf.Abs(dir.y);
+                if (ax >= navigateDeadzone || ay >= navigateDeadzone)
                 {
-                    MoveHorizontal(dir.x > 0 ? 1 : -1);
-                }
-                if (Mathf.Abs(dir.y) >= navigateDeadzone)
-                {
-                    MoveVertical(dir.y > 0 ? 1 : -1);
+                    if (ax >= ay)
+                    {
+                        MoveHorizontal(dir.x > 0 ? 1 : -1);
+                    }
+                    else
+                    {
+                        MoveVertical(dir.y > 0 ? 1 : -1);
+                    }
                 }
                 return;
             }
@@ -402,29 +409,40 @@ namespace ReunionMovement.UI.Select
         {
             if (options == null || options.Length == 0) return;
             var selectable = options[currentIndex];
+            int targetIndex = currentIndex;
             if (selectable != null && !selectable.interactable)
             {
                 // 当前项不可交互时，就近回退到最近的可交互项，避免焦点丢失
-                selectable = FindNearestInteractable(currentIndex);
+                targetIndex = FindNearestInteractableIndex(currentIndex);
+                if (targetIndex < 0) return;
+                selectable = options[targetIndex];
             }
             if (selectable == null) return;
+
+            // 回退后同步 currentIndex：否则 Refresh 高亮的仍是不可交互项，焦点与高亮错位
+            if (currentIndex != targetIndex)
+            {
+                currentIndex = targetIndex;
+                Refresh();
+            }
+
             if (EventSystem.current != null)
             {
                 EventSystem.current.SetSelectedGameObject(selectable.gameObject);
             }
         }
 
-        /// <summary>从 index 向两侧寻找最近的可交互选项（无则返回 null）</summary>
-        private Button FindNearestInteractable(int index)
+        /// <summary>从 index 向两侧寻找最近的可交互项索引（无则返回 -1）</summary>
+        private int FindNearestInteractableIndex(int index)
         {
             for (int dist = 1; dist < options.Length; dist++)
             {
-                var next = options[(index + dist) % options.Length];
-                if (next != null && next.interactable) return next;
-                var prev = options[(index - dist + options.Length) % options.Length];
-                if (prev != null && prev.interactable) return prev;
+                int nextIdx = (index + dist) % options.Length;
+                if (options[nextIdx] != null && options[nextIdx].interactable) return nextIdx;
+                int prevIdx = (index - dist + options.Length) % options.Length;
+                if (options[prevIdx] != null && options[prevIdx].interactable) return prevIdx;
             }
-            return null;
+            return -1;
         }
 
         private void Refresh()
@@ -447,10 +465,17 @@ namespace ReunionMovement.UI.Select
 
             for (int i = 0; i < options.Length; i++)
             {
-                // 高亮当前项
-                if (options[i] != null && options[i].targetGraphic != null)
+                // 高亮当前项。通过 ColorBlock 常态色设置：直接写 targetGraphic.color 会在
+                // 鼠标悬停/按下瞬间被 Button 自身状态色覆盖（两套高亮互斥闪烁）；
+                // 设置 normalColor 使选中即常态，与 Button 状态机一致。
+                var btn = options[i];
+                if (btn == null) continue;
+                Color targetColor = i == currentIndex ? selectedColor : normalColor;
+                var colors = btn.colors;
+                if (colors.normalColor != targetColor)
                 {
-                    options[i].targetGraphic.color = i == currentIndex ? selectedColor : normalColor;
+                    colors.normalColor = targetColor;
+                    btn.colors = colors;
                 }
             }
 
@@ -480,6 +505,12 @@ namespace ReunionMovement.UI.Select
             }
         }
 
+        /// <summary>确认选择事件（参数：选中项索引），外部订阅即可拿到选择结果，无需改源码</summary>
+        public event Action<int> onConfirmed;
+
+        /// <summary>确认后是否自动关闭窗口（默认 true，一步到位；设为 false 由外部自行处理关闭时机）</summary>
+        public bool closeOnConfirm = true;
+
         /// <summary>确认当前选择（可被选项 Button 的 onClick 复用）</summary>
         public void Confirm()
         {
@@ -492,7 +523,14 @@ namespace ReunionMovement.UI.Select
             }
             Log.Debug($"[CarouselSelection] 确认选择：{selected.name} (index={currentIndex})");
 
-            // TODO: 通知数据层 / 打开确认弹窗，然后 CloseWindow();
+            // 对外广播选择结果（订阅者异常隔离，不阻断关闭流程）
+            try { onConfirmed?.Invoke(currentIndex); }
+            catch (Exception ex) { Log.Warning($"[CarouselSelection] onConfirmed 订阅者异常: {ex.Message}"); }
+
+            if (closeOnConfirm)
+            {
+                CloseWindow();
+            }
         }
     }
 }

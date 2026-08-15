@@ -14,8 +14,22 @@ namespace ReunionMovement.Common.Util.Pool
     /// </summary>
     public static class GameObjectPoolRegistry
     {
-        private static readonly Dictionary<GameObject, GameObjectPool> pools = new Dictionary<GameObject, GameObjectPool>();
+        // 以资产 GUID 字符串为键（此前以 GameObject 实例为键）：实例销毁后 instanceID 可能被
+        // 新对象复用，命中错误池或残留 fake-null 条目；GUID 对同一资产恒定且唯一。
+        private static readonly Dictionary<string, GameObjectPool> pools = new Dictionary<string, GameObjectPool>();
         private static Transform root;
+
+        /// <summary>获取预制体的稳定键：编辑器下用资产 GUID；运行时退化为 name+instanceID</summary>
+        private static string GetPrefabKey(GameObject prefab)
+        {
+#if UNITY_EDITOR
+            if (UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(prefab, out string guid, out long _))
+            {
+                return guid;
+            }
+#endif
+            return prefab.name + "#" + prefab.GetInstanceID();
+        }
 
         /// <summary>获取（或创建）指定预制体的共享池</summary>
         public static GameObjectPool GetPool(GameObject prefab, int prewarm = 10, int maxSize = 100)
@@ -25,7 +39,8 @@ namespace ReunionMovement.Common.Util.Pool
                 Debug.LogError("GameObjectPoolRegistry.GetPool: prefab 不能为 null");
                 return null;
             }
-            if (pools.TryGetValue(prefab, out var existing) && existing != null)
+            string key = GetPrefabKey(prefab);
+            if (pools.TryGetValue(key, out var existing) && existing != null)
             {
                 return existing;
             }
@@ -38,7 +53,7 @@ namespace ReunionMovement.Common.Util.Pool
             pool.prewarmCount = prewarm;
             pool.maxSize = maxSize;
             pool.EnsureInitialized(); // AddComponent 已触发 Awake，此处幂等；确保参数在预热前生效
-            pools[prefab] = pool;
+            pools[key] = pool;
             return pool;
         }
 
@@ -53,7 +68,7 @@ namespace ReunionMovement.Common.Util.Pool
         public static void Release(GameObject prefab, GameObject instance)
         {
             if (prefab == null || instance == null) return;
-            if (pools.TryGetValue(prefab, out var pool) && pool != null)
+            if (pools.TryGetValue(GetPrefabKey(prefab), out var pool) && pool != null)
             {
                 pool.Release(instance);
                 return;
