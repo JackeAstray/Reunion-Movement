@@ -547,5 +547,5 @@ Shader "ReunionMovement/UI/ImageEx"
             ENDCG
         }
     }
-    CustomEditor "ReunionMovement.UI.ImageExtensions.Editor.ImageShaderGUI"
+    CustomEditor "ReunionMovement.EditorTools.ImageExtensions.ImageShaderGUI"
 }
