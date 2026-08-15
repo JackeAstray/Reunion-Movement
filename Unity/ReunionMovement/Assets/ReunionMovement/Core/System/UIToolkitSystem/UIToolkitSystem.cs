@@ -52,10 +52,11 @@ namespace ReunionMovement.Core.UIToolkit
 
         /// <summary>面板栈（用于层级管理、返回栈等）</summary>
         private readonly Stack<UIToolkitPanel> panelStack = new Stack<UIToolkitPanel>();
+        // RebuildStackWithout 的复用缓冲（避免每次关面板分配新栈）
+        private readonly List<UIToolkitPanel> rebuildBuffer = new List<UIToolkitPanel>();
 
-        /// <summary>在途异步打开信号（并发去重：同名面板等待同一结果，避免双方各自实例化产生孤儿面板）</summary>
-        private readonly Dictionary<string, UniTaskCompletionSource<UIToolkitPanel>> loadingPanelTcs
-            = new Dictionary<string, UniTaskCompletionSource<UIToolkitPanel>>();
+        /// <summary>在途异步打开信号（SingleFlightLoader 并发去重：同名面板等待同一结果，避免双方各自实例化产生孤儿面板）</summary>
+        private readonly SingleFlightLoader<UIToolkitPanel> panelLoadGate = new SingleFlightLoader<UIToolkitPanel>();
 
         /// <summary>面板 UXML 资源缓存（面板名 → VisualTreeAsset）</summary>
         private readonly Dictionary<string, VisualTreeAsset> panelAssetCache
@@ -143,11 +144,23 @@ namespace ReunionMovement.Core.UIToolkit
             panelStack.Clear();
 
             // 完成并清空在途打开信号：等待中的 OpenPanelAsync 恢复后经 RootVisualElement==null 校验返回 null
-            foreach (var kvp in loadingPanelTcs)
+            panelLoadGate.CancelAll();
+            // 归还 ResourcesSystem 引用计数：panelAssetCache 与全局样式/设置均以 isCache:true 加载，
+            // 仅清字典会泄漏引用（资源驻留内存直到 ResourcesSystem.Clear）
+            foreach (var key in panelAssetCache.Keys)
             {
-                kvp.Value.TrySetResult(null);
+                ResourcesSystem.Instance.DeleteAssetCache(UXML_PATH_PREFIX + key);
             }
-            loadingPanelTcs.Clear();
+            if (globalStyleSheet != null)
+            {
+                ResourcesSystem.Instance.DeleteAssetCache(GLOBAL_STYLE_PATH);
+                globalStyleSheet = null;
+            }
+            // panelSettings 可能为 null/已销毁；DeleteAssetCache 对未登记 key 为安全空操作
+            if (panelSettings != null)
+            {
+                ResourcesSystem.Instance.DeleteAssetCache(PANEL_SETTINGS_PATH);
+            }
             panelAssetCache.Clear();
             panelStyleCache.Clear();
 
@@ -338,17 +351,9 @@ namespace ReunionMovement.Core.UIToolkit
                 return existing as T;
             }
 
-            // 并发去重：同名面板正在加载中时等待同一结果（避免双方各自实例化产生孤儿面板）
-            if (loadingPanelTcs.TryGetValue(panelName, out var pending))
-            {
-                var (_, concurrentPanel) = await pending.Task.SuppressCancellationThrow();
-                return concurrentPanel as T;
-            }
-
-            var myTcs = new UniTaskCompletionSource<UIToolkitPanel>();
-            loadingPanelTcs[panelName] = myTcs;
-            UIToolkitPanel result = null;
-            try
+            // 并发去重：同名面板正在加载中时等待同一结果（SingleFlightLoader 统一管理
+            // 单飞/取消/摘除；Clear() 会 CancelAll，等待方拿到 null 走下方 Root 校验返回）
+            var panel = await panelLoadGate.RunAsync(panelName, async () =>
             {
                 // 异步加载 UXML（缓存优先）
                 if (!panelAssetCache.TryGetValue(panelName, out var asset))
@@ -379,42 +384,34 @@ namespace ReunionMovement.Core.UIToolkit
                 {
                     concurrent.OnOpen(data);
                     SafeOpenNotify(concurrent);
-                    result = concurrent;
-                    return concurrent as T;
+                    return concurrent;
                 }
 
                 // 实例化面板
-                var panel = new T();
-                panel.Initialize(panelName, asset, RootVisualElement, this);
+                var newPanel = new T();
+                newPanel.Initialize(panelName, asset, RootVisualElement, this);
 
                 // 异步加载面板样式
-                await LoadPanelStyleAsync(panelName, panel.Root);
+                await LoadPanelStyleAsync(panelName, newPanel.Root);
 
                 // 样式加载期间再次校验（Clear 或重复打开）
-                if (RootVisualElement == null || panel.Root == null)
+                if (RootVisualElement == null || newPanel.Root == null)
                 {
                     Log.Error("[UIToolkitSystem] OpenPanelAsync 失败：样式加载期间系统已清理");
                     return null;
                 }
 
-                panelInstances[panelName] = panel;
-                panelStack.Push(panel);
+                panelInstances[panelName] = newPanel;
+                panelStack.Push(newPanel);
 
-                panel.OnOpen(data);
-                SafeOpenNotify(panel);
+                newPanel.OnOpen(data);
+                SafeOpenNotify(newPanel);
 
                 Log.Debug("[UIToolkitSystem] 打开面板: {0}", panelName);
-                result = panel;
-                return panel as T;
-            }
-            finally
-            {
-                if (loadingPanelTcs.TryGetValue(panelName, out var cur) && ReferenceEquals(cur, myTcs))
-                {
-                    loadingPanelTcs.Remove(panelName);
-                }
-                myTcs.TrySetResult(result);
-            }
+                return (UIToolkitPanel)newPanel;
+            });
+
+            return panel as T;
         }
 
         /// <summary>
@@ -502,16 +499,18 @@ namespace ReunionMovement.Core.UIToolkit
 
         private void RebuildStackWithout(UIToolkitPanel target)
         {
-            var temp = new Stack<UIToolkitPanel>();
+            // 复用成员缓冲列表（避免每次关面板 new Stack 分配）
+            rebuildBuffer.Clear();
             while (panelStack.Count > 0)
             {
                 var p = panelStack.Pop();
-                if (p != target) temp.Push(p);
+                if (p != target) rebuildBuffer.Add(p);
             }
-            while (temp.Count > 0)
+            for (int i = rebuildBuffer.Count - 1; i >= 0; i--)
             {
-                panelStack.Push(temp.Pop());
+                panelStack.Push(rebuildBuffer[i]);
             }
+            rebuildBuffer.Clear();
         }
         #endregion
 
@@ -564,9 +563,10 @@ namespace ReunionMovement.Core.UIToolkit
         /// </summary>
         private async UniTask LoadPanelStyleAsync(string panelName, VisualElement root)
         {
-            // 异步加载，不缓存到 ResourcesSystem（避免缺失时打 Error）
+            // 异步加载，不缓存到 ResourcesSystem（避免缺失时打 Error）。
+            // 直接 await ResourceRequest（ToUniTask），避免 WaitUntil 每帧轮询开销
             var request = UnityEngine.Resources.LoadAsync<StyleSheet>($"{USS_PATH_PREFIX}{panelName}");
-            await UniTask.WaitUntil(() => request.isDone);
+            await request.ToUniTask();
             var style = request.asset as StyleSheet;
             if (style != null)
             {

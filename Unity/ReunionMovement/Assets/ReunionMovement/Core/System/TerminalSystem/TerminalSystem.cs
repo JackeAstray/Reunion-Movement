@@ -22,6 +22,8 @@ namespace ReunionMovement.Core.Terminal
 
         Keyboard keyboard;
         public TerminalRequest terminalRequest { get; private set; }
+        /// <summary>TerminalRequest 是否由本系统创建：仅销毁自建对象，避免误删场景作者手动放置的实例</summary>
+        private bool ownTerminalRequest;
 
         public UniTask Init()
         {
@@ -35,12 +37,14 @@ namespace ReunionMovement.Core.Terminal
             if (existing != null)
             {
                 terminalRequest = existing;
+                ownTerminalRequest = false; // 场景作者手动放置：Clear 时不销毁
             }
             else
             {
                 var go = new GameObject("TerminalRequest");
                 UnityEngine.Object.DontDestroyOnLoad(go);
                 terminalRequest = go.AddComponent<TerminalRequest>();
+                ownTerminalRequest = true;
             }
 
             terminalRequest.RegisterCommands();
@@ -80,12 +84,13 @@ namespace ReunionMovement.Core.Terminal
         {
             Log.Debug("TerminalSystem 清除数据");
             isInited = false;
-            // 销毁 TerminalRequest GameObject，避免重新 Init 时创建重复对象
-            if (terminalRequest != null)
+            // 仅销毁自建对象：场景作者手动放置的 TerminalRequest 归场景所有，销毁会致重进场景时 Missing
+            if (terminalRequest != null && ownTerminalRequest)
             {
                 UnityEngine.Object.Destroy(terminalRequest.gameObject);
                 terminalRequest = null;
             }
+            ownTerminalRequest = false;
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

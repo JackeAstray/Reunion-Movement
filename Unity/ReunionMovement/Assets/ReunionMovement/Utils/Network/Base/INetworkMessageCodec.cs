@@ -42,6 +42,10 @@ namespace ReunionMovement.Common.Util
         LengthPrefixedWithId = 2,
         /// <summary>原始透传 —— 对接任意自定义协议（消息 ID 恒为 0）</summary>
         Passthrough = 3,
+        /// <summary>[2 字节消息 ID][Deflate 压缩负载] —— 带宽敏感场景（大 JSON/状态同步）</summary>
+        CompressedMessageId = 4,
+        /// <summary>[4 字节长度][2 字节消息 ID][Deflate 压缩负载] —— 长度前缀 + 分发 + 压缩</summary>
+        CompressedLengthPrefixedWithId = 5,
     }
 
     /// <summary>编解码器工厂</summary>
@@ -57,6 +61,10 @@ namespace ReunionMovement.Common.Util
                     return new LengthPrefixedCodec(includeMessageId: true);
                 case NetworkCodecType.Passthrough:
                     return PassthroughCodec.Instance;
+                case NetworkCodecType.CompressedMessageId:
+                    return new CompressedCodec(MessageIdCodec.Instance);
+                case NetworkCodecType.CompressedLengthPrefixedWithId:
+                    return new CompressedCodec(new LengthPrefixedCodec(includeMessageId: true));
                 default:
                     return MessageIdCodec.Instance;
             }

@@ -20,8 +20,10 @@ namespace ReunionMovement.Common.Util
         /// <summary>尝试获取主相机；未到重试间隔时返回 null 且不触发查找</summary>
         public Camera TryGetCamera()
         {
-            if (Time.time - lastRetryTime < RetryInterval) return null;
-            lastRetryTime = Time.time;
+            // unscaledTime：暂停（timeScale=0）时重试计时不冻结，
+            // 否则暂停期间相机引用丢失后永不重试（Arrow/Billboard 受影响）
+            if (Time.unscaledTime - lastRetryTime < RetryInterval) return null;
+            lastRetryTime = Time.unscaledTime;
             return Camera.main;
         }
     }

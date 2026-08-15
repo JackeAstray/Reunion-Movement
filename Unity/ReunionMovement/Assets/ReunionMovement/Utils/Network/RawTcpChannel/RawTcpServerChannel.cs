@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using UnityEngine;
 
 namespace ReunionMovement.Common.Util
 {
@@ -17,6 +18,9 @@ namespace ReunionMovement.Common.Util
     {
         public const int DefaultReceiveChunkSize = 1 << 16; // 64KB
 
+        /// <summary>事件队列上限：主线程停摆时后台接收仍在入队，超限丢弃最旧事件防内存无界增长</summary>
+        private const int MaxPendingEvents = 1024;
+
         enum EventType { Connected, Error }
 
         TcpListener listener;
@@ -24,8 +28,17 @@ namespace ReunionMovement.Common.Util
         volatile bool running;
         readonly ConcurrentQueue<(EventType type, int connectionId, object connection, string message)> events = new ConcurrentQueue<(EventType type, int connectionId, object connection, string message)>();
         readonly Dictionary<int, RawTcpServerConnection> connections = new Dictionary<int, RawTcpServerConnection>();
+        // TickRefresh 复用快照列表（避免每帧 new List 分配）
+        readonly List<RawTcpServerConnection> tickSnapshot = new List<RawTcpServerConnection>();
         readonly int receiveChunkSize;
         int nextConnectionId = 1;
+
+        /// <summary>有界入队：超限时丢弃最旧事件（并发下的近似判断即可）</summary>
+        private void EnqueueEvent((EventType type, int connectionId, object connection, string message) ev)
+        {
+            if (events.Count >= MaxPendingEvents) events.TryDequeue(out _);
+            events.Enqueue(ev);
+        }
 
         public string ChannelName { get; set; }
 
@@ -41,6 +54,12 @@ namespace ReunionMovement.Common.Util
         public event Action<int, byte[]> OnDataReceived;
         public event Action<int> OnDisconnected;
         public event Action<int, string> OnError;
+
+        /// <summary>最大连接数（0 = 不限）。超出时新连接在接入阶段立即关闭并上报 OnError</summary>
+        public int MaxConnections = 0;
+
+        /// <summary>空闲超时（秒，0 = 禁用）：超过时长未收到任何数据的连接被关闭（半开连接/静默客户端回收）</summary>
+        public float IdleTimeoutSeconds = 0f;
 
         public RawTcpServerChannel(string channelName, int port, int receiveChunkSize = DefaultReceiveChunkSize)
         {
@@ -82,11 +101,13 @@ namespace ReunionMovement.Common.Util
                         return;
                     }
                     client.NoDelay = true;
+                    // 防止对端停止读取时发送缓冲填满导致主线程被 stream.Write 无限阻塞
+                    client.SendTimeout = 10000;
                     int id = Interlocked.Increment(ref nextConnectionId);
                     var conn = new RawTcpServerConnection(id, client, receiveChunkSize);
                     string address = string.Empty;
                     try { address = client.Client.RemoteEndPoint?.ToString() ?? string.Empty; } catch { }
-                    events.Enqueue((EventType.Connected, id, conn, address));
+                    EnqueueEvent((EventType.Connected, id, conn, address));
                 }
                 catch (Exception ex)
                 {
@@ -95,7 +116,7 @@ namespace ReunionMovement.Common.Util
                     {
                         if (!running) return;
                     }
-                    events.Enqueue((EventType.Error, -1, null, "Accept 异常: " + ex.Message));
+                    EnqueueEvent((EventType.Error, -1, null, "Accept 异常: " + ex.Message));
                 }
             }
         }
@@ -109,55 +130,94 @@ namespace ReunionMovement.Common.Util
             while (processed < 1024 && events.TryDequeue(out var ev))
             {
                 processed++;
-                switch (ev.type)
+                try
                 {
-                    case EventType.Connected:
+                    switch (ev.type)
                     {
-                        var conn = (RawTcpServerConnection)ev.connection;
-                        if (connections.ContainsKey(ev.connectionId))
+                        case EventType.Connected:
                         {
-                            conn.Close();
+                            var conn = (RawTcpServerConnection)ev.connection;
+                            if (connections.ContainsKey(ev.connectionId))
+                            {
+                                conn.Close();
+                                break;
+                            }
+                            // 连接上限：每个连接 = 1 个接收线程 + 64KB 缓冲，
+                            // 未限制时恶意连接洪水可耗尽线程与内存（DoS）
+                            if (MaxConnections > 0 && connections.Count >= MaxConnections)
+                            {
+                                conn.Close();
+                                OnError?.Invoke(ev.connectionId, string.Format("连接数已达上限 {0}，拒绝接入", MaxConnections));
+                                break;
+                            }
+                            connections[ev.connectionId] = conn;
+                            conn.StartReceive();
+                            OnConnected?.Invoke(ev.connectionId, ev.message);
                             break;
                         }
-                        connections[ev.connectionId] = conn;
-                        conn.StartReceive();
-                        OnConnected?.Invoke(ev.connectionId, ev.message);
-                        break;
+                        case EventType.Error:
+                            OnError?.Invoke(ev.connectionId, ev.message);
+                            break;
                     }
-                    case EventType.Error:
-                        OnError?.Invoke(ev.connectionId, ev.message);
-                        break;
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning("[RawTcpServerChannel] 事件订阅者异常（已隔离）: {0}", ex.Message);
                 }
             }
 
-            // 2) 各连接的接收队列
-            var snapshot = new List<RawTcpServerConnection>(connections.Values);
-            foreach (var conn in snapshot)
+            // 2) 各连接的接收队列（复用快照列表，Tick 期间字典可能被移除条目，不能直接遍历 Values）
+            tickSnapshot.Clear();
+            tickSnapshot.AddRange(connections.Values);
+            foreach (var conn in tickSnapshot)
             {
                 while (processed < 4096 && conn.TryDequeue(out var ev))
                 {
                     processed++;
-                    switch (ev.Type)
+                    try
                     {
-                        case RawTcpServerConnection.RecvEventType.Data:
-                            OnDataReceived?.Invoke(conn.Id, ev.Data);
-                            break;
-                        case RawTcpServerConnection.RecvEventType.Error:
-                            OnError?.Invoke(conn.Id, ev.Message);
-                            break;
-                        case RawTcpServerConnection.RecvEventType.Disconnected:
-                            if (connections.Remove(conn.Id))
-                            {
-                                conn.Close();
-                                OnDisconnected?.Invoke(conn.Id);
-                            }
-                            break;
+                        switch (ev.Type)
+                        {
+                            case RawTcpServerConnection.RecvEventType.Data:
+                                // 更新最后活跃时间（空闲踢人判定依据）
+                                conn.LastReceiveTime = Time.realtimeSinceStartup;
+                                OnDataReceived?.Invoke(conn.Id, ev.Data);
+                                break;
+                            case RawTcpServerConnection.RecvEventType.Error:
+                                OnError?.Invoke(conn.Id, ev.Message);
+                                break;
+                            case RawTcpServerConnection.RecvEventType.Disconnected:
+                                if (connections.Remove(conn.Id))
+                                {
+                                    conn.Close();
+                                    OnDisconnected?.Invoke(conn.Id);
+                                }
+                                break;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning("[RawTcpServerChannel] 连接 {0} 事件订阅者异常（已隔离）: {1}", conn.Id, ex.Message);
                     }
                 }
                 // 发送失败等原因静默关闭的连接也需清理
                 if (conn.IsClosed && connections.Remove(conn.Id))
                 {
-                    OnDisconnected?.Invoke(conn.Id);
+                    try { OnDisconnected?.Invoke(conn.Id); }
+                    catch (Exception ex) { Log.Warning("[RawTcpServerChannel] OnDisconnected 订阅者异常（已隔离）: {0}", ex.Message); }
+                }
+                // 空闲超时踢人：半开连接（断电/静默）Read 永久阻塞不产生任何事件，
+                // 必须在主线程按最后活跃时间回收，否则线程/缓冲永久泄漏
+                else if (!conn.IsClosed && IdleTimeoutSeconds > 0f
+                    && Time.realtimeSinceStartup - conn.LastReceiveTime > IdleTimeoutSeconds)
+                {
+                    Log.Warning("RawTcp 连接 {0} 空闲超时（{1}s），已关闭", conn.Id, IdleTimeoutSeconds);
+                    if (connections.Remove(conn.Id))
+                    {
+                        conn.Close();
+                        try { OnDisconnected?.Invoke(conn.Id); }
+                        catch (Exception ex) { Log.Warning("[RawTcpServerChannel] OnDisconnected 订阅者异常（已隔离）: {0}", ex.Message); }
+                    }
                 }
             }
         }
@@ -222,6 +282,8 @@ namespace ReunionMovement.Common.Util
         readonly int chunkSize;
         readonly ConcurrentQueue<RecvEvent> events = new ConcurrentQueue<RecvEvent>();
         readonly object sendLock = new object();
+        // 事件队列上限（同上：主线程停摆时防内存无界增长）
+        private const int MaxPendingEvents = 1024;
         NetworkStream stream;
         Thread recvThread;
         volatile bool running;
@@ -232,6 +294,9 @@ namespace ReunionMovement.Common.Util
         public string Address { get; }
 
         public bool IsClosed => closed;
+
+        /// <summary>最后收到数据的时间（主线程更新，供服务端空闲超时踢人判定）</summary>
+        public float LastReceiveTime { get; set; }
 
         public RawTcpServerConnection(int id, TcpClient socket, int chunkSize)
         {
@@ -268,6 +333,8 @@ namespace ReunionMovement.Common.Util
                     if (n <= 0) break;
                     var copy = new byte[n];
                     Buffer.BlockCopy(buffer, 0, copy, 0, n);
+                    // 有界入队：主线程停摆时丢弃最旧事件，防内存无界增长
+                    if (events.Count >= MaxPendingEvents) events.TryDequeue(out _);
                     events.Enqueue(new RecvEvent { Type = RecvEventType.Data, Data = copy });
                 }
             }
@@ -275,11 +342,13 @@ namespace ReunionMovement.Common.Util
             {
                 if (running)
                 {
+                    if (events.Count >= MaxPendingEvents) events.TryDequeue(out _);
                     events.Enqueue(new RecvEvent { Type = RecvEventType.Error, Message = "接收异常: " + ex.Message });
                 }
             }
             if (running)
             {
+                if (events.Count >= MaxPendingEvents) events.TryDequeue(out _);
                 events.Enqueue(new RecvEvent { Type = RecvEventType.Disconnected });
             }
         }

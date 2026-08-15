@@ -22,7 +22,7 @@ namespace ReunionMovement.Common.Util.Timer
         // 复用快照/待移除缓冲：防止 Tick 回调内调用 RemoveTimer/CancelAllTimers
         // 重入修改 timers 导致遍历越界（同时保持零分配）
         private readonly List<Timer> tickSnapshot = new List<Timer>();
-        private readonly List<Timer> toRemove = new List<Timer>();
+        private readonly HashSet<Timer> toRemove = new HashSet<Timer>();
 
         #region ICustomSystem 实现（GameEngine 驱动时使用）
 
@@ -38,9 +38,17 @@ namespace ReunionMovement.Common.Util.Timer
         /// <summary>
         /// GameEngine 驱动的 Update（与 MonoBehaviour Update 逻辑相同，避免双重调用）
         /// </summary>
+        /// <summary>
+        /// GameEngine 驱动的 Update（与 MonoBehaviour Update 逻辑相同，避免双重调用）
+        /// </summary>
         void ISystemUpdatable.Update(float logicTime, float realTime)
         {
-            TickTimers(logicTime);
+            // 双驱动防护：引擎驱动的模块实例必须与单例一致，否则两个实例会各自 Tick
+            // 同一份计时器列表导致双倍速（SingletonMgr 保证唯一实例，此校验防御异常装配场景）
+            if (ReferenceEquals(this, Instance))
+            {
+                TickTimers(logicTime);
+            }
         }
 
         public void Clear()
@@ -60,19 +68,22 @@ namespace ReunionMovement.Common.Util.Timer
             return timer;
         }
 
-        /// <summary>移除计时器（先取消再移除，确保回调被正确清理）</summary>
+        /// <summary>移除计时器（先取消再移除；OnCancelled 异常隔离，不中断移除流程）</summary>
         public void RemoveTimer(Timer timer)
         {
-            timer?.Cancel();
+            if (timer == null) return;
+            try { timer.Cancel(); }
+            catch (Exception ex) { Log.Error("[TimerMgr] RemoveTimer 取消回调异常（已隔离）: {0}", ex.Message); }
             timers.Remove(timer);
         }
 
-        /// <summary>取消所有计时器</summary>
+        /// <summary>取消所有计时器（逐 timer 异常隔离：单个 OnCancelled 异常不得中断全局清理与列表清空）</summary>
         public void CancelAllTimers()
         {
             for (int i = timers.Count - 1; i >= 0; i--)
             {
-                timers[i].Cancel();
+                try { timers[i].Cancel(); }
+                catch (Exception ex) { Log.Error("[TimerMgr] CancelAllTimers 取消回调异常（已隔离）: {0}", ex.Message); }
             }
             timers.Clear();
         }
@@ -130,20 +141,18 @@ namespace ReunionMovement.Common.Util.Timer
                 }
                 if (timer.state == Timer.TimerState.Finished || timer.state == Timer.TimerState.Cancelled)
                 {
-                    // 防御：快照中同一实例可能因回调重入被多次标记，Contains 防止重复添加
-                    if (!toRemove.Contains(timer))
-                    {
-                        toRemove.Add(timer);
-                    }
+                    // HashSet 天然去重：快照中同一实例可能因回调重入被多次标记，
+                    // 原 List.Contains 在大批量同时完成时退化为 O(n²)
+                    toRemove.Add(timer);
                 }
             }
 
             // 遍历结束后统一移除（引用移除，快照外新增的计时器不受影响）
             if (toRemove.Count > 0)
             {
-                for (int i = 0; i < toRemove.Count; i++)
+                foreach (var timer in toRemove)
                 {
-                    timers.Remove(toRemove[i]);
+                    timers.Remove(timer);
                 }
             }
         }

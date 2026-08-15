@@ -28,10 +28,15 @@ namespace ReunionMovement.Core.UI
         // UI加载状态缓存（用于跟踪每个UI窗口的加载状态）
         private Dictionary<string, UILoadState> uiStateCache = new Dictionary<string, UILoadState>(32);
 
-        // 同名窗口并发加载去重：加载期间先登记 TCS，后续调用方等待同一任务，
+        // 同名窗口并发加载去重：SingleFlightLoader 统一管理单飞/取消/摘除语义，
         // 避免双实例化 + uiStateCache.Add 键冲突抛异常导致孤儿窗口
-        private readonly Dictionary<string, UniTaskCompletionSource<UILoadState>> loadingWindows =
-            new Dictionary<string, UniTaskCompletionSource<UILoadState>>();
+        private readonly SingleFlightLoader<UILoadState> windowLoadGate = new SingleFlightLoader<UILoadState>();
+
+        // CloseAllWindows 批量关闭的复用缓冲（避免每次批量操作 new List 分配）
+        private readonly List<string> closeBuffer = new List<string>();
+
+        // SetWindowPriority 排序复用缓冲（按需扩容，避免每次调用 new 数组）
+        private UIController[] prioritySortBuffer;
 
         #region R3 响应式事件（推荐新代码使用）
 
@@ -55,6 +60,16 @@ namespace ReunionMovement.Core.UI
         public GameObject normalUIRoot { get; private set; }
         public GameObject headInfoUIRoot { get; private set; }
         public GameObject tipsUIRoot { get; private set; }
+
+        #region 窗口对象池（高频弹窗/提示复用，消除反复 Instantiate/Destroy 的 GC 与 Canvas 重建）
+        /// <summary>是否启用窗口对象池（关闭时放池、打开时优先取池）</summary>
+        public bool enableWindowPool = true;
+        /// <summary>可池化窗口白名单（仅提示/飘字/确认框类轻量窗口；重窗口保持销毁语义）</summary>
+        public readonly List<string> poolableWindowNames = new List<string>();
+        /// <summary>每个窗口名最多缓存的空闲对象数（防无限累积）</summary>
+        public int maxPooledWindowsPerName = 3;
+        private readonly Dictionary<string, Stack<GameObject>> windowPool = new Dictionary<string, Stack<GameObject>>();
+        #endregion
 
         public async UniTask Init()
         {
@@ -80,11 +95,7 @@ namespace ReunionMovement.Core.UI
             uiStateCache.Clear();
             uiControllerTypeCache.Clear();
             // 取消在途的窗口加载（其完成回调会登记到已清空的缓存中）
-            foreach (var kvp in loadingWindows)
-            {
-                kvp.Value.TrySetCanceled();
-            }
-            loadingWindows.Clear();
+            windowLoadGate.CancelAll();
             // 释放 R3 Subject（自动断开所有订阅）并置 null 以支持重初始化
             OnInitSubject?.Dispose();
             OnInitSubject = null;
@@ -94,6 +105,9 @@ namespace ReunionMovement.Core.UI
             OnSetSubject = null;
             OnCloseSubject?.Dispose();
             OnCloseSubject = null;
+
+            // 窗口池内对象挂 uiRoot 下，随 DestroyRoot 一起销毁；这里仅清空字典防止 fake-null 残留
+            windowPool.Clear();
 
             // 销毁 UI 根节点（与 SoundSystem/UIToolkitSystem 的 Clear 保持一致），
             // 避免引擎重初始化时残留一套孤儿 UI 与重复根节点（UIRoot/EventSystem 均为 DontDestroyOnLoad）
@@ -306,9 +320,23 @@ namespace ReunionMovement.Core.UI
                 return existingState;
             }
 
+            // 并发去重（与异步路径对齐）：已有同名窗口在途异步加载时，同步实例化会与
+            // 异步完成后的 SetupLoadedWindow → uiStateCache.Add 键冲突（抛异常 + 孤儿窗口）。
+            // 同步方法无法等待异步结果，返回 null 提示调用方等待或改走异步。
+            if (windowLoadGate.IsInflight(name))
+            {
+                Log.Warning("[UISystem] LoadWindow({0}) 与在途 LoadWindowAsync 冲突，返回 null（请等待异步结果或改用异步 API）", name);
+                return null;
+            }
+
             // 同步路径：仅走 Resources（Addressables 无法真正同步加载，WebGL 不支持 WaitForCompletion）。
             // 推荐使用 LoadWindowAsync 走 Addressables 双轨。
-            GameObject uiObj = ResourcesSystem.Instance.InstantiateAsset<GameObject>(Config.UIPath + name);
+            // 优先从窗口池复用（白名单内轻量窗口），池空才实例化
+            GameObject uiObj = GetPooledWindow(name);
+            if (uiObj == null)
+            {
+                uiObj = ResourcesSystem.Instance.InstantiateAsset<GameObject>(Config.UIPath + name);
+            }
             Log.Debug("[UISystem] LoadWindow({0}) Instantiate → {1}, activeSelf={2}", name, (uiObj ? uiObj.name : "NULL"), uiObj?.activeSelf);
             if (uiObj == null)
             {
@@ -325,23 +353,35 @@ namespace ReunionMovement.Core.UI
         /// </summary>
         public async UniTask<UILoadState> LoadWindowAsync(string name, bool openWhenFinish, params object[] args)
         {
+            return await LoadWindowAsyncCore(name, openWhenFinish, args);
+        }
+
+        /// <summary>
+        /// 带超时重载：timeoutSeconds > 0 时超时返回 null（调用方自行降级/重试），
+        /// 防止 Catalog 失败或 CDN 卡死时调用方无限等待；<=0 表示不超时。
+        /// </summary>
+        public async UniTask<UILoadState> LoadWindowAsync(string name, bool openWhenFinish, float timeoutSeconds, params object[] args)
+        {
+            var task = LoadWindowAsyncCore(name, openWhenFinish, args);
+            if (timeoutSeconds <= 0f)
+            {
+                return await task;
+            }
+            // 超时不受 timeScale 影响；超时返回 null，在途加载继续（结果仍会广播给其他等待方）
+            var (isTimeout, result) = await task.TimeoutWithoutException(TimeSpan.FromSeconds(timeoutSeconds), DelayType.UnscaledDeltaTime);
+            return isTimeout ? null : result;
+        }
+
+        private async UniTask<UILoadState> LoadWindowAsyncCore(string name, bool openWhenFinish, object[] args)
+        {
             if (uiStateCache.TryGetValue(name, out var existingState))
             {
                 return existingState;
             }
 
-            // 并发去重：已有同名窗口在途加载，等待同一结果，避免双实例化与缓存键冲突。
-            // Clear() 会 TrySetCanceled 在途加载任务：按“加载失败”语义返回 null，
-            // 不向调用方抛 OperationCanceledException（SuppressCancellationThrow 返回 (IsCanceled, Result) 元组）。
-            if (loadingWindows.TryGetValue(name, out var pending))
-            {
-                var (_, result) = await pending.Task.SuppressCancellationThrow();
-                return result;
-            }
-
-            var loadTcs = new UniTaskCompletionSource<UILoadState>();
-            loadingWindows[name] = loadTcs;
-            try
+            // 并发去重：同名窗口在途加载时等待同一结果（SingleFlightLoader 统一管理
+            // 单飞/取消/摘除语义；Clear() 会 CancelAll，等待方按“加载失败”返回 null）
+            return await windowLoadGate.RunAsync(name, async () =>
             {
                 GameObject prefab = null;
                 bool fromAddressables = false;
@@ -362,7 +402,6 @@ namespace ReunionMovement.Core.UI
                 if (uiRoot == null)
                 {
                     Log.Warning("[UISystem] LoadWindowAsync({0}) 中止：加载期间系统已清理", name);
-                    loadTcs.TrySetResult(null);
                     return null;
                 }
 
@@ -379,35 +418,23 @@ namespace ReunionMovement.Core.UI
                 if (prefab == null)
                 {
                     Log.Error("[UISystem] LoadWindowAsync({0}) 加载失败（Addressables + Resources 均未命中）", name);
-                    loadTcs.TrySetResult(null);
                     return null;
                 }
 
-                var uiObj = UnityEngine.Object.Instantiate(prefab);
-                // 实例化后释放源 Prefab 的 Addressables 引用（Resources 路径无引用计数，无需释放）
-                if (fromAddressables)
+                // 优先从窗口池复用（白名单内轻量窗口），池空才实例化
+                var uiObj = GetPooledWindow(name);
+                if (uiObj == null)
                 {
-                    AddressableSystem.Instance.ReleaseAsset(prefab);
+                    uiObj = UnityEngine.Object.Instantiate(prefab);
+                    // 实例化后释放源 Prefab 的 Addressables 引用（Resources 路径无引用计数，无需释放）
+                    if (fromAddressables)
+                    {
+                        AddressableSystem.Instance.ReleaseAsset(prefab);
+                    }
                 }
 
-                var result = SetupLoadedWindow(uiObj, name, openWhenFinish, args);
-                loadTcs.TrySetResult(result);
-                return result;
-            }
-            catch (Exception ex)
-            {
-                loadTcs.TrySetException(ex);
-                throw;
-            }
-            finally
-            {
-                // 仅移除自己的条目：Clear() 后可能有新的同名加载登记了新 TCS，
-                // 无条件 Remove 会误删新条目导致其等待者永久挂起
-                if (loadingWindows.TryGetValue(name, out var cur) && ReferenceEquals(cur, loadTcs))
-                {
-                    loadingWindows.Remove(name);
-                }
-            }
+                return SetupLoadedWindow(uiObj, name, openWhenFinish, args);
+            });
         }
 
         /// <summary>
@@ -437,6 +464,15 @@ namespace ReunionMovement.Core.UI
                 isOnInit = true
             };
             uiLoadState.uiWindow.uiName = name;
+
+            // 双保险兑底：任何并发竞态（如同步+异步同名并发）到达此处时，若缓存已存在同名条目，
+            // 销毁冗余实例并复用旧状态，避免 Add 键冲突异常与孤儿窗口。
+            if (uiStateCache.TryGetValue(name, out var existing))
+            {
+                Log.Warning("[UISystem] SetupLoadedWindow({0}) 缓存已存在同名条目，销毁冗余实例", name);
+                UnityEngine.Object.Destroy(uiObj);
+                return existing;
+            }
             uiStateCache.Add(name, uiLoadState);
 
             InitWindow(uiLoadState, uiLoadState.uiWindow, uiLoadState.openWhenFinish, uiLoadState.openArgs);
@@ -453,18 +489,23 @@ namespace ReunionMovement.Core.UI
             // 先关闭防止初始化过程中的闪烁，open=true 时 OnOpen 会重新激活
             uiBase.gameObject.SetActive(false);
 
-            uiBase.OnInit();
-
-            Log.Debug("OnInit UI {0}", uiBase.gameObject.name);
-
-            // 订阅者异常隔离：坏订阅者不应中断 InitWindow 后续的开窗流程
-            try
+            // OnInit 全生命周期只执行一次：窗口池复用时跳过，防止 OnInit 内的订阅等重复执行
+            if (!uiBase.IsInitialized)
             {
-                OnInitSubject.OnNext(uiBase);
-            }
-            catch (Exception ex)
-            {
-                Log.Error("OnInitSubject 订阅者异常（已隔离）: {0}", ex.Message);
+                uiBase.OnInit();
+                uiBase.MarkInitialized();
+
+                Log.Debug("OnInit UI {0}", uiBase.gameObject.name);
+
+                // 订阅者异常隔离：坏订阅者不应中断 InitWindow 后续的开窗流程
+                try
+                {
+                    OnInitSubject.OnNext(uiBase);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("OnInitSubject 订阅者异常（已隔离）: {0}", ex.Message);
+                }
             }
 
             if (open)
@@ -587,7 +628,12 @@ namespace ReunionMovement.Core.UI
                 uiState.isOnInit = true;
                 if (uiState.uiWindow != null)
                 {
-                    uiState.uiWindow.OnInit();
+                    // 用窗口自身初始化标志（池化复用场景 IsInitialized 已为 true，不再重复 OnInit）
+                    if (!uiState.uiWindow.IsInitialized)
+                    {
+                        uiState.uiWindow.OnInit();
+                        uiState.uiWindow.MarkInitialized();
+                    }
                 }
             }
 
@@ -614,7 +660,11 @@ namespace ReunionMovement.Core.UI
                 uiState.isOnInit = true;
                 if (uiState.uiWindow != null)
                 {
-                    uiState.uiWindow.OnInit();
+                    if (!uiState.uiWindow.IsInitialized)
+                    {
+                        uiState.uiWindow.OnInit();
+                        uiState.uiWindow.MarkInitialized();
+                    }
                 }
             }
 
@@ -649,7 +699,14 @@ namespace ReunionMovement.Core.UI
             if (!uiState.isOnInit)
             {
                 uiState.isOnInit = true;
-                if (uiState.uiWindow != null) uiState.uiWindow.OnInit();
+                if (uiState.uiWindow != null)
+                {
+                    if (!uiState.uiWindow.IsInitialized)
+                    {
+                        uiState.uiWindow.OnInit();
+                        uiState.uiWindow.MarkInitialized();
+                    }
+                }
             }
             OnSet(uiState, args);
             return uiState;
@@ -739,6 +796,13 @@ namespace ReunionMovement.Core.UI
             }
 
             // LoadWindow 为同步加载，不存在“加载中”状态，无需 isLoading 分支
+            // 判空防护：窗口 GameObject 被外部销毁（极端并发/误删）时不得 NRE 中断关闭流程
+            if (uiState?.uiWindow == null)
+            {
+                Log.Warning("[CloseWindow] uiWindow 已不存在，移除残留缓存项: {0}", name);
+                uiStateCache.Remove(name);
+                return;
+            }
             uiState.uiWindow.gameObject.SetActive(false);
 
             uiState.uiWindow.OnClose();
@@ -778,20 +842,21 @@ namespace ReunionMovement.Core.UI
         /// </summary>
         public void CloseAllWindows()
         {
-            List<string> toCloses = new List<string>();
-
+            // 复用成员缓冲（避免每次批量关闭 new List 分配）
+            closeBuffer.Clear();
             foreach (KeyValuePair<string, UILoadState> uiWindow in uiStateCache)
             {
                 if (IsOpen(uiWindow.Key))
                 {
-                    toCloses.Add(uiWindow.Key);
+                    closeBuffer.Add(uiWindow.Key);
                 }
             }
 
-            for (int i = toCloses.Count - 1; i >= 0; i--)
+            for (int i = closeBuffer.Count - 1; i >= 0; i--)
             {
-                CloseWindow(toCloses[i]);
+                CloseWindow(closeBuffer[i]);
             }
+            closeBuffer.Clear();
         }
 
         /// <summary>
@@ -809,13 +874,65 @@ namespace ReunionMovement.Core.UI
                 return;
             }
 
-            // 使用 DestroyImmediate 立即销毁：Destroy 延迟到帧末，若同帧内重新打开同名窗口，
-            // LoadWindow 会实例化新对象而旧对象尚未销毁 → 短暂双实例。
-            // UI 窗口关闭时本应停止自身协程/动画，立即销毁是安全且符合预期的。
-            UnityEngine.Object.DestroyImmediate(uiState.uiWindow.gameObject);
+            // 池化路径：白名单内的轻量窗口放池复用（消除反复 DestroyImmediate/Instantiate 的 GC 与 Canvas 重建）；
+            // 同帧关闭再打开时从池取出同一对象，天然避免双实例
+            if (enableWindowPool && poolableWindowNames.Contains(uiName))
+            {
+                PoolWindow(uiName, uiState.uiWindow.gameObject);
+            }
+            else
+            {
+                // 使用 DestroyImmediate 立即销毁：Destroy 延迟到帧末，若同帧内重新打开同名窗口，
+                // LoadWindow 会实例化新对象而旧对象尚未销毁 → 短暂双实例。
+                // UI 窗口关闭时本应停止自身协程/动画，立即销毁是安全且符合预期的。
+                UnityEngine.Object.DestroyImmediate(uiState.uiWindow.gameObject);
+            }
 
             uiState.uiWindow = null;
             uiStateCache.Remove(uiName);
+        }
+
+        /// <summary>窗口放回对象池：调用 OnDespawned 钩子 → 挂池根并隐藏。池满直接销毁当前对象。</summary>
+        private void PoolWindow(string uiName, GameObject windowObj)
+        {
+            if (!windowPool.TryGetValue(uiName, out var stack))
+            {
+                stack = new Stack<GameObject>();
+                windowPool[uiName] = stack;
+            }
+            if (stack.Count >= Mathf.Max(0, maxPooledWindowsPerName))
+            {
+                UnityEngine.Object.DestroyImmediate(windowObj);
+                return;
+            }
+
+            var controller = windowObj.GetComponent<UIController>();
+            if (controller != null)
+            {
+                try { controller.OnDespawned(); }
+                catch (Exception ex) { Log.Warning("[UISystem] {0} OnDespawned 异常（已隔离）: {1}", uiName, ex.Message); }
+            }
+            windowObj.transform.SetParent(uiRoot != null ? uiRoot.transform : null);
+            windowObj.SetActive(false);
+            stack.Push(windowObj);
+        }
+
+        /// <summary>从对象池取出窗口（无则返回 null）。fake-null 对象自动丢弃。</summary>
+        private GameObject GetPooledWindow(string uiName)
+        {
+            if (!enableWindowPool) return null;
+            if (!windowPool.TryGetValue(uiName, out var stack) || stack.Count == 0) return null;
+
+            var go = stack.Pop();
+            if (go == null) return null; // 池内对象被外部销毁（fake-null）：丢弃
+
+            var controller = go.GetComponent<UIController>();
+            if (controller != null)
+            {
+                try { controller.OnSpawned(); }
+                catch (Exception ex) { Log.Warning("[UISystem] {0} OnSpawned 异常（已隔离）: {1}", uiName, ex.Message); }
+            }
+            return go;
         }
         #endregion
 
@@ -1025,10 +1142,14 @@ namespace ReunionMovement.Core.UI
             if (ui != null && ui.transform.parent != null)
             {
                 ui.priority = priority;
-                // 获取同级所有 UIController 并按优先级排序（避免 LINQ 分配）
+                // 获取同级所有 UIController 并按优先级排序（避免 LINQ 分配；复用成员缓冲数组，零分配）
                 var parent = ui.transform.parent;
                 int childCount = parent.childCount;
-                var controllers = new UIController[childCount];
+                if (prioritySortBuffer == null || prioritySortBuffer.Length < childCount)
+                {
+                    prioritySortBuffer = new UIController[childCount];
+                }
+                var controllers = prioritySortBuffer;
                 int count = 0;
                 for (int i = 0; i < childCount; i++)
                 {
@@ -1038,23 +1159,29 @@ namespace ReunionMovement.Core.UI
                         controllers[count++] = ctrl;
                     }
                 }
-                // 冒泡排序（子节点数通常很小）
-                for (int i = 0; i < count - 1; i++)
-                {
-                    for (int j = 0; j < count - 1 - i; j++)
-                    {
-                        if (controllers[j].priority > controllers[j + 1].priority)
-                        {
-                            var temp = controllers[j];
-                            controllers[j] = controllers[j + 1];
-                            controllers[j + 1] = temp;
-                        }
-                    }
-                }
+                // Array.Sort：子节点数量少时开销可忽略，比手写冒泡更清晰且免分配
+                Array.Sort(controllers, 0, count, UIControllerPriorityComparer.Instance);
                 for (int i = 0; i < count; i++)
                 {
                     controllers[i].transform.SetSiblingIndex(i);
                 }
+                // 清理末尾引用，避免缓冲数组长期持有已销毁窗口
+                for (int i = count; i < controllers.Length; i++)
+                {
+                    controllers[i] = null;
+                }
+            }
+        }
+
+        /// <summary>SetWindowPriority 排序比较器（静态单例，免每调用分配闭包/对象）</summary>
+        private sealed class UIControllerPriorityComparer : IComparer<UIController>
+        {
+            public static readonly UIControllerPriorityComparer Instance = new UIControllerPriorityComparer();
+            public int Compare(UIController x, UIController y)
+            {
+                if (x == null) return y == null ? 0 : 1;
+                if (y == null) return -1;
+                return x.priority.CompareTo(y.priority);
             }
         }
 

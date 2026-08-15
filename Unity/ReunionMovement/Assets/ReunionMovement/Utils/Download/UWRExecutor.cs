@@ -33,6 +33,8 @@ namespace ReunionMovement.Common.Util.Download
         internal bool multipartDownload = false;
         internal bool abandonOnFailure = true;
         internal bool paused = false;
+        /// <summary>文件内容标识（ETag 优先，退化 Last-Modified）：续传时带 If-Range 校验服务器文件是否已更新</summary>
+        internal string fileETag;
 
         public event Action OnDownloadSuccess;
         public event Action OnCancel;
@@ -87,6 +89,31 @@ namespace ReunionMovement.Common.Util.Download
 
         public override bool Paused => paused;
 
+        /// <summary>
+        /// 暂停：中止在途 UWR 但不删除已完成部分（保留断点供 Resume 续传）。
+        /// 不触发 DidError/OnDownloadError/OnCancel（与用户主动取消语义区分）。
+        /// </summary>
+        public override bool Pause()
+        {
+            if (paused || cancelCalled) return false;
+            paused = true;
+            if (currentRequest != null && !currentRequest.isDone)
+            {
+                currentRequest.Abort();
+            }
+            currentRequest?.Dispose();
+            currentRequest = null;
+            return true;
+        }
+
+        /// <summary>恢复：仅退出暂停状态；重发由 FileDownloader 重新调用 Download() 并接线（基于已存在文件走 Range 续传）</summary>
+        public override bool Resume()
+        {
+            if (!paused || cancelCalled) return false;
+            paused = false;
+            return true;
+        }
+
         internal bool didError = false;
         public override bool DidError
         {
@@ -98,6 +125,9 @@ namespace ReunionMovement.Common.Util.Download
         internal UnityWebRequest currentRequest;
         /// <summary>已取消标记（防止 Cancel 被二次调用时 OnCancel 事件重复触发）</summary>
         private bool cancelCalled;
+
+        /// <summary>是否已被取消（供 FileDownloader 判定在途任务状态，拦截已完成回调）</summary>
+        public override bool IsCanceled => cancelCalled;
 
         public override int StartTime => startTime;
         public override int EndTime => endTime;
@@ -165,6 +195,20 @@ namespace ReunionMovement.Common.Util.Download
                     }
 
                     var headers = uwr.GetResponseHeaders();
+
+                    // 记录内容标识：断点续传时带 If-Range 头校验服务器文件是否已更新，
+                    // 标识不匹配时服务器返回 200 → 206 校验机制中止下载并清理（避免拼出损坏文件）
+                    if (headers != null)
+                    {
+                        if (headers.TryGetValue("ETag", out var etag) && !string.IsNullOrEmpty(etag))
+                        {
+                            fileETag = etag;
+                        }
+                        else if (headers.TryGetValue("Last-Modified", out var lastModified) && !string.IsNullOrEmpty(lastModified))
+                        {
+                            fileETag = lastModified;
+                        }
+                    }
 
                     if (headers == null ||
                         !headers.ContainsKey("Content-Length") ||
@@ -267,6 +311,13 @@ namespace ReunionMovement.Common.Util.Download
                     }
                     RequestHeaders.Remove("Range");
                     RequestHeaders.Add("Range", $"bytes={fileSize}-{fileSize + reqChunkSize - 1}");
+                    // If-Range：服务器文件已更新（标识不匹配）时返回 200，
+                    // 由 OnCompleteMulti 的 206 校验中止并清理，防止旧 Range + 新内容拼出损坏文件
+                    if (!string.IsNullOrEmpty(fileETag))
+                    {
+                        RequestHeaders.Remove("If-Range");
+                        RequestHeaders.Add("If-Range", fileETag);
+                    }
 
                     resp = HTTPHelper.Download(ref uwr, Uri, DownloadPath, isMd5Name, DownloadToRoot, AbandonOnFailure, true, RequestHeaders, Timeout);
                     currentRequest = uwr;
@@ -275,6 +326,10 @@ namespace ReunionMovement.Common.Util.Download
                 }
                 catch (Exception e)
                 {
+                    // 异常路径必须标记错误：否则 resp 为 null → Download() 返回 null，
+                    // FileDownloader 会把该 URI 当"已处理"递减计数，文件静默丢失且整体仍报成功
+                    DidError = true;
+                    try { OnDownloadError?.Invoke(0, e.Message); } catch { /* 订阅者异常不外溢 */ }
                     Log.Error(e.ToString());
                 }
             }

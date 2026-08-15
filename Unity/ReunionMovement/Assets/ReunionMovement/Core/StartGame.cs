@@ -82,6 +82,10 @@ namespace ReunionMovement.Core
             // 此处若再 ResetOptions() 会把 PlayerPrefs 覆盖成默认值，导致设置无法持久化。
             // 重置逻辑仅保留给“恢复默认设置”的 UI 按钮。
 
+            // 应用玩家保存的语言设置：此前全项目无 SetMultilingual 调用点，
+            // GameOption.language 加载后从不生效，玩家所选语言重启即回 ZH_CN
+            LanguagesSystem.Instance.SetMultilingual(GameOption.CurrentOption.language);
+
             // 测试/调试场景：跳过自动场景跳转，保留当前场景用于调试
             if (Bootstrap.IsTestScene)
             {

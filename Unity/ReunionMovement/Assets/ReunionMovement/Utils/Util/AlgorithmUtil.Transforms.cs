@@ -70,6 +70,12 @@ namespace ReunionMovement.Common.Util
         public static void SetChildLayers(this Transform transform, string layerName, bool recursive = false)
         {
             var layer = LayerMask.NameToLayer(layerName);
+            // NameToLayer 对不存在的层名返回 -1：直接赋给 gameObject.layer 会报错且难排查
+            if (layer < 0)
+            {
+                Log.Error("SetChildLayers: 层名 '{0}' 不存在（NameToLayer 返回 -1），操作中止", layerName);
+                return;
+            }
 
             foreach (Transform child in transform)
             {
@@ -115,11 +121,12 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 在X、Y和Z方向上缩放
+        /// 在X、Y和Z方向上缩放（乘法：当前缩放 × 参数；与 SetScaleXYZ 的赋值语义不同）
         /// </summary>
         public static void ScaleByXYZ(this Transform transform, float x, float y, float z)
         {
-            transform.localScale = new Vector3(x, y, z);
+            Vector3 s = transform.localScale;
+            transform.localScale = new Vector3(s.x * x, s.y * y, s.z * z);
         }
 
         /// <summary>
@@ -131,27 +138,33 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 设置X轴旋转
+        /// 设置X轴旋转（仅改 X 轴，保留 Y/Z 轴）
         /// </summary>
         public static void SetRotationX(this Transform transform, float angle)
         {
-            transform.eulerAngles = new Vector3(angle, 0, 0);
+            Vector3 e = transform.eulerAngles;
+            e.x = angle;
+            transform.eulerAngles = e;
         }
 
         /// <summary>
-        /// 设置Y轴旋转
+        /// 设置Y轴旋转（仅改 Y 轴，保留 X/Z 轴）
         /// </summary>
         public static void SetRotationY(this Transform transform, float angle)
         {
-            transform.eulerAngles = new Vector3(0, angle, 0);
+            Vector3 e = transform.eulerAngles;
+            e.y = angle;
+            transform.eulerAngles = e;
         }
 
         /// <summary>
-        /// 设置Z轴旋转
+        /// 设置Z轴旋转（仅改 Z 轴，保留 X/Y 轴）
         /// </summary>
         public static void SetRotationZ(this Transform transform, float angle)
         {
-            transform.eulerAngles = new Vector3(0, 0, angle);
+            Vector3 e = transform.eulerAngles;
+            e.z = angle;
+            transform.eulerAngles = e;
         }
 
         /// <summary>

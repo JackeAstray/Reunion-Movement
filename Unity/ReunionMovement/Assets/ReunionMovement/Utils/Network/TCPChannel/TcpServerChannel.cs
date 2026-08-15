@@ -60,6 +60,9 @@ namespace ReunionMovement.Common.Util
                 server.OnData = OnReceiveDataHandler;
                 return true;
             }
+            // 启动失败（端口占用等）：向错误订阅者派发全局错误（-1）。
+            // 其余通道（KCP/WebSocket）启动失败均有 onError 通知，此处补齐缺口。
+            OnError?.Invoke(-1, "TCP 服务启动失败（端口可能被占用）");
             return false;
         }
 
@@ -98,9 +101,9 @@ namespace ReunionMovement.Common.Util
             onDataReceived = null;
             onAbort?.Invoke();
             onAbort = null;
-            // Telepathy 无内建错误上报：服务中止时向错误订阅者派发全局错误（-1）
-            OnError?.Invoke(-1, "TCP 服务中止");
-            OnError = null;
+            // 主动 Stop 是正常关闭，不向 OnError 派发“TCP 服务中止”（业务会把主动关服误判为错误）；
+            // 通道对象关闭后随引用一起释放，无需显式置空 OnError。
+            // 需要感知关闭请订阅 OnAbort / OnDisconnected
         }
         void OnReceiveDataHandler(int conv, ArraySegment<byte> arrSeg)
         {

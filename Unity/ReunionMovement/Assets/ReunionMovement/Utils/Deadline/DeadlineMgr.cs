@@ -166,7 +166,14 @@ namespace ReunionMovement.Common.Util
         /// <param name="ticks"></param>
         private void SaveUtcTicks(long ticks)
         {
-            PlayerPrefs.SetString(prefKey_LastUtcTicks, ticks.ToString());
+            // 仅变化时写盘：每场景 Start 都会调用本方法（Max 后多数情况不变），
+            // 无条件 PlayerPrefs.Save() 每次强制同步落盘，造成无意义的 IO 卡顿
+            string ticksStr = ticks.ToString();
+            if (string.Equals(PlayerPrefs.GetString(prefKey_LastUtcTicks, ""), ticksStr, StringComparison.Ordinal))
+            {
+                return;
+            }
+            PlayerPrefs.SetString(prefKey_LastUtcTicks, ticksStr);
             PlayerPrefs.SetString(prefKey_Hash, ComputeHashForTicks(ticks));
             PlayerPrefs.Save();
         }
@@ -216,6 +223,9 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         private void PurgeActiveScene()
         {
+            // 先展示用户可见提示（黑屏前）；动态创建的提示对象不在场景根列表，不会被后续清理销毁
+            ShowViolationNotice();
+
             var scene = SceneManager.GetActiveScene();
             var roots = scene.GetRootGameObjects();
 
@@ -239,6 +249,57 @@ namespace ReunionMovement.Common.Util
             }
 
             Log.Warning("DeadlineMgr: 当前日期不在允许范围内或检测到篡改，已删除当前场景的所有对象。");
+        }
+
+        /// <summary>
+        /// 用户可见提示：场景清空前展示，避免用户面对无解释的黑屏。
+        /// 编辑器弹对话框；运行时创建全屏黑底提示（动态对象不在场景根列表，不会被 Purge 销毁）。
+        /// </summary>
+        private void ShowViolationNotice()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorUtility.DisplayDialog(
+                "DeadlineMgr",
+                "当前日期不在允许范围内或检测到系统时间被回拨，场景内容已被锁定。",
+                "确定");
+#else
+            try
+            {
+                var notice = new GameObject("[DeadlineNotice]");
+                UnityEngine.Object.DontDestroyOnLoad(notice);
+                var canvas = notice.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+                var bgGo = new GameObject("Background");
+                bgGo.transform.SetParent(notice.transform, false);
+                var bg = bgGo.AddComponent<UnityEngine.UI.Image>();
+                bg.color = Color.black;
+                var bgRt = bg.rectTransform;
+                bgRt.anchorMin = Vector2.zero;
+                bgRt.anchorMax = Vector2.one;
+                bgRt.offsetMin = Vector2.zero;
+                bgRt.offsetMax = Vector2.zero;
+
+                var textGo = new GameObject("Text");
+                textGo.transform.SetParent(notice.transform, false);
+                var text = textGo.AddComponent<UnityEngine.UI.Text>();
+                text.text = "当前日期不在允许范围内，游戏内容已锁定。";
+                var font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+                if (font != null) text.font = font;
+                text.fontSize = 28;
+                text.alignment = TextAnchor.MiddleCenter;
+                text.color = Color.white;
+                var rt = text.rectTransform;
+                rt.anchorMin = Vector2.zero;
+                rt.anchorMax = Vector2.one;
+                rt.offsetMin = Vector2.zero;
+                rt.offsetMax = Vector2.zero;
+            }
+            catch (Exception ex)
+            {
+                Log.Error("DeadlineMgr: 创建违规提示 UI 失败: {0}", ex.Message);
+            }
+#endif
         }
     }
 }

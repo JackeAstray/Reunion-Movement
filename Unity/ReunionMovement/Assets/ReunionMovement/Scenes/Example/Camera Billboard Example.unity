@@ -164,8 +164,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 983cbd9ad38b8db42abbfaa7f061328d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReunionMovement.Common.Util.Billboard
+  followCamera: 1
+  faceCamera: 0
+  horizontalOnly: 1
+  yawFollowCamera: 0
+  yawResetChild: {fileID: 795545423}
   targetTF: {fileID: 203538528}
-  billboardType: 0
 --- !u!1 &152258564
 GameObject:
   m_ObjectHideFlags: 0
@@ -391,8 +395,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 983cbd9ad38b8db42abbfaa7f061328d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReunionMovement.Common.Util.Billboard
+  followCamera: 0
+  faceCamera: 1
+  horizontalOnly: 0
+  yawFollowCamera: 0
+  yawResetChild: {fileID: 678285695}
   targetTF: {fileID: 203538528}
-  billboardType: 2
 --- !u!4 &451043092
 Transform:
   m_ObjectHideFlags: 0
@@ -946,8 +954,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 983cbd9ad38b8db42abbfaa7f061328d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReunionMovement.Common.Util.Billboard
+  followCamera: 0
+  faceCamera: 1
+  horizontalOnly: 1
+  yawFollowCamera: 1
+  yawResetChild: {fileID: 1785300616}
   targetTF: {fileID: 203538528}
-  billboardType: 1
 --- !u!4 &1572946140
 Transform:
   m_ObjectHideFlags: 0
@@ -1448,13 +1460,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1785300613}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1572946140}
-  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &4943771725376118805
 PrefabInstance:
   m_ObjectHideFlags: 0

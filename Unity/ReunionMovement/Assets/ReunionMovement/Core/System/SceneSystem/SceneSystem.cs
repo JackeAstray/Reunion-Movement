@@ -56,6 +56,9 @@ namespace ReunionMovement.Core.Scene
         private int isLoadingAtomic = 0;                                  // 原子操作：0=空闲, 1=加载中（Interlocked）
         private const string loadSceneName = "LoadingScene";              // 加载场景名字
 
+        /// <summary>生命周期代次：Clear() 时递增，用于让排队/在途加载在引擎销毁后主动放弃</summary>
+        private int clearGeneration = 0;
+
         /// <summary>在途加载完成信号（排队等待者 await 后重试获取加载锁）</summary>
         private UniTaskCompletionSource currentLoadTcs;
 
@@ -165,6 +168,15 @@ namespace ReunionMovement.Core.Scene
             Log.Debug("SceneSystem 清除数据");
 
             isInited = false;
+            // 先递增生命周期代次：排队中的 LoadScene 醒来后发现代次变化直接退出，不再继续加载；
+            // 再取消在途加载信号（排队者用 SuppressCancellationThrow 吞异常）；
+            // 最后强释放加载锁，避免排队者被永久阻塞
+            System.Threading.Interlocked.Increment(ref clearGeneration);
+            if (currentLoadTcs != null)
+            {
+                currentLoadTcs.TrySetCanceled();
+                currentLoadTcs = null;
+            }
             System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
             beforeSceneLoadingCompletionCallback = null;
             sceneLoadingCompletionCallback = null;
@@ -232,15 +244,40 @@ namespace ReunionMovement.Core.Scene
         /// <param name="slcc">场景加载完成回调</param>
         public async UniTask LoadScene(string levelName, bool openLoad = false, UnityAction bslcc = null, UnityAction slcc = null)
         {
+            await LoadSceneInternal(levelName, openLoad, bslcc, slcc, default);
+        }
+
+        /// <summary>
+        /// 可取消重载：ct 取消时中止排队/在途加载（切账号、断线回大厅等场景由上层主动中止）。
+        /// 取消抛 OperationCanceledException（不触发回调），调用方用 SuppressCancellationThrow 或 catch 处理。
+        /// </summary>
+        public async UniTask LoadScene(string levelName, CancellationToken ct, bool openLoad = false, UnityAction bslcc = null, UnityAction slcc = null)
+        {
+            await LoadSceneInternal(levelName, openLoad, bslcc, slcc, ct);
+        }
+
+        private async UniTask LoadSceneInternal(string levelName, bool openLoad, UnityAction bslcc, UnityAction slcc, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            // 生命周期代次：Clear()（引擎销毁/重建）时递增。代次变化后排队/在途加载必须放弃，
+            // 否则引擎销毁后排队者恢复执行，继续场景加载并污染下一会话状态
+            int gen = clearGeneration;
+
             // 原子操作：防止并发加载。与旧行为不同，并发调用不再被静默丢弃——
             // 而是排队等待在途加载完成后再执行，保证调用方的加载请求与回调不丢失。
             while (Interlocked.CompareExchange(ref isLoadingAtomic, 1, 0) != 0)
             {
+                ct.ThrowIfCancellationRequested();
+                if (gen != clearGeneration) return; // Clear() 已发生：放弃排队
                 Log.Debug("场景 {0} 排队等待在途加载完成...", levelName);
                 var pending = currentLoadTcs;
                 if (pending != null)
                 {
-                    await pending.Task;
+                    // Clear() 会取消在途 TCS：吞掉取消异常，由代次检查退出
+                    await pending.Task.SuppressCancellationThrow();
+                    ct.ThrowIfCancellationRequested();
+                    if (gen != clearGeneration) return;
                 }
                 else
                 {
@@ -249,11 +286,20 @@ namespace ReunionMovement.Core.Scene
                 }
             }
 
+            if (gen != clearGeneration)
+            {
+                // 拿到锁后才发现已 Clear：释放锁并退出
+                Interlocked.Exchange(ref isLoadingAtomic, 0);
+                return;
+            }
+
             var myTcs = new UniTaskCompletionSource();
             currentLoadTcs = myTcs;
 
             try
             {
+                // 取消检查放在 try 内：finally 负责释放加载锁，不会因取消泄漏锁
+                ct.ThrowIfCancellationRequested();
                 // 目标场景已加载：直接回调
                 if (currentSceneName == levelName)
                 {
@@ -279,6 +325,11 @@ namespace ReunionMovement.Core.Scene
                 }
                 await OnLoadTargetSceneAsync(targetSceneName, LoadSceneMode.Single);
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                // 主动取消不是错误：不记错误日志、不触发完成回调，交给调用方处理
+                throw;
+            }
             catch (Exception ex)
             {
                 Log.Error("场景加载异常：{0}", ex);
@@ -299,10 +350,14 @@ namespace ReunionMovement.Core.Scene
                 if (LoadState != null && LoadState.Value != SceneLoadState.Loaded)
                 {
                     targetSceneName = null;
-                    // 以实际激活场景为准，避免 currentSceneName 与真实场景不一致：
-                    // openLoad 模式下过渡场景已激活，不能回滚成 previousSceneName，
-                    // 否则后续 LoadScene(旧场景名) 会误判"已加载"直接回调而不真正加载。
-                    currentSceneName = SceneManager.GetActiveScene().name;
+                    if (gen == clearGeneration)
+                    {
+                        // 以实际激活场景为准，避免 currentSceneName 与真实场景不一致：
+                        // openLoad 模式下过渡场景已激活，不能回滚成 previousSceneName，
+                        // 否则后续 LoadScene(旧场景名) 会误判"已加载"直接回调而不真正加载。
+                        currentSceneName = SceneManager.GetActiveScene().name;
+                    }
+                    // 否则 Clear() 已发生：不回写 currentSceneName，避免污染下一会话的场景名缓存
                 }
             }
         }
@@ -472,7 +527,18 @@ namespace ReunionMovement.Core.Scene
                 : float.PositiveInfinity;
 
             CallbackProgress(0.15f);
-            await UniTask.Delay((int)(startProgressWaitingTime * 1000));
+            // 等待场景真正开始加载（progress > 0）：快机立即进入进度循环，慢机等待至多
+            // startProgressWaitingTime（避免固定白等 0.5s，同时保留进度条最小展示时长语义）
+            float startWaitDeadline = Time.realtimeSinceStartup + Mathf.Max(0f, startProgressWaitingTime);
+            while (async.progress <= 0f && Time.realtimeSinceStartup < startWaitDeadline)
+            {
+                if (Time.realtimeSinceStartup > timeoutDeadline)
+                {
+                    HandleSceneLoadTimeout(async, levelName);
+                    return;
+                }
+                await UniTask.Yield(PlayerLoopTiming.Update);
+            }
 
             // 加载进度 —— 节流：每 5 帧回调一次，减少 ~80% 事件触发
             int frameSkip = 5;
@@ -599,7 +665,9 @@ namespace ReunionMovement.Core.Scene
         {
             try
             {
-                ProgressSubject.OnNext(progress);
+                // Clear() 已 Dispose 并置 null：在途加载的进度回调（每 5 帧一次）继续触达时
+                // 必须判空，否则每 5 帧刷一条 NRE 错误日志直到加载结束
+                ProgressSubject?.OnNext(progress);
             }
             catch (Exception ex)
             {

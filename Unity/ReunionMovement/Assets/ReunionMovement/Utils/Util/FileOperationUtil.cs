@@ -322,6 +322,35 @@ namespace ReunionMovement.Common.Util
                         }
                     }
                     break;
+                case RuntimePlatform.WebGLPlayer:
+                    // WebGL 的 StreamingAssets 走 HTTP，无法 File.Copy，需用 UnityWebRequest 拉取
+                    // （此前无此分支：WebGL 平台静默跳过复制且无任何提示）
+                    if (!File.Exists(targetPath))
+                    {
+                        using (var www = UnityWebRequest.Get(originalPath))
+                        {
+                            yield return www.SendWebRequest();
+                            if (www.result != UnityWebRequest.Result.Success)
+                            {
+                                Log.Warning("CopyFileToTarget WebGL 复制失败：{0}", www.error);
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    File.WriteAllBytes(targetPath, www.downloadHandler.data);
+                                }
+                                catch (Exception e)
+                                {
+                                    Log.Error("CopyFileToTarget WebGL 写入失败:{0} -> {1}", targetPath, e.Message);
+                                }
+                            }
+                        }
+                    }
+                    break;
+                default:
+                    Log.Warning("CopyFileToTarget 未支持的平台 {0}，跳过复制 {1}", Application.platform, fileName);
+                    break;
             }
             yield return null;
         }

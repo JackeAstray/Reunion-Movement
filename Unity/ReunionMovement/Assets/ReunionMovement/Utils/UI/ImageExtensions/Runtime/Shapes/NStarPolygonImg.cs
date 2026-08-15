@@ -38,12 +38,15 @@ namespace ReunionMovement.UI.ImageExtensions
             set
             {
                 sideCount = Mathf.Clamp(value, 3f, 10f);
+                // 直接钳制 inset 字段（SideCount 变化会影响其合法上限），不经过 Inset setter ——
+                // 否则一次 SideCount 赋值会触发两次材质写与两次 onComponentSettingsChanged
+                inset = Mathf.Clamp(inset, 2f, sideCount - 0.01f);
                 if (shouldModifySharedMat)
                 {
                     sharedMat.SetFloat(nStarPolygonSideCount_Sp, sideCount);
+                    sharedMat.SetFloat(nStarPolygonInset_Sp, inset);
                 }
                 onComponentSettingsChanged?.Invoke(this, EventArgs.Empty);
-                Inset = inset;
             }
         }
 
@@ -117,8 +120,8 @@ namespace ReunionMovement.UI.ImageExtensions
 
         public void OnValidate()
         {
+            // SideCount setter 内部已同步钳制并写入 inset，无需再显式 Inset = inset（双触发）
             SideCount = sideCount;
-            Inset = inset;
             CornerRadius = cornerRadius;
             Offset = offset;
         }

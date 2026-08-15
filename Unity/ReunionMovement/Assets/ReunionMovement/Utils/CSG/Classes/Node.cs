@@ -111,19 +111,23 @@ namespace ReunionMovement.Common.Util
         /// <param name="list"></param>
         public void Build(List<Polygon> list)
         {
-            BuildDepth++;
-            if (BuildDepth > 1024)
+            // 深度改为递归参数传递：原 static 计数器在异常路径会永久 +1（多次异常后误触上限），
+            // 且多实例/后台线程并行构建时计数互相污染
+            BuildInternal(list, 0);
+        }
+
+        private void BuildInternal(List<Polygon> list, int depth)
+        {
+            if (depth > 1024)
             {
                 Debug.LogWarning($"CSG Node.Build 递归深度超过 1024 层，强制终止。" +
                     $"当前多边形数: {list?.Count ?? 0}, epsilon: {CSG.Epsilon}。请增大 CSG.Epsilon 或检查网格是否包含退化面。");
-                BuildDepth--;
                 return;
             }
 
             // 空输入防护（Build(null) / 空列表）：直接返回，不构造平面与子树
             if (list == null || list.Count < 1)
             {
-                BuildDepth--;
                 return;
             }
 
@@ -154,7 +158,7 @@ namespace ReunionMovement.Common.Util
                 if (newNode && listFront.Count == list.Count && list.SequenceEqual(listFront))
                     polygons.AddRange(listFront);
                 else
-                    (front ?? (front = new Node())).Build(listFront);
+                    (front ?? (front = new Node())).BuildInternal(listFront, depth + 1);
             }
 
             if (listBack.Count > 0)
@@ -162,13 +166,9 @@ namespace ReunionMovement.Common.Util
                 if (newNode && listBack.Count == list.Count && list.SequenceEqual(listBack))
                     polygons.AddRange(listBack);
                 else
-                    (back ?? (back = new Node())).Build(listBack);
+                    (back ?? (back = new Node())).BuildInternal(listBack, depth + 1);
             }
-
-            BuildDepth--;
         }
-
-        static int BuildDepth;
 
         /// <summary>
         /// 递归删除此BSP树内“多边形”中的所有多边形

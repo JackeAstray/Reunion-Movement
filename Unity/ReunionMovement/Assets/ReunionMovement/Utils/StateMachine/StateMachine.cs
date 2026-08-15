@@ -99,7 +99,8 @@ namespace ReunionMovement.Common.Util.StateMachine
                 return;
             }
 
-            GlobalUpdate?.Invoke();
+            // 回调异常隔离：单个订阅者抛异常不得中断整个状态机本帧更新
+            try { GlobalUpdate?.Invoke(); } catch (Exception ex) { Log.Error("StateMachine GlobalUpdate 订阅者异常（已隔离）: {0}", ex.Message); }
 
             if (currentState == null)
             {
@@ -111,8 +112,8 @@ namespace ReunionMovement.Common.Util.StateMachine
             // 必须在 OnUpdate 之后重新校验 currentState 是否仍指向同一状态实例，
             // 否则会对已退出的旧状态累加计时并触发虚假的超时切换。
             var state = currentState;
-            state?.OnUpdate?.Invoke();
-            if (state == null || !ReferenceEquals(currentState, state)) return;
+            try { state.OnUpdate?.Invoke(); } catch (Exception ex) { Log.Error("StateMachine OnUpdate 订阅者异常（已隔离）: {0}", ex.Message); }
+            if (!ReferenceEquals(currentState, state)) return;
 
             state.elapsedTime += Time.deltaTime;
 
@@ -128,11 +129,11 @@ namespace ReunionMovement.Common.Util.StateMachine
                 parallelState.elapsedTime += Time.deltaTime;
                 if (parallelState.elapsedTime >= parallelState.timeout)
                 {
-                    parallelState.OnStop?.Invoke();
+                    try { parallelState.OnStop?.Invoke(); } catch (Exception ex) { Log.Error("StateMachine 并行状态 OnStop 异常（已隔离）: {0}", ex.Message); }
                     parallelStates.RemoveAt(i);
                     continue;
                 }
-                parallelState.OnUpdate?.Invoke();
+                try { parallelState.OnUpdate?.Invoke(); } catch (Exception ex) { Log.Error("StateMachine 并行状态 OnUpdate 异常（已隔离）: {0}", ex.Message); }
             }
         }
 
@@ -225,55 +226,55 @@ namespace ReunionMovement.Common.Util.StateMachine
         /// <returns>切换是否成功</returns>
         private bool PerformStateChange(TLabel newState)
         {
-            try
+            // 防御：检查目标状态是否已注册
+            if (!stateDictionary.TryGetValue(newState, out State targetState))
             {
-                // 防御：检查目标状态是否已注册
-                if (!stateDictionary.TryGetValue(newState, out State targetState))
-                {
-                    Log.Error("状态切换失败：目标状态 {0} 未注册。保持当前状态。", newState);
-                    return false;
-                }
-
-                TLabel oldLabel = default(TLabel);
-                if (currentState != null)
-                {
-                    oldLabel = currentState.label;
-                    currentState.OnStop?.Invoke();
-                    OnStateExit?.Invoke(currentState.label);
-
-                    // 同状态重入（如 Attacking→Attacking 重启攻击）不压历史栈：
-                    // 从重启后的状态 Revert 应回到真正的上一个状态，而不是重复的自身条目；
-                    // 同时避免高频同状态重入导致历史栈无界增长（触发上限告警刷屏）。
-                    bool isSameState = ReferenceEquals(currentState, targetState);
-                    if (!isSameState)
-                    {
-                        // 带上限压栈：超出时丢弃最旧记录，防止高频 ChangeState 导致无界增长
-                        if (stateHistory.Count >= MaxStateHistory)
-                        {
-                            var items = stateHistory.ToArray();
-                            stateHistory.Clear();
-                            // items[0] 为栈顶（最新），末位为最旧；丢弃最旧的一条
-                            for (int i = 0; i < items.Length - 1; i++)
-                            {
-                                stateHistory.Push(items[i]);
-                            }
-                            Log.Warning("StateMachine: 状态历史超过上限 {0}，已丢弃最旧记录", MaxStateHistory);
-                        }
-                        stateHistory.Push(currentState);
-                    }
-                }
-
-                currentState = targetState;
-                currentState?.OnStart?.Invoke();
-                OnStateEnter?.Invoke(newState);
-                OnStateChanged?.Invoke(oldLabel, newState);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Log.Error("状态转换时发生异常: {0}", ex.Message);
+                Log.Error("状态切换失败：目标状态 {0} 未注册。保持当前状态。", newState);
                 return false;
             }
+
+            TLabel oldLabel = default(TLabel);
+            if (currentState != null)
+            {
+                oldLabel = currentState.label;
+                // 旧状态退出回调逐段隔离：单个订阅者异常不得中断切换流程
+                // （否则出现“OnStop 已执行但状态未切换”的不一致状态）
+                try { currentState.OnStop?.Invoke(); } catch (Exception ex) { Log.Error("StateMachine OnStop 异常（已隔离）: {0}", ex.Message); }
+                try { OnStateExit?.Invoke(currentState.label); } catch (Exception ex) { Log.Error("StateMachine OnStateExit 订阅者异常（已隔离）: {0}", ex.Message); }
+
+                // 同状态重入（如 Attacking→Attacking 重启攻击）不压历史栈：
+                // 从重启后的状态 Revert 应回到真正的上一个状态，而不是重复的自身条目；
+                // 同时避免高频同状态重入导致历史栈无界增长（触发上限告警刷屏）。
+                bool isSameState = ReferenceEquals(currentState, targetState);
+                if (!isSameState)
+                {
+                    // 带上限压栈：超出时丢弃最旧记录，防止高频 ChangeState 导致无界增长
+                    if (stateHistory.Count >= MaxStateHistory)
+                    {
+                        var items = stateHistory.ToArray();
+                        stateHistory.Clear();
+                        // items[0] 为栈顶（最新），末位为最旧；丢弃最旧的一条
+                        for (int i = 0; i < items.Length - 1; i++)
+                        {
+                            stateHistory.Push(items[i]);
+                        }
+                        Log.Warning("StateMachine: 状态历史超过上限 {0}，已丢弃最旧记录", MaxStateHistory);
+                    }
+                    stateHistory.Push(currentState);
+                }
+            }
+
+            currentState = targetState;
+            // 进入新状态必须重置计时：否则 timeout 计时跨多次进入累计——
+            // 状态 A（timeout=2s）活跃 1.9s→切走→切回 0.1s 后即超时；
+            // 超时切换到默认状态成功后旧状态 elapsedTime 保留在 timeout 以上，重进下一帧立即超时
+            currentState.elapsedTime = 0f;
+            try { currentState.OnStart?.Invoke(); } catch (Exception ex) { Log.Error("StateMachine OnStart 异常（已隔离）: {0}", ex.Message); }
+            try { OnStateEnter?.Invoke(newState); } catch (Exception ex) { Log.Error("StateMachine OnStateEnter 订阅者异常（已隔离）: {0}", ex.Message); }
+            try { OnStateChanged?.Invoke(oldLabel, newState); } catch (Exception ex) { Log.Error("StateMachine OnStateChanged 订阅者异常（已隔离）: {0}", ex.Message); }
+            // 状态已实际切换，即使某个订阅者抛异常也应返回 true（与真实状态一致），
+            // 不再像旧实现那样“已切换却返回 false”误导调用方
+            return true;
         }
 
         /// <summary>
@@ -352,13 +353,18 @@ namespace ReunionMovement.Common.Util.StateMachine
             if (stateHistory.Count > 0)
             {
                 TLabel oldLabel = currentState != null ? currentState.label : default;
-                currentState?.OnStop?.Invoke();
-                if (currentState != null) OnStateExit?.Invoke(currentState.label);
+                try { currentState?.OnStop?.Invoke(); } catch (Exception ex) { Log.Error("StateMachine OnStop 异常（已隔离）: {0}", ex.Message); }
+                if (currentState != null)
+                {
+                    try { OnStateExit?.Invoke(currentState.label); } catch (Exception ex) { Log.Error("StateMachine OnStateExit 订阅者异常（已隔离）: {0}", ex.Message); }
+                }
 
                 currentState = stateHistory.Pop();
-                currentState?.OnStart?.Invoke();
-                OnStateEnter?.Invoke(currentState.label);
-                OnStateChanged?.Invoke(oldLabel, currentState.label);
+                // 与 ChangeState 一致：进入状态时重置计时，防止 timeout 跨多次进入累计
+                currentState.elapsedTime = 0f;
+                try { currentState?.OnStart?.Invoke(); } catch (Exception ex) { Log.Error("StateMachine OnStart 异常（已隔离）: {0}", ex.Message); }
+                try { OnStateEnter?.Invoke(currentState.label); } catch (Exception ex) { Log.Error("StateMachine OnStateEnter 订阅者异常（已隔离）: {0}", ex.Message); }
+                try { OnStateChanged?.Invoke(oldLabel, currentState.label); } catch (Exception ex) { Log.Error("StateMachine OnStateChanged 订阅者异常（已隔离）: {0}", ex.Message); }
             }
         }
 
@@ -409,8 +415,21 @@ namespace ReunionMovement.Common.Util.StateMachine
 
         public string Serialize()
         {
-            // 序列化当前状态、历史状态等信息（不含 Action 委托）
-            return JsonConvert.SerializeObject(this, SafeJsonSettings);
+            // 直接序列化 this 只会得到 CurrentState 标签（私有字段默认不参与序列化），
+            // 反序列化后状态机为空壳。这里改为序列化显式 DTO：状态结构（标签/超时/优先级）+ 当前/默认/历史。
+            var snapshot = new Snapshot
+            {
+                states = new List<State>(stateDictionary.Values),
+                currentStateLabel = CurrentState,
+                defaultStateLabel = defaultStateLabel,
+                historyLabels = new List<TLabel>(stateHistory.Count),
+            };
+            // Stack 枚举顺序为栈顶→栈底，序列化保持该顺序；反序列化时倒序 Push 恢复
+            foreach (var s in stateHistory)
+            {
+                snapshot.historyLabels.Add(s.label);
+            }
+            return JsonConvert.SerializeObject(snapshot, SafeJsonSettings);
         }
 
         /// <summary>
@@ -420,7 +439,46 @@ namespace ReunionMovement.Common.Util.StateMachine
         /// <param name="json"></param>
         public StateMachine<TLabel> Deserialize(string json)
         {
-            return JsonConvert.DeserializeObject<StateMachine<TLabel>>(json, SafeJsonSettings);
+            var machine = new StateMachine<TLabel>();
+            var snapshot = JsonConvert.DeserializeObject<Snapshot>(json, SafeJsonSettings);
+            if (snapshot == null || snapshot.states == null)
+            {
+                Log.Warning("StateMachine 反序列化失败：JSON 无效或缺少状态结构");
+                return machine;
+            }
+            // 重建状态结构（回调丢失，由调用方重新 AddState 绑定行为）
+            foreach (var s in snapshot.states)
+            {
+                if (s == null) continue;
+                machine.stateDictionary[s.label] = new State(s.label, null, null, null, s.timeout, s.priority);
+            }
+            machine.defaultStateLabel = snapshot.defaultStateLabel;
+            // 恢复历史栈：倒序 Push（historyLabels[0] 是栈顶，最后入栈的才是栈顶）
+            if (snapshot.historyLabels != null)
+            {
+                for (int i = snapshot.historyLabels.Count - 1; i >= 0; i--)
+                {
+                    if (machine.stateDictionary.TryGetValue(snapshot.historyLabels[i], out var st))
+                    {
+                        machine.stateHistory.Push(st);
+                    }
+                }
+            }
+            // 恢复当前状态（仅当标签有效）
+            if (snapshot.currentStateLabel != null && machine.stateDictionary.TryGetValue(snapshot.currentStateLabel, out var cur))
+            {
+                machine.currentState = cur;
+            }
+            return machine;
+        }
+
+        /// <summary>序列化快照 DTO（仅结构，不含委托）</summary>
+        private class Snapshot
+        {
+            public List<State> states;
+            public TLabel currentStateLabel;
+            public TLabel defaultStateLabel;
+            public List<TLabel> historyLabels;
         }
 
         /// <summary>

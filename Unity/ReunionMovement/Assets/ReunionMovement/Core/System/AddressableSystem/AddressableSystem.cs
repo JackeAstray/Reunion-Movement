@@ -75,6 +75,9 @@ namespace ReunionMovement.Core.Resources
             if (Mode == AddressablesMode.Off)
             {
                 initProgress = 100;
+                // Off 模式即"已就绪"（跳过 Addressables）：置 isInited=true 保持"Init 成功即就绪"约定，
+                // 否则后续按 isInited 判断可用性的调用方会误判为未初始化而触发重复 Init 或错误降级
+                isInited = true;
                 Log.Debug("AddressableSystem 已关闭（AddressablesMode.Off），跳过初始化");
                 return;
             }
@@ -465,6 +468,10 @@ namespace ReunionMovement.Core.Resources
             var result = new AddressableUpdateResult();
             if (Mode != AddressablesMode.Remote) return result;
 
+            // 进入即清空：否则上一轮检测到更新、本轮无更新时旧列表残留，
+            // UpdateContentAsync(default) 会重新下载并应用已应用的旧 Catalog（重复热更）
+            pendingUpdateCatalogs.Clear();
+
             try
             {
                 // autoReleaseHandle=true：句柄完成自动释放，防泄漏
@@ -545,11 +552,14 @@ namespace ReunionMovement.Core.Resources
             await request;
         }
 
+        /// <summary>当前未释放句柄数（线程安全读：写侧 Interlocked）</summary>
+        public int ActiveHandles => Volatile.Read(ref activeCount);
+
         /// <summary>调试统计（活跃句柄数 / 累计加载释放数），用于泄漏排查</summary>
         public string GetDebugStats()
         {
             return string.Format("AddressableSystem | Mode={0} | 累计加载={1} | 累计释放={2} | 未释放={3} | 待更新Catalog={4}",
-                Mode, loadCount, releaseCount, activeCount, pendingUpdateCatalogs.Count);
+                Mode, Volatile.Read(ref loadCount), Volatile.Read(ref releaseCount), ActiveHandles, pendingUpdateCatalogs.Count);
         }
         #endregion
     }

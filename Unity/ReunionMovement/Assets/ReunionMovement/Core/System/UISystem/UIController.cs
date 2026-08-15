@@ -62,6 +62,12 @@ namespace ReunionMovement.Core.UI
 
         }
 
+        /// <summary>是否已执行过 OnInit（首次 Instantiate 加载时执行一次；窗口池复用不重复执行，防重复订阅）</summary>
+        public bool IsInitialized { get; private set; }
+
+        /// <summary>标记初始化完成（由 UISystem 在 OnInit 调用后置位）</summary>
+        internal void MarkInitialized() => IsInitialized = true;
+
         public virtual void BeforeOpen(object[] onOpenArgs, Action doOpen)
         {
             doOpen?.Invoke();
@@ -91,6 +97,22 @@ namespace ReunionMovement.Core.UI
         public virtual void OnClose()
         {
             IsVisiable = false;
+        }
+
+        /// <summary>
+        /// 窗口从对象池取出时调用（仅池化复用路径，Instantiate 首次创建不调用）。
+        /// 子类可重写重置瞬时状态（如 ScrollRect 位置、选中项），避免下次打开残留旧数据。
+        /// </summary>
+        public virtual void OnSpawned()
+        {
+        }
+
+        /// <summary>
+        /// 窗口放回对象池时调用（仅池化复用路径，销毁路径不调用）。
+        /// 子类可重写清理瞬时状态/引用（如取消动画、释放临时数据）。
+        /// </summary>
+        public virtual void OnDespawned()
+        {
         }
 
         /// <summary>

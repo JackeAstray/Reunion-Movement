@@ -41,6 +41,8 @@ namespace ReunionMovement.Common.Util
         readonly INetworkSerializer serializer;
         readonly NetworkMessageDispatcher dispatcher = new NetworkMessageDispatcher();
         readonly Dictionary<int, UniTaskCompletionSource<byte[]>> pendingRequests = new Dictionary<int, UniTaskCompletionSource<byte[]>>();
+        // 可靠发送待确认表（seq → 确认信号；SendReliableAsync 使用）
+        readonly Dictionary<int, UniTaskCompletionSource<bool>> pendingAcks = new Dictionary<int, UniTaskCompletionSource<bool>>();
 
         INetworkClientChannel channel;
         ClientState state = ClientState.Disconnected;
@@ -53,6 +55,21 @@ namespace ReunionMovement.Common.Util
         float heartbeatSendTimer;
         float lastReceiveTime;
         int rpcCorrelation;
+        int reliableSeq; // 可靠发送序号（Interlocked 自增）
+
+        // ===== 流量统计 / RTT =====
+        /// <summary>累计发送字节数（协议帧，含帧头）</summary>
+        public long BytesSent { get; private set; }
+        /// <summary>累计接收字节数（原始字节流）</summary>
+        public long BytesReceived { get; private set; }
+        /// <summary>最近一次心跳往返时延（毫秒；0 = 尚无测量）</summary>
+        public float LastRttMs { get; private set; }
+        private float pingSentTime = -1f;
+
+        // ===== 断线可靠消息重发队列（SendReliableAsync persistOnDisconnect=true 时使用）=====
+        private readonly Queue<(ushort messageId, byte[] payload)> reliableResendQueue
+            = new Queue<(ushort messageId, byte[] payload)>();
+        private const int MaxReliableResendQueue = 256;
 
         /// <summary>状态变化（旧状态, 新状态）</summary>
         public event Action<ClientState, ClientState> OnStateChanged;
@@ -240,29 +257,150 @@ namespace ReunionMovement.Common.Util
         /// <summary>发送负载（消息 ID = 0）</summary>
         public bool Send(byte[] payload) => Send(NetworkConstants.DefaultMessageId, payload);
 
-        /// <summary>发送消息（消息 ID + 负载，按编解码器组装帧）</summary>
-        public bool Send(ushort messageId, byte[] payload)
+        /// <summary>发送结果（背压感知：区别于 Send 只回 bool）</summary>
+        public enum SendResult
+        {
+            /// <summary>发送成功</summary>
+            Ok,
+            /// <summary>未连接</summary>
+            NotConnected,
+            /// <summary>通道拒绝（发送缓冲满/背压）或编码/发送异常</summary>
+            Rejected,
+        }
+
+        /// <summary>
+        /// 发送消息并返回详细结果（背压感知）：通道层返回 false 时统一归为 Rejected，
+        /// 调用方可据此降速/丢弃非关键消息，与发送侧的速率限制构成全链路背压。
+        /// </summary>
+        public SendResult SendDetailed(ushort messageId, byte[] payload)
         {
             if (!IsConnected)
             {
                 Log.Warning("[NetworkClient] 未连接，发送失败");
-                return false;
+                return SendResult.NotConnected;
+            }
+            byte[] frame;
+            try
+            {
+                frame = codec.Encode(messageId, payload);
+            }
+            catch (Exception ex)
+            {
+                OnError?.Invoke("编码异常: " + ex.Message);
+                return SendResult.Rejected;
             }
             try
             {
-                return channel.SendMessage(codec.Encode(messageId, payload));
+                bool ok = channel.SendMessage(frame);
+                if (ok) BytesSent += frame.Length;
+                return ok ? SendResult.Ok : SendResult.Rejected;
             }
             catch (Exception ex)
             {
                 OnError?.Invoke("发送异常: " + ex.Message);
-                return false;
+                return SendResult.Rejected;
             }
+        }
+
+        /// <summary>发送消息（消息 ID + 负载，按编解码器组装帧）</summary>
+        public bool Send(ushort messageId, byte[] payload)
+        {
+            return SendDetailed(messageId, payload) == SendResult.Ok;
         }
 
         /// <summary>发送 UTF-8 文本（消息 ID = 0）</summary>
         public bool SendString(string text)
         {
             return Send(Encoding.UTF8.GetBytes(text ?? string.Empty));
+        }
+
+        /// <summary>
+        /// 可靠发送：服务端收到后回 ACK 确认，超时自动重发（适合支付/存档类重要消息）。
+        /// 服务端自动解包并派发原消息（业务无需感知），返回 true 表示已收到 ACK。
+        /// persistOnDisconnect=true 时，断线/重试耗尽会把消息放入重发队列，重连成功后自动补发。
+        /// </summary>
+        public async UniTask<bool> SendReliableAsync(ushort messageId, byte[] payload, TimeSpan timeout, int maxRetries = 5, bool persistOnDisconnect = false)
+        {
+            if (!IsConnected)
+            {
+                if (persistOnDisconnect) TryEnqueueReliable(messageId, payload);
+                return false;
+            }
+
+            int seq = Interlocked.Increment(ref reliableSeq);
+            byte[] framePayload = BuildReliablePayload(seq, messageId, payload);
+            var tcs = new UniTaskCompletionSource<bool>();
+            pendingAcks[seq] = tcs;
+
+            try
+            {
+                for (int attempt = 0; attempt <= maxRetries; attempt++)
+                {
+                    if (!IsConnected || !Send(NetworkConstants.ReservedAckMessageId, framePayload))
+                    {
+                        if (persistOnDisconnect) TryEnqueueReliable(messageId, payload);
+                        return false;
+                    }
+
+                    // 必须用不抛异常的 TimeoutWithoutException：Timeout<T> 超时会抛 TimeoutException，
+                    // 重试循环永远走不到；且超时计时用 UnscaledDeltaTime，游戏暂停时不悬挂。
+                    // tcs 完成值：true=收到 ACK；false=连接断开（HandleDisconnected 置 false），
+                    // 此路径不可误报成功（支付/存档类消息从未送达）。
+                    var (isTimeout, ackResult) = await tcs.Task.TimeoutWithoutException(timeout, DelayType.UnscaledDeltaTime);
+                    if (isTimeout) continue; // 超时：重发
+                    if (!ackResult && persistOnDisconnect)
+                    {
+                        // 断线：消息未送达，入队待重连补发
+                        TryEnqueueReliable(messageId, payload);
+                    }
+                    return ackResult;
+                }
+            }
+            finally
+            {
+                pendingAcks.Remove(seq);
+            }
+
+            if (persistOnDisconnect) TryEnqueueReliable(messageId, payload);
+            Log.Warning("[NetworkClient] 可靠发送 seq={0} 重试 {1} 次未获确认", seq, maxRetries);
+            return false;
+        }
+
+        /// <summary>入队待重发的可靠消息（有界：防止断线期间无限积压）</summary>
+        void TryEnqueueReliable(ushort messageId, byte[] payload)
+        {
+            if (reliableResendQueue.Count >= MaxReliableResendQueue)
+            {
+                Log.Warning("[NetworkClient] 可靠消息重发队列已满（{0}），丢弃 messageId={1}", MaxReliableResendQueue, messageId);
+                return;
+            }
+            reliableResendQueue.Enqueue((messageId, payload));
+        }
+
+        /// <summary>重连成功后补发积压的可靠消息（persistOnDisconnect=false，避免失败自我回填成死循环）</summary>
+        async UniTaskVoid DrainReliableResendQueue()
+        {
+            while (reliableResendQueue.Count > 0 && IsConnected && !closed)
+            {
+                var (id, payload) = reliableResendQueue.Dequeue();
+                Log.Debug("[NetworkClient] 重连补发可靠消息 messageId={0}（剩余 {1}）", id, reliableResendQueue.Count);
+                await SendReliableAsync(id, payload, TimeSpan.FromSeconds(Mathf.Max(1f, config.reconnectBaseDelay)), 2);
+            }
+        }
+
+        /// <summary>打包可靠帧负载：[4B seq 小端][2B 原消息 ID 小端][原负载]</summary>
+        static byte[] BuildReliablePayload(int seq, ushort messageId, byte[] payload)
+        {
+            if (payload == null) payload = Array.Empty<byte>();
+            var result = new byte[6 + payload.Length];
+            result[0] = (byte)seq;
+            result[1] = (byte)(seq >> 8);
+            result[2] = (byte)(seq >> 16);
+            result[3] = (byte)(seq >> 24);
+            result[4] = (byte)(messageId & 0xFF);
+            result[5] = (byte)(messageId >> 8);
+            Buffer.BlockCopy(payload, 0, result, 6, payload.Length);
+            return result;
         }
 
         /// <summary>注册类型与消息 ID 的绑定（SendObject / RegisterObjectHandler 的前置步骤）</summary>
@@ -322,12 +460,20 @@ namespace ReunionMovement.Common.Util
             heartbeatSendTimer = 0f;
             SetState(ClientState.Connected);
             try { OnConnected?.Invoke(); } catch (Exception ex) { Log.Warning("[NetworkClient] OnConnected 回调异常: {0}", ex.Message); }
+            // 重连成功：补发断线期间积压的可靠消息（persistOnDisconnect 队列）
+            DrainReliableResendQueue().Forget();
         }
 
         void HandleDisconnected()
         {
             if (closed) return;
             FailAllPending("连接已断开");
+            // 断开时结束全部可靠发送等待（重连后 seq 表已无意义）
+            foreach (var kv in pendingAcks)
+            {
+                kv.Value.TrySetResult(false);
+            }
+            pendingAcks.Clear();
             SetState(ClientState.Disconnected);
             try { OnDisconnected?.Invoke(); } catch (Exception ex) { Log.Warning("[NetworkClient] OnDisconnected 回调异常: {0}", ex.Message); }
             if (config.autoReconnect && !explicitStop)
@@ -346,14 +492,47 @@ namespace ReunionMovement.Common.Util
         void HandleData(byte[] data)
         {
             if (closed || data == null || data.Length == 0) return;
+            BytesReceived += data.Length;
             lastReceiveTime = Time.realtimeSinceStartup;
             assembler.Feed(data, OnFrame);
         }
 
         void OnFrame(ushort messageId, ArraySegment<byte> frame, ArraySegment<byte> payload)
         {
-            try { OnRawFrame?.Invoke(frame.ToArray()); }
-            catch (Exception ex) { Log.Warning("[NetworkClient] OnRawFrame 回调异常: {0}", ex.Message); }
+            if (OnRawFrame != null)
+            {
+                try { OnRawFrame(frame.ToArray()); }
+                catch (Exception ex) { Log.Warning("[NetworkClient] OnRawFrame 回调异常: {0}", ex.Message); }
+            }
+
+            // 系统帧：PONG（服务端心跳应答）—— 仅确认链路活跃（lastReceiveTime 已在 HandleData 更新），
+            // 不派发给业务层
+            if (messageId == NetworkConstants.ReservedPongMessageId)
+            {
+                if (pingSentTime > 0f)
+                {
+                    LastRttMs = Mathf.Max(0f, (Time.realtimeSinceStartup - pingSentTime) * 1000f);
+                    pingSentTime = -1f;
+                }
+                return;
+            }
+
+            // 系统帧：ACK（可靠发送确认）—— 完成对应待确认任务，不派发给业务层
+            if (messageId == NetworkConstants.ReservedAckMessageId)
+            {
+                if (payload.Count >= 4)
+                {
+                    var arr = payload.Array;
+                    int off = payload.Offset;
+                    int seq = arr[off] | (arr[off + 1] << 8) | (arr[off + 2] << 16) | (arr[off + 3] << 24);
+                    if (pendingAcks.TryGetValue(seq, out var ackTcs))
+                    {
+                        pendingAcks.Remove(seq);
+                        ackTcs.TrySetResult(true);
+                    }
+                }
+                return;
+            }
 
             // 系统帧：RPC 响应
             if (messageId == NetworkConstants.ReservedResponseMessageId)
@@ -422,9 +601,13 @@ namespace ReunionMovement.Common.Util
 
         void SendHeartbeat()
         {
-            var text = config.heartbeatText ?? string.Empty;
-            if (!SendString(text))
+            // 协议级心跳：保留 ID PING 帧（不占用业务 ID 0、不混用 heartbeatText），
+            // 服务端自动回 PONG 应答；配合服务端 idleTimeoutSeconds 完成死链双向检测。
+            // 记录发送时刻：PONG 回来时计算 RTT（LastRttMs 供诊断/延迟补偿使用）
+            pingSentTime = Time.realtimeSinceStartup;
+            if (!Send(NetworkConstants.ReservedPingMessageId, Array.Empty<byte>()))
             {
+                pingSentTime = -1f;
                 Log.Warning("[NetworkClient] 心跳发送失败");
             }
         }
@@ -486,7 +669,8 @@ namespace ReunionMovement.Common.Util
             {
                 var (hasResultLeft, result) = await UniTask.WhenAny(
                     tcs.Task,
-                    UniTask.Delay(timeout, ignoreTimeScale: false, PlayerLoopTiming.Update, ct));
+                    // 超时计时不受 timeScale 影响：游戏暂停（timeScale=0）时 RPC 不会悬挂到恢复
+                    UniTask.Delay(timeout, ignoreTimeScale: true, PlayerLoopTiming.Update, ct));
                 if (hasResultLeft) return result;
                 throw new TimeoutException($"请求超时（{timeout.TotalSeconds:0.0}s）");
             }

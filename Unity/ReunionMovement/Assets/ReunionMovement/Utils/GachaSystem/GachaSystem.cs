@@ -57,6 +57,18 @@ namespace ReunionMovement.Common.Util
         private int last5StarPullCount = 0; // 记录第几抽抽到5星
         private bool isLastPullUp = false; // 记录最近一次抽卡是否为UP
 
+        // ===== 公开查询 API（UI 展示保底进度/结果用，此前只能依赖 Log 输出） =====
+        /// <summary>当前五星保底计数（距离硬保底 90 抽）</summary>
+        public int Pity5Star => pity5Star;
+        /// <summary>当前四星保底计数（距离硬保底 10 抽）</summary>
+        public int Pity4Star => pity4Star;
+        /// <summary>最近一次抽出五星时的抽数（0 = 尚未出过五星）</summary>
+        public int Last5StarPullCount => last5StarPullCount;
+        /// <summary>最近一次抽卡是否为 UP</summary>
+        public bool IsLastPullUp => isLastPullUp;
+        /// <summary>是否处于五星大保底（下一次五星必为 UP）</summary>
+        public bool IsGuaranteedUp5Star => isGuaranteedUp5Star;
+
         // ===== 概率参数 =====
         private const float BASE_5STAR_RATE = 0.006f;    // 0.6%
         private const float BASE_4STAR_RATE = 0.051f;    // 5.1%
@@ -66,38 +78,146 @@ namespace ReunionMovement.Common.Util
         // ===== 核心抽卡逻辑 =====
         /// <summary>
         /// 执行一次抽卡（优先判定五星，其次四星，否则三星）。
-        /// 每次抽卡同时推进五星和四星保底计数。
+        /// 每次抽卡同时推进五星和四星保底计数，并同步保底持久化。
         /// </summary>
         /// <returns></returns>
         public GachaItem PerformPull()
         {
+            // 卡池全空时不应推进保底：否则空配置下保底被无意义消耗，且结果恒为 null
+            if ((up5StarPool == null || up5StarPool.Count == 0)
+                && (standard5StarPool == null || standard5StarPool.Count == 0)
+                && (up4StarPool == null || up4StarPool.Count == 0)
+                && (standard4StarPool == null || standard4StarPool.Count == 0)
+                && (standard3StarPool == null || standard3StarPool.Count == 0))
+            {
+                Log.Error("所有卡池为空！请在 Inspector 中配置卡池列表");
+                return null;
+            }
+
             pity5Star++;
             pity4Star++;
 
+            GachaItem result;
             // 五星保底判断
             if (Check5StarPull())
             {
-                return Get5StarItem();
+                result = Get5StarItem();
             }
             // 四星保底判断
             else if (Check4StarPull())
             {
-                return Get4StarItem();
+                result = Get4StarItem();
             }
             else
             {
-                return Get3StarItem();
+                result = Get3StarItem();
             }
+
+            // 保底持久化：每次抽卡更新存档（PlayerPrefs.SetString 为内存操作，
+            // Unity 在正常退出时统一落盘，避免"重启游戏保底清零"）
+            SavePityState();
+            return result;
         }
 
         /// <summary>
-        /// 执行一次抽卡并强制返回四星（用于十连保底，正常推进五星保底计数）。
+        /// 应用服务端下发的抽卡结果（客户端仅表现层，权威结果应由服务端下发以保证公平性）：
+        /// 按结果星级推进/重置保底计数，并同步保底/UP 状态与最近结果，返回结果供 UI 展示。
         /// </summary>
-        private GachaItem PerformPullForce4Star()
+        /// <param name="serverResult">服务端下发的抽卡结果项</param>
+        /// <param name="isUp">服务端下发的该结果是否为 UP（驱动大保底/UP 提示状态）</param>
+        public GachaItem ApplyServerResult(GachaItem serverResult, bool isUp = false)
         {
-            pity5Star++; // 这次替换抽卡也计入五星保底
-            return Get4StarItem();
+            if (serverResult == null) return null;
+
+            pity5Star++;
+            pity4Star++;
+
+            switch (serverResult.starRating)
+            {
+                case 5:
+                    last5StarPullCount = pity5Star;
+                    // 五星重置五星保底（四星保底独立，不重置）
+                    ResetCounters();
+                    // 同步保底/UP 状态：否则 IsGuaranteedUp5Star/IsLastPullUp 永远停留在
+                    // 本地模拟遗留值，大保底提示 UI 显示错误
+                    isGuaranteedUp5Star = !isUp;
+                    isLastPullUp = isUp;
+                    break;
+                case 4:
+                    pity4Star = 0;
+                    isGuaranteedUp4Star = !isUp;
+                    isLastPullUp = isUp;
+                    break;
+                default:
+                    // 3 星：仅推进计数，最近一次结果非 UP
+                    isLastPullUp = false;
+                    break;
+            }
+            // 服务端权威结果同样需要持久化（客户端展示的保底进度跨重启保持一致）
+            SavePityState();
+            return serverResult;
         }
+
+        #region 保底状态持久化
+        private const string PitySaveKey = "gacha_pity_save_v1";
+
+        [Serializable]
+        private class PitySaveData
+        {
+            public int pity5Star;
+            public int pity4Star;
+            public bool isGuaranteedUp5Star;
+            public bool isGuaranteedUp4Star;
+            public int last5StarPullCount;
+            public bool isLastPullUp;
+        }
+
+        /// <summary>
+        /// 保存保底状态到 PlayerPrefs（SetString 为内存操作，Unity 正常退出时统一落盘；
+        /// flush=true 立即强制落盘，供关键节点（账号登出/付费点）使用）。
+        /// </summary>
+        public void SavePityState(bool flush = false)
+        {
+            var data = new PitySaveData
+            {
+                pity5Star = pity5Star,
+                pity4Star = pity4Star,
+                isGuaranteedUp5Star = isGuaranteedUp5Star,
+                isGuaranteedUp4Star = isGuaranteedUp4Star,
+                last5StarPullCount = last5StarPullCount,
+                isLastPullUp = isLastPullUp,
+            };
+            PlayerPrefs.SetString(PitySaveKey, JsonUtility.ToJson(data));
+            if (flush) PlayerPrefs.Save();
+        }
+
+        /// <summary>从 PlayerPrefs 恢复保底状态（玩家重启后保底不清零，避免"重开"绕过保底）</summary>
+        public void LoadPityState()
+        {
+            if (!PlayerPrefs.HasKey(PitySaveKey)) return;
+            try
+            {
+                var data = JsonUtility.FromJson<PitySaveData>(PlayerPrefs.GetString(PitySaveKey));
+                if (data == null) return;
+                pity5Star = data.pity5Star;
+                pity4Star = data.pity4Star;
+                isGuaranteedUp5Star = data.isGuaranteedUp5Star;
+                isGuaranteedUp4Star = data.isGuaranteedUp4Star;
+                last5StarPullCount = data.last5StarPullCount;
+                isLastPullUp = data.isLastPullUp;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("GachaSystem 保底状态恢复失败: {0}", ex.Message);
+            }
+        }
+
+        /// <summary>清空持久化的保底状态（测试/重置账号）</summary>
+        public void ResetPityState()
+        {
+            PlayerPrefs.DeleteKey(PitySaveKey);
+        }
+        #endregion
 
         /// <summary>
         /// 五星保底判断
@@ -259,7 +379,11 @@ namespace ReunionMovement.Common.Util
 #endif
         }
 
-        public void Test()
+        /// <summary>
+        /// 测试用：填充演示卡池（会覆盖 Inspector 中配置的卡池数据）。
+        /// 此前为 public 可被业务误调覆盖配置；降为私有，仅调试代码内部可用。
+        /// </summary>
+        private void Test()
         {
             // 配置卡池
             up5StarPool = new List<GachaItem>

@@ -27,6 +27,10 @@ namespace ReunionMovement.Core.Sound
         public float fadeDuration = -1f; // -1 表示使用全局淡入淡出时长（与 volume 约定一致）
         public bool playOnAwake = false;
 
+        // 哨兵值转换：-1 表示“使用全局音量”，必须转 null 走 SoundSystem 的 float? 语义；
+        // 否则 -1f 会被当作真实音量写入 AudioSource.volume（静音）。
+        private float? NormalizedVolume => volume < 0f ? null : volume;
+
         // 播放列表行为
         public bool autoPlayNext = true; // 是否在曲目结束后自动播放下一曲
         public bool loopPlaylist = true; // 到达列表末尾后是否循环到开头
@@ -87,7 +91,7 @@ namespace ReunionMovement.Core.Sound
             }
             else
             {
-                await SoundSystem.Instance.PlayMusic(musicIndex, volume);
+                await SoundSystem.Instance.PlayMusic(musicIndex, NormalizedVolume);
             }
 
             ApplyLoopSetting();
@@ -117,7 +121,7 @@ namespace ReunionMovement.Core.Sound
             }
             else
             {
-                await SoundSystem.Instance.PlayMusic(index, volume);
+                await SoundSystem.Instance.PlayMusic(index, NormalizedVolume);
             }
 
             ApplyLoopSetting();

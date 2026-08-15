@@ -25,6 +25,12 @@ namespace ReunionMovement.Core
             Engine.OnUpdate(Time.deltaTime, Time.unscaledDeltaTime);
         }
 
+        private void LateUpdate()
+        {
+            if (Engine == null) return;
+            Engine.OnLateUpdate(Time.deltaTime, Time.unscaledDeltaTime);
+        }
+
         private void FixedUpdate()
         {
             if (Engine == null) return;

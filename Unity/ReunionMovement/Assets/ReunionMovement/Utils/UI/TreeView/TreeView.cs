@@ -34,8 +34,13 @@ namespace ReunionMovement
         }
 
         // 对象池
-        private readonly List<GameObject> pool = new List<GameObject>();
+        private readonly Queue<GameObject> pool = new Queue<GameObject>();
+        // 池容量上限：数据反复刷新/高频展开折叠时池无限增长会积压节点；超出直接销毁
+        private const int MaxPoolSize = 128;
         private Transform poolParent = null;
+        // 模板节点在容器中的索引缓存（-1 未缓存）：避免每次 Pop 线性扫描 container.childCount（批量展开 O(n²)→O(n)）；
+        // 使用时校验缓存仍指向模板，失效自动重扫
+        private int cachedTemplateIndex = -1;
 
         /// <summary>
         /// 插入数据
@@ -135,12 +140,15 @@ namespace ReunionMovement
         public GameObject Pop(TreeViewData data, int siblingIndex)
         {
             GameObject treeNode = null;
-            if (pool.Count > 0)
+            // Queue 出队 O(1)：原 List.RemoveAt(0) 每次 Pop 移位 O(n)，批量展开退化 O(n²)。
+            // 场景切换/池根被销毁后，池内引用会变成 fake-null，出队时逐个剔除重建
+            while (pool.Count > 0)
             {
-                treeNode = pool[0];
-                pool.RemoveAt(0);
+                treeNode = pool.Dequeue();
+                if (treeNode != null) break;
+                treeNode = null;
             }
-            else
+            if (treeNode == null)
             {
                 treeNode = CloneTreeNode();
             }
@@ -153,22 +161,29 @@ namespace ReunionMovement
         }
 
         /// <summary>
-        /// 计算插入位置：不再假设模板节点恒在 index 0，
-        /// 基于模板当前实际位置动态计算（容器布局改动后仍正确）。
+        /// 计算插入位置：不再假设模板节点恒在 index 0，基于模板当前实际位置动态计算（容器布局改动后仍正确）。
+        /// 模板索引带缓存：仅首次/缓存失效时扫描一次，批量展开不再 O(n²)。
         /// </summary>
         private int GetInsertSiblingIndex(int siblingIndex)
         {
             int templateIndex = 0;
             if (nodePrefab != null && container != null)
             {
-                for (int i = 0; i < container.childCount; i++)
+                // 缓存校验：索引越界或该位置不再是模板（布局被外部改动）时重新扫描
+                if (cachedTemplateIndex < 0 || cachedTemplateIndex >= container.childCount
+                    || container.GetChild(cachedTemplateIndex).gameObject != nodePrefab)
                 {
-                    if (container.GetChild(i).gameObject == nodePrefab)
+                    cachedTemplateIndex = 0;
+                    for (int i = 0; i < container.childCount; i++)
                     {
-                        templateIndex = i;
-                        break;
+                        if (container.GetChild(i).gameObject == nodePrefab)
+                        {
+                            cachedTemplateIndex = i;
+                            break;
+                        }
                     }
                 }
+                templateIndex = cachedTemplateIndex;
             }
             return templateIndex + 1 + siblingIndex;
         }
@@ -189,6 +204,13 @@ namespace ReunionMovement
         /// <param name="treeNode"></param>
         public void Push(GameObject treeNode)
         {
+            if (treeNode == null) return;
+            // 容量上限：池满时直接销毁，防止数据反复刷新场景下无限积压节点
+            if (pool.Count >= MaxPoolSize)
+            {
+                UnityEngine.Object.Destroy(treeNode);
+                return;
+            }
             if (poolParent == null)
             {
                 poolParent = new GameObject("CachePool").transform;
@@ -196,7 +218,7 @@ namespace ReunionMovement
             treeNode.transform.SetParent(poolParent, false);
             treeNode.transform.localScale = Vector3.one;
             treeNode.SetActive(false);
-            pool.Add(treeNode);
+            pool.Enqueue(treeNode);
         }
 
         protected override void OnDestroy()

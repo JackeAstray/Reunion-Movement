@@ -26,7 +26,12 @@ namespace ReunionMovement.Common.Util
             {
                 itemName.text = name;
             }
-            gameObject.name = name;
+            // 仅名字变化时重命名：高频滚动下每次绑定都写 gameObject.name 会产生字符串分配，
+            // 重名还会触发 Unity 自动追加 "(1)" 后缀（运行期 Hierarchy 命名无收益）
+            if (gameObject.name != name)
+            {
+                gameObject.name = name;
+            }
             // 确保视觉效果反映当前的选择状态
             UpdateVisual();
         }

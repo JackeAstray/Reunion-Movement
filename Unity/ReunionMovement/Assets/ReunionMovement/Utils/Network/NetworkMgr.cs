@@ -1,5 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using ReunionMovement.Core.Base;
+using System;
 using System.Collections.Generic;
 
 namespace ReunionMovement.Common.Util
@@ -218,13 +219,15 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 消费延迟删除队列（ScheduleRemove 入队），同步清理 List 和 Index。
+        /// 消费延迟删除队列（ScheduleRemove 入队），同步清理 List 和 Index，
+        /// 并关闭被移除的通道（锁外 Close，与 RemoveChannel/CloseChannel 行为一致）。
         /// 本项目通道由 UniversalNetworkBehaviour.Update 直接驱动 TickRefresh，
-        /// 因此这里只清理移除队列，不重复 Tick。
+        /// 因此这里不重复 Tick。
         /// </summary>
         private void DrainRemoveQueue()
         {
             if (channelDictRemove.Count == 0) return;
+            List<INetworkChannel> toClose = null;
             lock (syncRoot)
             {
                 if (channelDictRemove.Count == 0) return;
@@ -239,8 +242,20 @@ namespace ReunionMovement.Common.Util
                     {
                         channelIndex.Remove(ch.ChannelName);
                     }
+                    // 收集待关闭通道：此前仅从集合移除不 Close，第三方直接注册的通道
+                    // 经 ScheduleRemove 移除后其线程/socket/事件订阅永久泄漏
+                    (toClose ?? (toClose = new List<INetworkChannel>())).Add(ch);
                 }
                 channelDictRemove.Clear();
+            }
+
+            if (toClose != null)
+            {
+                foreach (var ch in toClose)
+                {
+                    try { ch.Close(); }
+                    catch (Exception ex) { Log.Warning("[NetworkMgr] 延迟移除通道 Close 异常（已隔离）: {0}", ex.Message); }
+                }
             }
         }
 

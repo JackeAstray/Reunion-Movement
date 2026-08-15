@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Pool;
 
@@ -34,6 +35,10 @@ namespace ReunionMovement.Common.Util.Pool
 
         /// <summary>池内对象的挂载根节点（保持场景层级整洁）</summary>
         private Transform poolRoot;
+
+        /// <summary>per-实例 IPoolable 组件表缓存（CreateInstance 时登记）：Get/Release 高频路径不再每次分配数组</summary>
+        private readonly Dictionary<GameObject, (int instanceId, IPoolable[] components)> poolablesCache
+            = new Dictionary<GameObject, (int instanceId, IPoolable[] components)>();
 
         private void Awake()
         {
@@ -121,28 +126,42 @@ namespace ReunionMovement.Common.Util.Pool
             if (prefab == null)
             {
                 Debug.LogError($"GameObjectPool[{name}]: prefab 未赋值，无法创建池化对象");
-                return new GameObject("EmptyPoolItem");
+                // 返回 null（不再创建 EmptyPoolItem 污染池）：Get 返回 null，调用方判空处理
+                return null;
             }
             var go = Instantiate(prefab, poolRoot, false);
             go.name = prefab.name;
+            // 创建时一次性缓存 IPoolable 组件表（含子对象）：避免每次取出/归还分配数组。
+            // 同时记录 instanceID：外部销毁在途实例后，Unity 对象哈希基于 instanceID，
+            // ID 复用给新对象时若命中旧条目会对错误对象执行 OnSpawned/OnDespawned，必须比对
+            poolablesCache[go] = (go.GetInstanceID(), go.GetComponentsInChildren<IPoolable>(true));
             return go;
         }
 
         private void OnTakeFromPool(GameObject go)
         {
+            // prefab 未赋值时 CreateInstance 返回 null，ObjectPool 仍会回调本方法
+            if (go == null) return;
             go.SetActive(true);
             // IPoolable 钩子：通知自身及子对象的池化组件（替代 SendMessage 反射）
-            foreach (var poolable in go.GetComponentsInChildren<IPoolable>(true))
+            if (poolablesCache.TryGetValue(go, out var entry) && entry.instanceId == go.GetInstanceID())
             {
-                poolable.OnSpawned();
+                foreach (var poolable in entry.components)
+                {
+                    poolable.OnSpawned();
+                }
             }
         }
 
         private void OnReturnToPool(GameObject go)
         {
-            foreach (var poolable in go.GetComponentsInChildren<IPoolable>(true))
+            if (go == null) return;
+            if (poolablesCache.TryGetValue(go, out var entry) && entry.instanceId == go.GetInstanceID())
             {
-                poolable.OnDespawned();
+                foreach (var poolable in entry.components)
+                {
+                    poolable.OnDespawned();
+                }
             }
             go.SetActive(false);
             go.transform.SetParent(poolRoot, false);
@@ -150,7 +169,11 @@ namespace ReunionMovement.Common.Util.Pool
 
         private void OnDestroyInstance(GameObject go)
         {
-            if (go != null) Destroy(go);
+            if (go != null)
+            {
+                poolablesCache.Remove(go);
+                Destroy(go);
+            }
         }
 
         private void OnDestroy()
@@ -159,6 +182,7 @@ namespace ReunionMovement.Common.Util.Pool
             // 避免池对象与池根残留为孤儿场景对象
             pool?.Dispose();
             pool = null;
+            poolablesCache.Clear();
         }
     }
 }

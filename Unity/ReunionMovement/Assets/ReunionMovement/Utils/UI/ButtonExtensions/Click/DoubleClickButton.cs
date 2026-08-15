@@ -1,7 +1,4 @@
 using ReunionMovement.Common;
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -21,8 +18,12 @@ namespace ReunionMovement.UI.ButtonClick
             set { doubleClick = value; }
         }
 
-        private DateTime firstTime;
-        private DateTime secondTime;
+        // 首次有效点击时间（Time.unscaledTime，-1 表示未记录；不用墙钟，避免系统时间被校准/手动调整时跳变误判，且暂停不累积）
+        private float firstClickTime = -1f;
+        // 本次按下的时间（抬起时校验按住时长，长按不构成有效点击）
+        private float currentDownTime = -1f;
+        // 双击判定窗口（秒）：两次有效点击（按下→抬起）的最大间隔
+        private const float DoubleClickWindow = 0.4f;
 
         // 新增：是否启用输入与键表（默认与原实现一致）
         [SerializeField]
@@ -58,22 +59,9 @@ namespace ReunionMovement.UI.ButtonClick
         public override void OnPointerDown(PointerEventData eventData)
         {
             base.OnPointerDown(eventData);
-            var now = DateTime.Now;
-            if (firstTime.Equals(default(DateTime)))
-            {
-                firstTime = now;
-            }
-            else if ((now - firstTime).TotalMilliseconds > 400)
-            {
-                // 距上次单击已超过双击窗口：本次作为新的第一次点击，
-                // 避免"单击后长时间再双击"时第一次点击被当作 secondTime 导致双击永不触发
-                firstTime = now;
-                secondTime = default(DateTime);
-            }
-            else
-            {
-                secondTime = now;
-            }
+            // 仅记录本次按下时间：双击判定移到抬起时，基于两次完整点击（按下→抬起）的间隔。
+            // 旧实现基于两次按下间隔，第二次按住超过窗口再抬起仍会误触发双击。
+            currentDownTime = Time.unscaledTime;
         }
 
         /// <summary>
@@ -142,24 +130,10 @@ namespace ReunionMovement.UI.ButtonClick
             if (!pressedThisFrame && GamepadPressedThisFrame()) pressedThisFrame = true;
             if (!releasedThisFrame && GamepadReleasedThisFrame()) releasedThisFrame = true;
 
-            // 在按下帧记录时间（与鼠标 OnPointerDown 相同逻辑）
+            // 在按下帧仅记录按下时间（与鼠标 OnPointerDown 相同逻辑，双击判定在抬起帧执行）
             if (pressedThisFrame)
             {
-                var now = DateTime.Now;
-                if (firstTime.Equals(default(DateTime)))
-                {
-                    firstTime = now;
-                }
-                else if ((now - firstTime).TotalMilliseconds > 400)
-                {
-                    // 距上次单击已超时：本次作为新的第一次点击
-                    firstTime = now;
-                    secondTime = default(DateTime);
-                }
-                else
-                {
-                    secondTime = now;
-                }
+                currentDownTime = Time.unscaledTime;
             }
 
             // 在抬起帧做检查（与鼠标 OnPointerUp 相同逻辑）
@@ -170,25 +144,38 @@ namespace ReunionMovement.UI.ButtonClick
         }
 
         /// <summary>
-        /// 检查两次点击间隔并处理双击
+        /// 检查两次点击间隔并处理双击。
+        /// 判定基于两次完整点击（按下→抬起）的抬起时刻间隔：
+        /// - 按住超过窗口的“长按”不构成有效点击（旧实现基于按下间隔，第二次长按仍误判双击）；
+        /// - 两次有效点击间隔 ≤ 窗口时触发双击，超时则将本次点击作为新的第一次。
         /// </summary>
         private void TryHandleClickInterval()
         {
-            if (!firstTime.Equals(default(DateTime)) && !secondTime.Equals(default(DateTime)))
+            // 从未按下（无有效按下记录）时直接丢弃
+            if (currentDownTime < 0f) return;
+
+            float now = Time.unscaledTime;
+            // 长按（按下到抬起超过窗口）不构成有效点击：直接丢弃本次按压
+            if (now - currentDownTime > DoubleClickWindow) return;
+
+            if (firstClickTime < 0f)
             {
-                var intervalTime = secondTime - firstTime;
-                // TotalMilliseconds 包含分/小时等全部跨度，避免 TimeSpan.Seconds 只含 0-59 部分
-                // 导致超过 59 秒的间隔被误判为合法双击
-                double milliSeconds = intervalTime.TotalMilliseconds;
-                Log.Debug($"[DoubleClickButton] 两次点击间隔：{milliSeconds:F0} 毫秒");
-                if (milliSeconds < 400)
-                {
-                    Press();
-                }
-                else
-                {
-                    resetTime();
-                }
+                // 第一次有效点击
+                firstClickTime = now;
+                return;
+            }
+
+            var intervalMs = (now - firstClickTime) * 1000f;
+            Log.Debug($"[DoubleClickButton] 两次点击间隔：{intervalMs:F0} 毫秒");
+            if (intervalMs <= DoubleClickWindow * 1000f)
+            {
+                // 两次有效点击在窗口内：触发双击（Press 内部会 resetTime）
+                Press();
+            }
+            else
+            {
+                // 超过窗口：本次点击成为新的第一次
+                firstClickTime = now;
             }
         }
 
@@ -197,8 +184,8 @@ namespace ReunionMovement.UI.ButtonClick
         /// </summary>
         private void resetTime()
         {
-            firstTime = default(DateTime);
-            secondTime = default(DateTime);
+            firstClickTime = -1f;
+            currentDownTime = -1f;
         }
 
         protected override void OnDisable()

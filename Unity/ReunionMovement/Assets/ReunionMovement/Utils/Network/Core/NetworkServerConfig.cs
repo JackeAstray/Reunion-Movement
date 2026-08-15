@@ -25,6 +25,13 @@ namespace ReunionMovement.Common.Util
         [Tooltip("流式组装缓冲上限（字节），防恶意超大帧")]
         public int maxAssembledFrameSize = 1 << 20;
 
+        [Header("服务端防护")]
+        [Tooltip("空闲超时（秒，0=禁用）：超过时长未收到任何数据的连接被断开（需客户端启用心跳配合）")]
+        public float idleTimeoutSeconds = 0f;
+
+        [Tooltip("单连接消息速率上限（条/秒，0=不限）：超限消息被丢弃（防刷消息 DoS）")]
+        public int maxMessagesPerSecond = 0;
+
         public NetworkServerConfig Clone()
         {
             return (NetworkServerConfig)MemberwiseClone();

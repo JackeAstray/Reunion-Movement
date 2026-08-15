@@ -50,8 +50,9 @@ namespace ReunionMovement.UI.ButtonClick
         [SerializeField]
         public Image progressBar;
 
-        //按下时间
-        private DateTime pressStartTime;
+        //按下时间（Time.unscaledTime，-1 表示未按下；不用墙钟，避免系统时间跳变误判）
+        private float pressStartTime = -1f;
+
         //长按取消令牌
         private CancellationTokenSource longPressCts;
         //进度条动画取消令牌
@@ -196,9 +197,9 @@ namespace ReunionMovement.UI.ButtonClick
         /// </summary>
         private void StartPressIfNeeded()
         {
-            if (pressStartTime == default)
+            if (pressStartTime < 0f)
             {
-                pressStartTime = DateTime.Now;
+                pressStartTime = Time.unscaledTime;
                 longPressCts = new CancellationTokenSource();
                 progressCts = new CancellationTokenSource();
                 StartLongPressingAsync(longPressCts.Token).Forget();
@@ -217,10 +218,14 @@ namespace ReunionMovement.UI.ButtonClick
             progressCts = null;
             ResetProgressBar();
 
-            if (pressStartTime != default)
+            // 按压可能已被取消（OnPointerExit / 失去选中）：取消状态下抬起不再处理长按判定，
+            // 也不触发 onButtonUp（移出按钮后的抬起不应算完整点击）
+            if (pressStartTime >= 0f)
             {
-                var pressDuration = DateTime.Now - pressStartTime;
-                if (pressDuration.TotalMilliseconds > longPressDuration * 1000f)
+                // 使用 unscaledTime 而非墙钟：与 onLongPressing 协程/进度条的 unscaled 基准保持一致；
+                // 系统时间被 NTP 校准/手动调整时会跳变导致长按误判，且暂停（timeScale=0）不应累积按压时长
+                float pressDuration = Time.unscaledTime - pressStartTime;
+                if (pressDuration > longPressDuration)
                 {
                     TriggerLongClick();
                 }
@@ -228,10 +233,10 @@ namespace ReunionMovement.UI.ButtonClick
                 {
                     ResetPressTime();
                 }
-            }
 
-            // 触发按钮抬起事件
-            onButtonUp?.Invoke();
+                // 触发按钮抬起事件
+                onButtonUp?.Invoke();
+            }
         }
 
         /// <summary>
@@ -251,7 +256,7 @@ namespace ReunionMovement.UI.ButtonClick
         /// </summary>
         private void ResetPressTime()
         {
-            pressStartTime = default;
+            pressStartTime = -1f;
         }
 
         /// <summary>

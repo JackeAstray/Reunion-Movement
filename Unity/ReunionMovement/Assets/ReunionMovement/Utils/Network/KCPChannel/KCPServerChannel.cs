@@ -124,6 +124,14 @@ namespace ReunionMovement.Common.Util
         }
         public bool SendMessage(KcpReliableType reliableType, int connectionId, byte[] data)
         {
+            // kcp2k 的 Send 无返回值：发送前校验连接有效性，否则恒返回 true 导致上层
+            // 流量统计失真、业务误判发送成功
+            if (server.GetClientEndPoint(connectionId) == null)
+            {
+                Log.Warning("KCP 发送失败：连接 {0} 不存在", connectionId);
+                return false;
+            }
+
             var segment = new ArraySegment<byte>(data);
             var byteType = (byte)reliableType;
             var channelId = (KcpChannel)byteType;

@@ -181,6 +181,15 @@ namespace ReunionMovement.Common.Util.HttpService
         }
 
         /// <summary>
+        /// 请求生命周期结束标记（Send 协程正常完成/中止时由 UnityHttpService 调用）：
+        /// 此时底层 UWR 已被 using 释放，标记后 Abort/UpdateProgress 不再访问已释放对象。
+        /// </summary>
+        internal void MarkDisposed()
+        {
+            IsDisposed = true;
+        }
+
+        /// <summary>
         /// 设置重定向限制
         /// </summary>
         /// <param name="redirectLimit"></param>

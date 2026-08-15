@@ -88,7 +88,12 @@ namespace ReunionMovement.Common.Util
         private void ApplyDirection(Vector2 originPosOnScreen)
         {
             Vector2 differenceToMouse = Pointer.current != null ? Pointer.current.position.ReadValue() - originPosOnScreen : Vector2.zero;
-            differenceToMouse.Scale(new Vector2(1f / myRect.localScale.x, 1f / myRect.localScale.y));
+            // 除零防护：localScale 任一轴为 0 时除法得 Inf/NaN，随后写入 transform.up 产生 NaN 旋转
+            Vector3 scale = myRect.localScale;
+            if (scale.x != 0f && scale.y != 0f)
+            {
+                differenceToMouse.Scale(new Vector2(1f / scale.x, 1f / scale.y));
+            }
 
             // 鼠标恰好位于箭头上方时方向向量为零，跳过旋转/长度设置，避免 NaN 与除零
             if (differenceToMouse.sqrMagnitude < 0.0001f)

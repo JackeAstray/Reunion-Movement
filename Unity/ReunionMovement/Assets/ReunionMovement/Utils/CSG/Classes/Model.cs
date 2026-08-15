@@ -32,9 +32,20 @@ namespace ReunionMovement.Common.Util
             set { m_Indices = value; }
         }
 
+        private Mesh m_CachedMesh;
+
         public Mesh mesh
         {
-            get { return (Mesh)this; }
+            get
+            {
+                // 缓存转换结果：显式转换每次调用都新建 Mesh（顶点/索引/材质全量复制），
+                // 多次访问（示例中先赋 MeshFilter 再 ToArray 等）会重复构建
+                if (m_CachedMesh == null)
+                {
+                    m_CachedMesh = (Mesh)this;
+                }
+                return m_CachedMesh;
+            }
         }
 
         public Model(GameObject gameObject) :

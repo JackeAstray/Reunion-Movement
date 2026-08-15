@@ -24,6 +24,8 @@ namespace ReunionMovement.Common.Util
         readonly Dictionary<int, ServerConnection> connections = new Dictionary<int, ServerConnection>();
         readonly Dictionary<ushort, Func<int, byte[], byte[]>> requestHandlers = new Dictionary<ushort, Func<int, byte[], byte[]>>();
         readonly Dictionary<Type, Action<int, object>> objectHandlers = new Dictionary<Type, Action<int, object>>();
+        // TickIdleTimeout 的复用缓冲（避免每帧 new List 分配）
+        readonly List<int> idleExpiredBuffer = new List<int>();
 
         INetworkServerChannel channel;
         bool started;
@@ -65,6 +67,12 @@ namespace ReunionMovement.Common.Util
         {
             if (started) return true;
             channel = NetworkChannelFactory.CreateServer(config.transport, config.channelName, config.port);
+            // RawTcp 双套空闲超时统一：通道层 IdleTimeoutSeconds 未单独配置时沿用 config.idleTimeoutSeconds，
+            // 避免"NetworkServer 配了踢人时间但通道层不生效"的静默失效
+            if (channel is RawTcpServerChannel raw && raw.IdleTimeoutSeconds <= 0f && config.idleTimeoutSeconds > 0f)
+            {
+                raw.IdleTimeoutSeconds = config.idleTimeoutSeconds;
+            }
             channel.OnConnected += HandleConnected;
             channel.OnDataReceived += HandleData;
             channel.OnDisconnected += HandleDisconnected;
@@ -98,10 +106,33 @@ namespace ReunionMovement.Common.Util
             try { OnStopped?.Invoke(); } catch (Exception ex) { Log.Warning("[NetworkServer] OnStopped 回调异常: {0}", ex.Message); }
         }
 
-        /// <summary>驱动一帧（服务端事件在本帧内派发）</summary>
+        /// <summary>驱动一帧（服务端事件在本帧内派发 + 空闲超时回收）</summary>
         public void Tick()
         {
-            if (started) channel?.TickRefresh();
+            if (!started) return;
+            channel?.TickRefresh();
+            TickIdleTimeout();
+        }
+
+        /// <summary>空闲超时回收：超过 idleTimeoutSeconds 未收到任何数据的连接被断开
+        /// （客户端启用心跳后定期发 PING，活跃连接不会误伤；半开/静默连接被清理）</summary>
+        void TickIdleTimeout()
+        {
+            if (config.idleTimeoutSeconds <= 0f || connections.Count == 0) return;
+            float now = Time.realtimeSinceStartup;
+            idleExpiredBuffer.Clear();
+            foreach (var kv in connections)
+            {
+                if (now - kv.Value.Info.LastReceiveTime > config.idleTimeoutSeconds)
+                {
+                    idleExpiredBuffer.Add(kv.Key);
+                }
+            }
+            foreach (var id in idleExpiredBuffer)
+            {
+                Log.Warning("[NetworkServer] 连接 {0} 空闲超时（{1}s 未收到数据），已断开", id, config.idleTimeoutSeconds);
+                DisconnectClient(id);
+            }
         }
         #endregion
 
@@ -279,7 +310,7 @@ namespace ReunionMovement.Common.Util
         {
             if (!NetworkRpcFrames.TryDecodeRequest(payload, out int correlationId, out ushort targetMessageId, out var requestPayload))
             {
-                OnError?.Invoke(connectionId, "RPC 请求帧格式错误");
+                TryNotifyError(connectionId, "RPC 请求帧格式错误");
                 return;
             }
             byte[] response = Array.Empty<byte>();
@@ -292,16 +323,23 @@ namespace ReunionMovement.Common.Util
                 catch (Exception ex)
                 {
                     Log.Warning("[NetworkServer] RPC 请求 {0} 处理器异常: {1}", targetMessageId, ex.Message);
-                    OnError?.Invoke(connectionId, $"RPC 请求 {targetMessageId} 处理器异常: " + ex.Message);
+                    TryNotifyError(connectionId, $"RPC 请求 {targetMessageId} 处理器异常: " + ex.Message);
                 }
             }
             else
             {
                 Log.Warning("[NetworkServer] 未注册的 RPC 请求 ID: {0}", targetMessageId);
-                OnError?.Invoke(connectionId, $"未注册的 RPC 请求 ID: {targetMessageId}");
+                TryNotifyError(connectionId, $"未注册的 RPC 请求 ID: {targetMessageId}");
             }
             // 无论成败均回执（异常/未注册回空响应），避免请求方一直等待
             Send(connectionId, NetworkConstants.ReservedResponseMessageId, NetworkRpcFrames.EncodeResponse(correlationId, response));
+        }
+
+        /// <summary>OnError 订阅者异常隔离（与 HandleError 一致，异常不得沿派发链崩掉主循环）</summary>
+        void TryNotifyError(int connectionId, string message)
+        {
+            try { OnError?.Invoke(connectionId, message); }
+            catch (Exception ex) { Log.Warning("[NetworkServer] OnError 回调异常: {0}", ex.Message); }
         }
         #endregion
 
@@ -339,8 +377,61 @@ namespace ReunionMovement.Common.Util
             conn.Assembler.Feed(data, (messageId, frame, payload) => HandleFrame(connectionId, conn, messageId, frame, payload));
         }
 
+        /// <summary>ACK 回包 [4B seq] 复用缓冲（Send→codec.Encode 同步拷贝，主线程无重入风险，零分配）</summary>
+        static readonly byte[] ackSeqBuffer = new byte[4];
+
         void HandleFrame(int connectionId, ServerConnection conn, ushort messageId, ArraySegment<byte> frame, ArraySegment<byte> payload)
         {
+            // 系统帧：心跳 PING（客户端→服务端）—— 自动回 PONG 应答，不计入速率限制
+            if (messageId == NetworkConstants.ReservedPingMessageId)
+            {
+                Send(connectionId, NetworkConstants.ReservedPongMessageId, Array.Empty<byte>());
+                return;
+            }
+            // 系统帧：PONG（客户端不应主动发送）
+            if (messageId == NetworkConstants.ReservedPongMessageId)
+            {
+                Log.Warning("[NetworkServer] 连接 {0} 主动发送 PONG 帧，已忽略", connectionId);
+                return;
+            }
+            // 系统帧：可靠消息（客户端 SendReliableAsync）—— 解包 [seq][原消息 ID][负载]，
+            // 先回 ACK（及时解除客户端重发），再按原消息递归派发
+            if (messageId == NetworkConstants.ReservedAckMessageId)
+            {
+                if (payload.Count >= 6)
+                {
+                    var arr = payload.Array;
+                    int off = payload.Offset;
+                    int seq = arr[off] | (arr[off + 1] << 8) | (arr[off + 2] << 16) | (arr[off + 3] << 24);
+                    ushort innerId = (ushort)(arr[off + 4] | (arr[off + 5] << 8));
+                    // 防御：内嵌消息不得为系统保留帧（防嵌套递归/伪造 ACK 循环）
+                    if (NetworkConstants.IsReservedMessageId(innerId))
+                    {
+                        Log.Warning("[NetworkServer] 连接 {0} 可靠帧内嵌系统保留 ID {1}，已忽略", connectionId, innerId);
+                        return;
+                    }
+                    // ACK 去重：ACK 丢失时客户端会重发同一 seq，若不记录已处理 seq 会重复派发业务消息
+                    // （支付/存档类消息 at-least-once 且无幂等保护）。重复 seq 仍回 ACK 止住客户端重发，但不再派发
+                    bool isDuplicate = !conn.TryMarkReliableSeq(seq);
+                    // 回 ACK：[4B seq]（复用静态缓冲，Encode 同步拷贝无持有风险）
+                    ackSeqBuffer[0] = (byte)seq;
+                    ackSeqBuffer[1] = (byte)(seq >> 8);
+                    ackSeqBuffer[2] = (byte)(seq >> 16);
+                    ackSeqBuffer[3] = (byte)(seq >> 24);
+                    Send(connectionId, NetworkConstants.ReservedAckMessageId, ackSeqBuffer);
+                    if (isDuplicate) return;
+                    // 按原消息递归派发（业务对可靠发送无感知）。frame 传合成帧段
+                    // （[seq][原ID][负载] 均位于 off 起的连续内存），不能传 default：
+                    // 空段的 ToArray 会抛 ArgumentException，导致每条可靠消息刷一条错误日志
+                    // 且 OnRawFrame 订阅者拿不到可靠帧原文
+                    HandleFrame(connectionId, conn, innerId,
+                        new ArraySegment<byte>(arr, off, 6 + payload.Count - 6),
+                        new ArraySegment<byte>(arr, off + 6, payload.Count - 6));
+                    return;
+                }
+                Log.Warning("[NetworkServer] 连接 {0} 可靠帧格式错误，已忽略", connectionId);
+                return;
+            }
             // 系统帧：RPC 请求
             if (messageId == NetworkConstants.ReservedRequestMessageId)
             {
@@ -354,8 +445,33 @@ namespace ReunionMovement.Common.Util
                 return;
             }
 
-            try { OnRawFrame?.Invoke(connectionId, frame.ToArray()); }
-            catch (Exception ex) { Log.Warning("[NetworkServer] OnRawFrame 回调异常: {0}", ex.Message); }
+            // 消息速率限制：单连接超限丢弃本帧（防刷消息 DoS）
+            if (config.maxMessagesPerSecond > 0)
+            {
+                float now = Time.realtimeSinceStartup;
+                if (now - conn.MessageWindowStart >= 1f)
+                {
+                    conn.MessageWindowStart = now;
+                    conn.MessageCountInWindow = 0;
+                }
+                if (++conn.MessageCountInWindow > config.maxMessagesPerSecond)
+                {
+                    conn.DroppedMessages++;
+                    // 低频告警：每丢弃 100 条记一次，避免刷屏
+                    if (conn.DroppedMessages % 100 == 1)
+                    {
+                        Log.Warning("[NetworkServer] 连接 {0} 消息速率超限（>{1}/s），丢弃本帧（累计丢弃 {2}）",
+                            connectionId, config.maxMessagesPerSecond, conn.DroppedMessages);
+                    }
+                    return;
+                }
+            }
+
+            if (OnRawFrame != null)
+            {
+                try { OnRawFrame(connectionId, frame.ToArray()); }
+                catch (Exception ex) { Log.Warning("[NetworkServer] OnRawFrame 回调异常: {0}", ex.Message); }
+            }
 
             try { OnMessage?.Invoke(connectionId, messageId, payload); }
             catch (Exception ex) { Log.Warning("[NetworkServer] OnMessage 回调异常: {0}", ex.Message); }
@@ -430,17 +546,40 @@ namespace ReunionMovement.Common.Util
         }
         #endregion
 
-        /// <summary>服务端连接内部状态（信息 + 组装器 + 独立分发器）</summary>
+        /// <summary>服务端连接内部状态（信息 + 组装器 + 独立分发器 + 速率限制窗口）</summary>
         sealed class ServerConnection
         {
             public readonly NetworkConnectionInfo Info;
             public readonly NetworkStreamAssembler Assembler;
             public readonly NetworkMessageDispatcher Dispatcher = new NetworkMessageDispatcher();
 
+            // 速率限制窗口（主线程访问）
+            public float MessageWindowStart;
+            public int MessageCountInWindow;
+            public int DroppedMessages;
+
+            // 可靠消息 seq 去重（主线程访问）：ACQ 丢失重发时防止重复派发业务消息
+            const int MaxTrackedSeqs = 256;
+            readonly HashSet<int> recentReliableSeqs = new HashSet<int>();
+            readonly Queue<int> reliableSeqOrder = new Queue<int>();
+
+            /// <summary>标记可靠消息 seq 已处理；返回 false 表示重复 seq（已处理过）</summary>
+            public bool TryMarkReliableSeq(int seq)
+            {
+                if (!recentReliableSeqs.Add(seq)) return false;
+                reliableSeqOrder.Enqueue(seq);
+                while (reliableSeqOrder.Count > MaxTrackedSeqs)
+                {
+                    recentReliableSeqs.Remove(reliableSeqOrder.Dequeue());
+                }
+                return true;
+            }
+
             public ServerConnection(int connectionId, string address, INetworkMessageCodec codec, int maxFrameSize)
             {
                 Info = new NetworkConnectionInfo(connectionId, address);
                 Assembler = new NetworkStreamAssembler(codec, maxFrameSize);
+                MessageWindowStart = Time.realtimeSinceStartup;
             }
         }
     }

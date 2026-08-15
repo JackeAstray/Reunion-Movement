@@ -42,6 +42,9 @@ namespace ReunionMovement.Common.Util
         public float heartbeatInterval = 5f;
         public string heartbeatText = "PING";
 
+        [Tooltip("服务端收到消息后是否回显给发送者（调试用；默认关闭，回显会使流量翻倍）")]
+        public bool echoToSender = false;
+
         [Header("Inspector 控制")]
         public string inspectorSendText = "Hello from Inspector";
 

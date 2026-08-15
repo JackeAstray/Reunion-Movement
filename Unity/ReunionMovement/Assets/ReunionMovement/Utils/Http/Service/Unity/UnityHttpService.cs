@@ -101,56 +101,68 @@ namespace ReunionMovement.Common.Util.HttpService
                 throw new ArgumentException("UnityHttpService 仅支持 UnityHttpRequest，实际类型: " + request?.GetType().Name);
             }
 
-            using (UnityWebRequest unityWebRequest = unityHttpRequest.UnityWebRequest)
+            try
             {
-                // 默认超时：若调用方未显式设置，则使用默认值，避免请求永久挂起
-                if (unityWebRequest.timeout <= 0)
-                    unityWebRequest.timeout = DefaultTimeoutSeconds;
+                using (UnityWebRequest unityWebRequest = unityHttpRequest.UnityWebRequest)
+                {
+                    // 默认超时：若调用方未显式设置，则使用默认值，避免请求永久挂起
+                    if (unityWebRequest.timeout <= 0)
+                        unityWebRequest.timeout = DefaultTimeoutSeconds;
 
-                yield return unityWebRequest.SendWebRequest();
+                    yield return unityWebRequest.SendWebRequest();
 
-                // 请求已被取消并释放（HttpMgr.Abort 路径下协程被 cts 掐断后仍可能恢复执行）：
-                // 直接结束协程，避免继续访问已 Dispose 的 UWR 抛异常、并刷出误导性的"SendAsync 异常"错误日志
-                if (unityHttpRequest.IsDisposed)
-                {
-                    yield break;
-                }
+                    // 请求已被取消并释放（HttpMgr.Abort 路径下协程被 cts 掐断后仍可能恢复执行）：
+                    // 直接结束协程，避免继续访问已 Dispose 的 UWR 抛异常、并刷出误导性的"SendAsync 异常"错误日志
+                    if (unityHttpRequest.IsDisposed)
+                    {
+                        yield break;
+                    }
 
-                var response = new HttpResponse
-                {
-                    url = unityWebRequest.url,
-                    bytes = unityWebRequest.downloadHandler?.data,
-                    text = unityWebRequest.downloadHandler?.text,
-                    isSuccessful = unityWebRequest.result == UnityWebRequest.Result.Success,
-                    isHttpError = unityWebRequest.result == UnityWebRequest.Result.ProtocolError,
-                    isNetworkError = unityWebRequest.result == UnityWebRequest.Result.ConnectionError,
-                    error = unityWebRequest.error,
-                    statusCode = unityWebRequest.responseCode,
-                    responseHeaders = unityWebRequest.GetResponseHeaders(),
-                    texture = (unityWebRequest.downloadHandler as DownloadHandlerTexture)?.texture
-                };
+                    var response = new HttpResponse
+                    {
+                        url = unityWebRequest.url,
+                        bytes = unityWebRequest.downloadHandler?.data,
+                        text = unityWebRequest.downloadHandler?.text,
+                        isSuccessful = unityWebRequest.result == UnityWebRequest.Result.Success,
+                        isHttpError = unityWebRequest.result == UnityWebRequest.Result.ProtocolError,
+                        isNetworkError = unityWebRequest.result == UnityWebRequest.Result.ConnectionError,
+                        error = unityWebRequest.error,
+                        statusCode = unityWebRequest.responseCode,
+                        responseHeaders = unityWebRequest.GetResponseHeaders(),
+                        texture = (unityWebRequest.downloadHandler as DownloadHandlerTexture)?.texture
+                    };
 
-                if (response.isNetworkError) // 使用修正后的条件
-                {
-                    onNetworkError?.Invoke(response);
+                    if (response.isNetworkError) // 使用修正后的条件
+                    {
+                        onNetworkError?.Invoke(response);
+                    }
+                    else if (response.isHttpError) // 使用修正后的条件
+                    {
+                        onError?.Invoke(response);
+                    }
+                    else if (response.isSuccessful) // 检查请求是否成功
+                    {
+                        onSuccess?.Invoke(response);
+                    }
                 }
-                else if (response.isHttpError) // 使用修正后的条件
-                {
-                    onError?.Invoke(response);
-                }
-                else if (response.isSuccessful) // 检查请求是否成功
-                {
-                    onSuccess?.Invoke(response);
-                }
+            }
+            finally
+            {
+                // 请求生命周期结束（正常完成/中止/异常）：标记底层 UWR 不可再访问，
+                // 防止后续 Abort/进度轮询访问已释放对象抛 InvalidOperationException
+                unityHttpRequest.MarkDisposed();
             }
         }
 
         public void Abort(IHttpRequest request)
         {
             var unityHttpRequest = request as UnityHttpRequest;
-            if (unityHttpRequest?.UnityWebRequest != null && !unityHttpRequest.UnityWebRequest.isDone)
+            // 已释放（含自然完成）的请求不可再访问底层 UWR
+            if (unityHttpRequest == null || unityHttpRequest.IsDisposed) return;
+            var uwr = unityHttpRequest.UnityWebRequest;
+            if (uwr != null && !uwr.isDone)
             {
-                unityHttpRequest.UnityWebRequest.Abort();
+                uwr.Abort();
             }
         }
     }

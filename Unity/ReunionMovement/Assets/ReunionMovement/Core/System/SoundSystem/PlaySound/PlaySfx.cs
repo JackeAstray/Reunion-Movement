@@ -20,6 +20,10 @@ namespace ReunionMovement.Core.Sound
         public float volume = -1f; // -1 使用全局
         public float pitch = 1f;
 
+        // 哨兵值转换：-1 表示“使用全局音量”，必须转 null 走 SoundSystem 的 float? 语义；
+        // 否则 -1f 会被当作真实音量写入 AudioSource.volume（静音）。
+        private float? NormalizedVolume => volume < 0f ? null : volume;
+
         private void Start()
         {
             if (playOnAwake)
@@ -41,7 +45,7 @@ namespace ReunionMovement.Core.Sound
         {
             try
             {
-                await SoundSystem.Instance.PlaySfx(id, emitter, loop, volume, pitch);
+                await SoundSystem.Instance.PlaySfx(id, emitter, loop, NormalizedVolume, pitch);
             }
             catch (System.Exception ex)
             {
@@ -61,7 +65,7 @@ namespace ReunionMovement.Core.Sound
         {
             try
             {
-                await SoundSystem.Instance.PlaySfx(sfxIndex, emitter, loop, volume, pitch);
+                await SoundSystem.Instance.PlaySfx(sfxIndex, emitter, loop, NormalizedVolume, pitch);
             }
             catch (System.Exception ex)
             {

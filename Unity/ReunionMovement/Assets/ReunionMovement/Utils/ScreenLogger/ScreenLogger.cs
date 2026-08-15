@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using ReunionMovement.Common;
+using UnityEngine;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 
@@ -52,10 +53,24 @@ namespace ReunionMovement
         public bool stackTraceWarnings = false;
         public bool stackTraceErrors = true;
 
+        /// <summary>复位跨 Play 会话静态状态（关闭 Domain Reload 时残留上一会话的实例引用）</summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticsOnPlay()
+        {
+            persistentInstance = null;
+            lock (activeInstances)
+            {
+                activeInstances.Clear();
+            }
+        }
+
         // 线程安全队列：Application.logMessageReceived 可能在后台线程触发，
         // 与主线程 Update/OnGUI 的读写必须并发安全
         static readonly ConcurrentQueue<LogMessage> queue = new ConcurrentQueue<LogMessage>();
         private static readonly HashSet<ScreenLogger> activeInstances = new HashSet<ScreenLogger>();
+        // 持久实例引用（去重用）：编辑器反复 Play（关闭 Domain Reload）时 DontDestroyOnLoad 实例
+        // 会跨会话累积，多个实例叠加渲染同一份日志队列
+        private static ScreenLogger persistentInstance;
 
         GUIStyle styleContainer, styleText;
         int padding = 5;
@@ -63,6 +78,19 @@ namespace ReunionMovement
 
         public void Awake()
         {
+            if (isPersistent)
+            {
+                // 持久实例去重：已存在存活（Unity 判空处理已销毁残留）的持久实例时，本实例自毁
+                if (persistentInstance != null && persistentInstance != this)
+                {
+                    Log.Warning("ScreenLogger 已存在持久实例，销毁重复实例 {0}", name);
+                    Destroy(gameObject);
+                    return;
+                }
+                persistentInstance = this;
+                DontDestroyOnLoad(this);
+            }
+
             backgroundTex = new Texture2D(1, 1);
             // 用局部变量设置 alpha，避免直接修改公共字段 backgroundColor 的透明度分量
             var bgColor = backgroundColor;
@@ -77,15 +105,15 @@ namespace ReunionMovement
 
             styleText = new GUIStyle();
             styleText.fontSize = fontSize;
-
-            if (isPersistent)
-            {
-                DontDestroyOnLoad(this);
-            }
         }
 
         void OnDestroy()
         {
+            // 释放持久实例引用（仅当本实例是注册的那个）
+            if (ReferenceEquals(persistentInstance, this))
+            {
+                persistentInstance = null;
+            }
             // 从活跃实例列表中移除
             lock (activeInstances)
             {
@@ -136,7 +164,9 @@ namespace ReunionMovement
 
             // 防止 lineHeight 为 0 导致除零异常（字体未加载时可能为 0）
             float lineH = styleText.lineHeight > 0 ? styleText.lineHeight : Mathf.Max(fontSize, 1);
-            while (queue.Count > ((Screen.height - 2 * margin) * height - 2 * padding) / lineH)
+            // 容量钳制：窗口过小/大 margin 时计算值为负，queue.Count > 负数恒真会每帧清空全部日志
+            int capacity = Mathf.Max(1, Mathf.FloorToInt(((Screen.height - 2 * margin) * height - 2 * padding) / lineH));
+            while (queue.Count > capacity)
             {
                 queue.TryDequeue(out _);
             }
@@ -215,13 +245,19 @@ namespace ReunionMovement
             queue.Enqueue(new LogMessage(message, type));
 
             if (!ShouldStackTrace(type)) return;
+            if (string.IsNullOrEmpty(stackTrace)) return;
 
-            string[] trace = stackTrace.Split(new char[] { '\n' });
-
-            // 堆栈行入队同样受容量上限约束：否则单条大堆栈可把队列推到
-            // MaxQueueSize + 堆栈行数，突破上限
-            foreach (string t in trace)
+            // 手动分行遍历（避免 Split 分配字符串数组）：高频报错时降低 GC 压力
+            int start = 0;
+            while (start < stackTrace.Length)
             {
+                int nl = stackTrace.IndexOf('\n', start);
+                int end = nl < 0 ? stackTrace.Length : nl;
+                string t = end > start ? stackTrace.Substring(start, end - start) : string.Empty;
+                start = end + 1;
+
+                // 堆栈行入队同样受容量上限约束：否则单条大堆栈可把队列推到
+                // MaxQueueSize + 堆栈行数，突破上限
                 if (t.Length == 0) continue;
                 if (queue.Count >= MaxQueueSize)
                 {

@@ -162,9 +162,29 @@ namespace ReunionMovement.Common.Util.Timer
                 loopCount++;
                 if (isLoop && (maxLoop == 0 || loopCount < maxLoop))
                 {
+                    // 长帧多循环补发：一次 deltaTime 可能跨多个周期（如 3.2×duration）。
+                    // 必须在 Repeat 之前用原始 elapsed 计算跨周期数——Repeat 后 elapsed 恒 < duration，
+                    // FloorToInt(elapsed/duration)-1 恒为 -1，补发循环永远不执行（死代码）。
+                    // Mathf.Repeat 只保留一次余数，跨过的周期必须逐次补发 OnLoopCompleted，
+                    // 否则依赖循环计数的逻辑（如计时奖励）在低帧率下会丢失周期。
+                    int overflowLoops = duration > 0f ? Mathf.FloorToInt(elapsed / duration) - 1 : 0;
                     // 保留溢出量避免长帧累积漂移（原实现归零会丢弃 elapsed-duration）
                     elapsed = duration > 0f ? Mathf.Repeat(elapsed, duration) : 0f;
                     OnLoopCompleted?.Invoke(loopCount);
+
+                    for (int i = 0; i < overflowLoops; i++)
+                    {
+                        loopCount++;
+                        OnLoopCompleted?.Invoke(loopCount);
+                        // 回调内可能 Cancel/Reset（状态脱离 Running）：中止补发
+                        if (state != TimerState.Running) return;
+                        if (maxLoop > 0 && loopCount >= maxLoop)
+                        {
+                            state = TimerState.Finished;
+                            OnCompleted?.Invoke();
+                            return;
+                        }
+                    }
                 }
                 else
                 {

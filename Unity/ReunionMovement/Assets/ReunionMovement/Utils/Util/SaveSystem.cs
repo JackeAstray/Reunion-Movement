@@ -176,11 +176,12 @@ namespace ReunionMovement.Common.Util
 
             lock (saveLock)
             {
-                string path = GetSavePath(SanitizeSaveName(saveName), slot);
+                string safeName = SanitizeSaveName(saveName);
+                string path = GetSavePath(safeName, slot);
                 if (!File.Exists(path))
                 {
                     // 兼容升级前旧格式：slot>0 曾与 slot0 同目录写 {saveName}_slot{n}.json，读取时回退
-                    path = GetLegacySavePath(saveName, slot);
+                    path = GetLegacySavePath(safeName, slot);
                     if (!File.Exists(path)) return false;
                 }
 
@@ -278,10 +279,11 @@ namespace ReunionMovement.Common.Util
             if (string.IsNullOrEmpty(saveName)) return false;
             lock (saveLock)
             {
-                string path = GetSavePath(SanitizeSaveName(saveName), slot);
+                string safeName = SanitizeSaveName(saveName);
+                string path = GetSavePath(safeName, slot);
                 if (File.Exists(path)) return true;
-                // 兼容旧格式路径
-                return File.Exists(GetLegacySavePath(saveName, slot));
+                // 兼容旧格式路径（使用与新路径一致的净化名，避免带非法字符存档名新旧路径不一致）
+                return File.Exists(GetLegacySavePath(safeName, slot));
             }
         }
 

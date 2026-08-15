@@ -28,11 +28,12 @@ namespace ReunionMovement.Common.Util
             }
 
             mouse = Mouse.current;
-            if (enhancedTouchRefCount == 0)
+
+            // 掩码为 0 时 Physics.Raycast 永不命中，HandleMouseClick 形同虚设且无任何提示
+            if (layerMask.value == 0)
             {
-                EnhancedTouchSupport.Enable();
+                Log.Warning("CameraUtil layerMask 为 0：射线检测不会命中任何对象，请在 Inspector 配置 layerMask");
             }
-            enhancedTouchRefCount++;
 
             if (csmoCamera == null)
             {
@@ -60,6 +61,14 @@ namespace ReunionMovement.Common.Util
                 enabled = false;
                 return;
             }
+
+            // 引用计数必须在全部校验通过后才增加：失败路径 enabled=false 且组件可能不被销毁，
+            // 提前计数会导致 OnDestroy 永不执行、refCount 永久 +1、EnhancedTouchSupport 永不关闭
+            if (enhancedTouchRefCount == 0)
+            {
+                EnhancedTouchSupport.Enable();
+            }
+            enhancedTouchRefCount++;
 
             raycastBase = new RaycastBase(layerMask, csmoCamera);
             distance = Mathf.Clamp(distance, GetEffectiveMinDistance(), maxDistance);
@@ -94,6 +103,12 @@ namespace ReunionMovement.Common.Util
                 return;
             }
 
+            // 鼠标设备热插拔/启动时无鼠标后接入：缓存失效时每帧补取（InputSystem 引用极轻量）
+            if (mouse == null)
+            {
+                mouse = Mouse.current;
+            }
+
             if (checkPointerOverUI && IsPointerOverUI())
             {
                 return;
@@ -105,7 +120,13 @@ namespace ReunionMovement.Common.Util
             HandleCameraZoom();
             HandleAutoRotation();
             HandleMouseClick();
-            UpdatePosition();
+            // 仅当本帧未因旋转/缩放调用过 UpdatePosition 时兜底执行：
+            // OrbitCamera/SetZoom 内部已更新位置，重复执行等于每帧两次 Physics.Raycast 遮挡检测
+            if (!positionUpdatedThisFrame)
+            {
+                UpdatePosition();
+            }
+            positionUpdatedThisFrame = false;
         }
 
         /// <summary>
@@ -371,6 +392,7 @@ namespace ReunionMovement.Common.Util
             destRot = addRot * Quaternion.Euler(rotY, 0f, 0f);
             csmoCamera.transform.rotation = destRot;
             UpdatePosition();
+            positionUpdatedThisFrame = true;
         }
 
         /// <summary>
@@ -464,6 +486,7 @@ namespace ReunionMovement.Common.Util
             }
 
             UpdatePosition();
+            positionUpdatedThisFrame = true;
         }
 
     }

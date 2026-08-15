@@ -75,7 +75,8 @@ namespace ReunionMovement.Common.Util.Download
 
         /// <summary>
         /// 从Uri获取相对路径（已做路径遍历防护）。
-        /// 解码后逐段过滤：丢弃空段、"." 与 ".." 段，防止 "%2e%2e" 编码绕过写出下载目录。
+        /// 解码后按 / 与 \ 双分隔符逐段过滤：丢弃空段、"."、".."、含盘符（冒号）的段，
+        /// 防止 "%2e%2e" 编码绕过与 Windows 盘符段（Path.Combine 遇带盘符第二参数会直接返回该参数）。
         /// </summary>
         /// <param name="uri"></param>
         /// <returns></returns>
@@ -89,14 +90,20 @@ namespace ReunionMovement.Common.Util.Download
             try
             {
                 var u = new Uri(uri);
-                // 去掉开头的斜杠；先解码让编码的穿越段（%2e%2e）暴露，再逐段过滤
+                // 去掉开头的斜杠；先解码让编码的穿越段（%2e%2e）暴露，再逐段过滤。
+                // AbsolutePath 不含 query/fragment，无需额外剥离。
                 string decoded = Uri.UnescapeDataString(u.AbsolutePath.TrimStart('/'));
-                var segments = decoded.Split('/');
+                // 同时按 / 与 \ 分段：Windows 下反斜杠同样是目录分隔符，
+                // "x%3A%5C..%5C.." 解码后是单段 "x:\..\.."，不拆段就无法拦截其中的穿越。
+                var segments = decoded.Split('/', '\\');
                 var safeSegments = new List<string>(segments.Length);
                 foreach (var seg in segments)
                 {
                     if (string.IsNullOrEmpty(seg) || seg == ".") continue;
                     if (seg == "..") continue; // 丢弃目录穿越段
+                    // 拒绝含冒号的段：Windows 盘符（如 "x:"）经 Path.Combine 会直接覆盖下载目录前缀；
+                    // 同时拦截 UNC 主机名与 ADS 流（file.txt:stream）
+                    if (seg.IndexOf(':') >= 0) continue;
                     safeSegments.Add(seg);
                 }
                 return string.Join("/", safeSegments);
@@ -122,6 +129,12 @@ namespace ReunionMovement.Common.Util.Download
 
             var arr = uri.Split('/');
             var v = arr[^1];
+            // 剥离 query/fragment：带签名参数的 URL（file.bin?token=x）若不去掉 "?token=x"，
+            // 会生成非法 Windows 文件名导致 DownloadHandlerFile 写入失败
+            int queryIdx = v.IndexOf('?');
+            if (queryIdx >= 0) v = v.Substring(0, queryIdx);
+            int fragIdx = v.IndexOf('#');
+            if (fragIdx >= 0) v = v.Substring(0, fragIdx);
             // 注意：不要对含 % 的文件名做 Split('%') 截断 —— 编码文件名（如 report%20final.png）
             // 会被错误截成 "20 final.png"。% 解码已由下方的 Uri.UnescapeDataString 处理。
 

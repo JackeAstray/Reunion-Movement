@@ -42,6 +42,10 @@ namespace ReunionMovement.UI.ImageExtensions
         /// <param name="falloffDistance">衰减距离（保留用）。</param>
         /// <param name="appendShadow">是否附加阴影四边形。</param>
         /// <param name="shadowOffsetLocal">阴影的本地偏移量（以像素为单位，局部空间）。</param>
+        /// <summary>复用静态顶点缓冲：网格生成在主线程，AddQuad 调用期间即消费、不持有引用，复用安全且零分配</summary>
+        private static readonly Vector3[] sxyBuffer = new Vector3[4];
+        private static readonly Vector3[] suvBuffer = new Vector3[4];
+
         public static void GenerateSimpleSprite(VertexHelper vh, bool preserveAspect, Canvas canvas,
             RectTransform rectTransform, Sprite activeSprite, Color32 color, float falloffDistance, bool appendShadow, Vector2 shadowOffsetLocal, float shadowScale = 1f)
         {
@@ -55,13 +59,13 @@ namespace ReunionMovement.UI.ImageExtensions
             Vector2 size = new Vector2(v.z - v.x, v.w - v.y);
             Vector4 fullBounds = v;
 
-            Vector3[] sxy = new Vector3[4];
+            Vector3[] sxy = sxyBuffer;
             sxy[0] = new Vector2(v.x, v.y);
             sxy[1] = new Vector2(v.x, v.w);
             sxy[2] = new Vector2(v.z, v.w);
             sxy[3] = new Vector2(v.z, v.y);
 
-            Vector3[] suv = new Vector3[4];
+            Vector3[] suv = suvBuffer;
             suv[0] = new Vector2(uv.x, uv.y);
             suv[1] = new Vector2(uv.x, uv.w);
             suv[2] = new Vector2(uv.z, uv.w);
@@ -79,13 +83,13 @@ namespace ReunionMovement.UI.ImageExtensions
         {
             Vector2 size = new Vector2(drawingDims.z - drawingDims.x, drawingDims.w - drawingDims.y);
 
-            Vector3[] sxy = new Vector3[4];
+            Vector3[] sxy = sxyBuffer;
             sxy[0] = new Vector2(drawingDims.x, drawingDims.y);
             sxy[1] = new Vector2(drawingDims.x, drawingDims.w);
             sxy[2] = new Vector2(drawingDims.z, drawingDims.w);
             sxy[3] = new Vector2(drawingDims.z, drawingDims.y);
 
-            Vector3[] suv = new Vector3[4];
+            Vector3[] suv = suvBuffer;
             suv[0] = new Vector2(uv.x, uv.y);
             suv[1] = new Vector2(uv.x, uv.w);
             suv[2] = new Vector2(uv.z, uv.w);
@@ -188,13 +192,13 @@ namespace ReunionMovement.UI.ImageExtensions
                 }
             }
 
-            Vector3[] sxy = new Vector3[4];
+            Vector3[] sxy = sxyBuffer;
             sxy[0] = new Vector2(v.x, v.y);
             sxy[1] = new Vector2(v.x, v.w);
             sxy[2] = new Vector2(v.z, v.w);
             sxy[3] = new Vector2(v.z, v.y);
 
-            Vector3[] suv = new Vector3[4];
+            Vector3[] suv = suvBuffer;
             suv[0] = new Vector2(tx0, ty0);
             suv[1] = new Vector2(tx0, ty1);
             suv[2] = new Vector2(tx1, ty1);
