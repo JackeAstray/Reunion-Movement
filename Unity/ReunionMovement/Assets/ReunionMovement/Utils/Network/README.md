@@ -8,6 +8,7 @@
 Utils/Network/
 ├── Base/           INetworkChannel / INetworkClientChannel / INetworkServerChannel / INetworkMessageCodec
 ├── Codec/          帧编解码器（MessageId / LengthPrefixed / Passthrough）+ 字节流组装器
+│                   + CompressedCodec（Deflate 压缩）/ EncryptedCodec（Encrypt-then-MAC 加密）
 ├── Serialization/  对象序列化器（默认 JsonUtility）
 ├── Core/           NetworkClient / NetworkServer / 配置 / 通道工厂 / RPC 帧 / 类型协议
 ├── TCPChannel/     Telepathy TCP 通道
@@ -70,6 +71,21 @@ var resp = await client.RequestAsync<LoginRequest, LoginResponse>(
     new LoginRequest { user = "a" }, TimeSpan.FromSeconds(5), ct);
 ```
 
+可靠发送 / 背压 / 统计：
+
+```csharp
+// 可靠消息：服务端回 ACK，超时自动重发；断线时可选保留待连接后补发（persistOnDisconnect）
+bool acked = await client.SendReliableAsync(1, payload,
+    TimeSpan.FromSeconds(5), maxRetries: 5, persistOnDisconnect: true);
+
+// 背压：SendDetailed 区分成功 / 未连接 / 被拒，避免静默丢包
+SendResult result = client.SendDetailed(2, payload);   // Ok / NotConnected / Rejected
+
+// 流量与延迟统计（排障）
+long sent = client.BytesSent, received = client.BytesReceived;  // 累计收发字节
+float rtt  = client.LastRttMs;                                  // 最近一次心跳往返毫秒
+```
+
 ### 服务端 `NetworkServer`
 
 ```csharp
@@ -93,6 +109,32 @@ server.Start(); // 之后每帧 server.Tick()
 
 `Disconnected → Connecting → Connected`；断开后 `→ Reconnecting → Connecting → ...`；
 重连次数耗尽或 `Disconnect()` 后回到 `Disconnected`；`Close()` 后 `Closed`（不可复用）。
+
+## 压缩 / 加密（可选增强）
+
+**压缩**：内置 `NetworkCodecType` 枚举已支持，直接配置即可：
+
+```csharp
+var cfg = new NetworkClientConfig
+{
+    transport = NetworkTransportType.Tcp,
+    codec = NetworkCodecType.CompressedMessageId,           // [2B ID][Deflate 压缩负载]
+    // codec = NetworkCodecType.CompressedLengthPrefixedWithId, // [4B 长度][2B ID][压缩负载]
+};
+```
+
+**加密**：`EncryptedCodec` 包装底层编解码器，对负载做 AES-256-CBC 加密 + HMAC-SHA256 完整性校验
+（Encrypt-then-MAC，防篡改 / 防填充 oracle）：
+
+```csharp
+// 两端密钥必须一致（16/24/32 字节）
+var codec = EncryptedCodec.Wrap(NetworkCodecFactory.Create(NetworkCodecType.MessageId), keyBytes32);
+```
+
+> 说明：`NetworkClient` / `NetworkServer` 当前通过 `NetworkCodecType` 枚举构建编解码栈（内置压缩类型可直接用）；
+> `EncryptedCodec` 为独立可用的编解码器（帧格式 `[1B 版本][16B IV][密文][32B MAC]`），
+> 用于底层 `INetworkChannel` 直连场景，或自行扩展 `NetworkCodecFactory` 接入客户端/服务端。
+> 加解密有 CPU 成本，建议仅对敏感通道整链路启用。
 
 ## 兼容性说明
 
