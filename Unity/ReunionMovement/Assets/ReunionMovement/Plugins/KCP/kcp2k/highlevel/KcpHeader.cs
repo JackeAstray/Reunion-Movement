@@ -1,31 +1,31 @@
-using System;
+ï»¿using System;
 
-namespace kcp2k
+namespace ReunionMovement.Kcp2k
 {
-    // kcp ´¦ÀíµÄ¿É¿¿ÏûÏ¢Í·¡£
-    // ×¢Òâ£ºÕâ²»ÊÇÔ­Ê¼½ÓÊÕÏûÏ¢µÄÍ·²¿£¬ÒòÎªÎÕÊÖ/¶Ï¿ªĞèÒª¿É¿¿´«Êä¡£
-    // Èç¹û°ÑÕâĞ©·ÅÔÚ rawreceive ÉÏ£¬ÏûÏ¢¿ÉÄÜ¶ªÊ§ÇÒ²»»áÖØ´«£¡
+    // kcp å¤„ç†çš„å¯é æ¶ˆæ¯å¤´ã€‚
+    // æ³¨æ„ï¼šè¿™ä¸æ˜¯åŸå§‹æ¥æ”¶æ¶ˆæ¯çš„å¤´éƒ¨ï¼Œå› ä¸ºæ¡æ‰‹/æ–­å¼€éœ€è¦å¯é ä¼ è¾“ã€‚
+    // å¦‚æœæŠŠè¿™äº›æ”¾åœ¨ rawreceive ä¸Šï¼Œæ¶ˆæ¯å¯èƒ½ä¸¢å¤±ä¸”ä¸ä¼šé‡ä¼ ï¼
     public enum KcpHeaderReliable : byte
     {
-        // ²»Òª¶Ô 0x00 ×ö³ö·´Ó¦£¬ÄÜ°ïÃ¦¹ıÂËËæ»úÔëÉù¡£
+        // ä¸è¦å¯¹ 0x00 åšå‡ºååº”ï¼Œèƒ½å¸®å¿™è¿‡æ»¤éšæœºå™ªå£°ã€‚
         Hello      = 1,
-        // ping Ä¿Ç°×ß¿É¿¿Í¨µÀ£¨Ò²¿ÉÒÔ×ß²»¿É¿¿£©£¬
-        // Á½ÕßµÄÇø±ğ²»´ó£¬ÕâÀï×ß¿É¿¿Í¨µÀ¸ü·½±ã£¬ÒòÎªÒÑÓĞ¿É¿¿ÏûÏ¢µÄ KcpHeader¡£
-        // ping ½öÓÃÓÚ±£³ÖÁ¬½Ó»îÔ¾£¬ÑÓ³Ù²¢²»ÖØÒª¡£
+        // ping ç›®å‰èµ°å¯é é€šé“ï¼ˆä¹Ÿå¯ä»¥èµ°ä¸å¯é ï¼‰ï¼Œ
+        // ä¸¤è€…çš„åŒºåˆ«ä¸å¤§ï¼Œè¿™é‡Œèµ°å¯é é€šé“æ›´æ–¹ä¾¿ï¼Œå› ä¸ºå·²æœ‰å¯é æ¶ˆæ¯çš„ KcpHeaderã€‚
+        // ping ä»…ç”¨äºä¿æŒè¿æ¥æ´»è·ƒï¼Œå»¶è¿Ÿå¹¶ä¸é‡è¦ã€‚
         Ping       = 2,
         Data       = 3,
     }
 
     public enum KcpHeaderUnreliable : byte
     {
-        // ÓÃ»§¿É·¢ËÍ²»¿É¿¿ÏûÏ¢
+        // ç”¨æˆ·å¯å‘é€ä¸å¯é æ¶ˆæ¯
         Data = 4,
-        // ¶Ï¿ªÊ¹ÓÃ¿ìËÙ²»¿É¿¿·¢ËÍ£¨glenn fielder ·½·¨£©
+        // æ–­å¼€ä½¿ç”¨å¿«é€Ÿä¸å¯é å‘é€ï¼ˆglenn fielder æ–¹æ³•ï¼‰
         Disconnect = 5,
     }
 
-    // Ìá¹©´Ó/µ½ byte µÄ°²È«×ª»»¡£
-    // ¹¥»÷Õß¿ÉÄÜ·¢ËÍÎŞĞ§Öµ£¬ËùÒÔ 255 µÈÖµ²»ÄÜ±»½âÎö¡£
+    // æä¾›ä»/åˆ° byte çš„å®‰å…¨è½¬æ¢ã€‚
+    // æ”»å‡»è€…å¯èƒ½å‘é€æ— æ•ˆå€¼ï¼Œæ‰€ä»¥ 255 ç­‰å€¼ä¸èƒ½è¢«è§£æã€‚
     public static class KcpHeader
     {
         public static bool ParseReliable(byte value, out KcpHeaderReliable header)
@@ -36,7 +36,7 @@ namespace kcp2k
                 return true;
             }
 
-            header = KcpHeaderReliable.Ping; // ÈÎÒâÄ¬ÈÏÖµ
+            header = KcpHeaderReliable.Ping; // ä»»æ„é»˜è®¤å€¼
             return false;
         }
 
@@ -48,7 +48,7 @@ namespace kcp2k
                 return true;
             }
 
-            header = KcpHeaderUnreliable.Disconnect; // ÈÎÒâÄ¬ÈÏÖµ
+            header = KcpHeaderUnreliable.Disconnect; // ä»»æ„é»˜è®¤å€¼
             return false;
         }
     }

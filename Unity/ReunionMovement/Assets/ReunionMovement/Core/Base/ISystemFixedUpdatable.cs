@@ -1,4 +1,4 @@
-namespace ReunionMovement.Core.Base
+﻿namespace ReunionMovement.Core.Base
 {
     /// <summary>
     /// 固定步长更新系统 —— 实现此接口的模块会被 GameEngine 在 FixedUpdate 驱动。

@@ -3,7 +3,7 @@
 using System.Runtime.InteropServices;
 #endif
 
-namespace Mirror.SimpleWeb
+namespace ReunionMovement.SimpleWeb
 {
     internal static class SimpleWebJSLib
     {

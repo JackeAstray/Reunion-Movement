@@ -1,4 +1,4 @@
-namespace ReunionMovement.Core.UI
+﻿namespace ReunionMovement.Core.UI
 {
     /// <summary>
     /// UI 窗口名称常量 —— 替代硬编码字符串，避免 GC 分配和拼写错误。

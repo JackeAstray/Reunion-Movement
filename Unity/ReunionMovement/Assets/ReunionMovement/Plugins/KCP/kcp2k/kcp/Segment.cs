@@ -1,6 +1,6 @@
-using System.IO;
+﻿using System.IO;
 
-namespace kcp2k
+namespace ReunionMovement.Kcp2k
 {
     // KCP Segment Definition
     internal class Segment

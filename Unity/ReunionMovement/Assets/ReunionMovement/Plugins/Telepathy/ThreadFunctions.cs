@@ -9,7 +9,7 @@ using System;
 using System.Net.Sockets;
 using System.Threading;
 
-namespace Telepathy
+namespace ReunionMovement.Telepathy
 {
     public static class ThreadFunctions
     {

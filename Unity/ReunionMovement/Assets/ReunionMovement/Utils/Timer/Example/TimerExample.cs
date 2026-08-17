@@ -1,4 +1,4 @@
-using ReunionMovement.Common;
+﻿using ReunionMovement.Common;
 using ReunionMovement.Common.Util.Timer;
 using TMPro;
 using UnityEngine;

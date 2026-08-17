@@ -1,6 +1,6 @@
-// kcp specific error codes to allow for error switching, localization,
+﻿// kcp specific error codes to allow for error switching, localization,
 // translation to Mirror errors, etc.
-namespace kcp2k
+namespace ReunionMovement.Kcp2k
 {
     public enum ErrorCode : byte
     {

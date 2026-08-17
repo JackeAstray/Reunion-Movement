@@ -1,11 +1,12 @@
 ﻿#if MIRROR
+using Mirror;
 using System;
 using System.Net;
 using System.Security.Authentication;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-namespace Mirror.SimpleWeb
+namespace ReunionMovement.SimpleWeb
 {
     [DisallowMultipleComponent]
     [HelpURL("https://mirror-networking.gitbook.io/docs/manual/transports/websockets-transport")]

@@ -1,4 +1,4 @@
-//此脚本是由工具自动生成，请勿手动创建
+﻿//此脚本是由工具自动生成，请勿手动创建
 
 using DG.Tweening;
 using ReunionMovement.Common;

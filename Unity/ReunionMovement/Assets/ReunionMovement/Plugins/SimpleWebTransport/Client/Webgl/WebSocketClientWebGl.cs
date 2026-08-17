@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using AOT;
 
-namespace Mirror.SimpleWeb
+namespace ReunionMovement.SimpleWeb
 {
 #if !UNITY_2021_3_OR_NEWER
 

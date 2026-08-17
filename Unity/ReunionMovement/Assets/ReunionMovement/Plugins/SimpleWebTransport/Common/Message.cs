@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Mirror.SimpleWeb
+namespace ReunionMovement.SimpleWeb
 {
     public struct Message
     {

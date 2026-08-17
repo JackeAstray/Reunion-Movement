@@ -1,4 +1,4 @@
-namespace ReunionMovement.Common.Util
+﻿namespace ReunionMovement.Common.Util
 {
     /// <summary>
     /// 双 HTTP 体系的共享默认约定（集中管理，修改约定只改本文件）。

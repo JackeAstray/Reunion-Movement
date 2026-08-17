@@ -1,10 +1,10 @@
-// kcp ¿Í»§¶ËÂß¼­·â×°³ÉÀà¡£
-// ¹© Mirror¡¢DOTSNET¡¢²âÊÔµÈÊ¹ÓÃ¡£
+ï»¿// kcp å®¢æˆ·ç«¯é€»è¾‘å°è£…æˆç±»ã€‚
+// ä¾› Mirrorã€DOTSNETã€æµ‹è¯•ç­‰ä½¿ç”¨ã€‚
 using System;
 using System.Net;
 using System.Net.Sockets;
 
-namespace kcp2k
+namespace ReunionMovement.Kcp2k
 {
     public class KcpClient : KcpPeer
     {
@@ -12,33 +12,33 @@ namespace kcp2k
         protected Socket socket;
         public EndPoint remoteEndPoint;
 
-        // ¶ÔÍâ±©Â¶±¾µØ endpoint£¬±ãÓÚÓÃ»§ / ÖĞ¼Ì / NAT ±éÀúµÈÊ¹ÓÃ
+        // å¯¹å¤–æš´éœ²æœ¬åœ° endpointï¼Œä¾¿äºç”¨æˆ· / ä¸­ç»§ / NAT éå†ç­‰ä½¿ç”¨
         public EndPoint LocalEndPoint => socket?.LocalEndPoint;
 
-        // ÅäÖÃ
+        // é…ç½®
         protected readonly KcpConfig config;
 
-        // Ô­Ê¼½ÓÊÕ»º³åÇøÊ¼ÖÕĞèÒªÎª MTU ´óĞ¡£¬¼´Ê¹ MaxMessageSize ¸ü´ó¡£
-        // kcp ×ÜÊÇÒÔ MTU ·ÖÆ¬·¢ËÍ£¬»º³åÇøĞ¡ÓÚ MTU »á¾²Ä¬¶ªÆú¶àÓàÊı¾İ¡£
-        // => ÎÒÃÇĞèÒª MTU ÄÜ·ÅÏÂ channel + message£¡
-        // => ÊÜ±£»¤ÊÇÒòÎª¿ÉÄÜÓĞÈËÖØĞ´ RawReceive ÈÔÏë¸´ÓÃ»º³åÇø¡£
+        // åŸå§‹æ¥æ”¶ç¼“å†²åŒºå§‹ç»ˆéœ€è¦ä¸º MTU å¤§å°ï¼Œå³ä½¿ MaxMessageSize æ›´å¤§ã€‚
+        // kcp æ€»æ˜¯ä»¥ MTU åˆ†ç‰‡å‘é€ï¼Œç¼“å†²åŒºå°äº MTU ä¼šé™é»˜ä¸¢å¼ƒå¤šä½™æ•°æ®ã€‚
+        // => æˆ‘ä»¬éœ€è¦ MTU èƒ½æ”¾ä¸‹ channel + messageï¼
+        // => å—ä¿æŠ¤æ˜¯å› ä¸ºå¯èƒ½æœ‰äººé‡å†™ RawReceive ä»æƒ³å¤ç”¨ç¼“å†²åŒºã€‚
         protected readonly byte[] rawReceiveBuffer;
 
-        // »Øµ÷
-        // ¼´Ê¹·¢Éú´íÎóÒ²»á»Øµ÷£¬ÒÔ±ã¿âÏÔÊ¾¶Ô»°¿òµÈ¡£
-        // ¶ø²»ÊÇÖ±½Ó¼ÇÂ¼ÈÕÖ¾¡£
-        // £¨Ê¹ÓÃ string ¶ø²»ÊÇ Exception ÒÔ±ãÒ×ÓÃ²¢±ÜÃâÓÃ»§¿Ö»Å£©
+        // å›è°ƒ
+        // å³ä½¿å‘ç”Ÿé”™è¯¯ä¹Ÿä¼šå›è°ƒï¼Œä»¥ä¾¿åº“æ˜¾ç¤ºå¯¹è¯æ¡†ç­‰ã€‚
+        // è€Œä¸æ˜¯ç›´æ¥è®°å½•æ—¥å¿—ã€‚
+        // ï¼ˆä½¿ç”¨ string è€Œä¸æ˜¯ Exception ä»¥ä¾¿æ˜“ç”¨å¹¶é¿å…ç”¨æˆ·ææ…Œï¼‰
         //
-        // ÊÂ¼şÎªÖ»¶Á£¬ÔÚ¹¹Ôìº¯ÊıÖĞÉèÖÃ¡£
-        // Õâ¿ÉÒÔÈ·±£ÔÚÊ¹ÓÃÊ±ËüÃÇÒÑ¾­³õÊ¼»¯¡£
-        // ½â¾öÁË https://github.com/MirrorNetworking/Mirror/issues/3337 µÈÎÊÌâ
+        // äº‹ä»¶ä¸ºåªè¯»ï¼Œåœ¨æ„é€ å‡½æ•°ä¸­è®¾ç½®ã€‚
+        // è¿™å¯ä»¥ç¡®ä¿åœ¨ä½¿ç”¨æ—¶å®ƒä»¬å·²ç»åˆå§‹åŒ–ã€‚
+        // è§£å†³äº† https://github.com/MirrorNetworking/Mirror/issues/3337 ç­‰é—®é¢˜
         protected readonly Action OnConnectedCallback;
         protected readonly Action<ArraySegment<byte>, KcpChannel> OnDataCallback;
         protected readonly Action OnDisconnectedCallback;
         protected readonly Action<ErrorCode, string> OnErrorCallback;
 
-        // ×´Ì¬
-        bool active = false; // ÔÚ connect() ºÍ disconnect() Ö®¼äÎª active
+        // çŠ¶æ€
+        bool active = false; // åœ¨ connect() å’Œ disconnect() ä¹‹é—´ä¸º active
         public bool connected;
 
         public KcpClient(Action OnConnected,
@@ -46,24 +46,24 @@ namespace kcp2k
                          Action OnDisconnected,
                          Action<ErrorCode, string> OnError,
                          KcpConfig config)
-                         : base(config, 0) // ¿Í»§¶Ë³õÊ¼Ã»ÓĞ cookie
+                         : base(config, 0) // å®¢æˆ·ç«¯åˆå§‹æ²¡æœ‰ cookie
         {
-            // ÏÈ³õÊ¼»¯»Øµ÷ÒÔÈ·±£¿ÉÒÔ±»°²È«Ê¹ÓÃ¡£
+            // å…ˆåˆå§‹åŒ–å›è°ƒä»¥ç¡®ä¿å¯ä»¥è¢«å®‰å…¨ä½¿ç”¨ã€‚
             OnConnectedCallback = OnConnected;
             OnDataCallback = OnData;
             OnDisconnectedCallback = OnDisconnected;
             OnErrorCallback = OnError;
             this.config = config;
 
-            // ´´½¨ MTU ´óĞ¡µÄ½ÓÊÕ»º³å
+            // åˆ›å»º MTU å¤§å°çš„æ¥æ”¶ç¼“å†²
             rawReceiveBuffer = new byte[config.Mtu];
         }
 
-        // »Øµ÷ ///////////////////////////////////////////////////////////
-        // Ä³Ğ©»Øµ÷ĞèÒª°ü¹ü¶îÍâÂß¼­
+        // å›è°ƒ ///////////////////////////////////////////////////////////
+        // æŸäº›å›è°ƒéœ€è¦åŒ…è£¹é¢å¤–é€»è¾‘
         protected override void OnAuthenticated()
         {
-            Log.Info($"[KCP] ¿Í»§¶Ë: OnConnected");
+            Log.Info($"[KCP] å®¢æˆ·ç«¯: OnConnected");
             connected = true;
             OnConnectedCallback();
         }
@@ -76,7 +76,7 @@ namespace kcp2k
 
         protected override void OnDisconnected()
         {
-            Log.Info($"[KCP] ¿Í»§¶Ë: OnDisconnected");
+            Log.Info($"[KCP] å®¢æˆ·ç«¯: OnDisconnected");
             connected = false;
             socket?.Close();
             socket = null;
@@ -90,52 +90,52 @@ namespace kcp2k
         {
             if (connected)
             {
-                Log.Warning("[KCP] ¿Í»§¶Ë: ÒÑÁ¬½Ó£¡");
+                Log.Warning("[KCP] å®¢æˆ·ç«¯: å·²è¿æ¥ï¼");
                 return;
             }
 
-            // Á¬½ÓÖ®Ç°½âÎöÖ÷»úÃû¡£
-            // ĞŞ¸´: https://github.com/MirrorNetworking/Mirror/issues/3361
+            // è¿æ¥ä¹‹å‰è§£æä¸»æœºåã€‚
+            // ä¿®å¤: https://github.com/MirrorNetworking/Mirror/issues/3361
             if (!Common.ResolveHostname(address, out IPAddress[] addresses))
             {
-                // ½«´íÎó´«µİ¸øÓÃ»§»Øµ÷¡£ÎŞĞèÔÙ´Î¼ÇÂ¼ÈÕÖ¾¡£
-                OnError(ErrorCode.DnsResolve, $"ÎŞ·¨½âÎöÖ÷»ú: {address}");
+                // å°†é”™è¯¯ä¼ é€’ç»™ç”¨æˆ·å›è°ƒã€‚æ— éœ€å†æ¬¡è®°å½•æ—¥å¿—ã€‚
+                OnError(ErrorCode.DnsResolve, $"æ— æ³•è§£æä¸»æœº: {address}");
                 OnDisconnectedCallback();
                 return;
             }
 
-            // ÎªÃ¿´ÎĞÂ»á»°´´½¨ĞÂµÄ peer
-            // ¿Í»§¶Ë²»ĞèÒª°²È« cookie¡£
+            // ä¸ºæ¯æ¬¡æ–°ä¼šè¯åˆ›å»ºæ–°çš„ peer
+            // å®¢æˆ·ç«¯ä¸éœ€è¦å®‰å…¨ cookieã€‚
             Reset(config);
 
-            Log.Info($"[KCP] ¿Í»§¶Ë: Á¬½Óµ½ {address}:{port}");
+            Log.Info($"[KCP] å®¢æˆ·ç«¯: è¿æ¥åˆ° {address}:{port}");
 
-            // ´´½¨ socket
+            // åˆ›å»º socket
             remoteEndPoint = new IPEndPoint(addresses[0], port);
             socket = new Socket(remoteEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
             active = true;
 
-            // recv & send ÔÚÖ÷Ïß³Ìµ÷ÓÃ¡£
-            // ĞèÒªÈ·±£ËüÃÇÓÀÔ¶²»»á×èÈû¡£
-            // ¼´Ê¹Ã¿¸öÁ¬½Ó×èÈû 1ms Ò²»áÓ°ÏìÀ©Õ¹ĞÔ¡£
+            // recv & send åœ¨ä¸»çº¿ç¨‹è°ƒç”¨ã€‚
+            // éœ€è¦ç¡®ä¿å®ƒä»¬æ°¸è¿œä¸ä¼šé˜»å¡ã€‚
+            // å³ä½¿æ¯ä¸ªè¿æ¥é˜»å¡ 1ms ä¹Ÿä¼šå½±å“æ‰©å±•æ€§ã€‚
             socket.Blocking = false;
 
-            // ÅäÖÃ»º³åÇø´óĞ¡
+            // é…ç½®ç¼“å†²åŒºå¤§å°
             Common.ConfigureSocketBuffers(socket, config.RecvBufferSize, config.SendBufferSize);
 
-            // °ó¶¨µ½ endpoint£¬ÕâÑùÎÒÃÇ¿ÉÒÔÊ¹ÓÃ send/recv ¶ø²»ÊÇ sendto/recvfrom¡£
+            // ç»‘å®šåˆ° endpointï¼Œè¿™æ ·æˆ‘ä»¬å¯ä»¥ä½¿ç”¨ send/recv è€Œä¸æ˜¯ sendto/recvfromã€‚
             socket.Connect(remoteEndPoint);
 
-            // Á¢¼´Ïò·şÎñÆ÷·¢ËÍ hello ÏûÏ¢¡£
-            // ·şÎñÆ÷»áµ÷ÓÃ OnMessage ²¢½«ĞÂÁ¬½Ó¼ÓÈë¡£
-            // ×¢Òâ£ºÕâÊ± cookie=0£¬Ö±µ½ÊÕµ½·şÎñÆ÷µÄ hello¡£
+            // ç«‹å³å‘æœåŠ¡å™¨å‘é€ hello æ¶ˆæ¯ã€‚
+            // æœåŠ¡å™¨ä¼šè°ƒç”¨ OnMessage å¹¶å°†æ–°è¿æ¥åŠ å…¥ã€‚
+            // æ³¨æ„ï¼šè¿™æ—¶ cookie=0ï¼Œç›´åˆ°æ”¶åˆ°æœåŠ¡å™¨çš„ helloã€‚
             SendHello();
         }
 
-        // IO - ÊäÈë
-        // virtual ÒÔ±ãÖĞ¼ÌµÈ¿É¸²¸Ç¡£
-        // ÔÚËü·µ»Ø true Ê±Ñ­»·µ÷ÓÃÒÔ´¦Àí±¾ tick µÄËùÓĞÏûÏ¢¡£
-        // ·µ»ØµÄ ArraySegment ÔÚÏÂÒ»´Î RawReceive µ÷ÓÃÖ®Ç°ÓĞĞ§¡£
+        // IO - è¾“å…¥
+        // virtual ä»¥ä¾¿ä¸­ç»§ç­‰å¯è¦†ç›–ã€‚
+        // åœ¨å®ƒè¿”å› true æ—¶å¾ªç¯è°ƒç”¨ä»¥å¤„ç†æœ¬ tick çš„æ‰€æœ‰æ¶ˆæ¯ã€‚
+        // è¿”å›çš„ ArraySegment åœ¨ä¸‹ä¸€æ¬¡ RawReceive è°ƒç”¨ä¹‹å‰æœ‰æ•ˆã€‚
         protected virtual bool RawReceive(out ArraySegment<byte> segment)
         {
             segment = default;
@@ -145,25 +145,25 @@ namespace kcp2k
             {
                 return socket.ReceiveNonBlocking(rawReceiveBuffer, out segment);
             }
-            // ¶ÔÓÚ·Ç×èÈûÌ×½Ó×Ö£¬Èç¹ûÃ»ÓĞÏûÏ¢£¬Receive »áÅ×³ö WouldBlock¡£ÕâÊÇ¿ÉÒÔ½ÓÊÜµÄ¡£
-            // ½öÎªÆäËü´íÎó¼ÇÂ¼ÈÕÖ¾¡£
+            // å¯¹äºéé˜»å¡å¥—æ¥å­—ï¼Œå¦‚æœæ²¡æœ‰æ¶ˆæ¯ï¼ŒReceive ä¼šæŠ›å‡º WouldBlockã€‚è¿™æ˜¯å¯ä»¥æ¥å—çš„ã€‚
+            // ä»…ä¸ºå…¶å®ƒé”™è¯¯è®°å½•æ—¥å¿—ã€‚
             catch (SocketException e)
             {
-                // ¶Ô¶Ë¹Ø±ÕÁ¬½Ó²¢²»×ÜÊÇ¡°´íÎó¡±¡£
-                // µ«Á¬½Ó²»Ó¦¾²Ä¬½áÊø¡£ÖÁÉÙ¼ÇÂ¼Ò»ÌõÈÕÖ¾ÒÔ±ãµ÷ÊÔ¡£
-                // ÀıÈç£¬µ±Á¬½ÓÊ±Ã»ÓĞ·şÎñÆ÷Ôò»á·¢Éú¡£
-                Log.Info($"[KCP] Client.RawReceive: ¿´ÆğÀ´¶Ô¶ËÒÑ¹Ø±ÕÁ¬½Ó¡£ÕâÊÇÕı³£µÄ: {e}");
+                // å¯¹ç«¯å…³é—­è¿æ¥å¹¶ä¸æ€»æ˜¯â€œé”™è¯¯â€ã€‚
+                // ä½†è¿æ¥ä¸åº”é™é»˜ç»“æŸã€‚è‡³å°‘è®°å½•ä¸€æ¡æ—¥å¿—ä»¥ä¾¿è°ƒè¯•ã€‚
+                // ä¾‹å¦‚ï¼Œå½“è¿æ¥æ—¶æ²¡æœ‰æœåŠ¡å™¨åˆ™ä¼šå‘ç”Ÿã€‚
+                Log.Info($"[KCP] Client.RawReceive: çœ‹èµ·æ¥å¯¹ç«¯å·²å…³é—­è¿æ¥ã€‚è¿™æ˜¯æ­£å¸¸çš„: {e}");
                 base.Disconnect();
                 return false;
             }
         }
 
-        // IO - Êä³ö
-        // virtual ÒÔ±ãÖĞ¼ÌµÈ¿É¸²¸Ç¡£
+        // IO - è¾“å‡º
+        // virtual ä»¥ä¾¿ä¸­ç»§ç­‰å¯è¦†ç›–ã€‚
         protected override void RawSend(ArraySegment<byte> data)
         {
-            // ½öµ± socket ÒÑÁ¬½Ó/´´½¨Ê±²Å·¢ËÍ¡£
-            // ÓÃ»§¿ÉÄÜÔÚÎ´Á¬½ÓÊ±µ÷ÓÃ·¢ËÍº¯Êı£¬µ¼ÖÂ NRE¡£
+            // ä»…å½“ socket å·²è¿æ¥/åˆ›å»ºæ—¶æ‰å‘é€ã€‚
+            // ç”¨æˆ·å¯èƒ½åœ¨æœªè¿æ¥æ—¶è°ƒç”¨å‘é€å‡½æ•°ï¼Œå¯¼è‡´ NREã€‚
             if (socket == null) return;
 
             try
@@ -172,8 +172,8 @@ namespace kcp2k
             }
             catch (SocketException e)
             {
-                Log.Info($"[KCP] Client.RawSend: ¿´ÆğÀ´¶Ô¶ËÒÑ¹Ø±ÕÁ¬½Ó¡£ÕâÊÇÕı³£µÄ: {e}");
-                // base.Disconnect(); <- ²»Òªµ÷ÓÃ£¬Èô SendDisconnect() ÒÑÅ×³ö»áµ¼ÖÂËÀËø
+                Log.Info($"[KCP] Client.RawSend: çœ‹èµ·æ¥å¯¹ç«¯å·²å…³é—­è¿æ¥ã€‚è¿™æ˜¯æ­£å¸¸çš„: {e}");
+                // base.Disconnect(); <- ä¸è¦è°ƒç”¨ï¼Œè‹¥ SendDisconnect() å·²æŠ›å‡ºä¼šå¯¼è‡´æ­»é”
 
             }
         }
@@ -182,44 +182,44 @@ namespace kcp2k
         {
             if (!connected)
             {
-                Log.Warning("[KCP] ¿Í»§¶Ë: Î´Á¬½Ó£¬ÎŞ·¨·¢ËÍ£¡");
+                Log.Warning("[KCP] å®¢æˆ·ç«¯: æœªè¿æ¥ï¼Œæ— æ³•å‘é€ï¼");
                 return;
             }
 
             SendData(segment, channel);
         }
 
-        // ²åÈëÔ­Ê¼ IO¡£Í¨³£À´×Ô socket.Receive¡£
-        // offset ¶ÔÓÚÖĞ¼ÌºÜÓĞÓÃ£¬ÎÒÃÇ¿ÉÄÜ½âÎöÍ·²¿È»ºó°ÑÆäÓàÊı¾İÎ¹¸ø kcp¡£
+        // æ’å…¥åŸå§‹ IOã€‚é€šå¸¸æ¥è‡ª socket.Receiveã€‚
+        // offset å¯¹äºä¸­ç»§å¾ˆæœ‰ç”¨ï¼Œæˆ‘ä»¬å¯èƒ½è§£æå¤´éƒ¨ç„¶åæŠŠå…¶ä½™æ•°æ®å–‚ç»™ kcpã€‚
         public void RawInput(ArraySegment<byte> segment)
         {
-            // È·±£ÓĞĞ§´óĞ¡£ºÖÁÉÙ 1 ×Ö½ÚÍ¨µÀ + 4 ×Ö½Ú cookie
+            // ç¡®ä¿æœ‰æ•ˆå¤§å°ï¼šè‡³å°‘ 1 å­—èŠ‚é€šé“ + 4 å­—èŠ‚ cookie
             if (segment.Count <= 5) return;
 
-            // ½âÎöÍ¨µÀ
-            // byte channel = segment[0]; ArraySegment[i] ÔÚ¾É°æ Unity Mono ÖĞ²»ÊÜÖ§³Ö
+            // è§£æé€šé“
+            // byte channel = segment[0]; ArraySegment[i] åœ¨æ—§ç‰ˆ Unity Mono ä¸­ä¸å—æ”¯æŒ
             byte channel = segment.Array[segment.Offset + 0];
 
-            // ·şÎñÆ÷ÏûÏ¢×ÜÊÇ°üº¬°²È« cookie¡£
-            // ½âÎöÖ®£¬Èç¹ûÎ´·ÖÅäÔò¸³Öµ£¬Èç¹ûÍ»È»²»Í¬Ôò¾¯¸æ¡£
+            // æœåŠ¡å™¨æ¶ˆæ¯æ€»æ˜¯åŒ…å«å®‰å…¨ cookieã€‚
+            // è§£æä¹‹ï¼Œå¦‚æœæœªåˆ†é…åˆ™èµ‹å€¼ï¼Œå¦‚æœçªç„¶ä¸åŒåˆ™è­¦å‘Šã€‚
             Utils.Decode32U(segment.Array, segment.Offset + 1, out uint messageCookie);
             if (messageCookie == 0)
             {
-                Log.Error($"[KCP] ¿Í»§¶Ë: ÊÕµ½ cookie=0 µÄÏûÏ¢£¬Õâ²»Ó¦¸Ã·¢Éú¡£·şÎñÆ÷Ó¦Ê¼ÖÕ°üº¬°²È« cookie¡£");
+                Log.Error($"[KCP] å®¢æˆ·ç«¯: æ”¶åˆ° cookie=0 çš„æ¶ˆæ¯ï¼Œè¿™ä¸åº”è¯¥å‘ç”Ÿã€‚æœåŠ¡å™¨åº”å§‹ç»ˆåŒ…å«å®‰å…¨ cookieã€‚");
             }
 
             if (cookie == 0)
             {
                 cookie = messageCookie;
-                Log.Info($"[KCP] ¿Í»§¶Ë: ÊÕµ½³õÊ¼ cookie: {cookie}");
+                Log.Info($"[KCP] å®¢æˆ·ç«¯: æ”¶åˆ°åˆå§‹ cookie: {cookie}");
             }
             else if (cookie != messageCookie)
             {
-                Log.Warning($"[KCP] ¿Í»§¶Ë: ¶ªÆú cookie ²»Æ¥ÅäµÄÏûÏ¢: {messageCookie} ÆÚÍû: {cookie}¡£");
+                Log.Warning($"[KCP] å®¢æˆ·ç«¯: ä¸¢å¼ƒ cookie ä¸åŒ¹é…çš„æ¶ˆæ¯: {messageCookie} æœŸæœ›: {cookie}ã€‚");
                 return;
             }
 
-            // ½âÎöÏûÏ¢
+            // è§£ææ¶ˆæ¯
             ArraySegment<byte> message = new ArraySegment<byte>(segment.Array, segment.Offset + 1+4, segment.Count - 1-4);
 
             switch (channel)
@@ -236,42 +236,42 @@ namespace kcp2k
                 }
                 default:
                 {
-                    // ÎŞĞ§Í¨µÀÍ¨³£±íÊ¾Ëæ»ú»¥ÁªÍøÔëÉù¡£
-                    // ·şÎñÆ÷¿ÉÄÜÊÕµ½Ëæ»ú UDP Êı¾İ¡£
-                    // ºöÂÔ£¬µ«¼ÇÂ¼ÒÔ±ãµ÷ÊÔ¡£
-                    Log.Warning($"[KCP] ¿Í»§¶Ë: ÎŞĞ§Í¨µÀÍ·: {channel}£¬¿ÉÄÜÊÇ»¥ÁªÍøÔëÉù");
+                    // æ— æ•ˆé€šé“é€šå¸¸è¡¨ç¤ºéšæœºäº’è”ç½‘å™ªå£°ã€‚
+                    // æœåŠ¡å™¨å¯èƒ½æ”¶åˆ°éšæœº UDP æ•°æ®ã€‚
+                    // å¿½ç•¥ï¼Œä½†è®°å½•ä»¥ä¾¿è°ƒè¯•ã€‚
+                    Log.Warning($"[KCP] å®¢æˆ·ç«¯: æ— æ•ˆé€šé“å¤´: {channel}ï¼Œå¯èƒ½æ˜¯äº’è”ç½‘å™ªå£°");
                     break;
                 }
             }
         }
 
-        // ´¦ÀíÈëÕ¾£¬Ó¦ÔÚ¸üĞÂÊÀ½çÇ°µ÷ÓÃ¡£
-        // virtual ÒòÎªÖĞ¼Ì¿ÉÄÜĞèÒª×¢Èë×Ô¼ºµÄ ping µÈ¡£
+        // å¤„ç†å…¥ç«™ï¼Œåº”åœ¨æ›´æ–°ä¸–ç•Œå‰è°ƒç”¨ã€‚
+        // virtual å› ä¸ºä¸­ç»§å¯èƒ½éœ€è¦æ³¨å…¥è‡ªå·±çš„ ping ç­‰ã€‚
         public override void TickIncoming()
         {
-            // ÏÈ´Ó socket ½ÓÊÕ£¬È»ºó´¦ÀíÈëÕ¾
-            // £¨¼´Ê¹ÎÒÃÇÃ»ÊÕµ½ÈÎºÎ¶«Î÷£¬Ò²ĞèÒª tick ping µÈ£©
-            // £¨active Îª null ±íÊ¾Î´¼¤»î£©
+            // å…ˆä» socket æ¥æ”¶ï¼Œç„¶åå¤„ç†å…¥ç«™
+            // ï¼ˆå³ä½¿æˆ‘ä»¬æ²¡æ”¶åˆ°ä»»ä½•ä¸œè¥¿ï¼Œä¹Ÿéœ€è¦ tick ping ç­‰ï¼‰
+            // ï¼ˆactive ä¸º null è¡¨ç¤ºæœªæ¿€æ´»ï¼‰
             if (active)
             {
                 while (RawReceive(out ArraySegment<byte> segment))
                     RawInput(segment);
             }
 
-            // RawReceive ¿ÉÄÜÒÑ¶Ï¿ª¶Ô¶Ë¡£ÔÙ´Î¼ì²é active¡£
+            // RawReceive å¯èƒ½å·²æ–­å¼€å¯¹ç«¯ã€‚å†æ¬¡æ£€æŸ¥ activeã€‚
             if (active) base.TickIncoming();
         }
 
-        // ´¦Àí³öÕ¾£¬Ó¦ÔÚ¸üĞÂÊÀ½çºóµ÷ÓÃ¡£
-        // virtual ÒòÎªÖĞ¼Ì¿ÉÄÜĞèÒª×¢Èë×Ô¼ºµÄ ping µÈ¡£
+        // å¤„ç†å‡ºç«™ï¼Œåº”åœ¨æ›´æ–°ä¸–ç•Œåè°ƒç”¨ã€‚
+        // virtual å› ä¸ºä¸­ç»§å¯èƒ½éœ€è¦æ³¨å…¥è‡ªå·±çš„ ping ç­‰ã€‚
         public override void TickOutgoing()
         {
-            // ÔÚ active Ê±´¦Àí³öÕ¾
+            // åœ¨ active æ—¶å¤„ç†å‡ºç«™
             if (active) base.TickOutgoing();
         }
 
-        // ´¦ÀíÈëÕ¾ºÍ³öÕ¾ÒÔ±ãÊ¹ÓÃ
-        // => ÀíÏëÇé¿öÏÂÔÚ¸üĞÂÊÀ½çÇ°µ÷ÓÃ ProcessIncoming()£¬ÔÚ¸üĞÂÊÀ½çºóµ÷ÓÃ ProcessOutgoing() ÒÔ½µµÍÑÓ³Ù
+        // å¤„ç†å…¥ç«™å’Œå‡ºç«™ä»¥ä¾¿ä½¿ç”¨
+        // => ç†æƒ³æƒ…å†µä¸‹åœ¨æ›´æ–°ä¸–ç•Œå‰è°ƒç”¨ ProcessIncoming()ï¼Œåœ¨æ›´æ–°ä¸–ç•Œåè°ƒç”¨ ProcessOutgoing() ä»¥é™ä½å»¶è¿Ÿ
         public virtual void Tick()
         {
             TickIncoming();

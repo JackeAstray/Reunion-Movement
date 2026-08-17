@@ -1,4 +1,4 @@
-namespace ReunionMovement.Core.Resources
+﻿namespace ReunionMovement.Core.Resources
 {
     /// <summary>
     /// Addressables 地址常量 —— 消除魔法字符串，统一资源寻址入口。

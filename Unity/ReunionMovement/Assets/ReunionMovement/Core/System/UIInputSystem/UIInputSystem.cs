@@ -1,4 +1,4 @@
-using ReunionMovement.Common;
+﻿using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
 using ReunionMovement.Core.Resources;
 using ReunionMovement.Core.UI;
@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.InputSystem.UI;
 
 namespace ReunionMovement.Core.UIInput
@@ -80,6 +81,8 @@ namespace ReunionMovement.Core.UIInput
         // ---- 切换键解析缓存（避免每帧字符串分配）----
         private string cachedToggleToUIStr;
         private Key cachedToggleToUIKey = Key.None;
+        private string cachedToggleToUIGamepadStr;
+        private GamepadButton? cachedToggleToUIGamepadButton;
         private string cachedToggleToGameplayStr;
         private Key cachedToggleToGameplayKey = Key.None;
 
@@ -651,6 +654,7 @@ namespace ReunionMovement.Core.UIInput
             Register(CurrentBinding.submit, "Submit");
             Register(CurrentBinding.cancel, "Cancel");
             Register(CurrentBinding.toggleToUI, "ToggleToUI");
+            Register(CurrentBinding.toggleToUIGamepad, "ToggleToUIGamepad");
             Register(CurrentBinding.toggleToGameplay, "ToggleToGameplay");
 
             foreach (var kv in map)
@@ -683,6 +687,8 @@ namespace ReunionMovement.Core.UIInput
                 cancel = PlayerPrefs.GetString("ui_bind_cancel", "escape"),
                 cancelDisplayName = PlayerPrefs.GetString("ui_bind_cancel_display", "Escape"),
                 toggleToUI = PlayerPrefs.GetString("ui_bind_toggle_ui", "tab"),
+                toggleToUIGamepad = PlayerPrefs.GetString("ui_bind_toggle_ui_gamepad", "<Gamepad>/start"),
+                toggleToUIGamepadDisplayName = PlayerPrefs.GetString("ui_bind_toggle_ui_gamepad_display", "Start"),
                 toggleToGameplay = PlayerPrefs.GetString("ui_bind_toggle_gameplay", "escape"),
             };
         }
@@ -703,6 +709,8 @@ namespace ReunionMovement.Core.UIInput
             PlayerPrefs.SetString("ui_bind_cancel", CurrentBinding.cancel);
             PlayerPrefs.SetString("ui_bind_cancel_display", CurrentBinding.cancelDisplayName);
             PlayerPrefs.SetString("ui_bind_toggle_ui", CurrentBinding.toggleToUI);
+            PlayerPrefs.SetString("ui_bind_toggle_ui_gamepad", CurrentBinding.toggleToUIGamepad);
+            PlayerPrefs.SetString("ui_bind_toggle_ui_gamepad_display", CurrentBinding.toggleToUIGamepadDisplayName);
             PlayerPrefs.SetString("ui_bind_toggle_gameplay", CurrentBinding.toggleToGameplay);
 
             // 官方 JSON 快照：重置时删除（ResetBindings 后不应残留旧覆盖）
@@ -998,7 +1006,7 @@ namespace ReunionMovement.Core.UIInput
         {
             if (currentMode == UIControlMode.Gameplay)
             {
-                // 在 Gameplay 模式：检测进入 UI 模式的切换键
+                // 在 Gameplay 模式：检测进入 UI 模式的切换键（键盘，默认 Tab）
                 if (Keyboard.current != null)
                 {
                     var toggleKey = GetCachedKey(ref cachedToggleToUIStr, ref cachedToggleToUIKey, CurrentBinding.toggleToUI);
@@ -1008,10 +1016,43 @@ namespace ReunionMovement.Core.UIInput
                         return;
                     }
                 }
+
+                // 手柄切换键（默认 Start）：插着手柄时无需键盘即可进入 UI
+                if (Gamepad.current != null)
+                {
+                    var gamepadButton = GetCachedGamepadButton(ref cachedToggleToUIGamepadStr, ref cachedToggleToUIGamepadButton, CurrentBinding.toggleToUIGamepad);
+                    if (gamepadButton.HasValue && Gamepad.current[gamepadButton.Value].wasPressedThisFrame)
+                    {
+                        EnableUIControl();
+                        return;
+                    }
+                }
             }
             else // UIControlMode.UIControl
             {
-                // 在 UI 模式：检测退出 UI 模式的切换键
+                // 在 UI 模式：再按一次 Tab/Start 同样退出 UI 模式（与进入按键对称的 toggle）。
+                // 手柄玩家按 Start 打开界面后，再按 Start 即可关闭 UI 控制回到角色控制，无需键盘 Escape。
+                if (Keyboard.current != null)
+                {
+                    var toggleKey = GetCachedKey(ref cachedToggleToUIStr, ref cachedToggleToUIKey, CurrentBinding.toggleToUI);
+                    if (toggleKey != Key.None && Keyboard.current[toggleKey].wasPressedThisFrame)
+                    {
+                        DisableUIControl();
+                        return;
+                    }
+                }
+
+                if (Gamepad.current != null)
+                {
+                    var gamepadButton = GetCachedGamepadButton(ref cachedToggleToUIGamepadStr, ref cachedToggleToUIGamepadButton, CurrentBinding.toggleToUIGamepad);
+                    if (gamepadButton.HasValue && Gamepad.current[gamepadButton.Value].wasPressedThisFrame)
+                    {
+                        DisableUIControl();
+                        return;
+                    }
+                }
+
+                // 在 UI 模式：检测退出 UI 模式的切换键（Escape）
                 if (Keyboard.current != null)
                 {
                     var exitKey = GetCachedKey(ref cachedToggleToGameplayStr, ref cachedToggleToGameplayKey, CurrentBinding.toggleToGameplay);
@@ -1072,6 +1113,36 @@ namespace ReunionMovement.Core.UIInput
             }
 
             return Key.None;
+        }
+
+        /// <summary>
+        /// 游戏手柄按键路径（如 "&lt;Gamepad&gt;/start"）→ GamepadButton 的免分配缓存：
+        /// 仅当字符串值变化时才重新解析，避免每帧字符串分配。
+        /// </summary>
+        private GamepadButton? GetCachedGamepadButton(ref string cachedStr, ref GamepadButton? cachedButton, string current)
+        {
+            if (cachedStr != current)
+            {
+                cachedStr = current;
+                cachedButton = ParseGamepadButton(current);
+            }
+            return cachedButton;
+        }
+
+        /// <summary>
+        /// 解析游戏手柄按键完整路径（如 "&lt;Gamepad&gt;/start"）为 GamepadButton；
+        /// 支持 "&lt;Gamepad&gt;/xxx" 与裸名 "xxx" 两种写法，无法解析时返回 null。
+        /// </summary>
+        private GamepadButton? ParseGamepadButton(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return null;
+            int slash = path.LastIndexOf('/');
+            var name = slash >= 0 ? path.Substring(slash + 1) : path;
+            if (Enum.TryParse<GamepadButton>(name, true, out var result))
+            {
+                return result;
+            }
+            return null;
         }
 
         #endregion

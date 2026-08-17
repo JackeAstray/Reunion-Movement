@@ -2,7 +2,7 @@
 using System.Security.Authentication;
 using UnityEngine;
 
-namespace Mirror.SimpleWeb
+namespace ReunionMovement.SimpleWeb
 {
 
     public class SslConfigLoader

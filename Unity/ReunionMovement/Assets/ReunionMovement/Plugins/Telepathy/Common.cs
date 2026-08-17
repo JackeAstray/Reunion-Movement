@@ -1,5 +1,5 @@
 ﻿﻿// 服务器和客户端使用的公共代码
-namespace Telepathy
+namespace ReunionMovement.Telepathy
 {
     public abstract class Common
     {

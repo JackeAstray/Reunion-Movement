@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace kcp2k
+namespace ReunionMovement.Kcp2k
 {
     public class Pool<T>
     {

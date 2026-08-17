@@ -1,9 +1,9 @@
-// Kcp based on https://github.com/skywind3000/kcp
+﻿// Kcp based on https://github.com/skywind3000/kcp
 // Kept as close to original as possible.
 using System;
 using System.Collections.Generic;
 
-namespace kcp2k
+namespace ReunionMovement.Kcp2k
 {
     public class Kcp
     {

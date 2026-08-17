@@ -1,4 +1,4 @@
-using ReunionMovement.Core.Languages;
+﻿using ReunionMovement.Core.Languages;
 using System;
 using System.IO;
 using System.Linq;

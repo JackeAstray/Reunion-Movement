@@ -1,4 +1,4 @@
-// kcp 服务端逻辑封装成类。
+﻿// kcp 服务端逻辑封装成类。
 // 供 Mirror、DOTSNET、测试等使用。
 using System;
 using System.Collections.Generic;
@@ -6,7 +6,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
-namespace kcp2k
+namespace ReunionMovement.Kcp2k
 {
     public class KcpServer
     {

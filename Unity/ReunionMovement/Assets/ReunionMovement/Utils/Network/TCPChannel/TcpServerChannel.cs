@@ -1,5 +1,5 @@
 ﻿using System;
-using Telepathy;
+using ReunionMovement.Telepathy;
 
 namespace ReunionMovement.Common.Util
 {
@@ -47,9 +47,9 @@ namespace ReunionMovement.Common.Util
         {
             this.ChannelName = channelName;
             server = new Server(TcpConstants.MaxMessageSize);
-            Telepathy.Log.Info = (s) => Log.Info(s);
-            Telepathy.Log.Warning = (s) => Log.Warning(s);
-            Telepathy.Log.Error = (s) => Log.Error(s);
+            ReunionMovement.Telepathy.Log.Info = (s) => Log.Info(s);
+            ReunionMovement.Telepathy.Log.Warning = (s) => Log.Warning(s);
+            ReunionMovement.Telepathy.Log.Error = (s) => Log.Error(s);
             this.Port = port;
         }
 

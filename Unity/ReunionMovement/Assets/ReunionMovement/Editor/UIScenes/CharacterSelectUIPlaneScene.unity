@@ -2552,8 +2552,10 @@ MonoBehaviour:
   normalColor: {r: 0.4056604, g: 0.4056604, b: 0.4056604, a: 1}
   selectedColor: {r: 1, g: 0.688486, b: 0.48584908, a: 1}
   columns: 2
+  rowSizes: 
   navigateAxis: 0
   navigateDeadzone: 0.5
+  closeOnConfirm: 1
 --- !u!1 &1975037091
 GameObject:
   m_ObjectHideFlags: 0

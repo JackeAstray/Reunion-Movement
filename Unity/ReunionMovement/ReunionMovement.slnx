@@ -2,8 +2,8 @@
   <Project Path="UniTask.Linq.csproj" />
   <Project Path="UniTask.csproj" />
   <Project Path="ReunionMovement.Utils.csproj" />
-  <Project Path="SimpleWebTransport.csproj" />
-  <Project Path="kcp2k.csproj" />
+  <Project Path="ReunionMovement.SimpleWeb.csproj" />
+  <Project Path="ReunionMovement.Kcp2k.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="ReunionMovement.Common.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
@@ -14,7 +14,7 @@
   <Project Path="UniTask.TextMeshPro.csproj" />
   <Project Path="ReunionMovement.Utils.Deadline.Editor.csproj" />
   <Project Path="ReunionMovement.Utils.ColliderUtil.Editor.csproj" />
-  <Project Path="Telepathy.csproj" />
+  <Project Path="ReunionMovement.Telepathy.csproj" />
   <Project Path="ReunionMovement.Utils.CSG.Example.Editor.csproj" />
   <Project Path="ReunionMovement.Tests.csproj" />
   <Project Path="ReunionMovement.Utils.Network.Editor.csproj" />

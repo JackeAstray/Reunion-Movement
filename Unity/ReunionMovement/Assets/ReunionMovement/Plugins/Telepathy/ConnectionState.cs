@@ -7,7 +7,7 @@
 using System.Net.Sockets;
 using System.Threading;
 
-namespace Telepathy
+namespace ReunionMovement.Telepathy
 {
     public class ConnectionState
     {

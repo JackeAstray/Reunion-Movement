@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Buffers;
-using kcp2k;
+using ReunionMovement.Kcp2k;
 using R3;
 
 namespace ReunionMovement.Common.Util
@@ -98,9 +98,9 @@ namespace ReunionMovement.Common.Util
         public KcpClientChannel(string channelName)
         {
             this.ChannelName = channelName;
-            kcp2k.Log.Info = (s) => Log.Info(s);
-            kcp2k.Log.Warning = (s) => Log.Warning(s);
-            kcp2k.Log.Error = (s) => Log.Error(s);
+            ReunionMovement.Kcp2k.Log.Info = (s) => Log.Info(s);
+            ReunionMovement.Kcp2k.Log.Warning = (s) => Log.Warning(s);
+            ReunionMovement.Kcp2k.Log.Error = (s) => Log.Error(s);
             client = new KcpClient(
                 OnConnectHandler,
                 OnReceiveDataHandler,

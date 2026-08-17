@@ -1,4 +1,4 @@
-namespace ReunionMovement.Core.Base
+﻿namespace ReunionMovement.Core.Base
 {
     /// <summary>
     /// 模块运行时状态 —— 引擎层（GameEngine）与工具层（Utils 的 MonoBehaviour 单例兜底路径）共享的轻量状态。

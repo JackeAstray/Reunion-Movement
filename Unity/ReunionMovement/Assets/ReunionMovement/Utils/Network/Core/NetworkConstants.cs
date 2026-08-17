@@ -1,4 +1,4 @@
-namespace ReunionMovement.Common.Util
+﻿namespace ReunionMovement.Common.Util
 {
     /// <summary>网络层公共常量</summary>
     public static class NetworkConstants

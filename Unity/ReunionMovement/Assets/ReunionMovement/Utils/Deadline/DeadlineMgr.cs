@@ -1,4 +1,4 @@
-using ReunionMovement.Common;
+﻿using ReunionMovement.Common;
 using System;
 using System.Globalization;
 using System.Security.Cryptography;

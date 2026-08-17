@@ -1,97 +1,97 @@
-// Kcp Peer£¬ÀàËÆÓÚ UDP Peer£¬µ«·â×°ÁË¿É¿¿ĞÔ¡¢Í¨µÀ¡¢
-// ³¬Ê±¡¢ÈÏÖ¤¡¢×´Ì¬µÈ¹¦ÄÜ¡£
+ï»¿// Kcp Peerï¼Œç±»ä¼¼äº UDP Peerï¼Œä½†å°è£…äº†å¯é æ€§ã€é€šé“ã€
+// è¶…æ—¶ã€è®¤è¯ã€çŠ¶æ€ç­‰åŠŸèƒ½ã€‚
 //
-// ÈÔÈ»Óë IO ÎŞ¹Ø£¬ÒÔ±ã¼æÈİ udp¡¢ÎŞ·ÖÅä¡¢ÖĞ¼Ì¡¢Ô­ÉúµÈ¡£
+// ä»ç„¶ä¸ IO æ— å…³ï¼Œä»¥ä¾¿å…¼å®¹ udpã€æ— åˆ†é…ã€ä¸­ç»§ã€åŸç”Ÿç­‰ã€‚
 using System;
 using System.Diagnostics;
 using System.Net.Sockets;
 
-namespace kcp2k
+namespace ReunionMovement.Kcp2k
 {
     public abstract class KcpPeer
     {
-        // kcp ¿É¿¿ĞÔËã·¨
+        // kcp å¯é æ€§ç®—æ³•
         internal Kcp kcp;
 
-        // °²È« cookie ÓÃÒÔ·ÀÖ¹ UDP ÆÛÆ­¡£
-        // ¸ĞĞ» IncludeSec ·¢ÏÖ¸ÃÎÊÌâ¡£
+        // å®‰å…¨ cookie ç”¨ä»¥é˜²æ­¢ UDP æ¬ºéª—ã€‚
+        // æ„Ÿè°¢ IncludeSec å‘ç°è¯¥é—®é¢˜ã€‚
         //
-        // ·şÎñ¶Ë½«ÆÚÍûµÄ cookie ´«¸ø¿Í»§¶ËµÄ KcpPeer¡£
-        // KcpPeer ½« cookie ·¢ËÍ¸øÁ¬½ÓµÄ¿Í»§¶Ë¡£
-        // KcpPeer ½ö½ÓÊÜ°üº¬ cookie µÄÊı¾İ°ü¡£
-        // => cookie Ó¦¸ÃÊÇ¼ÓÃÜ°²È«µÄËæ»úÊı£¬ÎŞ·¨ÇáÒ×Ô¤²â¡£
-        // => cookie ¿ÉÒÔÊÇ hash(ip, port)£¬µ«±ØĞë¼ÓÑÎÒÔ±ÜÃâ¿ÉÔ¤²âĞÔ¡£
+        // æœåŠ¡ç«¯å°†æœŸæœ›çš„ cookie ä¼ ç»™å®¢æˆ·ç«¯çš„ KcpPeerã€‚
+        // KcpPeer å°† cookie å‘é€ç»™è¿æ¥çš„å®¢æˆ·ç«¯ã€‚
+        // KcpPeer ä»…æ¥å—åŒ…å« cookie çš„æ•°æ®åŒ…ã€‚
+        // => cookie åº”è¯¥æ˜¯åŠ å¯†å®‰å…¨çš„éšæœºæ•°ï¼Œæ— æ³•è½»æ˜“é¢„æµ‹ã€‚
+        // => cookie å¯ä»¥æ˜¯ hash(ip, port)ï¼Œä½†å¿…é¡»åŠ ç›ä»¥é¿å…å¯é¢„æµ‹æ€§ã€‚
         internal uint cookie;
 
-        // ×´Ì¬£ºÒ»´´½¨ peer ¼´ÊÓÎªÒÑÁ¬½Ó¡£
-        // KcpConnection ÒÅÁô×Ö¶Î£¬ÔÚÒÔºóÖØ¹¹¿ÉÒÆ³ı¡£
+        // çŠ¶æ€ï¼šä¸€åˆ›å»º peer å³è§†ä¸ºå·²è¿æ¥ã€‚
+        // KcpConnection é—ç•™å­—æ®µï¼Œåœ¨ä»¥åé‡æ„å¯ç§»é™¤ã€‚
         protected KcpState state = KcpState.Connected;
 
-        // Èç¹ûÔÚÒÔÏÂºÁÃëÊıÄÚ¶¼Î´ÊÕµ½ÈÎºÎÊı¾İ£¬ÔòÊÓÎª¶Ï¿ª
+        // å¦‚æœåœ¨ä»¥ä¸‹æ¯«ç§’æ•°å†…éƒ½æœªæ”¶åˆ°ä»»ä½•æ•°æ®ï¼Œåˆ™è§†ä¸ºæ–­å¼€
         public const int DEFAULT_TIMEOUT = 10000;
         public int timeout;
         uint lastReceiveTime;
 
-        // ÄÚ²¿Ê±¼ä¡£
-        // Stopwatch Ìá¹© ElapsedMilliseconds£¬ÔÚ³¤Ê±¼äÔËĞĞÖĞÓ¦¸Ã±È Unity µÄ time.deltaTime ¸ü¾«È·¡£
+        // å†…éƒ¨æ—¶é—´ã€‚
+        // Stopwatch æä¾› ElapsedMillisecondsï¼Œåœ¨é•¿æ—¶é—´è¿è¡Œä¸­åº”è¯¥æ¯” Unity çš„ time.deltaTime æ›´ç²¾ç¡®ã€‚
         readonly Stopwatch watch = new Stopwatch();
 
-        // ½ÓÊÕ kcp ´¦ÀíºóÏûÏ¢µÄ»º³å£¨±ÜÃâ·ÖÅä£©¡£
-        // ÖØÒª£ºÕâÊÇÓÃÓÚ KCP ÏûÏ¢µÄ»º³å£¬´óĞ¡Îª£º1 ×Ö½ÚÍ· + ReliableMaxMessageSize
+        // æ¥æ”¶ kcp å¤„ç†åæ¶ˆæ¯çš„ç¼“å†²ï¼ˆé¿å…åˆ†é…ï¼‰ã€‚
+        // é‡è¦ï¼šè¿™æ˜¯ç”¨äº KCP æ¶ˆæ¯çš„ç¼“å†²ï¼Œå¤§å°ä¸ºï¼š1 å­—èŠ‚å¤´ + ReliableMaxMessageSize
         readonly byte[] kcpMessageBuffer;// = new byte[1 + ReliableMaxMessageSize];
 
-        // ·¢ËÍ»º³å£¬ÓÃÓÚ°ÑÓÃ»§ÏûÏ¢½»¸ø kcp ´¦Àí£¨±ÜÃâ·ÖÅä£©¡£
-        // ÖØÒª£º´óĞ¡Îª£º1 ×Ö½ÚÍ· + ReliableMaxMessageSize
+        // å‘é€ç¼“å†²ï¼Œç”¨äºæŠŠç”¨æˆ·æ¶ˆæ¯äº¤ç»™ kcp å¤„ç†ï¼ˆé¿å…åˆ†é…ï¼‰ã€‚
+        // é‡è¦ï¼šå¤§å°ä¸ºï¼š1 å­—èŠ‚å¤´ + ReliableMaxMessageSize
         readonly byte[] kcpSendBuffer;// = new byte[1 + ReliableMaxMessageSize];
 
-        // Ô­Ê¼·¢ËÍ»º³åÕıºÃÎª MTU ´óĞ¡¡£
+        // åŸå§‹å‘é€ç¼“å†²æ­£å¥½ä¸º MTU å¤§å°ã€‚
         readonly byte[] rawSendBuffer;
 
-        // Å¼¶û·¢ËÍ ping ÒÔ±ÜÃâ¶Ô¶Ë³¬Ê±¡£
+        // å¶å°”å‘é€ ping ä»¥é¿å…å¯¹ç«¯è¶…æ—¶ã€‚
         public const int PING_INTERVAL = 1000;
         uint lastPingTime;
 
-        // Èç¹ûÎÒÃÇ·¢ËÍµÄÏûÏ¢³¬¹ı kcp ÄÜ´¦ÀíµÄÄÜÁ¦£¬·¢ËÍ/½ÓÊÕ»º³åºÍ¶ÓÁĞ»áÔö³¤£¬ÑÓ³ÙÒ²»á±äµÃ·Ç³£¸ß¡£
-        // => ÈôÁ¬½ÓÎŞ·¨¸úÉÏ£¬Ó¦¶Ï¿ªÒÔ±£»¤·şÎñÆ÷ÔÚ¸ß¸ºÔØÏÂµÄÎÈ¶¨ĞÔ¡£
+        // å¦‚æœæˆ‘ä»¬å‘é€çš„æ¶ˆæ¯è¶…è¿‡ kcp èƒ½å¤„ç†çš„èƒ½åŠ›ï¼Œå‘é€/æ¥æ”¶ç¼“å†²å’Œé˜Ÿåˆ—ä¼šå¢é•¿ï¼Œå»¶è¿Ÿä¹Ÿä¼šå˜å¾—éå¸¸é«˜ã€‚
+        // => è‹¥è¿æ¥æ— æ³•è·Ÿä¸Šï¼Œåº”æ–­å¼€ä»¥ä¿æŠ¤æœåŠ¡å™¨åœ¨é«˜è´Ÿè½½ä¸‹çš„ç¨³å®šæ€§ã€‚
         internal const int QueueDisconnectThreshold = 10000;
 
-        // ÓÃÓÚµ÷ÊÔĞÅÏ¢µÄ¶ÓÁĞÓë»º³å¼ÆÊı getter
+        // ç”¨äºè°ƒè¯•ä¿¡æ¯çš„é˜Ÿåˆ—ä¸ç¼“å†²è®¡æ•° getter
         public int SendQueueCount     => kcp.snd_queue.Count;
         public int ReceiveQueueCount  => kcp.rcv_queue.Count;
         public int SendBufferCount    => kcp.snd_buf.Count;
         public int ReceiveBufferCount => kcp.rcv_buf.Count;
 
-        // ÎÒÃÇĞèÒª´ÓÃ¿¸ö MaxMessageSize ¼ÆËãÖĞ¼õÈ¥Í¨µÀºÍ cookie ×Ö½Ú¡£
-        // Í¬Ê±ĞèÒª¸æËß kcp Ê¹ÓÃ MTU-1 À´Îª¸Ã×Ö½ÚÁô³ö¿Õ¼ä¡£
+        // æˆ‘ä»¬éœ€è¦ä»æ¯ä¸ª MaxMessageSize è®¡ç®—ä¸­å‡å»é€šé“å’Œ cookie å­—èŠ‚ã€‚
+        // åŒæ—¶éœ€è¦å‘Šè¯‰ kcp ä½¿ç”¨ MTU-1 æ¥ä¸ºè¯¥å­—èŠ‚ç•™å‡ºç©ºé—´ã€‚
         public const int CHANNEL_HEADER_SIZE = 1;
         public const int COOKIE_HEADER_SIZE = 4;
         public const int METADATA_SIZE = CHANNEL_HEADER_SIZE + COOKIE_HEADER_SIZE;
 
-        // ¿É¿¿Í¨µÀ£¨¼´ kcp£©MaxMessageSize£¬¹©Íâ²¿ÖªÏş×î´ó¿É·¢ËÍ³¤¶È¡£
+        // å¯é é€šé“ï¼ˆå³ kcpï¼‰MaxMessageSizeï¼Œä¾›å¤–éƒ¨çŸ¥æ™“æœ€å¤§å¯å‘é€é•¿åº¦ã€‚
         static int ReliableMaxMessageSize_Unconstrained(int mtu, uint rcv_wnd) =>
             (mtu - Kcp.OVERHEAD - METADATA_SIZE) * ((int)rcv_wnd - 1) - 1;
 
         public static int ReliableMaxMessageSize(int mtu, uint rcv_wnd) =>
             ReliableMaxMessageSize_Unconstrained(mtu, Math.Min(rcv_wnd, Kcp.FRG_MAX));
 
-        // ²»¿É¿¿×î´óÏûÏ¢´óĞ¡Îª MTU - Í¨µÀÍ· - kcp Í·
+        // ä¸å¯é æœ€å¤§æ¶ˆæ¯å¤§å°ä¸º MTU - é€šé“å¤´ - kcp å¤´
         public static int UnreliableMaxMessageSize(int mtu) =>
             mtu - METADATA_SIZE - 1;
 
-        // Ã¿Ãë×î´ó·¢ËÍËÙÂÊ¿ÉÓÉ kcp ²ÎÊı¼ÆËã
+        // æ¯ç§’æœ€å¤§å‘é€é€Ÿç‡å¯ç”± kcp å‚æ•°è®¡ç®—
         public uint MaxSendRate    => kcp.snd_wnd * kcp.mtu * 1000 / kcp.interval;
         public uint MaxReceiveRate => kcp.rcv_wnd * kcp.mtu * 1000 / kcp.interval;
 
-        // »ùÓÚ mtu ºÍ wnd ¼ÆËãÒ»´Î×î´óÏûÏ¢´óĞ¡
+        // åŸºäº mtu å’Œ wnd è®¡ç®—ä¸€æ¬¡æœ€å¤§æ¶ˆæ¯å¤§å°
         public readonly int unreliableMax;
         public readonly int reliableMax;
 
-        // ´´½¨²¢ÅäÖÃĞÂµÄ KCP ÊµÀı¡£
+        // åˆ›å»ºå¹¶é…ç½®æ–°çš„ KCP å®ä¾‹ã€‚
         protected KcpPeer(KcpConfig config, uint cookie)
         {
             Reset(config);
             this.cookie = cookie;
-            Log.Info($"[KCP] {GetType()}: ÒÑ´´½¨ cookie={cookie}");
+            Log.Info($"[KCP] {GetType()}: å·²åˆ›å»º cookie={cookie}");
 
             rawSendBuffer = new byte[config.Mtu];
 
@@ -102,7 +102,7 @@ namespace kcp2k
             kcpSendBuffer    = new byte[1 + reliableMax];
         }
 
-        // ÖØÖÃËùÓĞ×´Ì¬¡£
+        // é‡ç½®æ‰€æœ‰çŠ¶æ€ã€‚
         protected void Reset(KcpConfig config)
         {
             cookie = 0;
@@ -116,14 +116,14 @@ namespace kcp2k
             kcp.SetNoDelay(config.NoDelay ? 1u : 0u, config.Interval, config.FastResend, !config.CongestionWindow);
             kcp.SetWindowSize(config.SendWindowSize, config.ReceiveWindowSize);
 
-            // ¸æËß kcp Ê¹ÓÃ MTU - METADATA_SIZE
+            // å‘Šè¯‰ kcp ä½¿ç”¨ MTU - METADATA_SIZE
             kcp.SetMtu((uint)config.Mtu - METADATA_SIZE);
 
             kcp.dead_link = config.MaxRetransmits;
             timeout = config.Timeout;
         }
 
-        // »Øµ÷ ///////////////////////////////////////////////////////////
+        // å›è°ƒ ///////////////////////////////////////////////////////////
         protected abstract void OnAuthenticated();
         protected abstract void OnData(ArraySegment<byte> message, KcpChannel channel);
         protected abstract void OnDisconnected();
@@ -136,7 +136,7 @@ namespace kcp2k
         {
             if (time >= lastReceiveTime + timeout)
             {
-                OnError(ErrorCode.Timeout, $"{GetType()}: ³¬Ê± {timeout}ms£¬Î´ÊÕµ½ÈÎºÎÏûÏ¢¡£¶Ï¿ªÁ¬½Ó¡£");
+                OnError(ErrorCode.Timeout, $"{GetType()}: è¶…æ—¶ {timeout}msï¼Œæœªæ”¶åˆ°ä»»ä½•æ¶ˆæ¯ã€‚æ–­å¼€è¿æ¥ã€‚");
                 Disconnect();
             }
         }
@@ -145,7 +145,7 @@ namespace kcp2k
         {
             if (kcp.state == -1)
             {
-                OnError(ErrorCode.Timeout, $"{GetType()}: dead_link ¼ì²âµ½ÏûÏ¢±»ÖØ´« {kcp.dead_link} ´ÎÈÔÎ´È·ÈÏ¡£¶Ï¿ªÁ¬½Ó¡£");
+                OnError(ErrorCode.Timeout, $"{GetType()}: dead_link æ£€æµ‹åˆ°æ¶ˆæ¯è¢«é‡ä¼  {kcp.dead_link} æ¬¡ä»æœªç¡®è®¤ã€‚æ–­å¼€è¿æ¥ã€‚");
                 Disconnect();
             }
         }
@@ -166,10 +166,10 @@ namespace kcp2k
             if (total >= QueueDisconnectThreshold)
             {
                 OnError(ErrorCode.Congestion,
-                        $"{GetType()}: Á¬½ÓÎŞ·¨´¦ÀíÊı¾İ£¬ÕıÔÚ¶Ï¿ª¡£\n" +
-                        $"¶ÓÁĞ×ÜÊı {total}>{QueueDisconnectThreshold}. rcv_queue={kcp.rcv_queue.Count} snd_queue={kcp.snd_queue.Count} rcv_buf={kcp.rcv_buf.Count} snd_buf={kcp.snd_buf.Count}\n" +
-                        $"* ³¢ÊÔÆôÓÃ NoDelay£¬¼õĞ¡ INTERVAL£¬½ûÓÃÓµÈû´°¿Ú£¨ÆôÓÃ NOCWND!£©£¬Ôö´ó·¢ËÍ/½ÓÊÕ´°¿Ú»òÑ¹ËõÊı¾İ¡£\n" +
-                        $"* »òÕß¿ÉÄÜÊÇÎÒÃÇµÄÍøÂç»ò¶Ô¶ËÍøÂçÌ«Âı¡£");
+                        $"{GetType()}: è¿æ¥æ— æ³•å¤„ç†æ•°æ®ï¼Œæ­£åœ¨æ–­å¼€ã€‚\n" +
+                        $"é˜Ÿåˆ—æ€»æ•° {total}>{QueueDisconnectThreshold}. rcv_queue={kcp.rcv_queue.Count} snd_queue={kcp.snd_queue.Count} rcv_buf={kcp.rcv_buf.Count} snd_buf={kcp.snd_buf.Count}\n" +
+                        $"* å°è¯•å¯ç”¨ NoDelayï¼Œå‡å° INTERVALï¼Œç¦ç”¨æ‹¥å¡çª—å£ï¼ˆå¯ç”¨ NOCWND!ï¼‰ï¼Œå¢å¤§å‘é€/æ¥æ”¶çª—å£æˆ–å‹ç¼©æ•°æ®ã€‚\n" +
+                        $"* æˆ–è€…å¯èƒ½æ˜¯æˆ‘ä»¬çš„ç½‘ç»œæˆ–å¯¹ç«¯ç½‘ç»œå¤ªæ…¢ã€‚");
 
                 kcp.snd_queue.Clear();
 
@@ -187,7 +187,7 @@ namespace kcp2k
 
             if (msgSize > kcpMessageBuffer.Length)
             {
-                OnError(ErrorCode.InvalidReceive, $"{GetType()}: ¿ÉÄÜµÄ·ÖÅä¹¥»÷£¬msgSize {msgSize} > »º³å {kcpMessageBuffer.Length}¡£¶Ï¿ªÁ¬½Ó¡£");
+                OnError(ErrorCode.InvalidReceive, $"{GetType()}: å¯èƒ½çš„åˆ†é…æ”»å‡»ï¼ŒmsgSize {msgSize} > ç¼“å†² {kcpMessageBuffer.Length}ã€‚æ–­å¼€è¿æ¥ã€‚");
                 Disconnect();
                 return false;
             }
@@ -195,7 +195,7 @@ namespace kcp2k
             int received = kcp.Receive(kcpMessageBuffer, msgSize);
             if (received < 0)
             {
-                OnError(ErrorCode.InvalidReceive, $"{GetType()}: Receive Ê§°Ü£¬error={received}¡£¹Ø±ÕÁ¬½Ó¡£");
+                OnError(ErrorCode.InvalidReceive, $"{GetType()}: Receive å¤±è´¥ï¼Œerror={received}ã€‚å…³é—­è¿æ¥ã€‚");
                 Disconnect();
                 return false;
             }
@@ -203,7 +203,7 @@ namespace kcp2k
             byte headerByte = kcpMessageBuffer[0];
             if (!KcpHeader.ParseReliable(headerByte, out header))
             {
-                OnError(ErrorCode.InvalidReceive, $"{GetType()}: ½âÎöÍ·Ê§°Ü: {headerByte} Î´¶¨ÒåÓÚ {typeof(KcpHeaderReliable)}¡£\n");
+                OnError(ErrorCode.InvalidReceive, $"{GetType()}: è§£æå¤´å¤±è´¥: {headerByte} æœªå®šä¹‰äº {typeof(KcpHeaderReliable)}ã€‚\n");
                 Disconnect();
                 return false;
             }
@@ -226,7 +226,7 @@ namespace kcp2k
                 {
                     case KcpHeaderReliable.Hello:
                     {
-                        Log.Info($"[KCP] {GetType()}: ÊÕµ½´ø cookie={cookie} µÄ hello");
+                        Log.Info($"[KCP] {GetType()}: æ”¶åˆ°å¸¦ cookie={cookie} çš„ hello");
                         state = KcpState.Authenticated;
                         OnAuthenticated();
                         break;
@@ -237,7 +237,7 @@ namespace kcp2k
                     }
                     case KcpHeaderReliable.Data:
                     {
-                        OnError(ErrorCode.InvalidReceive, $"[KCP] {GetType()}: ÔÚ Connected ×´Ì¬ÊÕµ½ÎŞĞ§Í· {header}¡£¶Ï¿ªÁ¬½Ó¡£");
+                        OnError(ErrorCode.InvalidReceive, $"[KCP] {GetType()}: åœ¨ Connected çŠ¶æ€æ”¶åˆ°æ— æ•ˆå¤´ {header}ã€‚æ–­å¼€è¿æ¥ã€‚");
                         Disconnect();
                         break;
                     }
@@ -258,7 +258,7 @@ namespace kcp2k
                 {
                     case KcpHeaderReliable.Hello:
                     {
-                        Log.Warning($"{GetType()}: ÔÚ Authenticated ×´Ì¬ÊÕµ½ÎŞĞ§Í· {header}¡£¶Ï¿ªÁ¬½Ó¡£");
+                        Log.Warning($"{GetType()}: åœ¨ Authenticated çŠ¶æ€æ”¶åˆ°æ— æ•ˆå¤´ {header}ã€‚æ–­å¼€è¿æ¥ã€‚");
                         Disconnect();
                         break;
                     }
@@ -270,7 +270,7 @@ namespace kcp2k
                         }
                         else
                         {
-                            OnError(ErrorCode.InvalidReceive, $"{GetType()}: ÔÚ Authenticated ×´Ì¬ÊÕµ½¿ÕµÄ Data ÏûÏ¢¡£¶Ï¿ªÁ¬½Ó¡£");
+                            OnError(ErrorCode.InvalidReceive, $"{GetType()}: åœ¨ Authenticated çŠ¶æ€æ”¶åˆ°ç©ºçš„ Data æ¶ˆæ¯ã€‚æ–­å¼€è¿æ¥ã€‚");
                             Disconnect();
                         }
                         break;
@@ -309,17 +309,17 @@ namespace kcp2k
             }
             catch (SocketException exception)
             {
-                OnError(ErrorCode.ConnectionClosed, $"{GetType()}: ¶Ï¿ªÁ¬½ÓÒòÎª {exception}¡£ÕâÊÇÕı³£µÄ¡£");
+                OnError(ErrorCode.ConnectionClosed, $"{GetType()}: æ–­å¼€è¿æ¥å› ä¸º {exception}ã€‚è¿™æ˜¯æ­£å¸¸çš„ã€‚");
                 Disconnect();
             }
             catch (ObjectDisposedException exception)
             {
-                OnError(ErrorCode.ConnectionClosed, $"{GetType()}: ¶Ï¿ªÁ¬½ÓÒòÎª {exception}¡£ÕâÊÇÕı³£µÄ¡£");
+                OnError(ErrorCode.ConnectionClosed, $"{GetType()}: æ–­å¼€è¿æ¥å› ä¸º {exception}ã€‚è¿™æ˜¯æ­£å¸¸çš„ã€‚");
                 Disconnect();
             }
             catch (Exception exception)
             {
-                OnError(ErrorCode.Unexpected, $"{GetType()}: Î´Ô¤ÆÚµÄÒì³£: {exception}");
+                OnError(ErrorCode.Unexpected, $"{GetType()}: æœªé¢„æœŸçš„å¼‚å¸¸: {exception}");
                 Disconnect();
             }
         }
@@ -346,17 +346,17 @@ namespace kcp2k
             }
             catch (SocketException exception)
             {
-                OnError(ErrorCode.ConnectionClosed, $"{GetType()}: ¶Ï¿ªÁ¬½ÓÒòÎª {exception}¡£ÕâÊÇÕı³£µÄ¡£");
+                OnError(ErrorCode.ConnectionClosed, $"{GetType()}: æ–­å¼€è¿æ¥å› ä¸º {exception}ã€‚è¿™æ˜¯æ­£å¸¸çš„ã€‚");
                 Disconnect();
             }
             catch (ObjectDisposedException exception)
             {
-                OnError(ErrorCode.ConnectionClosed, $"{GetType()}: ¶Ï¿ªÁ¬½ÓÒòÎª {exception}¡£ÕâÊÇÕı³£µÄ¡£");
+                OnError(ErrorCode.ConnectionClosed, $"{GetType()}: æ–­å¼€è¿æ¥å› ä¸º {exception}ã€‚è¿™æ˜¯æ­£å¸¸çš„ã€‚");
                 Disconnect();
             }
             catch (Exception exception)
             {
-                OnError(ErrorCode.Unexpected, $"{GetType()}: Î´Ô¤ÆÚµÄÒì³£: {exception}");
+                OnError(ErrorCode.Unexpected, $"{GetType()}: æœªé¢„æœŸçš„å¼‚å¸¸: {exception}");
                 Disconnect();
             }
         }
@@ -366,7 +366,7 @@ namespace kcp2k
             int input = kcp.Input(message.Array, message.Offset, message.Count);
             if (input != 0)
             {
-                Log.Warning($"[KCP] {GetType()}: Input Ê§°Ü£¬error={input}£¬»º³å³¤¶È={message.Count - 1}");
+                Log.Warning($"[KCP] {GetType()}: Input å¤±è´¥ï¼Œerror={input}ï¼Œç¼“å†²é•¿åº¦={message.Count - 1}");
             }
         }
 
@@ -377,7 +377,7 @@ namespace kcp2k
             byte headerByte = message.Array[message.Offset + 0];
             if (!KcpHeader.ParseUnreliable(headerByte, out KcpHeaderUnreliable header))
             {
-                OnError(ErrorCode.InvalidReceive, $"{GetType()}: ½âÎöÍ·Ê§°Ü: {headerByte} Î´¶¨ÒåÓÚ {typeof(KcpHeaderUnreliable)}¡£\n");
+                OnError(ErrorCode.InvalidReceive, $"{GetType()}: è§£æå¤´å¤±è´¥: {headerByte} æœªå®šä¹‰äº {typeof(KcpHeaderUnreliable)}ã€‚\n");
                 Disconnect();
                 return;
             }
@@ -395,13 +395,13 @@ namespace kcp2k
                     }
                     else
                     {
-                        // ÔÚÎ´ÈÏÖ¤Ç°ÊÕµ½²»¿É¿¿ÏûÏ¢ºÜ³£¼û£¬ºöÂÔ¼´¿É¡£
+                        // åœ¨æœªè®¤è¯å‰æ”¶åˆ°ä¸å¯é æ¶ˆæ¯å¾ˆå¸¸è§ï¼Œå¿½ç•¥å³å¯ã€‚
                     }
                     break;
                 }
                 case KcpHeaderUnreliable.Disconnect:
                 {
-                    Log.Info($"[KCP] {GetType()}: ÊÕµ½¶Ï¿ªÏûÏ¢");
+                    Log.Info($"[KCP] {GetType()}: æ”¶åˆ°æ–­å¼€æ¶ˆæ¯");
                     Disconnect();
                     break;
                 }
@@ -421,7 +421,7 @@ namespace kcp2k
         {
             if (1 + content.Count > kcpSendBuffer.Length)
             {
-                OnError(ErrorCode.InvalidSend, $"{GetType()}: ·¢ËÍ¿É¿¿ÏûÏ¢Ê§°Ü£¬´óĞ¡ {content.Count} > ReliableMaxMessageSize={reliableMax}");
+                OnError(ErrorCode.InvalidSend, $"{GetType()}: å‘é€å¯é æ¶ˆæ¯å¤±è´¥ï¼Œå¤§å° {content.Count} > ReliableMaxMessageSize={reliableMax}");
                 return;
             }
 
@@ -433,7 +433,7 @@ namespace kcp2k
             int sent = kcp.Send(kcpSendBuffer, 0, 1 + content.Count);
             if (sent < 0)
             {
-                OnError(ErrorCode.InvalidSend, $"{GetType()}: Send Ê§°Ü£¬error={sent}£¬ÄÚÈİ³¤¶È={content.Count}");
+                OnError(ErrorCode.InvalidSend, $"{GetType()}: Send å¤±è´¥ï¼Œerror={sent}ï¼Œå†…å®¹é•¿åº¦={content.Count}");
             }
         }
 
@@ -441,7 +441,7 @@ namespace kcp2k
         {
             if (content.Count > unreliableMax)
             {
-                Log.Error($"[KCP] {GetType()}: ·¢ËÍ²»¿É¿¿ÏûÏ¢Ê§°Ü£¬´óĞ¡ {content.Count} > UnreliableMaxMessageSize={unreliableMax}");
+                Log.Error($"[KCP] {GetType()}: å‘é€ä¸å¯é æ¶ˆæ¯å¤±è´¥ï¼Œå¤§å° {content.Count} > UnreliableMaxMessageSize={unreliableMax}");
                 return;
             }
 
@@ -458,16 +458,16 @@ namespace kcp2k
 
         public void SendHello()
         {
-            Log.Info($"[KCP] {GetType()}: Ïò¶Ô¶Ë·¢ËÍÎÕÊÖ£¬cookie={cookie}");
+            Log.Info($"[KCP] {GetType()}: å‘å¯¹ç«¯å‘é€æ¡æ‰‹ï¼Œcookie={cookie}");
             SendReliable(KcpHeaderReliable.Hello, default);
         }
 
         public void SendData(ArraySegment<byte> data, KcpChannel channel)
         {
-            // ·¢ËÍ¿Õ¶ÎÊÇ²»ÔÊĞíµÄ¡£
+            // å‘é€ç©ºæ®µæ˜¯ä¸å…è®¸çš„ã€‚
             if (data.Count == 0)
             {
-                OnError(ErrorCode.InvalidSend, $"{GetType()}: ÊÔÍ¼·¢ËÍ¿ÕÏûÏ¢£¬Õâ²»Ó¦¸Ã·¢Éú¡£¶Ï¿ªÁ¬½Ó¡£");
+                OnError(ErrorCode.InvalidSend, $"{GetType()}: è¯•å›¾å‘é€ç©ºæ¶ˆæ¯ï¼Œè¿™ä¸åº”è¯¥å‘ç”Ÿã€‚æ–­å¼€è¿æ¥ã€‚");
                 Disconnect();
                 return;
             }
@@ -507,7 +507,7 @@ namespace kcp2k
             {
             }
 
-            Log.Info($"[KCP] {GetType()}: ÒÑ¶Ï¿ªÁ¬½Ó¡£");
+            Log.Info($"[KCP] {GetType()}: å·²æ–­å¼€è¿æ¥ã€‚");
             state = KcpState.Disconnected;
             OnDisconnected();
         }

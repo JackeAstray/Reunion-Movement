@@ -3,5 +3,5 @@ using System.Runtime.CompilerServices;
 
 [assembly: AssemblyVersion("1.6.0")]
 
-[assembly: InternalsVisibleTo("SimpleWebTransport.Tests.Runtime")]
-[assembly: InternalsVisibleTo("SimpleWebTransport.Tests.Editor")]
+[assembly: InternalsVisibleTo("ReunionMovement.SimpleWeb.Tests.Runtime")]
+[assembly: InternalsVisibleTo("ReunionMovement.SimpleWeb.Tests.Editor")]

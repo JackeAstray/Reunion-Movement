@@ -1,4 +1,4 @@
-namespace ReunionMovement.Common.Util
+﻿namespace ReunionMovement.Common.Util
 {
     /// <summary>
     /// Mesh attributes bitmask.
