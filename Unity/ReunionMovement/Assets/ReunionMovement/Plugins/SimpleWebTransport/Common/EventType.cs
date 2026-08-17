@@ -1,4 +1,4 @@
-﻿namespace Mirror.SimpleWeb
+﻿namespace ReunionMovement.SimpleWeb
 {
     public enum EventType
     {

@@ -3,7 +3,7 @@
 // （这样就不用强制依赖 UnityEngine）
 using System;
 
-namespace kcp2k
+namespace ReunionMovement.Kcp2k
 {
     public static class Log
     {

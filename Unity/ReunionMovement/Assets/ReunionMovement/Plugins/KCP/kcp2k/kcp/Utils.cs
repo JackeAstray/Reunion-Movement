@@ -1,6 +1,6 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 
-namespace kcp2k
+namespace ReunionMovement.Kcp2k
 {
     public static partial class Utils
     {

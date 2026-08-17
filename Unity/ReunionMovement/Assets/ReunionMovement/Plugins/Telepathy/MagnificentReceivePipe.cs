@@ -9,7 +9,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Telepathy
+namespace ReunionMovement.Telepathy
 {
     public class MagnificentReceivePipe
     {

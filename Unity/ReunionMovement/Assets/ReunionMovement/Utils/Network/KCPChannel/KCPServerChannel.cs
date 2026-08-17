@@ -1,5 +1,5 @@
 ﻿using System;
-using kcp2k;
+using ReunionMovement.Kcp2k;
 using ReunionMovement.Common;
 
 namespace ReunionMovement.Common.Util
@@ -76,9 +76,9 @@ namespace ReunionMovement.Common.Util
         {
             this.ChannelName = channelName;
             // 将 kcp2k 日志转发到我们的 Log 帮助类
-            kcp2k.Log.Info = (s) => Log.Info(s);
-            kcp2k.Log.Warning = (s) => Log.Warning(s);
-            kcp2k.Log.Error = (s) => Log.Error(s);
+            ReunionMovement.Kcp2k.Log.Info = (s) => Log.Info(s);
+            ReunionMovement.Kcp2k.Log.Warning = (s) => Log.Warning(s);
+            ReunionMovement.Kcp2k.Log.Error = (s) => Log.Error(s);
             this.Port = port;
             server = new KcpServerEndPoint(
                 (connectionId, ipEndPoint) => onConnected?.Invoke(connectionId, ipEndPoint.ToString()),

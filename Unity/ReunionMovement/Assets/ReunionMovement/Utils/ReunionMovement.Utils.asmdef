@@ -5,9 +5,9 @@
         "ReunionMovement.Base",
         "ReunionMovement.Common",
         "UniTask",
-        "Telepathy",
-        "kcp2k",
-        "SimpleWebTransport",
+        "ReunionMovement.Telepathy",
+        "ReunionMovement.Kcp2k",
+        "ReunionMovement.SimpleWeb",
         "UnityEngine.UI",
         "Unity.InputSystem",
         "Unity.TextMeshPro"

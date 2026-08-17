@@ -1,4 +1,4 @@
-using ReunionMovement.Common;
+﻿using ReunionMovement.Common;
 using ReunionMovement.Core.UIToolkit;
 using ReunionMovement.Core.Resources;
 using ReunionMovement.Core.Sound;

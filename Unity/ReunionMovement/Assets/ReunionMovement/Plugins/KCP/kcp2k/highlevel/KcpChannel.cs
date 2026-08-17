@@ -1,9 +1,9 @@
-namespace kcp2k
+ï»¿namespace ReunionMovement.Kcp2k
 {
-    // Ô­Ê¼ÏûÏ¢µÄÍ¨µÀÀàĞÍºÍÍ·²¿
+    // åŸå§‹æ¶ˆæ¯çš„é€šé“ç±»å‹å’Œå¤´éƒ¨
     public enum KcpChannel : byte
     {
-        // ²»Òª¶Ô 0x00 ×ö³ö·´Ó¦£¬ÄÜ°ïÖú¹ıÂËËæ»úÔëÉù¡£
+        // ä¸è¦å¯¹ 0x00 åšå‡ºååº”ï¼Œèƒ½å¸®åŠ©è¿‡æ»¤éšæœºå™ªå£°ã€‚
         Reliable   = 1,
         Unreliable = 2
     }

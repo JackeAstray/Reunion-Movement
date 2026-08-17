@@ -1,22 +1,22 @@
-// server needs to store a separate KcpPeer for each connection.
+ï»¿// server needs to store a separate KcpPeer for each connection.
 // as well as remoteEndPoint so we know where to send data to.
 using System;
 using System.Net;
 
-namespace kcp2k
+namespace ReunionMovement.Kcp2k
 {
     public class KcpServerConnection : KcpPeer
     {
         public readonly EndPoint remoteEndPoint;
 
-        // »Øµ÷
-        // ¼´Ê¹·¢Éú´íÎóÒ²»á»Øµ÷£¬ÒÔ±ã¿âÏÔÊ¾¶Ô»°¿òµÈ¡£
-        // ¶ø²»ÊÇÖ±½Ó¼ÇÂ¼ÈÕÖ¾¡£
-        // £¨Ê¹ÓÃ string ¶ø²»ÊÇ Exception ÒÔ±ãÒ×ÓÃ²¢±ÜÃâÓÃ»§¿Ö»Å£©
+        // å›è°ƒ
+        // å³ä½¿å‘ç”Ÿé”™è¯¯ä¹Ÿä¼šå›è°ƒï¼Œä»¥ä¾¿åº“æ˜¾ç¤ºå¯¹è¯æ¡†ç­‰ã€‚
+        // è€Œä¸æ˜¯ç›´æ¥è®°å½•æ—¥å¿—ã€‚
+        // ï¼ˆä½¿ç”¨ string è€Œä¸æ˜¯ Exception ä»¥ä¾¿æ˜“ç”¨å¹¶é¿å…ç”¨æˆ·ææ…Œï¼‰
         //
-        // ÊÂ¼şÎªÖ»¶Á£¬ÔÚ¹¹Ôìº¯ÊıÖĞÉèÖÃ¡£
-        // Õâ¿ÉÒÔÈ·±£ÔÚÊ¹ÓÃÊ±ËüÃÇÒÑ¾­³õÊ¼»¯¡£
-        // ½â¾öÁË https://github.com/MirrorNetworking/Mirror/issues/3337 µÈÎÊÌâ
+        // äº‹ä»¶ä¸ºåªè¯»ï¼Œåœ¨æ„é€ å‡½æ•°ä¸­è®¾ç½®ã€‚
+        // è¿™å¯ä»¥ç¡®ä¿åœ¨ä½¿ç”¨æ—¶å®ƒä»¬å·²ç»åˆå§‹åŒ–ã€‚
+        // è§£å†³äº† https://github.com/MirrorNetworking/Mirror/issues/3337 ç­‰é—®é¢˜
         protected readonly Action<KcpServerConnection> OnConnectedCallback;
         protected readonly Action<ArraySegment<byte>, KcpChannel> OnDataCallback;
         protected readonly Action OnDisconnectedCallback;
@@ -43,10 +43,10 @@ namespace kcp2k
             this.remoteEndPoint = remoteEndPoint;
         }
 
-        // »Øµ÷ ///////////////////////////////////////////////////////////
+        // å›è°ƒ ///////////////////////////////////////////////////////////
         protected override void OnAuthenticated()
         {
-            // Ò»µ©ÊÕµ½¿Í»§¶ËµÄµÚÒ»¸ö hello£¬Á¢¼´»Ø¸´ hello£¬Ê¹¿Í»§¶ËÖªµÀ°²È« cookie¡£
+            // ä¸€æ—¦æ”¶åˆ°å®¢æˆ·ç«¯çš„ç¬¬ä¸€ä¸ª helloï¼Œç«‹å³å›å¤ helloï¼Œä½¿å®¢æˆ·ç«¯çŸ¥é“å®‰å…¨ cookieã€‚
             SendHello();
             OnConnectedCallback(this);
         }
@@ -64,37 +64,37 @@ namespace kcp2k
             RawSendCallback(data);
         ////////////////////////////////////////////////////////////////////////
 
-        // ²åÈëÔ­Ê¼ IO¡£Í¨³£À´×Ô socket.Receive¡£
-        // offset ¶ÔÓÚÖĞ¼ÌºÜÓĞÓÃ£¬ÎÒÃÇ¿ÉÄÜ½âÎöÍ·²¿È»ºó°ÑÆäÓàÊı¾İÎ¹¸ø kcp¡£
+        // æ’å…¥åŸå§‹ IOã€‚é€šå¸¸æ¥è‡ª socket.Receiveã€‚
+        // offset å¯¹äºä¸­ç»§å¾ˆæœ‰ç”¨ï¼Œæˆ‘ä»¬å¯èƒ½è§£æå¤´éƒ¨ç„¶åæŠŠå…¶ä½™æ•°æ®å–‚ç»™ kcpã€‚
         public void RawInput(ArraySegment<byte> segment)
         {
-            // È·±£ÓĞĞ§´óĞ¡£ºÖÁÉÙ 1 ×Ö½ÚÍ¨µÀ + 4 ×Ö½Ú cookie
+            // ç¡®ä¿æœ‰æ•ˆå¤§å°ï¼šè‡³å°‘ 1 å­—èŠ‚é€šé“ + 4 å­—èŠ‚ cookie
             if (segment.Count <= 5) return;
 
-            // ½âÎöÍ¨µÀ
-            // byte channel = segment[0]; ArraySegment[i] ÔÚ¾É°æ Unity Mono ÖĞ²»ÊÜÖ§³Ö
+            // è§£æé€šé“
+            // byte channel = segment[0]; ArraySegment[i] åœ¨æ—§ç‰ˆ Unity Mono ä¸­ä¸å—æ”¯æŒ
             byte channel = segment.Array[segment.Offset + 0];
 
-            // ËùÓĞ server->client ÏûÏ¢¶¼°üº¬·şÎñÆ÷µÄ°²È« cookie¡£
-            // ËùÓĞ client->server ÏûÏ¢£¨³ı³õÊ¼ hello£©Ò²Ó¦°üº¬ cookie¡£
-            // ½âÎö cookie ²¢È·±£Æ¥Åä£¨³õÊ¼ hello ³ıÍâ£©¡£
+            // æ‰€æœ‰ server->client æ¶ˆæ¯éƒ½åŒ…å«æœåŠ¡å™¨çš„å®‰å…¨ cookieã€‚
+            // æ‰€æœ‰ client->server æ¶ˆæ¯ï¼ˆé™¤åˆå§‹ helloï¼‰ä¹Ÿåº”åŒ…å« cookieã€‚
+            // è§£æ cookie å¹¶ç¡®ä¿åŒ¹é…ï¼ˆåˆå§‹ hello é™¤å¤–ï¼‰ã€‚
             Utils.Decode32U(segment.Array, segment.Offset + 1, out uint messageCookie);
 
-            // °²È«ĞÔ£ºÈÏÖ¤ºóÏûÏ¢Ó¦°üº¬ cookie£¬ÒÔ·À UDP ÆÛÆ­¡£
-            // Èç¹û cookie ²»Æ¥ÅäÔòÖ±½Ó¶ªÆúÏûÏ¢¡£
+            // å®‰å…¨æ€§ï¼šè®¤è¯åæ¶ˆæ¯åº”åŒ…å« cookieï¼Œä»¥é˜² UDP æ¬ºéª—ã€‚
+            // å¦‚æœ cookie ä¸åŒ¹é…åˆ™ç›´æ¥ä¸¢å¼ƒæ¶ˆæ¯ã€‚
             if (state == KcpState.Authenticated)
             {
                 if (messageCookie != cookie)
                 {
-                    // ÓÃ Info ¼ÇÂ¼×ã¹»£¬²»Òª¾ª¶¯ÓÃ»§¡£
-                    // => Õâ¿ÉÄÜÊÇ¶ñÒâÏûÏ¢
-                    // => Ò²¿ÉÄÜÊÇ¿Í»§¶ËµÄ Hello ÏûÏ¢±»¶à´ÎÖØ´«£¬ÕâÊÇÕı³£µÄ¡£
-                    Log.Info($"[KCP] ServerConnection: ¶ªÆú¾ßÓĞÎŞĞ§ cookie µÄÏûÏ¢: {messageCookie} À´×Ô {remoteEndPoint} ÆÚÍû: {cookie} ×´Ì¬: {state}¡£Õâ¿ÉÄÜÊÇ¿Í»§¶ËµÄ Hello ±»¶à´Î·¢ËÍ£¬»òÊÇ³¢ÊÔµÄ UDP ÆÛÆ­¡£");
+                    // ç”¨ Info è®°å½•è¶³å¤Ÿï¼Œä¸è¦æƒŠåŠ¨ç”¨æˆ·ã€‚
+                    // => è¿™å¯èƒ½æ˜¯æ¶æ„æ¶ˆæ¯
+                    // => ä¹Ÿå¯èƒ½æ˜¯å®¢æˆ·ç«¯çš„ Hello æ¶ˆæ¯è¢«å¤šæ¬¡é‡ä¼ ï¼Œè¿™æ˜¯æ­£å¸¸çš„ã€‚
+                    Log.Info($"[KCP] ServerConnection: ä¸¢å¼ƒå…·æœ‰æ— æ•ˆ cookie çš„æ¶ˆæ¯: {messageCookie} æ¥è‡ª {remoteEndPoint} æœŸæœ›: {cookie} çŠ¶æ€: {state}ã€‚è¿™å¯èƒ½æ˜¯å®¢æˆ·ç«¯çš„ Hello è¢«å¤šæ¬¡å‘é€ï¼Œæˆ–æ˜¯å°è¯•çš„ UDP æ¬ºéª—ã€‚");
                     return;
                 }
             }
 
-            // ½âÎöÏûÏ¢
+            // è§£ææ¶ˆæ¯
             ArraySegment<byte> message = new ArraySegment<byte>(segment.Array, segment.Offset + 1+4, segment.Count - 1-4);
 
             switch (channel)
@@ -111,10 +111,10 @@ namespace kcp2k
                 }
                 default:
                 {
-                    // ÎŞĞ§Í¨µÀÍ¨³£±íÊ¾Ëæ»ú»¥ÁªÍøÔëÉù¡£
-                    // ·şÎñÆ÷¿ÉÄÜÊÕµ½Ëæ»ú UDP Êı¾İ¡£
-                    // ºöÂÔ£¬µ«¼ÇÂ¼ÒÔ±ãµ÷ÊÔ¡£
-                    Log.Warning($"[KCP] ServerConnection: ÎŞĞ§µÄÍ¨µÀÍ·: {channel} À´×Ô {remoteEndPoint}£¬¿ÉÄÜÊÇ»¥ÁªÍøÔëÉù");
+                    // æ— æ•ˆé€šé“é€šå¸¸è¡¨ç¤ºéšæœºäº’è”ç½‘å™ªå£°ã€‚
+                    // æœåŠ¡å™¨å¯èƒ½æ”¶åˆ°éšæœº UDP æ•°æ®ã€‚
+                    // å¿½ç•¥ï¼Œä½†è®°å½•ä»¥ä¾¿è°ƒè¯•ã€‚
+                    Log.Warning($"[KCP] ServerConnection: æ— æ•ˆçš„é€šé“å¤´: {channel} æ¥è‡ª {remoteEndPoint}ï¼Œå¯èƒ½æ˜¯äº’è”ç½‘å™ªå£°");
                     break;
                 }
             }

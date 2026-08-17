@@ -2,7 +2,7 @@
 using System.Net.Sockets;
 using System.Threading;
 
-namespace Telepathy
+namespace ReunionMovement.Telepathy
 {
     // ClientState 对象，可以安全地传递给接收线程。
     // => 允许我们在每次连接时创建一个新对象并启动一个

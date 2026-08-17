@@ -1,4 +1,4 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using ReunionMovement.Core.Terminal;
 
 namespace ReunionMovement.Tests

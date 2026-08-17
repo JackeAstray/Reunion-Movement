@@ -3,7 +3,7 @@
 // （这样我们就不必依赖 UnityEngine.DLL，也不需要为每个 Unity 版本提供不同的实现）
 using System;
 
-namespace Telepathy
+namespace ReunionMovement.Telepathy
 {
     public static class Log
     {

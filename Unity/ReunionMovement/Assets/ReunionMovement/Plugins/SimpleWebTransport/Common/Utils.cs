@@ -1,6 +1,6 @@
 ﻿using System.Threading;
 
-namespace Mirror.SimpleWeb
+namespace ReunionMovement.SimpleWeb
 {
     internal static class Utils
     {

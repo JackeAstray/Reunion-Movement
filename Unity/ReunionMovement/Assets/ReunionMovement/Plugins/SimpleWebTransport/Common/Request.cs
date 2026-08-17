@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Mirror.SimpleWeb
+namespace ReunionMovement.SimpleWeb
 {
     /// <summary>
     /// 表示客户端发送到 WebSocket 服务器的请求，这是客户端发送的第一条消息。

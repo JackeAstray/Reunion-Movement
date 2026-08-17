@@ -1,4 +1,4 @@
-namespace ReunionMovement.Core
+﻿namespace ReunionMovement.Core
 {
     /// <summary>
     /// 游戏引擎生命周期状态

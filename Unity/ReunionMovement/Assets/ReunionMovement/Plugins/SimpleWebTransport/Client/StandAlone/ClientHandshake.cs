@@ -3,7 +3,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Mirror.SimpleWeb
+namespace ReunionMovement.SimpleWeb
 {
     /// <summary>
     /// 处理客户端在首次连接到服务器时的握手

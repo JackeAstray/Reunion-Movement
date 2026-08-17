@@ -1,4 +1,4 @@
-namespace ReunionMovement.Core.Base
+﻿namespace ReunionMovement.Core.Base
 {
     /// <summary>
     /// 可更新系统 —— 实现此接口的模块会被 GameEngine 每帧驱动 Update。

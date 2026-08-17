@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Buffers;
-using Telepathy;
+using ReunionMovement.Telepathy;
 
 namespace ReunionMovement.Common.Util
 {
@@ -44,9 +44,9 @@ namespace ReunionMovement.Common.Util
         {
             this.ChannelName = channelName;
             client = new Client(TcpConstants.MaxMessageSize);
-            Telepathy.Log.Info = (s) => Log.Info(s);
-            Telepathy.Log.Warning = (s) => Log.Warning(s);
-            Telepathy.Log.Error = (s) => Log.Error(s);
+            ReunionMovement.Telepathy.Log.Info = (s) => Log.Info(s);
+            ReunionMovement.Telepathy.Log.Warning = (s) => Log.Warning(s);
+            ReunionMovement.Telepathy.Log.Error = (s) => Log.Error(s);
             // 内部跟踪：连接成功标记；从未成功连接即断开 → 视为连接失败并上报错误
             client.OnConnected += () => everConnected = true;
             client.OnDisconnected += () =>

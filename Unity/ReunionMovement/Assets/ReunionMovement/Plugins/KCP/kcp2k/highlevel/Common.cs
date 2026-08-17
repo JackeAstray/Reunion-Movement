@@ -1,9 +1,9 @@
-using System;
+﻿using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 
-namespace kcp2k
+namespace ReunionMovement.Kcp2k
 {
     public static class Common
     {

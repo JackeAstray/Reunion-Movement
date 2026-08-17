@@ -1,4 +1,4 @@
-namespace ReunionMovement.Common.Util
+﻿namespace ReunionMovement.Common.Util
 {
     /// <summary>
     /// 网络传输类型 —— 统一抽象，由 NetworkChannelFactory 创建对应通道实现。

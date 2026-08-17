@@ -1,7 +1,7 @@
-// common config struct, instead of passing 10 parameters manually every time.
+﻿// common config struct, instead of passing 10 parameters manually every time.
 using System;
 
-namespace kcp2k
+namespace ReunionMovement.Kcp2k
 {
     // [Serializable] to show it in Unity inspector.
     // 'class' so we can set defaults easily.

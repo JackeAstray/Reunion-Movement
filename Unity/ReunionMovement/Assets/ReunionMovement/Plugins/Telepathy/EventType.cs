@@ -1,4 +1,4 @@
-﻿﻿namespace Telepathy
+﻿﻿namespace ReunionMovement.Telepathy
 {
     public enum EventType
     {

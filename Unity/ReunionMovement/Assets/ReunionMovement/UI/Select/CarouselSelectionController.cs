@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using R3;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -52,8 +52,14 @@ namespace ReunionMovement.UI.Select
         [SerializeField] private NavigateAxis navigateAxis = NavigateAxis.Horizontal;
         [Tooltip("导航响应阈值（手柄左摇杆死区，0~1）")]
         [SerializeField, Range(0f, 1f)] private float navigateDeadzone = 0.5f;
+        [Tooltip("导航切换节流（秒）：两次切换的最小间隔。摇杆为模拟量，推入过程中每帧都会触发导航事件，" +
+                 "若无节流一次推入会连跳多格；方向键快速连按也会被限制为该间隔，避免切换过快")]
+        [SerializeField, Range(0f, 0.5f)] private float navigateRepeatDelay = 0.15f;
 
         private int currentIndex = 0;
+
+        /// <summary>上次响应导航的时间（unscaledTime），用于导航节流（摇杆推入过程/按键连按去抖）</summary>
+        private float lastNavigateTime = -1f;
 
         // 矩阵行布局缓存（由 rowSizes 或 columns 推导），避免每次按键重复分配
         private int[] cachedRowTable;
@@ -183,6 +189,13 @@ namespace ReunionMovement.UI.Select
         {
             // 叠层窗口同时激活时，只有顶层窗口响应导航
             if (!IsTopmostWindow()) return;
+
+            // 导航节流：两次切换至少间隔 navigateRepeatDelay。摇杆为模拟量，
+            // 推入过程中值每帧变化都会触发导航事件，若无节流一次推入会连跳多格；
+            // 方向键快速连按也会被限制为该间隔，避免切换过快。
+            float now = Time.unscaledTime;
+            if (now - lastNavigateTime < navigateRepeatDelay) return;
+            lastNavigateTime = now;
 
             if (columns > 1)
             {
@@ -529,8 +542,14 @@ namespace ReunionMovement.UI.Select
 
             if (closeOnConfirm)
             {
-                CloseWindow();
+                // CloseWindow();
+                Log.Debug($"CloseWindow");
             }
+        }
+
+        public void Cancel()
+        {
+            Log.Debug($"CloseWindow");
         }
     }
 }

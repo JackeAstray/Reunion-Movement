@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace ReunionMovement.Core.UIInput
 {
@@ -50,8 +50,14 @@ namespace ReunionMovement.Core.UIInput
         /// <summary>取消按键显示名称</summary>
         public string cancelDisplayName = "Escape";
 
-        /// <summary>从角色控制切换到 UI 控制的按键（默认 Tab）</summary>
+        /// <summary>切换 UI 控制模式的按键（默认 Tab）：Gameplay 按下进入 UI，UI 模式下再按退出</summary>
         public string toggleToUI = "tab";
+
+        /// <summary>切换 UI 控制模式的游戏手柄按键（完整 control path，默认 Start）：Gameplay 按下进入 UI，UI 模式下再按退出</summary>
+        public string toggleToUIGamepad = "<Gamepad>/start";
+
+        /// <summary>游戏手柄切换键显示名称</summary>
+        public string toggleToUIGamepadDisplayName = "Start";
 
         /// <summary>从 UI 控制切换回角色控制的按键（默认 Escape，与 Cancel 共用时由模式判断）</summary>
         public string toggleToGameplay = "escape";
@@ -99,6 +105,8 @@ namespace ReunionMovement.Core.UIInput
                 cancel = "escape",
                 cancelDisplayName = "Escape",
                 toggleToUI = "tab",
+                toggleToUIGamepad = "<Gamepad>/start",
+                toggleToUIGamepadDisplayName = "Start",
                 toggleToGameplay = "escape",
             };
         }

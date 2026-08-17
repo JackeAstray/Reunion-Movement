@@ -1,4 +1,4 @@
-namespace ReunionMovement.Core.Base
+﻿namespace ReunionMovement.Core.Base
 {
     /// <summary>
     /// 可清理系统 —— 提供 Clear 方法用于释放模块数据。

@@ -1,4 +1,4 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using ReunionMovement.Common.Util.Timer;
 
 namespace ReunionMovement.Tests

@@ -1,4 +1,4 @@
-using ReunionMovement.UI.ImageExtensions;
+﻿using ReunionMovement.UI.ImageExtensions;
 using System;
 using System.Collections;
 using System.Collections.Generic;
