@@ -15,17 +15,17 @@
 
 ## 阅读顺序
 
-```
+```text
 首次接入：设计方案(1) → 快速开始(2)
 日常开发：本地测试(3) → 快速开始(2)
 上线发版：远程部署(4) → 打包分发(见 Docs/Packaging)
 ```
 
-## 当前实现状态（2026-08-12）
+## 当前实现状态（2026-08-17）
 
 | 模块 | 状态 | 说明 |
 | --- | --- | --- |
-| `AddressableSystem`（运行时封装） | ✅ 已实现 | 加载/实例化/场景/释放/降级/远程更新检查/缓存清理 |
+| `AddressableSystem`（运行时封装） | ✅ 已实现 | 加载/实例化/场景/释放/降级/远程更新检查/缓存清理/调试统计 |
 | `AddressableKeys`（地址常量） | ✅ 已实现 | `BuiltIn/UI/...` 前缀 + Label 约定 |
 | `Config`/`GameConfig` 配置 | ✅ 已实现 | `enableAddressables` / `addressablesMode` / 远程 URL |
 | `AddressablesSetup`（自动配置） | ✅ 已实现 | `[InitializeOnLoad]` 自动建分组/Label/Profile，校验并修正 Remote 分组路径变量，默认激活 `DevLocal`；远程 Catalog **默认关闭**（`ReunionMovement → Addressables → 配置/启用远程 Catalog（Phase 3 热更）` 手动开启） |
@@ -38,6 +38,7 @@
 | SoundSystem 双轨加载（`GetAudioClipAsync`） | ✅ 已实现 | Addressables 优先（`Remote/Sounds/...`）→ Resources 降级，按来源释放 |
 | SceneSystem 双轨加载（`LoadScene`） | ✅ 已实现 | Addressable 场景优先（`Remote/Scenes/...`）→ SceneManager 降级，切换释放旧场景 |
 | 远程 URL 运行时重写 | ✅ 已实现 | `remoteBundleUrl`/`remoteCatalogUrl` 在 Remote 模式覆盖构建烘焙地址（`InternalIdTransformFunc`），同构建产物可部署任意 CDN |
+| 热更状态机（`AddressableUpdateFlow`） | ✅ 已实现 | 检查→下载→应用流程（R3 可观测），非 Remote 模式自动跳过；可与 UI 进度直接绑定 |
 | 远程 CDN 实测 | ⏳ 待验证 | 代码就绪，无 CDN，LocalOnly 本地可用 |
 | 运行时开关（`GameConfig.enableAddressables`） | ⏸ 当前关闭 | 交付包内 `GameConfig.asset` 为 `enableAddressables=0`（有意关闭），运行时全走 Resources 降级；启用热更前需置 1 并配置 `remoteBundleUrl`/`remoteCatalogUrl`（注：`m_BuildAddressablesWithPlayerBuild=0`，玩家包内无本地 bundle） |
 | UI 资源实际迁移 | ✅ 已迁移 | `BuiltIn_UI`：StartGameUIPlane / PopupUIPlane / TerminalUIPlane（含 Logo/材质/Shader 依赖） |
@@ -45,7 +46,7 @@
 
 ## 菜单结构（2026-08-13 整理）
 
-```
+```text
 ReunionMovement/Addressables/
 ├─ 一键流水线（迁移+构建+上传 OSS）      ← 推荐入口（优先 0）
 ├─ 配置/
