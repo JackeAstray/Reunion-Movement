@@ -190,7 +190,13 @@ namespace ReunionMovement.Core.Terminal
         /// <param name="arguments"></param>
         public void ExecuteCommand(string command_name, CommandArg[] arguments)
         {
-            var command = commands[command_name];
+            // public 入口：外部可能传入未知命令名，TryGetValue 避免 KeyNotFoundException 崩溃
+            if (!commands.TryGetValue(command_name, out var command))
+            {
+                ErrorLog("找不到命令：{0}", command_name);
+                return;
+            }
+            arguments ??= Array.Empty<CommandArg>();
             int arg_count = arguments.Length;
             string error_message = null;
             int required_arg = 0;
@@ -479,7 +485,17 @@ namespace ReunionMovement.Core.Terminal
         /// <param name="message"></param>
         public void ErrorLog(string format, params object[] message)
         {
-            string str = string.Format(format, message);
+            // 参数可能来自命令输入（含未转义 { 时 string.Format 抛 FormatException），
+            // 失败时降级为原样输出，避免异常沿解析栈传播
+            string str;
+            try
+            {
+                str = string.Format(format, message);
+            }
+            catch (FormatException)
+            {
+                str = string.Concat(format, " | ", message != null ? string.Join(", ", message) : string.Empty);
+            }
             Log.Error(str);
         }
     }

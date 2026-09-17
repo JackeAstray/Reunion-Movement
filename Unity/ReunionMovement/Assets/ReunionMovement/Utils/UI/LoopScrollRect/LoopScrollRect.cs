@@ -148,7 +148,8 @@ namespace ReunionMovement.Common.Util
                 enabled = false;
                 return;
             }
-            itemPrefab.gameObject.SetActive(false);
+            // 注意：不直接对 itemPrefab 资产 SetActive(false)（会修改内存中的预制体状态，
+            // 编辑器下可能标脏资产并影响其他实例化源）；实例化后由 GetItem 显式控制激活。
         }
 
         void OnEnable()
@@ -162,6 +163,16 @@ namespace ReunionMovement.Common.Util
             // 组件在拖拽中途被禁用（窗口关闭等）时 OnEndDrag 不会到达：
             // 复位拖拽标记，避免重新启用后 OnScroll 每帧误跑指示器逻辑
             isDragging = false;
+
+            // 隐藏已显示的 pull 指示器实例（拖拽中禁用会残留 active 指示器，直到下次滚动才被隐藏）
+            if (pullStartIndicatorInstance != null)
+            {
+                pullStartIndicatorInstance.gameObject.SetActive(false);
+            }
+            if (pullEndIndicatorInstance != null)
+            {
+                pullEndIndicatorInstance.gameObject.SetActive(false);
+            }
         }
 
         void OnDestroy()
@@ -205,6 +216,10 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         void Build()
         {
+            // 数据重建期间取消在途平滑滚动：否则其每帧写 content.anchoredPosition，
+            // 结束后用旧 finalFirstIndex 对新池执行 RefreshVisible，造成跳动/错位
+            StopScrollCoroutineIfAny();
+
             // 清理已有池
             foreach (var it in pooledItems)
             {

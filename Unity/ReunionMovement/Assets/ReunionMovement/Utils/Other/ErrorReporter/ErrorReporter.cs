@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 namespace ReunionMovement.Common.Util
@@ -36,6 +37,25 @@ namespace ReunionMovement.Common.Util
         /// <summary>最近错误缓冲（线程安全）</summary>
         private static readonly List<string> recentErrors = new List<string>(MaxBufferedEntries);
         private static readonly object syncRoot = new object();
+
+        /// <summary>上传最小间隔（5 秒）：防止调用方任意频次触发上报刷爆日志服务</summary>
+        private const long MinUploadIntervalTicks = TimeSpan.TicksPerSecond * 5;
+        private static long lastUploadTicks;
+
+        // ===== 上报脱敏（防本地绝对路径/开发机用户名/邮箱随堆栈外泄）=====
+        private static readonly Regex s_winPathRegex = new Regex(@"[A-Za-z]:[\\/][^\s<>|:*?""]*", RegexOptions.Compiled);
+        private static readonly Regex s_uncPathRegex = new Regex(@"\\\\(?:[^\\\s]+)\\(?:[^\\\s]+)", RegexOptions.Compiled);
+        private static readonly Regex s_emailRegex = new Regex(@"\b[\w.+-]+@[\w-]+\.[\w.-]+\b", RegexOptions.Compiled);
+
+        /// <summary>上报前脱敏：屏蔽盘符路径 / UNC 路径 / 邮箱，防止堆栈泄漏开发机目录结构与个人数据</summary>
+        internal static string SanitizeForUpload(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            text = s_winPathRegex.Replace(text, "[path]");
+            text = s_uncPathRegex.Replace(text, "[path]");
+            text = s_emailRegex.Replace(text, "[email]");
+            return text;
+        }
 
         // ===== 同类错误聚合（错误风暴防护）=====
         // 同一 logString+stackTrace 连续出现时：内存缓冲只保留一条带 [×N] 计数的条目，
@@ -172,9 +192,13 @@ namespace ReunionMovement.Common.Util
                     DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), type, lastLogCount));
             }
 
-            // 重入防护：订阅者内部再触发错误日志时直接返回，防止 logMessageReceived 无限递归
-            if (isDispatching) return;
-            isDispatching = true;
+            // 重入防护（含多线程：Unity 日志回调允许任意线程触发，isDispatching 须持锁读写）：
+            // 订阅者内部再触发错误日志时直接返回，防止 logMessageReceived 无限递归
+            lock (syncRoot)
+            {
+                if (isDispatching) return;
+                isDispatching = true;
+            }
             try
             {
                 try
@@ -188,7 +212,7 @@ namespace ReunionMovement.Common.Util
             }
             finally
             {
-                isDispatching = false;
+                lock (syncRoot) { isDispatching = false; }
             }
         }
 
@@ -238,13 +262,23 @@ namespace ReunionMovement.Common.Util
             string log;
             lock (syncRoot)
             {
-                log = string.Join("\n", recentErrors);
+                // 上传前脱敏：堆栈中的本地绝对路径/邮箱等不外泄
+                log = SanitizeForUpload(string.Join("\n", recentErrors));
             }
             if (string.IsNullOrEmpty(log))
             {
                 onComplete?.Invoke(true);
                 return;
             }
+
+            // 节流：距上次实际上传不足最小间隔时视为已完成，避免调用方高频触发刷爆日志服务
+            long now = DateTime.UtcNow.Ticks;
+            if (now - lastUploadTicks < MinUploadIntervalTicks)
+            {
+                onComplete?.Invoke(true);
+                return;
+            }
+            lastUploadTicks = now;
 
             var payload = new ErrorReportPayload
             {

@@ -338,6 +338,17 @@ namespace ReunionMovement.UI.ImageExtensions
                 dynamicMaterial = null;
             }
 
+            // 销毁运行时生成的过渡渐变纹理（用户资产不销毁），防止每组件泄漏一张原生纹理
+            if (transitionGradient != null && transitionGradientIsRuntime)
+            {
+                if (Application.isPlaying)
+                    UnityEngine.Object.Destroy(transitionGradient);
+                else
+                    UnityEngine.Object.DestroyImmediate(transitionGradient);
+                transitionGradient = null;
+                transitionGradientIsRuntime = false;
+            }
+
             base.OnDestroy();
         }
 

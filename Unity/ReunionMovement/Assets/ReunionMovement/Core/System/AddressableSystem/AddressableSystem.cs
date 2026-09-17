@@ -3,9 +3,13 @@ using ReunionMovement.Core.Base;
 using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.Networking;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
@@ -49,6 +53,12 @@ namespace ReunionMovement.Core.Resources
 
         /// <summary>CheckUpdateAsync 找到的待更新 Catalog 列表</summary>
         private readonly List<string> pendingUpdateCatalogs = new List<string>();
+
+        /// <summary>
+        /// Catalog 锚点校验失败标记：内嵌 version.json 的 catalogHash 与远程 Catalog 不一致
+        /// （疑似中间人篡改）。置位后拒绝应用远程更新，仅使用内嵌/本地内容。
+        /// </summary>
+        private bool catalogAnchorFailed;
 
         // 调试统计（Interlocked 保证线程安全，Addressables 回调可能跨线程）
         private int loadCount;      // 累计加载/实例化次数
@@ -100,6 +110,13 @@ namespace ReunionMovement.Core.Resources
                 {
                     try
                     {
+                        // 首次下载的远程 Catalog 与内嵌 version.json 锚点核对
+                        // （无内嵌锚点或本地已有缓存 Catalog 时跳过，详见 VerifyCatalogAnchor）
+                        await VerifyCatalogAnchorAsync();
+                        if (catalogAnchorFailed)
+                        {
+                            Log.Error("AddressableSystem 远程 Catalog 与内嵌锚点不一致，已拒绝远程更新（仅使用内嵌/本地内容）");
+                        }
                         var result = await CheckUpdateAsync();
                         Log.Debug("AddressableSystem 远程更新检查: {0}", result.hasUpdate ? "有更新待下载" : "无更新");
                     }
@@ -120,21 +137,37 @@ namespace ReunionMovement.Core.Resources
             }
         }
 
+        /// <summary>是否仅允许 https 远程地址（拒绝明文 http，防止 CDN 热更被中间人替换）</summary>
+        private static bool s_plaintextWarned;
+
         /// <summary>
         /// 配置远程 URL 重写：用 GameConfig 的 remoteBundleUrl / remoteCatalogUrl 覆盖构建时
         /// 烘焙的远程地址（Profile Remote.LoadPath），使同一构建产物可部署到任意 CDN。
         /// 必须在 Addressables.InitializeAsync 之前调用（远程 catalog 在初始化时加载）。
-        /// 规则：仅重写 http(s) 远程地址；catalog_* 文件优先用 remoteCatalogUrl，其余用 remoteBundleUrl；
-        /// 目标 URL 视为“最终目录 URL”（含平台目录），如 https://cdn.example.com/reunion/0.2.0/WebGL。
+        /// 规则：仅重写 https 远程地址（明文 http 一律拒绝并告警）；catalog_* 文件优先用
+        /// remoteCatalogUrl，其余用 remoteBundleUrl；目标 URL 视为“最终目录 URL”（含平台目录），
+        /// 如 https://cdn.example.com/reunion/0.2.0/WebGL。
         /// </summary>
         private void ConfigureRemoteUrlRewrite()
         {
             string bundleRoot = Config.RemoteBundleUrl;
             string catalogRoot = Config.RemoteCatalogUrl;
 
+            // 明文 http 根地址拒绝参与重写：热更内容可被中间人替换，属高危配置
+            if (IsPlaintextHttp(bundleRoot))
+            {
+                Log.Error("AddressableSystem 拒绝使用明文 HTTP Bundle 根地址（请改用 https）：{0}", bundleRoot);
+                bundleRoot = null;
+            }
+            if (IsPlaintextHttp(catalogRoot))
+            {
+                Log.Error("AddressableSystem 拒绝使用明文 HTTP Catalog 根地址（请改用 https）：{0}", catalogRoot);
+                catalogRoot = null;
+            }
+
             if (string.IsNullOrEmpty(bundleRoot) && string.IsNullOrEmpty(catalogRoot))
             {
-                // 未配置：使用构建时烘焙地址，清除可能残留的重写
+                // 未配置（或全部被拒）：使用构建时烘焙地址，清除可能残留的重写
                 Addressables.ResourceManager.InternalIdTransformFunc = null;
                 return;
             }
@@ -144,10 +177,19 @@ namespace ReunionMovement.Core.Resources
                 string id = location.InternalId;
                 if (string.IsNullOrEmpty(id)) return id;
 
-                // 仅重写远程 http(s) 地址（本地 file:// / StreamingAssets 路径不受影响）
-                bool isHttp = id.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-                           || id.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
-                if (!isHttp) return id;
+                // 仅重写 https 远程地址（本地 file:// / StreamingAssets 路径不受影响）
+                bool isHttps = id.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+                if (!isHttps)
+                {
+                    // 明文 http 远程地址：拒绝重写并告警（首次触发一次），
+                    // 残留的烘焙 http 地址仅在开发环境（DevLocal）出现
+                    if (id.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !s_plaintextWarned)
+                    {
+                        s_plaintextWarned = true;
+                        Log.Error("AddressableSystem 检测到明文 http 远程资源地址（{0}），生产环境必须使用 https", id);
+                    }
+                    return id;
+                }
 
                 string root = IsRemoteCatalogId(id) && !string.IsNullOrEmpty(catalogRoot) ? catalogRoot : bundleRoot;
                 if (string.IsNullOrEmpty(root)) return id;
@@ -155,6 +197,12 @@ namespace ReunionMovement.Core.Resources
                 return ReplaceRemoteRoot(id, root);
             };
             Log.Debug("AddressableSystem 已配置远程 URL 重写: bundle={0}, catalog={1}", bundleRoot, catalogRoot);
+        }
+
+        private static bool IsPlaintextHttp(string url)
+        {
+            return !string.IsNullOrEmpty(url)
+                && url.StartsWith("http://", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>判断 InternalId 是否为远程 Catalog 文件（catalog_*.bin/.hash/.json）</summary>
@@ -468,6 +516,13 @@ namespace ReunionMovement.Core.Resources
             var result = new AddressableUpdateResult();
             if (Mode != AddressablesMode.Remote) return result;
 
+            // Catalog 锚点校验失败：拒绝检查远程更新（防止基于被篡改 Catalog 的热更）
+            if (catalogAnchorFailed)
+            {
+                Log.Error("AddressableSystem Catalog 锚点校验失败，已跳过远程更新检查");
+                return result;
+            }
+
             // 进入即清空：否则上一轮检测到更新、本轮无更新时旧列表残留，
             // UpdateContentAsync(default) 会重新下载并应用已应用的旧 Catalog（重复热更）
             pendingUpdateCatalogs.Clear();
@@ -501,6 +556,13 @@ namespace ReunionMovement.Core.Resources
         {
             if (Mode != AddressablesMode.Remote) return false;
 
+            // Catalog 锚点校验失败：拒绝应用远程更新（仅用内嵌/本地内容）
+            if (catalogAnchorFailed)
+            {
+                Log.Error("AddressableSystem Catalog 锚点校验失败，已拒绝应用远程更新");
+                return false;
+            }
+
             var catalogs = result.updatedCatalogs ?? pendingUpdateCatalogs;
             if (catalogs == null || catalogs.Count == 0)
             {
@@ -510,6 +572,10 @@ namespace ReunionMovement.Core.Resources
 
             try
             {
+                // 首次远程 Catalog 下载（本地缓存无 Catalog）：下载后需与内嵌锚点核对，
+                // 堵住"首次安装无信任锚点"的中间人替换面；后续更新由 Addressables 内部 hash 锚定
+                bool firstRemoteCatalog = FindCachedCatalogFile() == null;
+
                 var handle = Addressables.UpdateCatalogs(catalogs, true);
                 var locators = await handle.ToUniTask(progress, cancellationToken: ct, autoReleaseWhenCanceled: true);
                 if (locators == null || locators.Count == 0)
@@ -517,6 +583,15 @@ namespace ReunionMovement.Core.Resources
                     Log.Warning("AddressableSystem 更新完成但无新 Locator");
                     return false;
                 }
+
+                // 首次下载校验：Catalog md5 与内嵌锚点不一致 → 判定被篡改，拒绝应用并清除缓存
+                if (firstRemoteCatalog && !await VerifyFirstCatalogAgainstAnchorAsync())
+                {
+                    Log.Error("AddressableSystem 首次远程 Catalog 与内嵌锚点不一致，已拒绝应用并清除缓存");
+                    pendingUpdateCatalogs.Clear();
+                    return false;
+                }
+
                 pendingUpdateCatalogs.Clear();
                 Log.Debug("AddressableSystem 内容更新成功: {0} Locator", locators.Count);
                 return true;
@@ -527,6 +602,161 @@ namespace ReunionMovement.Core.Resources
                 return false;
             }
         }
+
+        #region Catalog 锚点校验
+        /// <summary>内嵌锚点清单（StreamingAssets/version.json，构建时由 AddressablesBuildWindow 烘焙）</summary>
+        [Serializable]
+        private class BakedVersionManifest
+        {
+            public string catalogHash;
+        }
+
+        private const string AnchorFileName = "version.json";
+
+        /// <summary>
+        /// 校验首次下载的远程 Catalog 与内嵌锚点（StreamingAssets/version.json）的 catalogHash 是否一致。
+        /// 仅当存在内嵌锚点且本地尚无 Addressables Catalog 缓存（首次启动）时校验 ——
+        /// 后续更新的完整性由 Addressables 内部 hash 对比（本地缓存锚点）保证，此处不重复校验避免误报。
+        /// 不一致时置 catalogAnchorFailed（拒绝远程更新，仅用内嵌/本地内容）。
+        /// </summary>
+        private async UniTask VerifyCatalogAnchorAsync()
+        {
+            // 本地已有 Catalog 缓存：后续更新由 Addressables 内部 hash 机制锚定，跳过
+            if (FindCachedCatalogFile() != null) return;
+
+            string anchorHash = await LoadAnchorCatalogHashAsync();
+            if (string.IsNullOrEmpty(anchorHash))
+            {
+                // 无内嵌锚点：首次安装的远程 Catalog 无信任锚点，提示部署方烘焙 version.json
+                Log.Warning("AddressableSystem 未找到内嵌锚点（StreamingAssets/version.json），首次远程 Catalog 无法校验。建议构建时烘焙 version.json（含 catalogHash）");
+                return;
+            }
+
+            var cachedCatalog = FindCachedCatalogFile();
+            if (cachedCatalog == null)
+            {
+                // 远程 Catalog 尚未下载完成（首次启动也可能走内嵌 Catalog），本次跳过
+                return;
+            }
+
+            string actualHash = Md5File(cachedCatalog);
+            if (string.IsNullOrEmpty(actualHash)
+                || !string.Equals(actualHash, anchorHash, StringComparison.OrdinalIgnoreCase))
+            {
+                catalogAnchorFailed = true;
+                Log.Error("AddressableSystem Catalog 锚点校验失败：本地 Catalog(md5={0}) ≠ 内嵌锚点({1})，疑似被篡改，已拒绝远程更新",
+                    actualHash ?? "N/A", anchorHash);
+            }
+        }
+
+        /// <summary>
+        /// 首次 Catalog 下载后的校验（UpdateContentAsync 使用，跨平台支持 Android StreamingAssets）：
+        /// md5 与内嵌锚点不一致时置失败标记并删除被篡改的 Catalog 缓存，返回 false。
+        /// </summary>
+        private async UniTask<bool> VerifyFirstCatalogAgainstAnchorAsync()
+        {
+            string anchorHash = await LoadAnchorCatalogHashAsync();
+            if (string.IsNullOrEmpty(anchorHash))
+            {
+                Log.Warning("AddressableSystem 未找到内嵌锚点（StreamingAssets/version.json），首次远程 Catalog 无法校验。建议构建时烘焙 version.json（含 catalogHash）");
+                return true; // 无锚点不阻断（保持向后兼容），仅告警
+            }
+
+            var cachedCatalog = FindCachedCatalogFile();
+            if (cachedCatalog == null) return true; // 未落盘缓存（可能走内存），本次跳过
+
+            string actualHash = Md5File(cachedCatalog);
+            if (string.IsNullOrEmpty(actualHash)
+                || !string.Equals(actualHash, anchorHash, StringComparison.OrdinalIgnoreCase))
+            {
+                catalogAnchorFailed = true;
+                Log.Error("AddressableSystem 首次远程 Catalog 校验失败：本地(md5={0}) ≠ 锚点({1})，疑似被篡改", actualHash ?? "N/A", anchorHash);
+                try { File.Delete(cachedCatalog); } catch { /* 清理失败忽略 */ }
+                return false;
+            }
+            return true;
+        }
+
+        /// <summary>读取内嵌锚点的 catalogHash（Android 的 StreamingAssets 位于 APK 内，需经 UnityWebRequest）</summary>
+        private static async UniTask<string> LoadAnchorCatalogHashAsync()
+        {
+            try
+            {
+                string json = null;
+#if UNITY_ANDROID && !UNITY_EDITOR
+                using (var uwr = UnityWebRequest.Get(Application.streamingAssetsPath + "/" + AnchorFileName))
+                {
+                    await uwr.SendWebRequest().ToUniTask();
+                    if (uwr.result == UnityWebRequest.Result.Success)
+                    {
+                        json = uwr.downloadHandler?.text;
+                    }
+                }
+#else
+                string anchorPath = Path.Combine(Application.streamingAssetsPath, AnchorFileName);
+                if (File.Exists(anchorPath))
+                {
+                    json = File.ReadAllText(anchorPath);
+                }
+#endif
+                if (string.IsNullOrEmpty(json)) return null;
+                var manifest = JsonUtility.FromJson<BakedVersionManifest>(json);
+                return manifest?.catalogHash;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("AddressableSystem 读取内嵌锚点失败: {0}", ex.Message);
+                return null;
+            }
+        }
+
+        /// <summary>在 Addressables 缓存目录查找已下载的远程 Catalog 文件（catalog_*.bin）</summary>
+        private static string FindCachedCatalogFile()
+        {
+            try
+            {
+                if (!Directory.Exists(Application.persistentDataPath)) return null;
+                var files = Directory.GetFiles(Application.persistentDataPath, "catalog_*.bin", SearchOption.AllDirectories);
+                if (files == null || files.Length == 0) return null;
+                // 多个缓存取最新修改的（当前生效版本）
+                string newest = null;
+                DateTime newestTime = DateTime.MinValue;
+                foreach (var f in files)
+                {
+                    var info = new FileInfo(f);
+                    if (info.LastWriteTimeUtc > newestTime)
+                    {
+                        newestTime = info.LastWriteTimeUtc;
+                        newest = f;
+                    }
+                }
+                return newest;
+            }
+            catch (Exception ex)
+            {
+                Log.Debug("AddressableSystem 查找缓存 Catalog 失败: {0}", ex.Message);
+                return null;
+            }
+        }
+
+        /// <summary>计算文件 MD5（与编辑器 version.json 生成逻辑一致）</summary>
+        private static string Md5File(string path)
+        {
+            try
+            {
+                using var md5 = MD5.Create();
+                using var stream = File.OpenRead(path);
+                var hash = md5.ComputeHash(stream);
+                var sb = new StringBuilder(hash.Length * 2);
+                foreach (var b in hash) sb.Append(b.ToString("x2"));
+                return sb.ToString();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        #endregion
         #endregion
 
         #region 内存 / 统计

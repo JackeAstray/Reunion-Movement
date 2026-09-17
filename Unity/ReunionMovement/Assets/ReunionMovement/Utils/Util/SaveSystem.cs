@@ -323,14 +323,16 @@ namespace ReunionMovement.Common.Util
             catch (Exception ex) { Log.Error("SaveSystem 创建目录失败: {0}", ex.Message); }
         }
 
-        #region 加密（AES-CBC，随机 IV 前置；带 ENC1: 魔法头，旧明文存档自动兼容）
-        private const string EncryptionMagic = "ENC1:";
+        #region 加密（AES-CBC + HMAC 完整性，随机 IV 前置；带 ENC2: 魔法头，兼容旧 ENC1: 与明文存档）
+        private const string EncryptionMagic = "ENC2:";
+        private const string EncryptionMagicLegacy = "ENC1:";
         private static readonly byte[] EncryptionSalt = { 0x52, 0x4D, 0x53, 0x76, 0x31, 0xA5, 0x3C, 0x9F };
         private const string EncryptionPassphrase = "ReunionMovement.SaveSystem.v1";
         private const int EncryptionIvLength = 16;
         private const int EncryptionKeyLength = 32;
+        private const int EncryptionMacLength = 32;
 
-        /// <summary>明文 JSON → Base64(AES 密文)。加密不可用（部分平台/裁剪）时回退返回明文。</summary>
+        /// <summary>明文 JSON → Base64(IV + AES 密文 + HMAC)。加密不可用（部分平台/裁剪）时回退返回明文。</summary>
         private static string EncryptToText(string plain)
         {
             try
@@ -343,9 +345,17 @@ namespace ReunionMovement.Common.Util
                 byte[] plainBytes = Encoding.UTF8.GetBytes(plain);
                 byte[] cipher = encryptor.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
 
-                byte[] payload = new byte[EncryptionIvLength + cipher.Length];
+                byte[] payload = new byte[EncryptionIvLength + cipher.Length + EncryptionMacLength];
                 Buffer.BlockCopy(aes.IV, 0, payload, 0, EncryptionIvLength);
                 Buffer.BlockCopy(cipher, 0, payload, EncryptionIvLength, cipher.Length);
+
+                // Encrypt-then-MAC：对 [IV+密文] 追加 HMAC-SHA256，任何篡改在解密前被拒绝
+                // （纯 CBC 无 MAC 时密文可被翻转，篡改后可能仍解析出合法 JSON）
+                using (var hmac = new HMACSHA256(DeriveMacKey(key)))
+                {
+                    var mac = hmac.ComputeHash(payload, 0, EncryptionIvLength + cipher.Length);
+                    Buffer.BlockCopy(mac, 0, payload, EncryptionIvLength + cipher.Length, EncryptionMacLength);
+                }
                 return EncryptionMagic + Convert.ToBase64String(payload);
             }
             catch (Exception ex)
@@ -355,16 +365,68 @@ namespace ReunionMovement.Common.Util
             }
         }
 
-        /// <summary>Base64(AES 密文) → 明文 JSON；非加密文本原样返回，解密失败返回 null。</summary>
+        /// <summary>Base64(IV+AES 密文+HMAC) → 明文 JSON；非加密文本原样返回，解密/校验失败返回 null。</summary>
         private static string DecryptFromText(string text)
         {
-            if (string.IsNullOrEmpty(text) || !text.StartsWith(EncryptionMagic, StringComparison.Ordinal))
+            if (string.IsNullOrEmpty(text)) return text;
+
+            // 旧版 ENC1:（无完整性校验，仅兼容读取）
+            if (text.StartsWith(EncryptionMagicLegacy, StringComparison.Ordinal))
             {
-                return text; // 旧明文存档
+                return DecryptLegacyPayload(text.Substring(EncryptionMagicLegacy.Length));
             }
+
+            // 新版 ENC2: —— 先校验 HMAC 再解密
+            if (text.StartsWith(EncryptionMagic, StringComparison.Ordinal))
+            {
+                return DecryptPayloadWithMac(text.Substring(EncryptionMagic.Length));
+            }
+
+            return text; // 旧明文存档
+        }
+
+        /// <summary>解密带 HMAC 的 ENC2 负载：MAC 校验失败（被篡改/密钥不符）返回 null</summary>
+        private static string DecryptPayloadWithMac(string base64)
+        {
             try
             {
-                byte[] payload = Convert.FromBase64String(text.Substring(EncryptionMagic.Length));
+                byte[] payload = Convert.FromBase64String(base64);
+                if (payload.Length <= EncryptionIvLength + EncryptionMacLength) return null;
+
+                int cipherLen = payload.Length - EncryptionIvLength - EncryptionMacLength;
+                var key = DeriveKey();
+
+                // 先校验 HMAC（常量时间比较），篡改在解密前即被拒绝
+                using (var hmac = new HMACSHA256(DeriveMacKey(key)))
+                {
+                    var expected = hmac.ComputeHash(payload, 0, EncryptionIvLength + cipherLen);
+                    if (!FixedTimeEquals(expected, payload, EncryptionIvLength + cipherLen, EncryptionMacLength))
+                    {
+                        return null;
+                    }
+                }
+
+                using var aes = Aes.Create();
+                aes.Key = key;
+                byte[] iv = new byte[EncryptionIvLength];
+                Buffer.BlockCopy(payload, 0, iv, 0, EncryptionIvLength);
+                aes.IV = iv;
+                using var decryptor = aes.CreateDecryptor();
+                byte[] plain = decryptor.TransformFinalBlock(payload, EncryptionIvLength, cipherLen);
+                return Encoding.UTF8.GetString(plain);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>解密旧版 ENC1 负载（无 MAC，仅解密；供升级前存档兼容读取）</summary>
+        private static string DecryptLegacyPayload(string base64)
+        {
+            try
+            {
+                byte[] payload = Convert.FromBase64String(base64);
                 if (payload.Length <= EncryptionIvLength) return null;
 
                 using var aes = Aes.Create();
@@ -372,7 +434,6 @@ namespace ReunionMovement.Common.Util
                 byte[] iv = new byte[EncryptionIvLength];
                 Buffer.BlockCopy(payload, 0, iv, 0, EncryptionIvLength);
                 aes.IV = iv;
-
                 using var decryptor = aes.CreateDecryptor();
                 byte[] cipher = new byte[payload.Length - EncryptionIvLength];
                 Buffer.BlockCopy(payload, EncryptionIvLength, cipher, 0, cipher.Length);
@@ -390,6 +451,28 @@ namespace ReunionMovement.Common.Util
         {
             using var pdb = new Rfc2898DeriveBytes(EncryptionPassphrase, EncryptionSalt, 1000);
             return pdb.GetBytes(EncryptionKeyLength);
+        }
+
+        /// <summary>由主密钥派生 MAC 密钥（标签分离，避免加密/完整性同密钥复用）</summary>
+        private static byte[] DeriveMacKey(byte[] masterKey)
+        {
+            using var sha = SHA256.Create();
+            var input = new byte[masterKey.Length + 1];
+            Buffer.BlockCopy(masterKey, 0, input, 0, masterKey.Length);
+            input[masterKey.Length] = 0x02;
+            return sha.ComputeHash(input);
+        }
+
+        /// <summary>常量时间字节比较（避免 HMAC 校验的计时侧信道）</summary>
+        private static bool FixedTimeEquals(byte[] expected, byte[] actual, int actualOffset, int count)
+        {
+            int min = Math.Min(expected.Length, count);
+            int diff = expected.Length ^ count;
+            for (int i = 0; i < min; i++)
+            {
+                diff |= expected[i] ^ actual[actualOffset + i];
+            }
+            return diff == 0;
         }
         #endregion
 

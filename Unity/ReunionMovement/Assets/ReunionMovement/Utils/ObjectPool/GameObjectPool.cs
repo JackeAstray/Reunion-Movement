@@ -178,6 +178,12 @@ namespace ReunionMovement.Common.Util.Pool
 
         private void OnDestroy()
         {
+            // 泄漏诊断：仍有对象在途（被 Get 未归还）时池被销毁，这些对象将随池一并销毁，
+            // 持有方会得到悬垂引用 —— 告警便于定位未配对 Release 的调用点
+            if (pool != null && pool.CountActive > 0)
+            {
+                Debug.LogWarning($"GameObjectPool[{name}]: 销毁时仍有 {pool.CountActive} 个对象在途（未归还），请检查 Get/Release 配对");
+            }
             // Dispose 会对池内所有对象调用 OnDestroyInstance 真正销毁，
             // 避免池对象与池根残留为孤儿场景对象
             pool?.Dispose();

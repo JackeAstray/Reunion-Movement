@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 using System.Security.Cryptography;
 
@@ -68,6 +69,8 @@ namespace ReunionMovement.Common.Util
         public bool IsLastPullUp => isLastPullUp;
         /// <summary>是否处于五星大保底（下一次五星必为 UP）</summary>
         public bool IsGuaranteedUp5Star => isGuaranteedUp5Star;
+        /// <summary>是否处于四星保底（下一次四星必为 UP，与五星查询 API 对称）</summary>
+        public bool IsGuaranteedUp4Star => isGuaranteedUp4Star;
 
         // ===== 概率参数 =====
         private const float BASE_5STAR_RATE = 0.006f;    // 0.6%
@@ -129,6 +132,14 @@ namespace ReunionMovement.Common.Util
         {
             if (serverResult == null) return null;
 
+            // 服务端结果校验：星级仅允许 3/4/5（非法值按三星处理并告警，
+            // 防止伪造字段扰乱保底状态机——如 starRating=6 落入 default 分支被当三星推进计数）
+            if (serverResult.starRating < 3 || serverResult.starRating > 5)
+            {
+                Log.Warning("ApplyServerResult 收到非法星级 {0}，按三星处理", serverResult.starRating);
+                serverResult.starRating = 3;
+            }
+
             pity5Star++;
             pity4Star++;
 
@@ -160,6 +171,9 @@ namespace ReunionMovement.Common.Util
 
         #region 保底状态持久化
         private const string PitySaveKey = "gacha_pity_save_v1";
+        /// <summary>保底存档完整性盐：PlayerPrefs 明文 JSON 可被随手篡改，加 SHA256 校验提高篡改成本。
+        /// 注意：客户端存档始终可被彻底清空（删 PlayerPrefs），权威保底必须由服务端下发。</summary>
+        private const string PityHashSalt = "@Reunion_GachaPity_v1";
 
         [Serializable]
         private class PitySaveData
@@ -170,6 +184,22 @@ namespace ReunionMovement.Common.Util
             public bool isGuaranteedUp4Star;
             public int last5StarPullCount;
             public bool isLastPullUp;
+            /// <summary>完整性校验（SHA256，旧存档无此字段视为合法）</summary>
+            public string integrityHash;
+        }
+
+        /// <summary>计算保底状态的完整性哈希</summary>
+        private static string ComputePityHash(PitySaveData data)
+        {
+            string payload = string.Concat(
+                data.pity5Star, "|", data.pity4Star, "|",
+                data.isGuaranteedUp5Star, "|", data.isGuaranteedUp4Star, "|",
+                data.last5StarPullCount, "|", data.isLastPullUp, "|", PityHashSalt);
+            using (var sha = SHA256.Create())
+            {
+                var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(payload));
+                return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+            }
         }
 
         /// <summary>
@@ -187,6 +217,7 @@ namespace ReunionMovement.Common.Util
                 last5StarPullCount = last5StarPullCount,
                 isLastPullUp = isLastPullUp,
             };
+            data.integrityHash = ComputePityHash(data);
             PlayerPrefs.SetString(PitySaveKey, JsonUtility.ToJson(data));
             if (flush) PlayerPrefs.Save();
         }
@@ -199,11 +230,21 @@ namespace ReunionMovement.Common.Util
             {
                 var data = JsonUtility.FromJson<PitySaveData>(PlayerPrefs.GetString(PitySaveKey));
                 if (data == null) return;
-                pity5Star = data.pity5Star;
-                pity4Star = data.pity4Star;
+
+                // 完整性校验：哈希不匹配（数据被篡改）时拒绝加载，保持默认状态
+                if (!string.IsNullOrEmpty(data.integrityHash)
+                    && !string.Equals(data.integrityHash, ComputePityHash(data), StringComparison.OrdinalIgnoreCase))
+                {
+                    Log.Warning("GachaSystem 保底存档完整性校验失败，已忽略篡改数据");
+                    return;
+                }
+
+                // 值域钳制：防手改 PlayerPrefs 把计数改成负数/超限值
+                pity5Star = Mathf.Clamp(data.pity5Star, 0, HARD_PITY_5STAR);
+                pity4Star = Mathf.Clamp(data.pity4Star, 0, 10);
                 isGuaranteedUp5Star = data.isGuaranteedUp5Star;
                 isGuaranteedUp4Star = data.isGuaranteedUp4Star;
-                last5StarPullCount = data.last5StarPullCount;
+                last5StarPullCount = Mathf.Max(0, data.last5StarPullCount);
                 isLastPullUp = data.isLastPullUp;
             }
             catch (Exception ex)
@@ -253,7 +294,16 @@ namespace ReunionMovement.Common.Util
             // 更新是否为UP的状态
             isLastPullUp = isUp;
 
+            // 选择卡池：UP 池为空时回退常驻池（否则保底已消耗但出货丢失）
             List<GachaItem> pool = isUp ? up5StarPool : standard5StarPool;
+            if (pool == null || pool.Count == 0)
+            {
+                pool = isUp ? standard5StarPool : up5StarPool;
+                if (pool == null || pool.Count == 0)
+                {
+                    Log.Error("五星卡池全部为空（UP 与常驻），无法出货");
+                }
+            }
             ResetCounters();
             return SelectRandomItem(pool);
         }
@@ -294,8 +344,16 @@ namespace ReunionMovement.Common.Util
             //// 动态概率验证（调试用）
             //Debug.Log($"四星触发于第{pity4Star}抽 | UP状态:{isUp}");
 
-            // 选择卡池
+            // 选择卡池：UP 池为空时回退常驻池（否则保底已消耗但出货丢失）
             List<GachaItem> pool = isUp ? up4StarPool : standard4StarPool;
+            if (pool == null || pool.Count == 0)
+            {
+                pool = isUp ? standard4StarPool : up4StarPool;
+                if (pool == null || pool.Count == 0)
+                {
+                    Log.Error("四星卡池全部为空（UP 与常驻），无法出货");
+                }
+            }
             pity4Star = 0; // 重置四星计数器
             return SelectRandomItem(pool);
         }
@@ -363,7 +421,11 @@ namespace ReunionMovement.Common.Util
             // 直接调用 Get4StarItem 替换最后一个三星结果，避免 PerformPullForce4Star 额外推进 pity5Star 导致保底计数偏移。
             if (!hasFourStarOrAbove && lastThreeStarIndex >= 0)
             {
+                // 十连保底替换不应消耗硬保底计数：替换后恢复 pity4Star，
+                // 与主流抽卡"十连至少一四星"独立于硬保底的语义一致
+                int pityBeforeReplace = pity4Star;
                 results[lastThreeStarIndex] = Get4StarItem();
+                pity4Star = pityBeforeReplace;
             }
 
             return results;

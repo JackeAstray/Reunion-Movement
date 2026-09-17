@@ -171,7 +171,8 @@ namespace ReunionMovement.Core.UIInput
             {
                 var previous = CurrentSelected;
                 CurrentSelected = current;
-                SelectionChangedSubject.OnNext(current);
+                try { SelectionChangedSubject.OnNext(current); }
+                catch (Exception ex) { Log.Warning("[UIInputSystem] SelectionChangedSubject 订阅者异常（已隔离）: {0}", ex.Message); }
 
                 if (current != null)
                 {
@@ -676,6 +677,11 @@ namespace ReunionMovement.Core.UIInput
         /// </summary>
         public void LoadBindings()
         {
+            // 与 GameOption 对齐：WebGL 的 PlayerPrefs 为异步 IndexedDB，同步读取不可靠，跳过
+#if UNITY_WEBGL
+            CurrentBinding = new UIInputBinding();
+            return;
+#else
             CurrentBinding = new UIInputBinding
             {
                 navigateUp = PlayerPrefs.GetString("ui_bind_nav_up", "w"),
@@ -691,6 +697,7 @@ namespace ReunionMovement.Core.UIInput
                 toggleToUIGamepadDisplayName = PlayerPrefs.GetString("ui_bind_toggle_ui_gamepad_display", "Start"),
                 toggleToGameplay = PlayerPrefs.GetString("ui_bind_toggle_gameplay", "escape"),
             };
+#endif
         }
 
         /// <summary>
@@ -700,6 +707,10 @@ namespace ReunionMovement.Core.UIInput
         /// </summary>
         public void SaveBindings()
         {
+#if UNITY_WEBGL
+            // 与 LoadBindings 对称：WebGL 跳过持久化，避免写入"同步读不回"的设置造成行为不一致
+            return;
+#else
             PlayerPrefs.SetString("ui_bind_nav_up", CurrentBinding.navigateUp);
             PlayerPrefs.SetString("ui_bind_nav_down", CurrentBinding.navigateDown);
             PlayerPrefs.SetString("ui_bind_nav_left", CurrentBinding.navigateLeft);
@@ -731,6 +742,7 @@ namespace ReunionMovement.Core.UIInput
             }
 
             PlayerPrefs.Save();
+#endif
         }
 
         #endregion
@@ -906,7 +918,8 @@ namespace ReunionMovement.Core.UIInput
             TryFocusCurrentUI();
 
             Log.Debug("UIInputSystem: 启用 UI 控制模式");
-            UIControlModeChangedSubject.OnNext(UIControlMode.UIControl);
+            try { UIControlModeChangedSubject.OnNext(UIControlMode.UIControl); }
+            catch (Exception ex) { Log.Warning("[UIInputSystem] UIControlModeChangedSubject 订阅者异常（已隔离）: {0}", ex.Message); }
         }
 
         /// <summary>
@@ -946,7 +959,8 @@ namespace ReunionMovement.Core.UIInput
             currentMode = UIControlMode.Gameplay;
 
             Log.Debug("UIInputSystem: 禁用 UI 控制模式");
-            UIControlModeChangedSubject.OnNext(UIControlMode.Gameplay);
+            try { UIControlModeChangedSubject.OnNext(UIControlMode.Gameplay); }
+            catch (Exception ex) { Log.Warning("[UIInputSystem] UIControlModeChangedSubject 订阅者异常（已隔离）: {0}", ex.Message); }
         }
 
         /// <summary>
@@ -1344,12 +1358,15 @@ namespace ReunionMovement.Core.UIInput
         private void OnNavigatePerformed(InputAction.CallbackContext ctx)
         {
             var value = ctx.ReadValue<Vector2>();
-            NavigateSubject.OnNext(value);
+            // 订阅者异常隔离：坏订阅者不应中断输入链路（与 UISystem/SceneSystem 策略一致）
+            try { NavigateSubject.OnNext(value); }
+            catch (Exception ex) { Log.Warning("[UIInputSystem] NavigateSubject 订阅者异常（已隔离）: {0}", ex.Message); }
         }
 
         private void OnSubmitPerformed(InputAction.CallbackContext ctx)
         {
-            SubmitSubject.OnNext(Unit.Default);
+            try { SubmitSubject.OnNext(Unit.Default); }
+            catch (Exception ex) { Log.Warning("[UIInputSystem] SubmitSubject 订阅者异常（已隔离）: {0}", ex.Message); }
         }
 
         private void OnCancelPerformed(InputAction.CallbackContext ctx)
@@ -1365,7 +1382,8 @@ namespace ReunionMovement.Core.UIInput
             {
                 cancelConsumedByWindowFrame = Time.frameCount;
             }
-            CancelSubject.OnNext(Unit.Default);
+            try { CancelSubject.OnNext(Unit.Default); }
+            catch (Exception ex) { Log.Warning("[UIInputSystem] CancelSubject 订阅者异常（已隔离）: {0}", ex.Message); }
         }
 
         /// <summary>

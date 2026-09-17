@@ -10,9 +10,10 @@
     {
         /// <summary>
         /// 引擎是否处于 Running 状态（由 GameEngine 启动/失败/销毁时维护）。
-        /// setter 为 public：GameEngine 位于 Core 程序集，而本类型位于 Base 程序集，
-        /// internal setter 跨程序集不可见；该标志仅为运行时状态，公开写入无害。
+        /// setter 为 internal（经 InternalsVisibleTo 仅 Core/Utils 可写）：
+        /// 引擎状态是全局关键状态，禁止业务代码随手改写；
+        /// 本类型位于 Base 程序集，跨程序集 internal 需显式 InternalsVisibleTo 声明。
         /// </summary>
-        public static bool IsEngineRunning { get; set; }
+        public static bool IsEngineRunning { get; internal set; }
     }
 }

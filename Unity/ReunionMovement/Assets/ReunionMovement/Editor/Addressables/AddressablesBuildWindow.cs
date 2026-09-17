@@ -113,6 +113,7 @@ namespace ReunionMovement.EditorTools.Addressables
             }
 
             WriteVersionManifest(settings, result.OutputPath, target);
+            BakeAnchorIntoStreamingAssets();
             Log.Debug($"[AddressablesBuild] 构建成功 [{target}]，版本清单: {OutputFolder}/{VersionFileName}", channel: LogChannel.Resource);
             EditorUtility.DisplayDialog("Addressables 构建",
                 $"构建成功 [{target}]\n已生成 version.json（含 catalog hash 与 Bundle 清单）", "确定");
@@ -164,6 +165,7 @@ namespace ReunionMovement.EditorTools.Addressables
                 }
 
                 WriteVersionManifest(settings, result.OutputPath, target);
+                BakeAnchorIntoStreamingAssets();
                 Log.Debug($"[AddressablesBuild] 批处理构建成功 [{target}]，version.json 已更新", channel: LogChannel.Resource);
                 return true;
             }
@@ -242,6 +244,56 @@ namespace ReunionMovement.EditorTools.Addressables
             sb.AppendLine("}");
 
             File.WriteAllText(Path.Combine(dir, VersionFileName), sb.ToString(), Encoding.UTF8);
+        }
+
+        /// <summary>
+        /// 把 version.json 烘焙进 Assets/StreamingAssets：作为客户端首次远程 Catalog 的信任锚点
+        /// （AddressableSystem.VerifyCatalogAnchorAsync 按 catalogHash 核对）。
+        /// 仅当 version.json 含非空 catalogHash（存在远程 Catalog）时烘焙；纯本地构建自动跳过。
+        /// 注意：热更发布新 Catalog 后，内嵌锚点只校验"首次下载"（后续由 Addressables 内部 hash 锚定），
+        /// 故锚点无需随每次热更更新 —— 但首次正式发布前必须执行一次构建烘焙。
+        /// </summary>
+        private static void BakeAnchorIntoStreamingAssets()
+        {
+            try
+            {
+                var manifestPath = Path.Combine(Directory.GetCurrentDirectory(), OutputFolder, VersionFileName);
+                if (!File.Exists(manifestPath)) return;
+
+                string catalogHash = ReadCatalogHashFromManifest(File.ReadAllText(manifestPath));
+                if (string.IsNullOrEmpty(catalogHash))
+                {
+                    Log.Debug("[AddressablesBuild] 无远程 Catalog（catalogHash 为空），跳过烘焙锚点", channel: LogChannel.Resource);
+                    return;
+                }
+
+                const string streamingDir = "Assets/StreamingAssets";
+                if (!AssetDatabase.IsValidFolder(streamingDir))
+                {
+                    AssetDatabase.CreateFolder("Assets", "StreamingAssets");
+                }
+                string targetPath = Path.Combine(streamingDir, VersionFileName);
+                File.Copy(manifestPath, targetPath, overwrite: true);
+                AssetDatabase.ImportAsset(targetPath, ImportAssetOptions.ForceSynchronousImport);
+                Log.Debug($"[AddressablesBuild] 已烘焙 version.json 到 StreamingAssets（catalogHash={catalogHash}）", channel: LogChannel.Resource);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"[AddressablesBuild] 烘焙 version.json 失败（不影响构建产物）: {ex.Message}", channel: LogChannel.Resource);
+            }
+        }
+
+        /// <summary>从 version.json 文本提取 catalogHash 字段（轻量解析，避免引入 JSON 依赖）</summary>
+        private static string ReadCatalogHashFromManifest(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return null;
+            const string marker = "\"catalogHash\": \"";
+            int start = text.IndexOf(marker, StringComparison.Ordinal);
+            if (start < 0) return null;
+            int valueStart = start + marker.Length;
+            int valueEnd = text.IndexOf('"', valueStart);
+            if (valueEnd <= valueStart) return null;
+            return text.Substring(valueStart, valueEnd - valueStart).Trim();
         }
 
         /// <summary>

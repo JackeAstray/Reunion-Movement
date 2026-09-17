@@ -5,6 +5,7 @@
   <Project Path="ReunionMovement.SimpleWeb.csproj" />
   <Project Path="ReunionMovement.Kcp2k.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="WebGLInput.csproj" />
   <Project Path="ReunionMovement.Common.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="ReunionMovement.Utils.UI.ImageExtensions.Editor.csproj" />

@@ -138,17 +138,6 @@ namespace ReunionMovement.Core.UI
         }
 
         /// <summary>
-        /// 正在加载的UI统计
-        /// </summary>
-        private int loadingUICount = 0;
-
-        public int LoadingUICount
-        {
-            get => loadingUICount;
-            set => loadingUICount = value;
-        }
-
-        /// <summary>
         /// 创建根节点
         /// </summary>
         private async UniTask CreateRoot()
@@ -556,6 +545,14 @@ namespace ReunionMovement.Core.UI
             // LoadWindow 为同步加载，不存在“加载中”状态，无需 isLoading 分支
             UIController uiBase = uiState.uiWindow;
 
+            // fake-null 防护：uiWindow 被外部销毁（极端并发/误删）时不 NRE 中断打开流程
+            if (uiBase == null)
+            {
+                Log.Warning("[UISystem] OnOpen({0}) uiWindow 已不存在（外部销毁），移除残留缓存项", uiState.uiName);
+                uiStateCache.Remove(uiState.uiName);
+                return;
+            }
+
             Log.Debug("[UISystem] OnOpen({0}) activeSelf before={1}", uiBase.gameObject.name, uiBase.gameObject.activeSelf);
 
             if (uiBase.gameObject.activeSelf)
@@ -895,6 +892,12 @@ namespace ReunionMovement.Core.UI
         /// <summary>窗口放回对象池：调用 OnDespawned 钩子 → 挂池根并隐藏。池满直接销毁当前对象。</summary>
         private void PoolWindow(string uiName, GameObject windowObj)
         {
+            // Clear() 已销毁 UI 根（uiRoot=null）：不再池化，直接销毁，避免窗口挂到根层级成为孤儿对象
+            if (uiRoot == null)
+            {
+                UnityEngine.Object.DestroyImmediate(windowObj);
+                return;
+            }
             if (!windowPool.TryGetValue(uiName, out var stack))
             {
                 stack = new Stack<GameObject>();

@@ -1,6 +1,7 @@
 ﻿using ReunionMovement.Common;
 using System;
 using System.Globalization;
+using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
@@ -34,6 +35,11 @@ namespace ReunionMovement.Common.Util
         private const string prefKey_Hash = "Deadline_LastUtcHash_v1";
         // 简单的内置 salt（最好构建时注入或由服务端提供）
         private const string internalSalt = "@REUNION_m0v3m3nt$alt";
+
+        // 跨存储安装标记：仅删 PlayerPrefs 键（注册表/plist）无法绕过首次运行判定，
+        // 攻击者需同时删除持久化目录下的标记文件
+        private static string MarkerPath =>
+            Path.Combine(Application.persistentDataPath, "DeadlineMgr", "installed.marker");
 
         // 容忍的向后跳阈值（例如：1 分钟）。如果跳得比这个多则认为可疑。
         private static readonly TimeSpan RollbackTolerance = TimeSpan.FromMinutes(1);
@@ -92,9 +98,10 @@ namespace ReunionMovement.Common.Util
         /// <summary>
         /// 检测时钟回拨或本地记录被篡改。
         /// 逻辑：
-        ///  - 如果没有本地记录（ticks/hash 均不存在），创建记录（安全哈希随存）。
+        ///  - 如果没有本地记录（ticks/hash/标记文件均不存在），创建记录（安全哈希随存）。
         ///  - 如果存在部分缺失（仅 ticks 或仅 hash） -> 认为被篡改。
         ///  - 如果存在记录但哈希不匹配 -> 认为被篡改。
+        ///  - 如果标记文件存在但 PlayerPrefs 记录被清空 -> 认为被篡改（堵住删键绕过）。
         ///  - 如果存在记录且当前 UTC 时间小于记录 - 容忍阈值 -> 认为回拨。
         ///  - 否则更新记录为 max(记录, 当前时间) 并保存哈希。
         /// 返回 true 表示发现问题（篡改或回拨）。
@@ -105,12 +112,20 @@ namespace ReunionMovement.Common.Util
             {
                 var hasTicks = PlayerPrefs.HasKey(prefKey_LastUtcTicks);
                 var hasHash = PlayerPrefs.HasKey(prefKey_Hash);
+                var hasMarker = File.Exists(MarkerPath);
 
-                // 首次运行或无任何记录：写入当前 UTC
-                if (!hasTicks && !hasHash)
+                // 首次运行或无任何记录：写入当前 UTC（含标记文件）
+                if (!hasTicks && !hasHash && !hasMarker)
                 {
                     SaveUtcTicks(nowUtc.Ticks);
                     return false;
+                }
+
+                // 标记文件存在但 PlayerPrefs 记录被清空：玩家删键绕过首次运行判定
+                if (hasMarker && !hasTicks && !hasHash)
+                {
+                    Log.Warning("DeadlineMgr: 检测到安装标记存在但本地时间记录被清空，已视为被篡改。");
+                    return true;
                 }
 
                 // 如果存在部分缺失，视为被篡改
@@ -136,6 +151,31 @@ namespace ReunionMovement.Common.Util
                 {
                     Log.Warning("DeadlineMgr: 本地存储的完整性校验失败，已视为被篡改。");
                     return true;
+                }
+
+                // 标记文件交叉校验：内容须与 ticks 记录一致（旧版安装无标记文件则迁移补写，不误判）
+                if (hasMarker)
+                {
+                    string markerContent = null;
+                    try
+                    {
+                        markerContent = File.ReadAllText(MarkerPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning("DeadlineMgr: 读取标记文件失败，已视为被篡改。{0}", ex.Message);
+                        return true;
+                    }
+                    if (!string.Equals(markerContent, storedTicksStr, StringComparison.Ordinal))
+                    {
+                        Log.Warning("DeadlineMgr: 安装标记与时间记录不一致，已视为被篡改。");
+                        return true;
+                    }
+                }
+                else
+                {
+                    // 旧版（仅 PlayerPrefs）升级：补写标记文件，保持记录一致
+                    WriteMarkerFile(storedTicksStr);
                 }
 
                 var storedUtc = new DateTime(storedTicks, DateTimeKind.Utc);
@@ -176,6 +216,22 @@ namespace ReunionMovement.Common.Util
             PlayerPrefs.SetString(prefKey_LastUtcTicks, ticksStr);
             PlayerPrefs.SetString(prefKey_Hash, ComputeHashForTicks(ticks));
             PlayerPrefs.Save();
+            WriteMarkerFile(ticksStr);
+        }
+
+        /// <summary>写安装标记文件（跨存储冗余：删 PlayerPrefs 键无法单独绕过）</summary>
+        private void WriteMarkerFile(string ticksStr)
+        {
+            try
+            {
+                var dir = Path.GetDirectoryName(MarkerPath);
+                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+                File.WriteAllText(MarkerPath, ticksStr);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("DeadlineMgr: 写入标记文件失败（不影响 PlayerPrefs 记录）: {0}", ex.Message);
+            }
         }
 
         /// <summary>

@@ -273,10 +273,25 @@ namespace ReunionMovement.Common.Util.Download
                     {
                         return;
                     }
+                    // 单文件下载完整性：Content-Length 与落盘大小不一致判定为文件损坏（
+                    // 服务器中途截断/代理改写；与分块路径的 expectedSize 校验对齐）
+                    var contentLengthHeader = uwr.GetResponseHeader("Content-Length");
+                    long fileSize = new FileInfo(DownloadResultPath).Length;
+                    if (!string.IsNullOrEmpty(contentLengthHeader)
+                        && long.TryParse(contentLengthHeader, out var contentLength)
+                        && contentLength >= 0
+                        && fileSize != contentLength)
+                    {
+                        DidError = true;
+                        OnDownloadError?.Invoke(0, string.Format(
+                            "单文件下载大小不匹配（落盘 {0} ≠ Content-Length {1}），判定文件损坏，中止下载", fileSize, contentLength));
+                        Cancel();
+                        return;
+                    }
                     progress = 1.0f;
                     OnDownloadSuccess?.Invoke();
                     endTime = Environment.TickCount;
-                    bytesDownloaded = new FileInfo(DownloadResultPath).Length;
+                    bytesDownloaded = fileSize;
                 };
             }
             else

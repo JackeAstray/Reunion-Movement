@@ -184,7 +184,8 @@ namespace ReunionMovement.Common.Util.StateMachine
             {
                 if (EqualityComparer<TLabel>.Default.Equals(parallelStates[i].label, label))
                 {
-                    parallelStates[i].OnStop?.Invoke();
+                    try { parallelStates[i].OnStop?.Invoke(); }
+                    catch (Exception ex) { Log.Error("StateMachine 并行状态 OnStop 异常（已隔离）: {0}", ex.Message); }
                     parallelStates.RemoveAt(i);
                     break;
                 }
@@ -200,7 +201,8 @@ namespace ReunionMovement.Common.Util.StateMachine
             parallelStates.Insert(insertIndex, newState);
 
             // 进入时触发 onStart（与主状态行为一致）
-            newState.OnStart?.Invoke();
+            try { newState.OnStart?.Invoke(); }
+            catch (Exception ex) { Log.Error("StateMachine 并行状态 OnStart 异常（已隔离）: {0}", ex.Message); }
         }
 
         /// <summary>
@@ -338,7 +340,8 @@ namespace ReunionMovement.Common.Util.StateMachine
                 if (EqualityComparer<TLabel>.Default.Equals(parallelStates[i].label, label))
                 {
                     // 与超时移除、AddParallelState 的旧状态移除保持一致：先触发 OnStop 再移除
-                    parallelStates[i].OnStop?.Invoke();
+                    try { parallelStates[i].OnStop?.Invoke(); }
+                    catch (Exception ex) { Log.Error("StateMachine 并行状态 OnStop 异常（已隔离）: {0}", ex.Message); }
                     parallelStates.RemoveAt(i);
                     return;
                 }
@@ -389,12 +392,14 @@ namespace ReunionMovement.Common.Util.StateMachine
         /// </summary>
         public void Reset()
         {
-            currentState?.OnStop?.Invoke();
+            try { currentState?.OnStop?.Invoke(); }
+            catch (Exception ex) { Log.Error("StateMachine OnStop 异常（已隔离）: {0}", ex.Message); }
             currentState = null;
             // 并行状态也需停止并清空，否则 Reset 后仍在 Update 中运行（泄漏）
             for (int i = 0; i < parallelStates.Count; i++)
             {
-                parallelStates[i].OnStop?.Invoke();
+                try { parallelStates[i].OnStop?.Invoke(); }
+                catch (Exception ex) { Log.Error("StateMachine 并行状态 OnStop 异常（已隔离）: {0}", ex.Message); }
             }
             parallelStates.Clear();
             stateHistory.Clear();

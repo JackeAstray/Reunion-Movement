@@ -212,10 +212,7 @@ namespace ReunionMovement.UI.ButtonClick
         /// </summary>
         private void EndPressAndHandle()
         {
-            longPressCts?.Cancel();
-            longPressCts = null;
-            progressCts?.Cancel();
-            progressCts = null;
+            DisposePressCts();
             ResetProgressBar();
 
             // 按压可能已被取消（OnPointerExit / 失去选中）：取消状态下抬起不再处理长按判定，
@@ -244,11 +241,19 @@ namespace ReunionMovement.UI.ButtonClick
         /// </summary>
         private void CancelPress()
         {
+            DisposePressCts();
+            ResetProgressBar();
+        }
+
+        /// <summary>取消并释放长按/进度 CTS：仅 Cancel 不 Dispose 会让每次按压泄漏 2 个 CTS 托管控件</summary>
+        private void DisposePressCts()
+        {
             longPressCts?.Cancel();
+            longPressCts?.Dispose();
             longPressCts = null;
             progressCts?.Cancel();
+            progressCts?.Dispose();
             progressCts = null;
-            ResetProgressBar();
         }
 
         /// <summary>
