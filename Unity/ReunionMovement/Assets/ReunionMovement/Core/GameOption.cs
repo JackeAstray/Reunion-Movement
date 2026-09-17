@@ -428,6 +428,21 @@ namespace ReunionMovement.Core
         }
 
         /// <summary>
+        /// 设置全屏状态：更新字段并持久化。
+        /// 非 WebGL 平台由 ApplyDisplayOptions 走 Screen.SetResolution；WebGL 平台
+        /// Screen 相关设置无效，浏览器全屏动作由 StartGame.SetFullscreen 调 jslib 完成，
+        /// 这里仅维护内存状态，保证 UI 图标与真实状态一致。
+        /// 浏览器侧全屏变化（用户按 Esc、页面按钮退出等）由 jslib 回调
+        /// StartGame.OnBrowserFullscreenChanged 同步回本字段。
+        /// </summary>
+        public static void SetFullscreen(bool fullscreen)
+        {
+            currentOption.fullscreen = fullscreen;
+            ApplyDisplayOptions();
+            SaveOptions();
+        }
+
+        /// <summary>
         /// 设置语言：写回 GameOption、立即应用到 LanguagesSystem（UIText/UISprite 自动刷新）、持久化。
         /// 语言系统未初始化时仅持久化（SetMultilingual 内部判空忽略）。
         /// </summary>
