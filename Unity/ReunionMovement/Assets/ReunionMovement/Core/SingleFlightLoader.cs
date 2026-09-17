@@ -15,12 +15,20 @@ namespace ReunionMovement.Core
     {
         private readonly Dictionary<string, UniTaskCompletionSource<T>> inflight =
             new Dictionary<string, UniTaskCompletionSource<T>>();
+        // 字典访问互斥：支持多线程并发调用（await 在锁外执行，锁内仅做登记/摘除）
+        private readonly object gate = new object();
 
         /// <summary>当前在途任务数量（诊断用）</summary>
-        public int InflightCount => inflight.Count;
+        public int InflightCount
+        {
+            get { lock (gate) return inflight.Count; }
+        }
 
         /// <summary>是否已有同名 key 在途</summary>
-        public bool IsInflight(string key) => inflight.ContainsKey(key);
+        public bool IsInflight(string key)
+        {
+            lock (gate) return inflight.ContainsKey(key);
+        }
 
         /// <summary>
         /// 以单飞语义执行 factory：
@@ -31,14 +39,28 @@ namespace ReunionMovement.Core
         /// </summary>
         public async UniTask<T> RunAsync(string key, Func<UniTask<T>> factory)
         {
-            if (inflight.TryGetValue(key, out var pending))
+            UniTaskCompletionSource<T> tcs;
+            bool isOwner;
+            lock (gate)
             {
-                var (_, result) = await pending.Task.SuppressCancellationThrow();
+                if (inflight.TryGetValue(key, out tcs))
+                {
+                    isOwner = false;
+                }
+                else
+                {
+                    tcs = new UniTaskCompletionSource<T>();
+                    inflight[key] = tcs;
+                    isOwner = true;
+                }
+            }
+
+            if (!isOwner)
+            {
+                var (_, result) = await tcs.Task.SuppressCancellationThrow();
                 return result;
             }
 
-            var tcs = new UniTaskCompletionSource<T>();
-            inflight[key] = tcs;
             try
             {
                 var result = await factory();
@@ -52,9 +74,12 @@ namespace ReunionMovement.Core
             }
             finally
             {
-                if (inflight.TryGetValue(key, out var cur) && ReferenceEquals(cur, tcs))
+                lock (gate)
                 {
-                    inflight.Remove(key);
+                    if (inflight.TryGetValue(key, out var cur) && ReferenceEquals(cur, tcs))
+                    {
+                        inflight.Remove(key);
+                    }
                 }
             }
         }
@@ -65,11 +90,14 @@ namespace ReunionMovement.Core
         /// </summary>
         public void CancelAll()
         {
-            foreach (var kvp in inflight)
+            lock (gate)
             {
-                kvp.Value.TrySetCanceled();
+                foreach (var kvp in inflight)
+                {
+                    kvp.Value.TrySetCanceled();
+                }
+                inflight.Clear();
             }
-            inflight.Clear();
         }
     }
 }

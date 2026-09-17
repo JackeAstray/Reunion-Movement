@@ -346,6 +346,11 @@ namespace ReunionMovement.Core.Scene
                 Interlocked.Exchange(ref isLoadingAtomic, 0);
                 myTcs.TrySetResult();
 
+                // 统一清理本次切换注册的"不隐藏窗口"集合：
+                // 成功路径已由 OnTargetSceneLoaded 之后清理，失败/超时/异常路径在此兜底，
+                // 避免集合残留到下次场景切换导致窗口误不隐藏
+                ClearExcludeSet();
+
                 // 加载未完成时修正状态（Clear() 可能已置空 LoadState，判空避免 NRE）
                 if (LoadState != null && LoadState.Value != SceneLoadState.Loaded)
                 {
@@ -558,7 +563,8 @@ namespace ReunionMovement.Core.Scene
                 await UniTask.Yield(PlayerLoopTiming.Update);
             }
 
-            await UniTask.Delay((int)(endProgressWaitingTime * 1000));
+            // 进度条最小展示时长：用 unscaled 时间，避免 PauseSystem 暂停（timeScale=0）挂起该延时
+            await UniTask.Delay((int)(endProgressWaitingTime * 1000), DelayType.UnscaledDeltaTime);
 
             CallbackProgress(1f);
 

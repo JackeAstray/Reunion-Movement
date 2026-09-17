@@ -199,6 +199,26 @@ namespace ReunionMovement.Common.Util
             }
         }
 
+        /// <summary>非法文件名字符缓存（与 SaveSystem 对齐，防路径穿越写出 Json 目录）</summary>
+        private static readonly System.Collections.Generic.HashSet<char> s_invalidNameChars
+            = new System.Collections.Generic.HashSet<char>(Path.GetInvalidFileNameChars());
+
+        /// <summary>
+        /// 净化 Json 文件名：剥离目录分隔符与非法字符，防止外部输入含 ../ 写出 Json 目录。
+        /// 净化结果为空时返回 null（调用方应放弃读写）。
+        /// </summary>
+        private static string SanitizeJsonName(string fileName)
+        {
+            if (string.IsNullOrEmpty(fileName)) return null;
+            var sb = new StringBuilder(fileName.Length);
+            foreach (var c in fileName)
+            {
+                if (c == '\\' || c == '/' || s_invalidNameChars.Contains(c)) continue;
+                sb.Append(c);
+            }
+            return sb.Length > 0 ? sb.ToString() : null;
+        }
+
         /// <summary>
         /// 加载Json，增加异常捕获并记录错误
         /// </summary>
@@ -207,7 +227,13 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static T LoadJson<T>(string fileName)
         {
-            var fileAbslutePath = Path.Combine(Application.persistentDataPath, "Json", fileName + ".json");
+            var safeName = SanitizeJsonName(fileName);
+            if (safeName == null)
+            {
+                Log.Warning("LoadJson() 文件名为空或全部为非法字符: {0}", fileName);
+                return default;
+            }
+            var fileAbslutePath = Path.Combine(Application.persistentDataPath, "Json", safeName + ".json");
             if (!File.Exists(fileAbslutePath))
             {
                 return default;
@@ -234,6 +260,12 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static async UniTask<bool> SaveJson(string jsonStr, string fileName)
         {
+            var safeName = SanitizeJsonName(fileName);
+            if (safeName == null)
+            {
+                Log.Warning("SaveJson() 文件名为空或全部为非法字符: {0}", fileName);
+                return false;
+            }
             var filePath = Path.Combine(Application.persistentDataPath, "Json");
             try
             {
@@ -241,13 +273,13 @@ namespace ReunionMovement.Common.Util
                 {
                     Directory.CreateDirectory(filePath);
                 }
-                var fileAbslutePath = Path.Combine(filePath, fileName + ".json");
+                var fileAbslutePath = Path.Combine(filePath, safeName + ".json");
                 await File.WriteAllTextAsync(fileAbslutePath, jsonStr);
                 return true;
             }
             catch (Exception e)
             {
-                Log.Error("SaveJson() 路径:{0}, 文件:{1}, 错误:{2}", filePath, fileName, e.Message);
+                Log.Error("SaveJson() 路径:{0}, 文件:{1}, 错误:{2}", filePath, safeName, e.Message);
                 return false;
             }
         }

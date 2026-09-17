@@ -360,9 +360,11 @@ namespace ReunionMovement.Common.Util
                 }
             }
 
-            // 触摸点击
-            foreach (var t in Touch.activeTouches)
+            // 触摸点击（索引遍历：IReadOnlyList 的 foreach 枚举器会装箱，每帧产生小分配）
+            var activeTouches = Touch.activeTouches;
+            for (int i = 0; i < activeTouches.Count; i++)
             {
+                var t = activeTouches[i];
                 if (t.phase == UnityEngine.InputSystem.TouchPhase.Began)
                 {
                     if (raycastBase.CastRayFromScreenPoint(t.screenPosition, out RaycastHit hitInfo))

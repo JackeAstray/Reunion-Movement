@@ -391,10 +391,22 @@ namespace ReunionMovement
                 }
             }
 
-            // 将所有子节点 GameObject 回收到对象池（uiTree 为 null 时直接丢弃引用，防 NRE）
+            // 将所有子节点 GameObject 回收到对象池（uiTree 为 null 时直接销毁，防孤儿对象残留）
             if (uiTree != null)
             {
                 uiTree.Push(children);
+            }
+            else
+            {
+                // 节点脱离 TreeView 使用/父树已销毁：子节点 GameObject 已递归移除监听，
+                // 无法回池，直接销毁避免孤儿
+                foreach (var childObj in children)
+                {
+                    if (childObj != null)
+                    {
+                        Destroy(childObj.gameObject);
+                    }
+                }
             }
             children.Clear();
         }

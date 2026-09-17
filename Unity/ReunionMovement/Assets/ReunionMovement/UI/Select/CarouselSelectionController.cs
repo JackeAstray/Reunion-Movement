@@ -262,6 +262,8 @@ namespace ReunionMovement.UI.Select
             for (int i = 1; i <= rows; i++)
             {
                 int r = ((row + step * i) % rows + rows) % rows;
+                // 空行（rowSizes 配置为 0）无实际元素：跳过，避免列号计算错位跳到错误选项
+                if (table[r] <= 0) continue;
                 // 目标行可能比当前列短（不规则行），列号收拢；空行兜底 0
                 int c = Mathf.Max(0, Mathf.Min(col, table[r] - 1));
                 int candidate = RowOffset(table, r) + c;
@@ -542,8 +544,12 @@ namespace ReunionMovement.UI.Select
 
             if (closeOnConfirm)
             {
-                // CloseWindow();
-                Log.Debug($"CloseWindow");
+                // 按字段文档自动关闭；仅当窗口由 UISystem 管理时关闭
+                // （场景直接激活、非 UISystem 打开的窗口由外部自行处理，避免刷"未加载的UIWindow"错误）
+                if (UISystem.Instance.IsOpen(uiName))
+                {
+                    CloseWindow();
+                }
             }
         }
 

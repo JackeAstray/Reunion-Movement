@@ -24,6 +24,10 @@ namespace ReunionMovement.Common.Util
         /// <summary>事件队列上限：主线程停摆时后台接收仍在入队，超限丢弃最旧事件防内存无界增长</summary>
         private const int MaxPendingEvents = 1024;
 
+        // 溢出丢弃计数（节流告警：主线程长时间停摆时避免每事件刷日志）
+        int droppedEventCount;
+        int lastDropWarnTick;
+
         enum EventType { Connected, Data, Disconnected, Error }
 
         TcpClient socket;
@@ -41,7 +45,17 @@ namespace ReunionMovement.Common.Util
         /// <summary>有界入队：超限时丢弃最旧事件（并发下的近似判断即可，多丢少丢一条无碍）</summary>
         private void EnqueueEvent((EventType type, byte[] data, string message) ev)
         {
-            if (events.Count >= MaxPendingEvents) events.TryDequeue(out _);
+            if (events.Count >= MaxPendingEvents)
+            {
+                events.TryDequeue(out _);
+                // 节流告警：主线程停摆导致持续丢弃时，每秒最多记录一条，避免刷屏
+                if (Interlocked.Increment(ref droppedEventCount) == 1
+                    || Environment.TickCount - lastDropWarnTick > 1000)
+                {
+                    lastDropWarnTick = Environment.TickCount;
+                    Log.Warning("[RawTcpClientChannel] 事件队列超限（{0}），丢弃最旧事件。主线程可能长时间停摆，累计丢弃 {1}", MaxPendingEvents, Volatile.Read(ref droppedEventCount));
+                }
+            }
             events.Enqueue(ev);
         }
 

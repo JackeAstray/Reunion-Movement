@@ -1,6 +1,7 @@
 ﻿using Microsoft.Win32;
 using ReunionMovement.Common.Util;
 using System;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -53,6 +54,9 @@ namespace ReunionMovement.EditorTools
             PlayerPrefs.DeleteKey("Deadline_LastUtcHash_v1");
             PlayerPrefs.Save();
 
+            // 1.5) 编辑器本地标记文件（跨存储冗余：只删 PlayerPrefs 会让运行时判定"篡改"）
+            TryDeleteMarkerFile(Application.persistentDataPath);
+
             // 2) 打包程序(exe) 注册表记录
             var company = PlayerSettings.companyName;
             var product = PlayerSettings.productName;
@@ -83,6 +87,12 @@ namespace ReunionMovement.EditorTools
                     }
                 }
 
+                // 2.5) 打包程序(exe) 本地标记文件（persistentDataPath = LocalLow/<公司>/<产品>）
+                string exePersistentRoot = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "Low", company, product);
+                TryDeleteMarkerFile(exePersistentRoot);
+
                 if (removed)
                 {
                     Debug.Log($"DeadlineMgr: 已清除打包程序注册表记录: HKCU\\{path}");
@@ -103,6 +113,24 @@ namespace ReunionMovement.EditorTools
                     ? $"已清除全部截止日期数据（含打包程序注册表记录）：\nHKCU\\{path}"
                     : "已清除编辑器 PlayerPrefs；打包程序注册表中无记录。",
                 "OK");
+        }
+
+        /// <summary>删除 DeadlineMgr 的安装标记文件（跨存储冗余；只删 PlayerPrefs 会被运行时判定"篡改"）</summary>
+        private static void TryDeleteMarkerFile(string persistentRoot)
+        {
+            try
+            {
+                string marker = Path.Combine(persistentRoot, "DeadlineMgr", "installed.marker");
+                if (File.Exists(marker))
+                {
+                    File.Delete(marker);
+                    Debug.Log($"DeadlineMgr: 已删除标记文件: {marker}");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"DeadlineMgr: 删除标记文件失败（不影响其他清理）: {ex.Message}");
+            }
         }
     }
 }

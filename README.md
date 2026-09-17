@@ -28,6 +28,7 @@ Unity Game Framework | Unity游戏框架
 - **统一生命周期引擎**：纯 C# `GameEngine` + `GameEngineDriver` 桥接，模块化 `ICustomSystem`，`[RuntimeInitializeOnLoadMethod]` 自动启动。
 - **四传输网络层**：TCP(Telepathy) / KCP(kcp2k) / WebSocket(SimpleWebTransport) / RawTcp(原生 Socket) 统一 `INetworkChannel` 抽象，可插拔帧编解码器（MessageId / LengthPrefixed / Passthrough）+ 压缩 + 加密（Encrypt-then-MAC）+ 心跳、自动重连、断线可靠消息重发、RPC 请求/响应。
 - **断点续传下载**：HTTP 分块下载（>2GB 支持）、MD5 校验、多线程并发调度、超时兜底、暂停 / 恢复。
+- **热更完整性保护**：Remote 模式强制 `https://`（拒绝明文 http）；首次远程 Catalog 与内嵌 `version.json` 锚点（catalogHash）核对，防中间人替换热更内容；单文件下载按 Content-Length 校验完整性。
 - **SDF 形状 UI**：`ImageEx` 基于 SDF 着色器实现 12 种形状（四边形 / 心形 / 六边形 / 星形 / 圆角等）+ 渐变 / 模糊 / 描边 / 过渡特效；`ImageExReplica`（相机画面投影）、`ImageExTweener`（参数动画）。
 - **循环滚动列表**：`LoopScrollRect` 对象池 + 虚拟化 + 数据索引缓存，滚动零 GC、选中状态零 GetComponent。
 - **UI Toolkit 面板系统**：`UIToolkitSystem` 异步加载 UXML/USS，面板栈管理。
@@ -79,14 +80,14 @@ Unity Game Framework | Unity游戏框架
 | `HttpMgr` | HTTP 请求封装（GET / POST / 进度 / 取消） |
 | `TimerMgr` | 计时器 / 倒计时 |
 | `StateMachine` | 泛型状态机（并行状态 / 超时 / 历史回退 / 序列化快照） |
-| `GachaSystem` | 加密随机抽卡系统（无可预测性 / 保底持久化） |
+| `GachaSystem` | 加密随机抽卡系统（无可预测性 / 保底持久化 + 完整性校验） |
 | `GameObjectPool` | 通用对象池（IPoolable 生命周期 / 注册表） |
 | `ResolutionMgr` | 屏幕分辨率 / 全屏 / 帧率 |
 | `SafeArea` | 刘海屏安全区适配 |
 | `ScreenLogger` | 屏幕日志显示 |
 | `DeadlineMgr` | 截止日期检测 |
 | `ErrorReporter` | 全局错误捕获 / 日志落盘（轮转 + 聚合）/ 可选上报 |
-| `SaveSystem` | 通用 JSON 存档（原子写入 + 版本迁移） |
+| `SaveSystem` | 通用 JSON 存档（原子写入 + AES+HMAC 加密完整性 + 版本迁移） |
 | `PerformanceMonitor` | FPS / 内存采样与防抖告警 |
 | `NetworkMessage` | 消息 ID 编解码 + 分发器（协议层） |
 | `AddressableUpdateFlow` | Addressables 热更状态机（检查→下载→应用） |

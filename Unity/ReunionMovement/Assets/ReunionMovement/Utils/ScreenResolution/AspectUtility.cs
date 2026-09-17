@@ -39,9 +39,11 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         private void UpdateCamera()
         {
-            // fixedAspectRatio 关闭或相机缺失：恢复完整视口并清理底衬相机。
-            // 运行中关闭开关后 backgroundCam 不应残留（黑色底衬遮住画面）
-            if (!ResolutionMgr.Instance.fixedAspectRatio || cameraObj == null)
+            // 用 IsInitialized 判断：经 Instance 访问会在无 ResolutionMgr 的场景隐式懒创建单例（行为隐晦）。
+            // 未初始化时视同"未启用固定纵横比"，恢复完整视口并清理底衬相机。
+            if (!ResolutionMgr.IsInitialized
+                || !ResolutionMgr.Instance.fixedAspectRatio
+                || cameraObj == null)
             {
                 if (cameraObj != null)
                 {

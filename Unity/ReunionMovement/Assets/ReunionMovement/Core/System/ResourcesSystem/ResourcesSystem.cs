@@ -205,6 +205,28 @@ namespace ReunionMovement.Core.Resources
         /// </summary>
         public void ClearAssetsCache()
         {
+            // 平衡告警：存在未归零引用计数的条目时，UnloadAsset 后持有方会得到 Missing 资源，
+            // 输出告警便于定位只 Load 未 Delete 的泄漏调用方
+            if (resourceRefCount.Count > 0)
+            {
+                int leaked = 0;
+                foreach (var kvp in resourceRefCount)
+                {
+                    if (kvp.Value > 0)
+                    {
+                        if (leaked < 5)
+                        {
+                            Log.Warning("ResourcesSystem.ClearAssetsCache: 资源 {0} 仍有 {1} 个未释放引用，Unload 后可能变 Missing", kvp.Key, kvp.Value);
+                        }
+                        leaked++;
+                    }
+                }
+                if (leaked > 5)
+                {
+                    Log.Warning("ResourcesSystem.ClearAssetsCache: 共 {0} 条资源引用未归零（仅列出前 5 条）", leaked);
+                }
+            }
+
             foreach (var kvp in resourceTable)
             {
                 var obj = kvp.Value;
