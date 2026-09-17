@@ -13,9 +13,12 @@ using ReunionMovement.Core.Terminal;
 using ReunionMovement.Core.UI;
 using ReunionMovement.Core.UIInput;
 using ReunionMovement.Core.UIToolkit;
+using AOT;
 using Cysharp.Threading.Tasks;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Runtime.InteropServices;
 
 namespace ReunionMovement.Core
 {
@@ -25,6 +28,22 @@ namespace ReunionMovement.Core
     /// </summary>
     public class StartGame : GameEntry
     {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [DllImport("__Internal")]
+        private static extern void SetFullscreenState(int value);
+
+        /// <summary>当前是否全屏（查询浏览器实时状态，1/0）</summary>
+        [DllImport("__Internal")]
+        private static extern int GetFullscreenState();
+
+        /// <summary>注册浏览器全屏状态变化回调（参数：1=全屏，0=非全屏）</summary>
+        [DllImport("__Internal")]
+        private static extern void RegisterFullscreenChanged(Action<int> callback);
+
+        // 持有回调委托引用，防止被 GC 回收导致浏览器侧回调失效
+        private static readonly Action<int> fullscreenChangedCallback = OnBrowserFullscreenChanged;
+#endif
+
         /// <summary>
         /// 注册所有游戏模块。列表顺序决定初始化顺序（先注册的先初始化）。
         /// ResourcesSystem 必须在最前面（其他模块依赖它加载资源）。
@@ -77,6 +96,20 @@ namespace ReunionMovement.Core
         {
             Log.Debug("[StartGame] 游戏启动");
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // 注册浏览器全屏状态变化回调（含用户按 Esc、页面按钮退出）：把真实状态同步回
+            // GameOption，避免设置界面显示的开关状态与浏览器不一致
+            RegisterFullscreenChanged(fullscreenChangedCallback);
+
+            // 初始校准：浏览器起始必为窗口模式（无用户手势禁止自动进入全屏），而 GameOption
+            // 默认 fullscreen=true；以浏览器实际状态为准同步一次
+            bool actualFullscreen = GetFullscreenState() != 0;
+            if (GameOption.CurrentOption.fullscreen != actualFullscreen)
+            {
+                GameOption.SetFullscreen(actualFullscreen);
+            }
+#endif
+
             // 注意：这里不再调用 GameOption.ResetOptions()。
             // OnBeforeInitAsync 已用 GameOption.LoadOptions() 读回玩家存档，
             // 此处若再 ResetOptions() 会把 PlayerPrefs 覆盖成默认值，导致设置无法持久化。
@@ -102,5 +135,52 @@ namespace ReunionMovement.Core
             // 打开启动界面（Addressables 双轨加载，失败自动降级 Resources）
             await UISystem.Instance.OpenWindowAsync(UINames.StartGame);
         }
+
+        /// <summary>
+        /// 全屏状态变化事件（参数：true = 进入全屏）。
+        /// 覆盖主动切换（SetFullscreen）与浏览器侧变化（WebGL 用户按 Esc/页面按钮退出，
+        /// 经 jslib 回调同步后触发）；设置界面订阅即可保持图标/开关与真实状态一致。
+        /// </summary>
+        public static event Action<bool> OnFullscreenChanged;
+
+        /// <summary>
+        /// 切换全屏模式（设置界面全屏开关的入口）。
+        /// WebGL：以 GameOption 内存状态取反（浏览器状态变化回调已把外部变化同步回该字段），
+        /// 经 jslib 调用浏览器 Fullscreen API —— 浏览器要求全屏由用户手势触发，因此必须挂在
+        /// 按钮点击等交互回调上，不能代码强制；WebGL 上分辨率/全屏设置由浏览器控制，
+        /// GameOption 仅维护内存状态（存档与 SetResolution 在 WebGL 分支内均被跳过）。
+        /// 其他平台：更新 GameOption（持久化）并由 ApplyDisplayOptions 走 Screen.SetResolution。
+        /// </summary>
+        public static void SetFullscreen()
+        {
+            bool fullscreen = !GameOption.CurrentOption.fullscreen;
+            GameOption.SetFullscreen(fullscreen);
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+            Log.Debug("[StartGame] {0}全屏", fullscreen ? "进入" : "退出");
+            SetFullscreenState(fullscreen ? 1 : 0);
+#endif
+
+            // 通知 UI 刷新图标/开关（WebGL 全屏异步生效，浏览器回调会按真实状态再校正）
+            OnFullscreenChanged?.Invoke(fullscreen);
+        }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        /// <summary>
+        /// 浏览器全屏状态变化回调（由 jslib 的 fullscreenchange 触发，含 Esc 与页面按钮退出）。
+        /// 仅同步 GameOption 内存状态：WebGL 下存档写入与分辨率应用均被平台分支跳过。
+        /// </summary>
+        [MonoPInvokeCallback(typeof(Action<int>))]
+        private static void OnBrowserFullscreenChanged(int fullscreen)
+        {
+            bool active = fullscreen != 0;
+            if (GameOption.CurrentOption.fullscreen != active)
+            {
+                Log.Debug("[StartGame] 浏览器全屏状态同步: {0}", active);
+                GameOption.SetFullscreen(active);
+                OnFullscreenChanged?.Invoke(active);
+            }
+        }
+#endif
     }
 }
