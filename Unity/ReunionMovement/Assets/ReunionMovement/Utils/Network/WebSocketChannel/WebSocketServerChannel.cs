@@ -9,9 +9,10 @@ namespace ReunionMovement.Common.Util
     /// </summary>
     public sealed class WebSocketServerChannel : INetworkServerChannel
     {
-        public const int DefaultMaxMessageSize = 32000;
+        public const int DefaultMaxMessageSize = 1 << 20; // 与 maxAssembledFrameSize(1MB) 对齐
 
         SimpleWebServer server;
+        readonly int maxMessageSize;
 
         public string ChannelName { get; set; }
 
@@ -32,6 +33,7 @@ namespace ReunionMovement.Common.Util
         {
             ChannelName = channelName;
             Port = port;
+            this.maxMessageSize = maxMessageSize;
             server = new SimpleWebServer(500, new TcpConfig(true, 5000, 5000), maxMessageSize, 5000, default);
             server.onConnect += HandleConnect;
             server.onDisconnect += HandleDisconnect;
@@ -62,6 +64,11 @@ namespace ReunionMovement.Common.Util
         public bool SendMessage(int connectionId, byte[] data)
         {
             if (!Active || data == null || data.Length == 0) return false;
+            if (data.Length > maxMessageSize)
+            {
+                Log.Error("WebSocket 服务端发送消息超限: {0}B > {1}B，已丢弃", data.Length, maxMessageSize);
+                return false;
+            }
             try
             {
                 server.SendOne(connectionId, new ArraySegment<byte>(data));

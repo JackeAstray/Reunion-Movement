@@ -17,6 +17,16 @@ namespace ReunionMovement.Common.Util.HttpService
         /// </summary>
         public const int DefaultTimeoutSeconds = HttpDefaults.DefaultRequestTimeoutSeconds;
 
+        /// <summary>生产构建下对明文 HTTP 地址告警（不阻断，供开发/内网环境使用），防止登录令牌等敏感数据明文传输</summary>
+        static void WarnIfInsecureScheme(string url)
+        {
+            if (string.IsNullOrEmpty(url)) return;
+            if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            {
+                Debug.LogWarning("[UnityHttpService] 检测到明文 HTTP 请求：" + url + "。生产环境请使用 https:// 避免敏感数据泄露");
+            }
+        }
+
         public IHttpRequest Get(string uri)
         {
             return new UnityHttpRequest(UnityWebRequest.Get(uri));
@@ -105,6 +115,10 @@ namespace ReunionMovement.Common.Util.HttpService
             {
                 using (UnityWebRequest unityWebRequest = unityHttpRequest.UnityWebRequest)
                 {
+                    // 明文 HTTP 告警（仅生产构建生效）
+#if !UNITY_EDITOR && !DEVELOPMENT_BUILD
+                    WarnIfInsecureScheme(unityWebRequest.url);
+#endif
                     // 默认超时：若调用方未显式设置，则使用默认值，避免请求永久挂起
                     if (unityWebRequest.timeout <= 0)
                         unityWebRequest.timeout = DefaultTimeoutSeconds;

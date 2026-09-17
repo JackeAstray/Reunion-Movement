@@ -62,12 +62,27 @@ namespace ReunionMovement.Core.Resources
                 // 验证缓存资源未被 Unity 销毁（fake null 检查）
                 if (asset != null && asset)
                 {
-                    SafeIncrementRefCount(assetPath);
-                    return asset as T;
+                    var typed = asset as T;
+                    if (typed == null)
+                    {
+                        // 同一路径被不同类型缓存（配置错误）：告警并重新按目标类型加载，避免静默返回 null 掩盖问题
+                        Log.Error("ResourcesSystem.Load<{0}>({1}) 缓存类型不符（缓存为 {2}），已重新加载",
+                            typeof(T).Name, assetPath, asset.GetType().Name);
+                        resourceTable.Remove(assetPath);
+                        resourceRefCount.Remove(assetPath);
+                    }
+                    else
+                    {
+                        SafeIncrementRefCount(assetPath);
+                        return typed;
+                    }
                 }
-                // 资源已被销毁，清理脏缓存条目
-                resourceTable.Remove(assetPath);
-                resourceRefCount.Remove(assetPath);
+                else
+                {
+                    // 资源已被销毁，清理脏缓存条目
+                    resourceTable.Remove(assetPath);
+                    resourceRefCount.Remove(assetPath);
+                }
             }
 
             var assets = UnityEngine.Resources.Load<T>(assetPath);
@@ -100,14 +115,29 @@ namespace ReunionMovement.Core.Resources
                 // 验证缓存资源未被 Unity 销毁（fake null 检查）
                 if (cachedAsset != null && cachedAsset)
                 {
-                    // 安全增加引用计数（即使 key 不在 refCount 字典中也不会崩溃）
-                    SafeIncrementRefCount(assetPath);
-                    callback?.Invoke(cachedAsset as T);
-                    return cachedAsset as T;
+                    var typed = cachedAsset as T;
+                    if (typed == null)
+                    {
+                        // 同一路径被不同类型缓存（配置错误）：告警并重新按目标类型加载
+                        Log.Error("ResourcesSystem.LoadAsync<{0}>({1}) 缓存类型不符（缓存为 {2}），已重新加载",
+                            typeof(T).Name, assetPath, cachedAsset.GetType().Name);
+                        resourceTable.Remove(assetPath);
+                        resourceRefCount.Remove(assetPath);
+                    }
+                    else
+                    {
+                        // 安全增加引用计数（即使 key 不在 refCount 字典中也不会崩溃）
+                        SafeIncrementRefCount(assetPath);
+                        callback?.Invoke(typed);
+                        return typed;
+                    }
                 }
-                // 资源已被销毁，清理脏缓存条目
-                resourceTable.Remove(assetPath);
-                resourceRefCount.Remove(assetPath);
+                else
+                {
+                    // 资源已被销毁，清理脏缓存条目
+                    resourceTable.Remove(assetPath);
+                    resourceRefCount.Remove(assetPath);
+                }
             }
 
             var assets = await ResourcesUtil.LoadAsync<T>(assetPath, callback);

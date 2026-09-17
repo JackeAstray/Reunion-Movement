@@ -346,6 +346,10 @@ namespace ReunionMovement.Core.Scene
                 Interlocked.Exchange(ref isLoadingAtomic, 0);
                 myTcs.TrySetResult();
 
+                // 复位跨方法传参字段：加载完成后 openLoad 仅在本流程内有意义，
+                // 不复位会让外部在下次加载前读到上次的过期值
+                openLoad = false;
+
                 // 统一清理本次切换注册的"不隐藏窗口"集合：
                 // 成功路径已由 OnTargetSceneLoaded 之后清理，失败/超时/异常路径在此兜底，
                 // 避免集合残留到下次场景切换导致窗口误不隐藏
@@ -691,13 +695,23 @@ namespace ReunionMovement.Core.Scene
             // → UnregisterUIWindow → 修改 registeredUIWindows，
             // 在 foreach 迭代期间修改 HashSet 会抛 InvalidOperationException。
             var snapshot = new List<UI.UIWindowAsset>(registeredUIWindows);
+            var uiSystem = UISystem.Instance;
             foreach (var window in snapshot)
             {
                 if (window == null) continue;
                 if (!window.isHiddenWhenLeaveScene) continue;
                 if (excludeFromSceneHide.Contains(window.name)) continue;
 
-                window.gameObject.SetActive(false);
+                // 优先走 UISystem 关闭流程：触发 OnClose 生命周期 / OnCloseSubject 广播 / 对象池回收，
+                // 否则仅 SetActive(false) 会让窗口滞留 uiStateCache，OnClose 清理与池化复用被跳过
+                if (uiSystem != null && uiSystem.IsOpen(window.name))
+                {
+                    uiSystem.CloseWindow(window.name);
+                }
+                else
+                {
+                    window.gameObject.SetActive(false);
+                }
             }
         }
 

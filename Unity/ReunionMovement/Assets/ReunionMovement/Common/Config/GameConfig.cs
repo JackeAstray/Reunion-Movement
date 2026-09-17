@@ -52,7 +52,28 @@ namespace ReunionMovement
         public bool channelCustom3  = true;
 
         // 公开属性以便 Config 读取
-        public bool EnableDebugLog => enableDebugLog;
-        public bool EnableInfoLog => enableInfoLog;
+        public bool EnableDebugLog
+        {
+            get
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                return enableDebugLog;
+#else
+                return false; // Release 构建强制关闭：与资产序列化默认值解耦，防编辑器资产（默认 true）泄漏到发布包
+#endif
+            }
+        }
+
+        public bool EnableInfoLog
+        {
+            get
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                return enableInfoLog;
+#else
+                return false; // 同上：信息日志 Release 构建一律关闭
+#endif
+            }
+        }
     }
 }

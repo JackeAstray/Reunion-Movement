@@ -2,6 +2,7 @@
 using ReunionMovement.Common;
 using Cysharp.Threading.Tasks;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ReunionMovement.Core.UI
@@ -47,6 +48,10 @@ namespace ReunionMovement.Core.UI
             }
         }
         #endregion
+
+        /// <summary>控件查找缓存（uri → Transform）：GetControl 高频路径避免每帧 Transform.Find 全树遍历。
+        /// 命中时校验未销毁且仍挂在窗口层级下；关闭/入池自动清空；动态增删子节点后调用 InvalidateControlCache()</summary>
+        private readonly Dictionary<string, Transform> controlCache = new Dictionary<string, Transform>(32);
 
         /// <summary>
         /// 是否可见（直接与activeSelf绑定）
@@ -96,6 +101,7 @@ namespace ReunionMovement.Core.UI
         /// </summary>
         public virtual void OnClose()
         {
+            controlCache.Clear(); // 关闭即失效控件缓存，防复用/重开后命中旧层级
             IsVisiable = false;
         }
 
@@ -113,6 +119,7 @@ namespace ReunionMovement.Core.UI
         /// </summary>
         public virtual void OnDespawned()
         {
+            controlCache.Clear(); // 入池即失效控件缓存，防复用后命中旧层级
         }
 
         /// <summary>
@@ -168,6 +175,30 @@ namespace ReunionMovement.Core.UI
         public object GetControl(Type type, string uri, Transform findTrans = null, bool isLog = true)
         {
             findTrans ??= transform;
+            // 缓存路径（仅根为 this.transform 的常见调用）：命中校验未销毁且仍挂在窗口层级下
+            if (findTrans == transform)
+            {
+                if (controlCache.TryGetValue(uri, out var cached))
+                {
+                    if (cached != null && cached.IsChildOf(transform))
+                    {
+                        return type == typeof(GameObject) ? cached.gameObject : cached.GetComponent(type);
+                    }
+                    controlCache.Remove(uri); // 失效条目：已销毁或已移出层级
+                }
+                Transform found = transform.Find(uri);
+                if (found == null)
+                {
+                    if (isLog)
+                    {
+                        Log.Error("Get UI<{0}> Control Error: {1}", type.Name, uri);
+                    }
+                    return null;
+                }
+                controlCache[uri] = found;
+                return type == typeof(GameObject) ? found.gameObject : found.GetComponent(type);
+            }
+
             Transform trans = findTrans.Find(uri);
             if (trans == null)
             {
@@ -180,6 +211,9 @@ namespace ReunionMovement.Core.UI
 
             return type == typeof(GameObject) ? trans.gameObject : trans.GetComponent(type);
         }
+
+        /// <summary>清空控件查找缓存（子类动态增删子节点后调用，防陈旧引用）</summary>
+        public void InvalidateControlCache() => controlCache.Clear();
 
         /// <summary>
         /// 查找控件

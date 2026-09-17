@@ -176,6 +176,18 @@ namespace ReunionMovement.Core.Sound
 
             initProgress = 100;
             isInited = true;
+            // 启动早期 GameOption.ApplyLightOptions 可能因 SoundSystem 未初始化而跳过音频设置，
+            // 此处补齐音量/淡入淡出，避免用户已保存的选项在初始化后不生效
+            try
+            {
+                fadeDuration = GameOption.CurrentOption.musicFadeTime;
+                SetMusicProperties(GameOption.CurrentOption.musicVolume, GameOption.CurrentOption.musicMuted);
+                SetSfxProperties(GameOption.CurrentOption.sfxVolume, GameOption.CurrentOption.sfxMuted);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("初始化后应用选项音量设置失败: {0}", ex.Message);
+            }
             Log.Debug("SoundSystem 初始化完成");
 
             return UniTask.CompletedTask;

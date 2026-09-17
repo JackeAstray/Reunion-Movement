@@ -61,6 +61,13 @@ namespace ReunionMovement.Common.Util
         [Tooltip("死链判定：超过此时长未收到任何数据则断开并重连；0 = 不启用")]
         public float heartbeatTimeout = 0f;
 
+        [Header("加密握手")]
+        [Tooltip("启用加密握手：连接建立后交换随机数派生会话密钥，业务帧 AES-256-CBC+HMAC 加密（两端需同时开启且主密钥一致）")]
+        public bool enableEncryptedHandshake = false;
+
+        [Tooltip("握手主密钥（32 字节）。生产环境建议运行时用 SetHandshakeMasterKey 从 HTTPS 登录接口下发，勿硬编码")]
+        public byte[] handshakeMasterKey = null;
+
         public NetworkClientConfig Clone()
         {
             return (NetworkClientConfig)MemberwiseClone();

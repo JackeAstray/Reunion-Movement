@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -41,6 +42,13 @@ namespace ReunionMovement.Common.Util
         public bool enableHeartbeat = false;
         public float heartbeatInterval = 5f;
         public string heartbeatText = "PING";
+
+        [Header("加密握手")]
+        [Tooltip("启用加密握手：握手完成后业务帧 AES-256-CBC+HMAC 加密（需客户端与服务端同时开启且主口令一致）")]
+        public bool enableEncryptedHandshake = false;
+
+        [Tooltip("握手主口令：SHA256 派生 32 字节主密钥。生产环境建议代码运行时通过 Client/Server.SetHandshakeMasterKey 从 HTTPS 登录接口下发，勿硬编码")]
+        public string handshakePassphrase = "";
 
         [Tooltip("服务端收到消息后是否回显给发送者（调试用；默认关闭，回显会使流量翻倍）")]
         public bool echoToSender = false;
@@ -153,6 +161,20 @@ namespace ReunionMovement.Common.Util
                 case Transport.WebSocket: return NetworkTransportType.WebSocket;
                 case Transport.RawTCP: return NetworkTransportType.RawTcp;
                 default: return NetworkTransportType.Tcp;
+            }
+        }
+
+        /// <summary>由主口令派生 32 字节握手主密钥（SHA256）</summary>
+        static byte[] DeriveHandshakeKey(string passphrase)
+        {
+            if (string.IsNullOrEmpty(passphrase))
+            {
+                Log.Error("[UniversalNetworkBehaviour] 启用加密握手但未配置 handshakePassphrase");
+                return null;
+            }
+            using (var sha = System.Security.Cryptography.SHA256.Create())
+            {
+                return sha.ComputeHash(Encoding.UTF8.GetBytes(passphrase));
             }
         }
     }

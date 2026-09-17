@@ -202,9 +202,10 @@ namespace ReunionMovement.Core
                 // 修复：原先此处直接 AudioListener.pause = autoPause，开启选项即永久静音（语义错误）。
                 AudioListener.pause = GameEngine.IsApplicationPaused && currentOption.autoPause;
 
-                // 应用音乐和音效设置到 SoundSystem（如果已初始化）
+                // 应用音乐和音效设置到 SoundSystem（已初始化后才触碰：
+                // 未初始化时访问 Lazy 单例 + EnsureAudioSource 会提前创建音频根节点，破坏初始化顺序）
                 var ss = SoundSystem.Instance;
-                if (ss != null)
+                if (ss != null && ss.isInited)
                 {
                     // 将淡入淡出时间同步
                     try { ss.fadeDuration = currentOption.musicFadeTime; }

@@ -28,22 +28,18 @@ namespace ReunionMovement.Common
                 lock (instanceLock)
                 {
                     if (instance != null) return instance;
-                }
 
-                // 锁外创建：AddComponent 会同步触发子类 Awake（用户代码），
-                // 持锁执行用户代码可能形成锁序环（Awake 内再访问其他单例/等待工作线程）。
-                // 并发重复创建由 Awake→setter 的重复检测销毁多余实例。
-                var created = CreateInstance();
-
-                lock (instanceLock)
-                {
+                    // 持锁创建：C# Monitor 可重入（同线程），CreateInstance 内部触发
+                    // Awake→setter→OnInstanceCreated 均不会持锁回调用户代码（setter 在锁外触发事件），
+                    // 不会形成锁序环；同时消除"锁外创建"在并发下的重复实例窗口
+                    var created = CreateInstance();
                     // 正常路径 Awake/setter 已写入 instance（并触发创建事件）；此处兜底处理极端未写入场景
                     if (instance == null)
                     {
                         instance = created;
                     }
+                    return instance;
                 }
-                return instance;
             }
             protected set
             {

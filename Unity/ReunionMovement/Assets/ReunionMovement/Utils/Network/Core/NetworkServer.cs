@@ -24,8 +24,14 @@ namespace ReunionMovement.Common.Util
         readonly Dictionary<int, ServerConnection> connections = new Dictionary<int, ServerConnection>();
         readonly Dictionary<ushort, Func<int, byte[], byte[]>> requestHandlers = new Dictionary<ushort, Func<int, byte[], byte[]>>();
         readonly Dictionary<Type, Action<int, object>> objectHandlers = new Dictionary<Type, Action<int, object>>();
+        // 已鉴权连接集合（config.requireRpcAuthentication 开启时生效）
+        readonly HashSet<int> authenticatedConnections = new HashSet<int>();
         // TickIdleTimeout 的复用缓冲（避免每帧 new List 分配）
         readonly List<int> idleExpiredBuffer = new List<int>();
+
+        // 加密握手（config.enableEncryptedHandshake 开启时生效）
+        bool handshakeEnabled;
+        byte[] handshakeMasterKey;
 
         INetworkServerChannel channel;
         bool started;
@@ -38,6 +44,8 @@ namespace ReunionMovement.Common.Util
         public event Action<int, string> OnClientConnected;
         /// <summary>客户端断开（连接 ID）</summary>
         public event Action<int> OnClientDisconnected;
+        /// <summary>客户端完成加密握手（连接 ID；enableEncryptedHandshake 开启时，业务通信应等待此事件）</summary>
+        public event Action<int> OnClientSecured;
         /// <summary>完整帧原始字节（含帧头，副本可安全持有）</summary>
         public event Action<int, byte[]> OnRawFrame;
         /// <summary>解码后的消息（连接 ID, 消息 ID, 负载段）</summary>
@@ -58,6 +66,30 @@ namespace ReunionMovement.Common.Util
         {
             this.config = config ?? throw new ArgumentNullException(nameof(config));
             codec = NetworkCodecFactory.Create(config.codec);
+            handshakeEnabled = config.enableEncryptedHandshake;
+            handshakeMasterKey = config.handshakeMasterKey;
+            if (handshakeEnabled && (handshakeMasterKey == null || handshakeMasterKey.Length != 32))
+            {
+                Log.Warning("[NetworkServer] 启用加密握手但未提供 32 字节主密钥（等待 SetHandshakeMasterKey 运行时下发）");
+                handshakeMasterKey = null;
+            }
+        }
+
+        /// <summary>运行时下发握手主密钥（32 字节）。生产环境应通过 HTTPS 登录接口下发，替代硬编码常量</summary>
+        public void SetHandshakeMasterKey(byte[] masterKey)
+        {
+            if (masterKey == null || masterKey.Length != 32)
+            {
+                Log.Error("[NetworkServer] SetHandshakeMasterKey：主密钥必须为 32 字节");
+                return;
+            }
+            handshakeMasterKey = masterKey;
+        }
+
+        /// <summary>查询连接是否已完成加密握手（enableEncryptedHandshake 关闭时恒为 false）</summary>
+        public bool IsConnectionSecured(int connectionId)
+        {
+            return connections.TryGetValue(connectionId, out var conn) && conn.Secured;
         }
 
         #region 生命周期
@@ -102,6 +134,7 @@ namespace ReunionMovement.Common.Util
                 kv.Value.Dispatcher.ClearHandlers();
             }
             connections.Clear();
+            authenticatedConnections.Clear();
             started = false;
             try { OnStopped?.Invoke(); } catch (Exception ex) { Log.Warning("[NetworkServer] OnStopped 回调异常: {0}", ex.Message); }
         }
@@ -144,10 +177,15 @@ namespace ReunionMovement.Common.Util
         /// <summary>发送消息到指定客户端（消息 ID + 负载）</summary>
         public bool Send(int connectionId, ushort messageId, byte[] payload)
         {
-            if (!IsActive || !connections.ContainsKey(connectionId)) return false;
-            var frame = codec.Encode(messageId, payload);
+            if (!IsActive || !connections.TryGetValue(connectionId, out var conn)) return false;
+            // 加密握手：未完成握手的连接仅允许系统帧（业务帧该连接尚无法解密，静默丢弃）
+            if (handshakeEnabled && !conn.Secured && !NetworkConstants.IsReservedMessageId(messageId))
+            {
+                return false;
+            }
+            var frame = conn.Codec.Encode(messageId, payload);
             var ok = channel.SendMessage(connectionId, frame);
-            if (ok && connections.TryGetValue(connectionId, out var conn))
+            if (ok)
             {
                 conn.Info.BytesSent += frame.Length;
             }
@@ -290,6 +328,19 @@ namespace ReunionMovement.Common.Util
             return requestHandlers.Remove(messageId);
         }
 
+        /// <summary>标记连接为已鉴权（开启 config.requireRpcAuthentication 后，未鉴权连接的 RPC 将被拒绝）。
+        /// 应在业务登录/握手验证成功后调用；连接断开时自动失效。</summary>
+        public void MarkConnectionAuthenticated(int connectionId)
+        {
+            authenticatedConnections.Add(connectionId);
+        }
+
+        /// <summary>查询连接是否已鉴权</summary>
+        public bool IsConnectionAuthenticated(int connectionId)
+        {
+            return authenticatedConnections.Contains(connectionId);
+        }
+
         /// <summary>注册强类型 RPC 处理器（类型需先注册消息 ID）</summary>
         public void RegisterRequestHandler<TRequest, TResponse>(ushort messageId, Func<int, TRequest, TResponse> handler)
         {
@@ -311,6 +362,14 @@ namespace ReunionMovement.Common.Util
             if (!NetworkRpcFrames.TryDecodeRequest(payload, out int correlationId, out ushort targetMessageId, out var requestPayload))
             {
                 TryNotifyError(connectionId, "RPC 请求帧格式错误");
+                return;
+            }
+            // 鉴权闸门：开启 requireRpcAuthentication 后，未鉴权连接的 RPC 一律拒绝（防越权调用）
+            if (config.requireRpcAuthentication && !authenticatedConnections.Contains(connectionId))
+            {
+                Log.Warning("[NetworkServer] 未鉴权连接 {0} 调用 RPC {1}，已拒绝", connectionId, targetMessageId);
+                TryNotifyError(connectionId, $"连接未鉴权，无法调用 RPC {targetMessageId}");
+                Send(connectionId, NetworkConstants.ReservedResponseMessageId, NetworkRpcFrames.EncodeResponse(correlationId, Array.Empty<byte>()));
                 return;
             }
             byte[] response = Array.Empty<byte>();
@@ -349,6 +408,12 @@ namespace ReunionMovement.Common.Util
         {
             if (connections.ContainsKey(connectionId)) return;
             connections[connectionId] = new ServerConnection(connectionId, address, codec, config.maxAssembledFrameSize);
+            // 加密握手：向新连接下发服务端随机数（明文；客户端回 ClientHello 后本连接切换为加密）
+            if (handshakeEnabled && connections.TryGetValue(connectionId, out var handshakeConn))
+            {
+                handshakeConn.ServerNonce = NetworkHandshake.GenerateNonce();
+                Send(connectionId, NetworkConstants.ReservedHandshakeServerHello, handshakeConn.ServerNonce);
+            }
             try { OnClientConnected?.Invoke(connectionId, address); }
             catch (Exception ex) { Log.Warning("[NetworkServer] OnClientConnected 回调异常: {0}", ex.Message); }
         }
@@ -357,6 +422,7 @@ namespace ReunionMovement.Common.Util
         {
             if (!connections.Remove(connectionId, out var conn)) return;
             conn.Dispatcher.ClearHandlers();
+            authenticatedConnections.Remove(connectionId); // 断开后鉴权状态失效，防止连接 ID 复用时越权
             try { OnClientDisconnected?.Invoke(connectionId); }
             catch (Exception ex) { Log.Warning("[NetworkServer] OnClientDisconnected 回调异常: {0}", ex.Message); }
         }
@@ -393,6 +459,49 @@ namespace ReunionMovement.Common.Util
             {
                 Log.Warning("[NetworkServer] 连接 {0} 主动发送 PONG 帧，已忽略", connectionId);
                 return;
+            }
+
+            // 加密握手（服务端侧）：收到 ClientHello → 派生会话密钥并切换该连接为加密
+            if (handshakeEnabled)
+            {
+                if (messageId == NetworkConstants.ReservedHandshakeClientHello)
+                {
+                    if (payload.Count != NetworkHandshake.NonceLength)
+                    {
+                        Log.Warning("[NetworkServer] 连接 {0} ClientHello 随机数长度非法，已忽略", connectionId);
+                        return;
+                    }
+                    if (conn.Secured)
+                    {
+                        Log.Warning("[NetworkServer] 连接 {0} 重复 ClientHello，已忽略", connectionId);
+                        return;
+                    }
+                    if (handshakeMasterKey == null)
+                    {
+                        Log.Error("[NetworkServer] 连接 {0} 发起 ClientHello 但主密钥尚未下发，无法完成握手", connectionId);
+                        return;
+                    }
+                    byte[] clientNonce = payload.ToArray();
+                    byte[] sessionKey = NetworkHandshake.DeriveSessionKey(handshakeMasterKey, conn.ServerNonce, clientNonce);
+                    conn.SwapToEncrypted(EncryptedCodec.Wrap(NetworkCodecFactory.Create(config.codec), sessionKey));
+                    try { OnClientSecured?.Invoke(connectionId); }
+                    catch (Exception ex) { Log.Warning("[NetworkServer] OnClientSecured 回调异常: {0}", ex.Message); }
+                    return;
+                }
+                if (messageId == NetworkConstants.ReservedHandshakeServerHello)
+                {
+                    Log.Warning("[NetworkServer] 连接 {0} 发送 ServerHello 帧，已忽略", connectionId);
+                    return;
+                }
+                // 防御：握手未完成仅放行协议保活帧（PING/PONG/ACK），RPC 与业务帧一律静默丢弃
+                // （防跳过握手直接调用 RPC / 发送业务帧）
+                if (!conn.Secured
+                    && messageId != NetworkConstants.ReservedPingMessageId
+                    && messageId != NetworkConstants.ReservedPongMessageId
+                    && messageId != NetworkConstants.ReservedAckMessageId)
+                {
+                    return;
+                }
             }
             // 系统帧：可靠消息（客户端 SendReliableAsync）—— 解包 [seq][原消息 ID][负载]，
             // 先回 ACK（及时解除客户端重发），再按原消息递归派发
@@ -432,20 +541,9 @@ namespace ReunionMovement.Common.Util
                 Log.Warning("[NetworkServer] 连接 {0} 可靠帧格式错误，已忽略", connectionId);
                 return;
             }
-            // 系统帧：RPC 请求
-            if (messageId == NetworkConstants.ReservedRequestMessageId)
-            {
-                HandleRpcRequest(connectionId, payload);
-                return;
-            }
-            // 系统帧：RPC 响应（服务端不应收到）
-            if (messageId == NetworkConstants.ReservedResponseMessageId)
-            {
-                Log.Warning("[NetworkServer] 收到 RPC 响应帧，已忽略");
-                return;
-            }
 
-            // 消息速率限制：单连接超限丢弃本帧（防刷消息 DoS）
+            // 消息速率限制：单连接超限丢弃本帧（防刷消息 DoS）。
+            // 置于 RPC 分支之前：RPC 洪水同样受限；可靠帧在解包递归后按内层消息计一次（不重复计外层 ACK 帧）
             if (config.maxMessagesPerSecond > 0)
             {
                 float now = Time.realtimeSinceStartup;
@@ -465,6 +563,19 @@ namespace ReunionMovement.Common.Util
                     }
                     return;
                 }
+            }
+
+            // 系统帧：RPC 请求
+            if (messageId == NetworkConstants.ReservedRequestMessageId)
+            {
+                HandleRpcRequest(connectionId, payload);
+                return;
+            }
+            // 系统帧：RPC 响应（服务端不应收到）
+            if (messageId == NetworkConstants.ReservedResponseMessageId)
+            {
+                Log.Warning("[NetworkServer] 收到 RPC 响应帧，已忽略");
+                return;
             }
 
             if (OnRawFrame != null)
@@ -553,6 +664,13 @@ namespace ReunionMovement.Common.Util
             public readonly NetworkStreamAssembler Assembler;
             public readonly NetworkMessageDispatcher Dispatcher = new NetworkMessageDispatcher();
 
+            /// <summary>本连接收发使用的编解码器：默认 = 服务端全局 codec；加密握手完成后替换为加密 codec</summary>
+            public INetworkMessageCodec Codec;
+            /// <summary>加密握手是否已完成（enableEncryptedHandshake 关闭时恒为 false）</summary>
+            public bool Secured;
+            /// <summary>本连接的服务端随机数（握手 ServerHello 下发）</summary>
+            public byte[] ServerNonce;
+
             // 速率限制窗口（主线程访问）
             public float MessageWindowStart;
             public int MessageCountInWindow;
@@ -578,8 +696,17 @@ namespace ReunionMovement.Common.Util
             public ServerConnection(int connectionId, string address, INetworkMessageCodec codec, int maxFrameSize)
             {
                 Info = new NetworkConnectionInfo(connectionId, address);
+                Codec = codec;
                 Assembler = new NetworkStreamAssembler(codec, maxFrameSize);
                 MessageWindowStart = Time.realtimeSinceStartup;
+            }
+
+            /// <summary>切换本连接为加密模式（发送与接收 codec 同步替换，丢弃组装器残留字节）</summary>
+            public void SwapToEncrypted(INetworkMessageCodec encrypted)
+            {
+                Codec = encrypted;
+                Assembler.ReplaceCodec(encrypted);
+                Secured = true;
             }
         }
     }

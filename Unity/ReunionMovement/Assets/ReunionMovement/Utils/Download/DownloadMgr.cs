@@ -382,10 +382,9 @@ namespace ReunionMovement.Common.Util.Download
                 {
                     var oldest = imageCacheOrder.First.Value;
                     imageCacheOrder.RemoveFirst();
-                    if (imageCache.TryGetValue(oldest, out var oldTex) && oldTex != null && oldTex != tex)
-                    {
-                        UnityEngine.Object.Destroy(oldTex);
-                    }
+                    // 仅移出缓存，不 Destroy：纹理可能仍被 UI（Sprite/Image）引用，
+                    // 强行 Destroy 会触发 MissingReferenceException；无引用的纹理由
+                    // Resources.UnloadUnusedAssets / 场景卸载自然回收
                     imageCache.Remove(oldest);
                 }
 

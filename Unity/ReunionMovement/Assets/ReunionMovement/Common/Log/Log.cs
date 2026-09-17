@@ -29,6 +29,24 @@ namespace ReunionMovement.Common
             return Config.Enable_LOG && levelEnabled && Config.IsChannelEnabled(channel);
         }
 
+        /// <summary>
+        /// 频道重载格式化兜底：`Debug(string, LogChannel, params)` 与 `Debug(string, params object[])`
+        /// 存在绑定歧义（如 Log.Debug("x={0}", LogChannel.Network) 会被解析为频道参数），
+        /// 占位符与参数不匹配时回退输出原始字符串，避免 FormatException 中断调用方。
+        /// </summary>
+        [HideInCallstack]
+        private static string SafeFormat(string format, object[] args)
+        {
+            try
+            {
+                return string.Format(format, args ?? System.Array.Empty<object>());
+            }
+            catch (System.FormatException)
+            {
+                return format;
+            }
+        }
+
         // ============================================================
         //  Debug — Release 构建中完全剔除（0GC）
         // ============================================================
@@ -106,7 +124,7 @@ namespace ReunionMovement.Common
         public static void Debug(string format, LogChannel channel, params object[] args)
         {
             if (IsEnabled(Config.Enable_Debug_LOG, channel))
-                GameLogger.Debug((object)string.Format(format, args), channel);
+                GameLogger.Debug((object)SafeFormat(format, args), channel);
         }
 
         // ============================================================
@@ -182,7 +200,7 @@ namespace ReunionMovement.Common
         public static void Info(string format, LogChannel channel, params object[] args)
         {
             if (IsEnabled(Config.Enable_Info_LOG, channel))
-                GameLogger.Info((object)string.Format(format, args), channel);
+                GameLogger.Info((object)SafeFormat(format, args), channel);
         }
 
         // ============================================================
@@ -242,7 +260,7 @@ namespace ReunionMovement.Common
         public static void Warning(string format, LogChannel channel, params object[] args)
         {
             if (IsEnabled(Config.Enable_Warning_LOG, channel))
-                GameLogger.Warning((object)string.Format(format, args), channel);
+                GameLogger.Warning((object)SafeFormat(format, args), channel);
         }
 
         // ============================================================
@@ -302,7 +320,7 @@ namespace ReunionMovement.Common
         public static void Error(string format, LogChannel channel, params object[] args)
         {
             if (IsEnabled(Config.Enable_Error_LOG, channel))
-                GameLogger.Error((object)string.Format(format, args), channel);
+                GameLogger.Error((object)SafeFormat(format, args), channel);
         }
 
         // ============================================================

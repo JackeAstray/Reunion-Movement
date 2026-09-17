@@ -24,6 +24,8 @@ namespace ReunionMovement.Common.Util
                 transport = ToTransportType(transport),
                 port = port,
                 codec = codec,
+                enableEncryptedHandshake = enableEncryptedHandshake,
+                handshakeMasterKey = enableEncryptedHandshake ? DeriveHandshakeKey(handshakePassphrase) : null,
             };
 
             networkServer = new NetworkServer(cfg);

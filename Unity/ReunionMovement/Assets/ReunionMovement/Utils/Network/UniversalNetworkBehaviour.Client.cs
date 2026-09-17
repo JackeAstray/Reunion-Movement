@@ -36,6 +36,8 @@ namespace ReunionMovement.Common.Util
                 enableHeartbeat = enableHeartbeat,
                 heartbeatInterval = heartbeatInterval,
                 heartbeatText = heartbeatText,
+                enableEncryptedHandshake = enableEncryptedHandshake,
+                handshakeMasterKey = enableEncryptedHandshake ? DeriveHandshakeKey(handshakePassphrase) : null,
             };
 
             networkClient = new NetworkClient(cfg);
