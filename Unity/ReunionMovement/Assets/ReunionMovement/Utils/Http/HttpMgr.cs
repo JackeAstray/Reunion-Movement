@@ -70,15 +70,19 @@ namespace ReunionMovement.Common.Util.HttpService
         }
 
         /// <summary>
-        /// 初始化Http
+        /// 初始化Http（幂等）：重复调用不会重建字典，保留在途请求的 CTS 与已配置的 SuperHeaders，
+        /// 否则在途请求会丢失取消/轮询引用、并发上限计数归零。
         /// </summary>
         /// <param name="service"></param>
         public void Init(IHttpService service)
         {
-            superHeaders = new Dictionary<string, string>();
-            httpRequests = new Dictionary<IHttpRequest, CancellationTokenSource>();
-            // 重建字典后失效只读包装缓存,避免返回旧字典的包装
-            superHeadersReadOnlyCache = null;
+            if (service == null) throw new ArgumentNullException(nameof(service));
+            if (superHeaders == null)
+            {
+                superHeaders = new Dictionary<string, string>();
+                httpRequests = new Dictionary<IHttpRequest, CancellationTokenSource>();
+                superHeadersReadOnlyCache = null;
+            }
             this.service = service;
         }
 

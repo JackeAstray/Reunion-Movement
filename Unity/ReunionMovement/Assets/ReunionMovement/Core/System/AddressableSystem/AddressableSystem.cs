@@ -678,37 +678,48 @@ namespace ReunionMovement.Core.Resources
         }
 
         /// <summary>读取内嵌锚点的 catalogHash（Android 的 StreamingAssets 位于 APK 内，需经 UnityWebRequest）</summary>
-        private static async UniTask<string> LoadAnchorCatalogHashAsync()
+        private static UniTask<string> LoadAnchorCatalogHashAsync()
         {
             try
             {
-                string json = null;
 #if UNITY_ANDROID && !UNITY_EDITOR
-                using (var uwr = UnityWebRequest.Get(Application.streamingAssetsPath + "/" + AnchorFileName))
-                {
-                    await uwr.SendWebRequest().ToUniTask();
-                    if (uwr.result == UnityWebRequest.Result.Success)
-                    {
-                        json = uwr.downloadHandler?.text;
-                    }
-                }
+                return LoadAnchorHashViaWebRequestAsync();
 #else
                 string anchorPath = Path.Combine(Application.streamingAssetsPath, AnchorFileName);
-                if (File.Exists(anchorPath))
-                {
-                    json = File.ReadAllText(anchorPath);
-                }
+                string json = File.Exists(anchorPath) ? File.ReadAllText(anchorPath) : null;
+                return UniTask.FromResult(ParseCatalogHash(json));
 #endif
-                if (string.IsNullOrEmpty(json)) return null;
-                var manifest = JsonUtility.FromJson<BakedVersionManifest>(json);
-                return manifest?.catalogHash;
             }
             catch (Exception ex)
             {
                 Log.Warning("AddressableSystem 读取内嵌锚点失败: {0}", ex.Message);
-                return null;
+                return UniTask.FromResult<string>(null);
             }
         }
+
+        /// <summary>解析内嵌锚点 JSON 中的 catalogHash</summary>
+        private static string ParseCatalogHash(string json)
+        {
+            if (string.IsNullOrEmpty(json)) return null;
+            var manifest = JsonUtility.FromJson<BakedVersionManifest>(json);
+            return manifest?.catalogHash;
+        }
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        /// <summary>Android：StreamingAssets 位于 APK 内，经 UnityWebRequest 异步读取</summary>
+        private static async UniTask<string> LoadAnchorHashViaWebRequestAsync()
+        {
+            using (var uwr = UnityWebRequest.Get(Application.streamingAssetsPath + "/" + AnchorFileName))
+            {
+                await uwr.SendWebRequest().ToUniTask();
+                if (uwr.result == UnityWebRequest.Result.Success)
+                {
+                    return ParseCatalogHash(uwr.downloadHandler?.text);
+                }
+            }
+            return null;
+        }
+#endif
 
         /// <summary>在 Addressables 缓存目录查找已下载的远程 Catalog 文件（catalog_*.bin）</summary>
         private static string FindCachedCatalogFile()

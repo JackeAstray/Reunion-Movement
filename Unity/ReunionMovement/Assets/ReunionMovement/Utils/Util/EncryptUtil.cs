@@ -76,7 +76,9 @@ namespace ReunionMovement.Common.Util
             // 基于位置的密钥轮转：使用种子的不同字节 + 位置混合
             uint rotated = keySeed;
             int shift = (position & 3) * 8; // position % 4 → 选择 4 字节中的哪一个
-            rotated = ((rotated << (position & 31)) | (rotated >> (32 - (position & 31))));
+            // 循环左移 position&31 位；移位量为 0 时跳过，避免 `>> (32 - 0) == >> 32` 的未定义行为
+            int rot = position & 31;
+            rotated = rot == 0 ? rotated : ((rotated << rot) | (rotated >> (32 - rot)));
             rotated ^= (uint)(position * 0x9E3779B9); // 黄金比例常数，增加非线性
             return (byte)((rotated >> shift) & 0xFF);
         }

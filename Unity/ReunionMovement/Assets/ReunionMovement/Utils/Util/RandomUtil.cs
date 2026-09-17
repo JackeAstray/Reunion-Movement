@@ -47,18 +47,18 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 根据给定的概率（百分比）判断某个事件是否“发生” byte （0-255）
+        /// 根据给定的概率（百分比）判断某个事件是否"发生" byte（0-100，与 float 重载语义一致）
         /// </summary>
         /// <param name="chancePercent"></param>
         /// <returns></returns>
         public static bool Probability(byte chancePercent)
         {
-            // 当传入255(或更大)视为必然发生
-            if (chancePercent >= 255)
+            // 与 float 重载一致按百分比 0-100 解释；>=100 视为必然发生
+            if (chancePercent >= 100)
             {
                 return true;
             }
-            return GetRandom().Next(0, 256) < chancePercent;
+            return GetRandom().Next(0, 100) < chancePercent;
         }
 
         /// <summary>

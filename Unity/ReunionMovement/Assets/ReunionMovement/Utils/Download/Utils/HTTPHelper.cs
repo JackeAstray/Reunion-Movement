@@ -31,6 +31,58 @@ namespace ReunionMovement.Common.Util.Download
     /// </summary>
     public static class HTTPHelper
     {
+        /// <summary>Windows 保留设备名（大小写不敏感）：作为文件/目录名会触发设备访问或 IO 异常</summary>
+        static readonly string[] WindowsReservedDeviceNames =
+        {
+            "CON", "PRN", "AUX", "NUL",
+            "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+            "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+        };
+
+        /// <summary>
+        /// 净化 Windows 文件名/目录段：去除结尾点与空格、规避保留设备名（CON/NUL 等，含 "CON.txt" 前缀形式）。
+        /// 返回 null 表示净化后为空段（调用方应跳过或回退默认名）。
+        /// </summary>
+        static string SanitizeWindowsSegment(string segment)
+        {
+            if (string.IsNullOrEmpty(segment)) return segment;
+            string cleaned = segment.TrimEnd('.', ' ');
+            if (cleaned.Length == 0) return null;
+
+            string stem = cleaned;
+            int dotIdx = cleaned.IndexOf('.');
+            if (dotIdx > 0) stem = cleaned.Substring(0, dotIdx);
+
+            foreach (var device in WindowsReservedDeviceNames)
+            {
+                // 完全匹配（"CON"）或扩展名前缀匹配（"CON.txt"）均视为保留名
+                if (string.Equals(cleaned, device, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(stem, device, StringComparison.OrdinalIgnoreCase))
+                {
+                    return "_" + cleaned; // 加下划线前缀规避设备名，保留内容可读性
+                }
+            }
+            return cleaned;
+        }
+
+        /// <summary>
+        /// 日志脱敏：Authorization/Cookie/token 等凭证类请求头以掩码输出，避免敏感信息明文落盘。
+        /// </summary>
+        static string RedactHeaderValue(string key, string value)
+        {
+            if (string.IsNullOrEmpty(value)) return value;
+            if (key.IndexOf("authorization", StringComparison.OrdinalIgnoreCase) >= 0
+                || key.IndexOf("cookie", StringComparison.OrdinalIgnoreCase) >= 0
+                || key.IndexOf("token", StringComparison.OrdinalIgnoreCase) >= 0
+                || key.IndexOf("api-key", StringComparison.OrdinalIgnoreCase) >= 0
+                || key.IndexOf("signature", StringComparison.OrdinalIgnoreCase) >= 0
+                || key.IndexOf("secret", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return value.Length <= 4 ? "****" : value.Substring(0, 2) + "****" + value.Substring(value.Length - 2);
+            }
+            return value;
+        }
+
         /// <summary>
         /// 发送GET请求
         /// </summary>
@@ -104,7 +156,10 @@ namespace ReunionMovement.Common.Util.Download
                     // 拒绝含冒号的段：Windows 盘符（如 "x:"）经 Path.Combine 会直接覆盖下载目录前缀；
                     // 同时拦截 UNC 主机名与 ADS 流（file.txt:stream）
                     if (seg.IndexOf(':') >= 0) continue;
-                    safeSegments.Add(seg);
+                    // Windows 保留设备名与结尾点/空格净化（CON/NUL 等段作为目录/文件会触发设备访问）
+                    string cleaned = SanitizeWindowsSegment(seg);
+                    if (cleaned == null) continue;
+                    safeSegments.Add(cleaned);
                 }
                 return string.Join("/", safeSegments);
             }
@@ -156,6 +211,8 @@ namespace ReunionMovement.Common.Util.Download
             // 过滤空文件名和纯扩展名（如 ".bashrc"）
             if (string.IsNullOrEmpty(v) || v.StartsWith(".") && v.Length < 3)
                 v = "download.dat";
+            // Windows 保留设备名/结尾点空格净化（"CON"、"NUL.txt" 等写入会触发设备访问异常）
+            v = SanitizeWindowsSegment(v) ?? "download.dat";
 
             return v;
         }
@@ -188,7 +245,7 @@ namespace ReunionMovement.Common.Util.Download
             {
                 foreach (var str in headers)
                 {
-                    Log.Debug("[{0}={1}]", str.Key, str.Value);
+                    Log.Debug("[{0}={1}]", str.Key, RedactHeaderValue(str.Key, str.Value));
                 }
             }
 
@@ -224,7 +281,7 @@ namespace ReunionMovement.Common.Util.Download
             {
                 foreach (var str in headers)
                 {
-                    Log.Debug("[{0}={1}]", str.Key, str.Value);
+                    Log.Debug("[{0}={1}]", str.Key, RedactHeaderValue(str.Key, str.Value));
                 }
             }
 

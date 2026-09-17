@@ -73,6 +73,14 @@ namespace ReunionMovement.Common.Util
 
         public bool SendMessage(byte[] data)
         {
+            if (data == null || data.Length == 0) return false;
+            // 超限帧会在 Telepathy 发送线程的池化拷贝中抛异常（Pooled 缓冲仅 MaxMessageSize），
+            // 此处提前拦截并显式报错，避免后台线程异常吞掉业务错误
+            if (data.Length > TcpConstants.MaxMessageSize)
+            {
+                Log.Error("TCP 发送消息超限: {0}B > MaxMessageSize({1}B)，已丢弃", data.Length, TcpConstants.MaxMessageSize);
+                return false;
+            }
             var segment = new ArraySegment<byte>(data);
             return client.Send(segment);
         }

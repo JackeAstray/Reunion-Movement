@@ -35,7 +35,7 @@ namespace ReunionMovement.Common.Util
         }
 
         readonly NetworkClientConfig config;
-        readonly INetworkMessageCodec codec;
+        INetworkMessageCodec codec; // 加密握手完成后替换为加密 codec
         readonly NetworkStreamAssembler assembler;
         readonly NetworkTypedProtocol typedProtocol = new NetworkTypedProtocol();
         readonly INetworkSerializer serializer;
@@ -56,6 +56,11 @@ namespace ReunionMovement.Common.Util
         float lastReceiveTime;
         int rpcCorrelation;
         int reliableSeq; // 可靠发送序号（Interlocked 自增）
+
+        // 加密握手（config.enableEncryptedHandshake 开启时生效）
+        bool handshakeEnabled;
+        byte[] handshakeMasterKey;
+        bool sessionEstablished;
 
         // ===== 流量统计 / RTT =====
         /// <summary>累计发送字节数（协议帧，含帧头）</summary>
@@ -79,10 +84,14 @@ namespace ReunionMovement.Common.Util
         public event Action<byte[]> OnRawFrame;
         /// <summary>解码后的消息（消息 ID + 负载段，零拷贝，回调返回后失效）</summary>
         public event Action<ushort, ArraySegment<byte>> OnMessage;
+        /// <summary>加密握手完成（业务通信应等待此事件；enableEncryptedHandshake 关闭时在连接成功时即视为完成）</summary>
+        public event Action OnSessionEstablished;
         public event Action<string> OnError;
 
         public ClientState State => state;
         public bool IsConnected => state == ClientState.Connected && channel != null && channel.IsConnect;
+        /// <summary>加密会话是否已建立（enableEncryptedHandshake 关闭时连接成功即为 true）</summary>
+        public bool IsSessionEstablished => !handshakeEnabled || sessionEstablished;
         public NetworkClientConfig Config => config;
         public int ReconnectAttempts => reconnectAttempts;
         public INetworkClientChannel Channel => channel;
@@ -97,6 +106,24 @@ namespace ReunionMovement.Common.Util
             codec = NetworkCodecFactory.Create(config.codec);
             assembler = new NetworkStreamAssembler(codec, config.maxAssembledFrameSize);
             serializer = JsonNetSerializer.Instance;
+            handshakeEnabled = config.enableEncryptedHandshake;
+            handshakeMasterKey = config.handshakeMasterKey;
+            if (handshakeEnabled && (handshakeMasterKey == null || handshakeMasterKey.Length != 32))
+            {
+                Log.Warning("[NetworkClient] 启用加密握手但未提供 32 字节主密钥（等待 SetHandshakeMasterKey 运行时下发）");
+                handshakeMasterKey = null;
+            }
+        }
+
+        /// <summary>运行时下发握手主密钥（32 字节）。生产环境应通过 HTTPS 登录接口下发，替代硬编码常量</summary>
+        public void SetHandshakeMasterKey(byte[] masterKey)
+        {
+            if (masterKey == null || masterKey.Length != 32)
+            {
+                Log.Error("[NetworkClient] SetHandshakeMasterKey：主密钥必须为 32 字节");
+                return;
+            }
+            handshakeMasterKey = masterKey;
         }
 
         #region 生命周期
@@ -138,6 +165,14 @@ namespace ReunionMovement.Common.Util
         {
             CloseChannel();
             if (closed) return;
+
+            // 加密握手：重连/重连后回退明文 codec 并复位会话状态（新连接需重新握手）
+            if (handshakeEnabled)
+            {
+                codec = NetworkCodecFactory.Create(config.codec);
+                assembler.ReplaceCodec(codec);
+                sessionEstablished = false;
+            }
 
             channel = NetworkChannelFactory.CreateClient(config.transport, config.channelName);
             channel.OnConnected += HandleConnected;
@@ -278,6 +313,17 @@ namespace ReunionMovement.Common.Util
             {
                 Log.Warning("[NetworkClient] 未连接，发送失败");
                 return SendResult.NotConnected;
+            }
+            // 加密握手：会话建立前仅允许 ClientHello 与心跳 PING（业务/RPC/可靠帧服务端尚无法解密）
+            if (handshakeEnabled && !sessionEstablished)
+            {
+                bool allowed = messageId == NetworkConstants.ReservedHandshakeClientHello
+                               || messageId == NetworkConstants.ReservedPingMessageId;
+                if (!allowed)
+                {
+                    Log.Warning("[NetworkClient] 加密握手未完成，丢弃消息 {0}", messageId);
+                    return SendResult.Rejected;
+                }
             }
             byte[] frame;
             try
@@ -505,6 +551,52 @@ namespace ReunionMovement.Common.Util
                 catch (Exception ex) { Log.Warning("[NetworkClient] OnRawFrame 回调异常: {0}", ex.Message); }
             }
 
+            // 加密握手：会话建立前只接受 ServerHello，其余消息一律忽略
+            if (handshakeEnabled && !sessionEstablished)
+            {
+                if (messageId == NetworkConstants.ReservedHandshakeServerHello)
+                {
+                    if (payload.Count != NetworkHandshake.NonceLength)
+                    {
+                        Log.Error("[NetworkClient] ServerHello 随机数长度非法，已断开");
+                        Disconnect();
+                        return;
+                    }
+                    if (handshakeMasterKey == null)
+                    {
+                        Log.Error("[NetworkClient] 收到 ServerHello 但主密钥尚未下发（SetHandshakeMasterKey），已断开");
+                        Disconnect();
+                        return;
+                    }
+                    byte[] serverNonce = payload.ToArray();
+                    byte[] clientNonce = NetworkHandshake.GenerateNonce();
+                    byte[] sessionKey = NetworkHandshake.DeriveSessionKey(handshakeMasterKey, serverNonce, clientNonce);
+                    // 先以明文发送 ClientHello（服务端据此完成握手），再切换本端为加密
+                    if (!Send(NetworkConstants.ReservedHandshakeClientHello, clientNonce))
+                    {
+                        Log.Error("[NetworkClient] ClientHello 发送失败，已断开");
+                        Disconnect();
+                        return;
+                    }
+                    SwapToEncrypted(sessionKey);
+                    return;
+                }
+                if (messageId == NetworkConstants.ReservedHandshakeClientHello)
+                {
+                    Log.Warning("[NetworkClient] 收到 ClientHello 帧（服务端不应发送），已忽略");
+                    return;
+                }
+                // 握手未完成即收到业务/系统帧：忽略（服务端在握手完成前同样拒绝业务帧）
+                return;
+            }
+            // 会话建立后仍收到握手帧：状态错乱防御
+            if (handshakeEnabled && (messageId == NetworkConstants.ReservedHandshakeServerHello
+                                     || messageId == NetworkConstants.ReservedHandshakeClientHello))
+            {
+                Log.Warning("[NetworkClient] 会话已建立仍收到握手帧 {0}，已忽略", messageId);
+                return;
+            }
+
             // 系统帧：PONG（服务端心跳应答）—— 仅确认链路活跃（lastReceiveTime 已在 HandleData 更新），
             // 不派发给业务层
             if (messageId == NetworkConstants.ReservedPongMessageId)
@@ -566,6 +658,16 @@ namespace ReunionMovement.Common.Util
             try { OnMessage?.Invoke(messageId, payload); }
             catch (Exception ex) { Log.Warning("[NetworkClient] OnMessage 回调异常: {0}", ex.Message); }
             dispatcher.Dispatch(messageId, payload);
+        }
+
+        /// <summary>切换为加密模式：发送/接收 codec 同步替换为会话密钥加密 codec，并广播会话建立事件</summary>
+        void SwapToEncrypted(byte[] sessionKey)
+        {
+            codec = EncryptedCodec.Wrap(NetworkCodecFactory.Create(config.codec), sessionKey);
+            assembler.ReplaceCodec(codec);
+            sessionEstablished = true;
+            try { OnSessionEstablished?.Invoke(); }
+            catch (Exception ex) { Log.Warning("[NetworkClient] OnSessionEstablished 回调异常: {0}", ex.Message); }
         }
         #endregion
 

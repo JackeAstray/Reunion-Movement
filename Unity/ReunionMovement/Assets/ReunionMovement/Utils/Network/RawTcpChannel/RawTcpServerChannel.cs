@@ -33,10 +33,22 @@ namespace ReunionMovement.Common.Util
         readonly int receiveChunkSize;
         int nextConnectionId = 1;
 
-        /// <summary>有界入队：超限时丢弃最旧事件（并发下的近似判断即可）</summary>
+        /// <summary>丢弃告警节流时间戳（多线程竞争仅影响日志频率，可忽略）</summary>
+        int lastDropWarnTick;
+
+        /// <summary>有界入队：超限时丢弃最旧事件（并发下的近似判断即可），并低频告警暴露主线程停摆问题</summary>
         private void EnqueueEvent((EventType type, int connectionId, object connection, string message) ev)
         {
-            if (events.Count >= MaxPendingEvents) events.TryDequeue(out _);
+            if (events.Count >= MaxPendingEvents)
+            {
+                events.TryDequeue(out _);
+                int now = Environment.TickCount;
+                if (unchecked(now - lastDropWarnTick) > 1000)
+                {
+                    lastDropWarnTick = now;
+                    Log.Warning("[RawTcpServerChannel] 事件队列满（{0}），丢弃最旧事件：主线程 TickRefresh 可能停摆，连接/数据事件将丢失", MaxPendingEvents);
+                }
+            }
             events.Enqueue(ev);
         }
 
@@ -55,8 +67,9 @@ namespace ReunionMovement.Common.Util
         public event Action<int> OnDisconnected;
         public event Action<int, string> OnError;
 
-        /// <summary>最大连接数（0 = 不限）。超出时新连接在接入阶段立即关闭并上报 OnError</summary>
-        public int MaxConnections = 0;
+        /// <summary>最大连接数（0 = 不限）。超出时新连接在接入阶段立即关闭并上报 OnError。
+        /// 默认 64 防连接洪水（每连接 1 接收线程 + 缓冲），按需调大</summary>
+        public int MaxConnections = 64;
 
         /// <summary>空闲超时（秒，0 = 禁用）：超过时长未收到任何数据的连接被关闭（半开连接/静默客户端回收）</summary>
         public float IdleTimeoutSeconds = 0f;

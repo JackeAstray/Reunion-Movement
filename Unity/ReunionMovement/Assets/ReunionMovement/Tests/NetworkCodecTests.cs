@@ -119,6 +119,57 @@ namespace ReunionMovement.Tests
         }
 
         [Test]
+        public void Assembler_ReplaceCodec_Datagram_SwitchesCodec()
+        {
+            var assembler = new NetworkStreamAssembler(PassthroughCodec.Instance);
+            var received = new List<(ushort id, byte[] payload)>();
+
+            // 明文阶段
+            assembler.Feed(Bytes("plain-1"), (id, f, p) => received.Add((id, p.ToArray())));
+
+            // 握手完成：回调内切换为加密 codec（LengthPrefixed 带 ID）
+            var enc = EncryptedCodec.Wrap(new LengthPrefixedCodec(includeMessageId: true), new byte[32]);
+            assembler.Feed(Bytes("switch"), (id, f, p) =>
+            {
+                assembler.ReplaceCodec(enc);
+                received.Add((id, p.ToArray()));
+            });
+
+            // 切换后：加密帧可被新 codec 解码
+            var encFrame = enc.Encode(7, Bytes("secret"));
+            assembler.Feed(encFrame, (id, f, p) => received.Add((id, p.ToArray())));
+
+            Assert.AreEqual(3, received.Count);
+            Assert.AreEqual(7, received[2].id);
+            CollectionAssert.AreEqual(Bytes("secret"), received[2].payload);
+        }
+
+        [Test]
+        public void Assembler_ReplaceCodec_InsideStreamCallback_NoCrash()
+        {
+            var codec = new LengthPrefixedCodec(includeMessageId: true);
+            var assembler = new NetworkStreamAssembler(codec);
+            var f1 = codec.Encode(1, Bytes("one"));
+
+            // 首个 chunk 含完整帧 + 3 字节流水垃圾（模拟异常流水数据）
+            var chunk = new byte[f1.Length + 3];
+            Buffer.BlockCopy(f1, 0, chunk, 0, f1.Length);
+            chunk[f1.Length] = 0xAA;
+            chunk[f1.Length + 1] = 0xBB;
+            chunk[f1.Length + 2] = 0xCC;
+
+            var received = new List<ushort>();
+            assembler.Feed(chunk, (id, f, p) =>
+            {
+                assembler.ReplaceCodec(PassthroughCodec.Instance); // 回调内切换：不得崩溃/越界
+                received.Add(id);
+            });
+
+            Assert.AreEqual(1, received.Count, "仅首帧应被回调");
+            Assert.AreEqual(0, assembler.BufferedBytes, "切换后残留缓冲应被清空");
+        }
+
+        [Test]
         public void RpcFrames_RequestRoundTrip()
         {
             var payload = Bytes("request");

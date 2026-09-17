@@ -13,8 +13,8 @@ namespace ReunionMovement.Common.Util
     {
         public const int DefaultMaxBufferSize = 1 << 20; // 1MB
 
-        readonly INetworkMessageCodec codec;
         readonly int maxBufferSize;
+        INetworkMessageCodec codec;
         byte[] buffer = Array.Empty<byte>();
         int count;
         int lastDecodeFailWarnTicks;
@@ -26,6 +26,19 @@ namespace ReunionMovement.Common.Util
         {
             this.codec = codec ?? throw new ArgumentNullException(nameof(codec));
             this.maxBufferSize = maxBufferSize <= 0 ? DefaultMaxBufferSize : maxBufferSize;
+        }
+
+        /// <summary>
+        /// 交换编解码器（加密握手完成后切换）：丢弃缓冲中残留的半帧/流水字节。
+        /// 须在完整帧回调（onFrame）内调用——握手协议保证对端在收到握手应答后才发送加密帧，
+        /// 因此切换边界后到达的数据均为新 codec 帧。
+        /// </summary>
+        public void ReplaceCodec(INetworkMessageCodec newCodec)
+        {
+            if (newCodec == null) throw new ArgumentNullException(nameof(newCodec));
+            codec = newCodec;
+            count = 0;
+            buffer = Array.Empty<byte>();
         }
 
         /// <summary>
@@ -101,8 +114,13 @@ namespace ReunionMovement.Common.Util
                 count = 0;
                 return;
             }
-            // 保留剩余半帧到缓冲头部
+            // 保留剩余半帧到缓冲头部；回调内 ReplaceCodec（加密握手切换）已复位 count/buffer 时直接退出
             int remaining = count - offset;
+            if (remaining <= 0)
+            {
+                count = 0;
+                return;
+            }
             if (remaining > maxBufferSize)
             {
                 Log.Warning("[NetworkStreamAssembler] 残余缓冲 {0} 字节超过上限，重置", remaining);

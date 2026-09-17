@@ -136,10 +136,45 @@ var codec = EncryptedCodec.Wrap(NetworkCodecFactory.Create(NetworkCodecType.Mess
 > 用于底层 `INetworkChannel` 直连场景，或自行扩展 `NetworkCodecFactory` 接入客户端/服务端。
 > 加解密有 CPU 成本，建议仅对敏感通道整链路启用。
 
+### 加密握手（推荐：客户端/服务端整链路加密）
+
+开启后连接建立时自动完成握手，业务帧在握手完成后整链路 AES-256-CBC + HMAC 加密：
+
+```csharp
+// 服务端与客户端配置必须一致（主密钥一致）
+var cfg = new NetworkServerConfig
+{
+    transport = NetworkTransportType.Tcp,
+    port = 9000,
+    enableEncryptedHandshake = true,
+    // handshakeMasterKey = 32 字节主密钥；或启动前调用 SetHandshakeMasterKey 从 HTTPS 登录接口下发
+};
+```
+
+```csharp
+var cfg = new NetworkClientConfig
+{
+    transport = NetworkTransportType.Tcp,
+    host = "127.0.0.1", port = 9000,
+    enableEncryptedHandshake = true,
+};
+var client = new NetworkClient(cfg);
+client.OnSessionEstablished += () => { /* 业务通信应等待此事件 */ };
+```
+
+握手流程：服务端下发随机数 → 客户端回随机数 → 两端以"主密钥 + 双随机数"派生**每连接唯一会话密钥**
+（HMAC-SHA256），随后切换加密 codec。握手完成前双方的业务帧会被丢弃（`Send` 返回 false）。
+
+安全说明：若主密钥仅硬编码在客户端二进制（可反编译提取），本机制提供每连接唯一密钥 +
+防重放/防离线分析加固；**生产环境应通过 HTTPS 登录接口下发主密钥**方可构成真实加密信任边界。
+
+`UniversalNetworkBehaviour` 也支持：勾选 `enableEncryptedHandshake` 并填写 `handshakePassphrase`
+（SHA256 派生主密钥）即可，无需手写代码。
+
 ## 兼容性说明
 
 - `NetworkMessageCodec` 静态类与旧 `INetworkClientChannel` 用法保持不变；
 - `UniversalNetworkBehaviour` 公共字段与事件契约不变，新增 `codec` 字段与 `RawTCP` 传输；
 - 默认 `codec = MessageId`，线上帧格式与旧版一致（`[2B ID][负载]`，ID=0 即旧版裸数据）；
-- RPC 占用保留消息 ID `0xFFFE`（请求）/ `0xFFFF`（响应），业务消息请避开；
+- 保留消息 ID 范围 `0xFFF9 ~ 0xFFFF`（握手 / ACK / PING / PONG / RPC），业务消息请避开；
 - `RawTcp` 基于原生 Socket，仅支持桌面/移动等原生平台（WebGL 请使用 WebSocket 传输）。

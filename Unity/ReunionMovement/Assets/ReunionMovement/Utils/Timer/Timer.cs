@@ -188,6 +188,12 @@ namespace ReunionMovement.Common.Util.Timer
                 }
                 else
                 {
+                    // 与溢出补发路径保持一致：到达 maxLoop 的那次循环同样广播 OnLoopCompleted，
+                    // 否则同一事件在普通路径（无广播）与长帧路径（有广播）行为不一致
+                    if (isLoop)
+                    {
+                        OnLoopCompleted?.Invoke(loopCount);
+                    }
                     state = TimerState.Finished;
                     OnCompleted?.Invoke();
                 }

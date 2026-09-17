@@ -284,15 +284,8 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         private GachaItem Get5StarItem()
         {
-            // 记录当前抽数
-            last5StarPullCount = pity5Star;
-
             // 判断是否为UP
             bool isUp = isGuaranteedUp5Star ? true : CryptoRandomValue() <= 0.5f;
-            isGuaranteedUp5Star = !isUp; // 未出UP则触发大保底
-
-            // 更新是否为UP的状态
-            isLastPullUp = isUp;
 
             // 选择卡池：UP 池为空时回退常驻池（否则保底已消耗但出货丢失）
             List<GachaItem> pool = isUp ? up5StarPool : standard5StarPool;
@@ -302,8 +295,16 @@ namespace ReunionMovement.Common.Util
                 if (pool == null || pool.Count == 0)
                 {
                     Log.Error("五星卡池全部为空（UP 与常驻），无法出货");
+                    // 双池皆空：不消耗保底、不改动 UP 状态与最近抽数，等待配置修复
+                    return null;
                 }
             }
+
+            // 仅在实际出货时更新状态
+            last5StarPullCount = pity5Star;
+            isGuaranteedUp5Star = !isUp; // 未出UP则触发大保底
+            isLastPullUp = isUp;
+
             ResetCounters();
             return SelectRandomItem(pool);
         }
@@ -336,13 +337,6 @@ namespace ReunionMovement.Common.Util
         {
             // 判断是否触发UP保底
             bool isUp = isGuaranteedUp4Star ? true : CryptoRandomValue() <= 0.5f;
-            isGuaranteedUp4Star = !isUp; // 更新保底状态
-
-            // 更新是否为UP的状态
-            isLastPullUp = isUp;
-
-            //// 动态概率验证（调试用）
-            //Debug.Log($"四星触发于第{pity4Star}抽 | UP状态:{isUp}");
 
             // 选择卡池：UP 池为空时回退常驻池（否则保底已消耗但出货丢失）
             List<GachaItem> pool = isUp ? up4StarPool : standard4StarPool;
@@ -352,8 +346,14 @@ namespace ReunionMovement.Common.Util
                 if (pool == null || pool.Count == 0)
                 {
                     Log.Error("四星卡池全部为空（UP 与常驻），无法出货");
+                    // 双池皆空：不消耗保底、不改动 UP 状态，等待配置修复
+                    return null;
                 }
             }
+
+            isGuaranteedUp4Star = !isUp; // 更新保底状态
+            isLastPullUp = isUp;
+
             pity4Star = 0; // 重置四星计数器
             return SelectRandomItem(pool);
         }
@@ -424,8 +424,14 @@ namespace ReunionMovement.Common.Util
                 // 十连保底替换不应消耗硬保底计数：替换后恢复 pity4Star，
                 // 与主流抽卡"十连至少一四星"独立于硬保底的语义一致
                 int pityBeforeReplace = pity4Star;
+                bool guaranteedBeforeReplace = isGuaranteedUp4Star;
+                bool lastPullUpBeforeReplace = isLastPullUp;
                 results[lastThreeStarIndex] = Get4StarItem();
                 pity4Star = pityBeforeReplace;
+                // 同样恢复 UP 保底标记：Get4StarItem 内部翻转的 isGuaranteedUp4Star/isLastPullUp
+                // 属于"正常抽卡"语义，十连保底替换不应消耗/污染玩家的四星大保底状态
+                isGuaranteedUp4Star = guaranteedBeforeReplace;
+                isLastPullUp = lastPullUpBeforeReplace;
             }
 
             return results;
