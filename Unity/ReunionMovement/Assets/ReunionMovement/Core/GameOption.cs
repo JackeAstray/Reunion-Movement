@@ -15,7 +15,7 @@ namespace ReunionMovement.Core
             // 版本号
             public string version = "1.0.0";
             // 全屏模式
-            public bool fullscreen = true;
+            public bool fullscreen = false;
             // 分辨率宽度
             public int resolutionWidth = 1920;
             // 分辨率高度
