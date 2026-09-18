@@ -95,6 +95,13 @@ namespace ReunionMovement.Common
         {
             // 使用 setter 设置实例（自动处理重复检测与事件触发）
             Instance = this as T;
+
+            // 场景放置的单例同样遵守 IsPersistentAcrossScenes：
+            // 否则该声明只对动态创建路径生效，场景对象会在场景卸载时被销毁。
+            if (IsPersistentAcrossScenes)
+            {
+                DontDestroyOnLoad(gameObject);
+            }
         }
 
         /// <summary>
