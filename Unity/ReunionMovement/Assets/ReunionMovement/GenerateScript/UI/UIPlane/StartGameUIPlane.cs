@@ -44,20 +44,32 @@ namespace ReunionMovement.Core.UI
 
             base.OnInit();
 
-            // 全屏按钮：初始图标与 GameOption 同步；浏览器侧状态变化（含 Esc/页面按钮退出）
-            // 经 StartGame.OnFullscreenChanged 广播实时回刷，避免图标与真实状态不一致
-            StartGame.OnFullscreenChanged += OnFullscreenChanged;
-            RefreshFullscreenIcon();
-
-            if (fullscreen != null)
+            if (Application.platform == RuntimePlatform.WebGLPlayer)
             {
-                fullscreen.onClick.RemoveAllListeners();
-                fullscreen.onClick.AddListener(OnFullscreenButtonClick);
+                // 全屏按钮：初始图标与 GameOption 同步；浏览器侧状态变化（含 Esc/页面按钮退出）
+                // 经 StartGame.OnFullscreenChanged 广播实时回刷，避免图标与真实状态不一致
+                StartGame.OnFullscreenChanged += OnFullscreenChanged;
+                RefreshFullscreenIcon();
+
+                if (fullscreen != null)
+                {
+                    fullscreen.onClick.RemoveAllListeners();
+                    fullscreen.onClick.AddListener(OnFullscreenButtonClick);
+                }
+                else
+                {
+                    Log.Warning("StartGameUIPlane: fullscreen 按钮未赋值，跳过全屏设置绑定");
+                }
             }
             else
             {
-                Log.Warning("StartGameUIPlane: fullscreen 按钮未赋值，跳过全屏设置绑定");
+                // 非 WebGL 平台隐藏全屏按钮
+                if (fullscreen != null)
+                {
+                    fullscreen.gameObject.SetActive(false);
+                }
             }
+
 
             // 生成代码空保护：logo 未赋值时给出明确告警而非 NRE（仅跳过 Logo 动画，不影响全屏按钮）
             if (logo1 == null || logo2 == null)

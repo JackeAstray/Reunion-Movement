@@ -1,7 +1,7 @@
 ﻿<Solution>
-  <Project Path="ReunionMovement.Utils.csproj" />
   <Project Path="UniTask.Linq.csproj" />
   <Project Path="UniTask.csproj" />
+  <Project Path="ReunionMovement.Utils.csproj" />
   <Project Path="ReunionMovement.SimpleWeb.csproj" />
   <Project Path="ReunionMovement.Kcp2k.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
