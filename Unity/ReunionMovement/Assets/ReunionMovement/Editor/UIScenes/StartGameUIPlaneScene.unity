@@ -17852,8 +17852,8 @@ MonoBehaviour:
   firstSelected: {fileID: 0}
   logo1: {fileID: 811709449}
   logo2: {fileID: 1366111095}
-  fullscreenImg_01: {fileID: 21300000, guid: 9e75239c883f90c4f9eba9585e60e288, type: 3}
-  fullscreenImg_02: {fileID: 21300000, guid: 133a35eae1d3c204c97cdcf40fdec9a6, type: 3}
+  fullscreenImg_01: {fileID: 21300000, guid: 133a35eae1d3c204c97cdcf40fdec9a6, type: 3}
+  fullscreenImg_02: {fileID: 21300000, guid: 9e75239c883f90c4f9eba9585e60e288, type: 3}
   fullscreenImg: {fileID: 317721995}
   fullscreen: {fileID: 317721992}
 --- !u!1 &1724840639

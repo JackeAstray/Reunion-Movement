@@ -44,7 +44,8 @@ namespace ReunionMovement.Core.UI
 
             base.OnInit();
 
-            if (Application.platform == RuntimePlatform.WebGLPlayer)
+            if (Application.platform == RuntimePlatform.WebGLPlayer ||
+                Application.platform == RuntimePlatform.WindowsEditor)
             {
                 // 全屏按钮：初始图标与 GameOption 同步；浏览器侧状态变化（含 Esc/页面按钮退出）
                 // 经 StartGame.OnFullscreenChanged 广播实时回刷，避免图标与真实状态不一致
@@ -153,7 +154,14 @@ namespace ReunionMovement.Core.UI
             isFullscreen = GameOption.CurrentOption.fullscreen;
             if (fullscreenImg != null)
             {
-                fullscreenImg.sprite = isFullscreen ? fullscreenImg_01 : fullscreenImg_02;
+                if (isFullscreen)
+                {
+                    fullscreenImg.sprite = fullscreenImg_02;
+                }
+                else
+                {
+                    fullscreenImg.sprite = fullscreenImg_01;
+                }
             }
         }
 
