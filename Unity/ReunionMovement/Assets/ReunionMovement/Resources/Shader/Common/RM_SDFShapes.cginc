@@ -90,7 +90,8 @@ half RM_RectangleScene(float4 additionalData)
 {
     float2 texcoord = additionalData.xy;
     float2 size = float2(additionalData.z, additionalData.w);
-    float4 radius = _RectangleCornerRadius;
+    // 半径不得超过短边一半，否则同侧两个角圆重叠成双圆凸包，顶/底中心出现 V 缝
+    float4 radius = min(_RectangleCornerRadius, min(size.x, size.y) * 0.5);
     half4 c  = half4(texcoord, size - texcoord);
     half rect = min(min(min(c.x, c.y), c.z), c.w);
 

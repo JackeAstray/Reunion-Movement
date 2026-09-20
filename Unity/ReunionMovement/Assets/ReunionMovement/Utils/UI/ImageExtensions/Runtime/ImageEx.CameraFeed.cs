@@ -49,54 +49,6 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
-        #if UNITY_EDITOR
-        /// <summary>
-        /// 调试：输出当前 ImageEx 的运行时材质/纹理状态，用于排查“透明/半透明”问题。
-        /// 在 Inspector 组件上右键 → “调试：输出材质状态” 运行。
-        /// </summary>
-        [UnityEditor.MenuItem("CONTEXT/ImageEx/调试：输出材质状态")]
-        private static void DebugMaterialState(UnityEditor.MenuCommand command)
-        {
-            ImageEx img = (ImageEx)command.context;
-            img.DebugPrintMaterialState();
-        }
-
-        /// <summary>
-        /// 打印材质状态到 Console。
-        /// </summary>
-        public void DebugPrintMaterialState()
-        {
-            Material m = material;
-            System.Text.StringBuilder sb = new System.Text.StringBuilder();
-
-            Texture mainTex = mainTexture;
-            string mainTexDesc = mainTex != null
-                ? mainTex.name + "  " + mainTex.width + "x" + mainTex.height
-                : "NULL";
-
-            sb.AppendLine("[ImageEx] Shader: " + (m != null ? m.shader.name : "NULL"));
-            sb.AppendLine("[ImageEx] mainTexture: " + mainTexDesc);
-            sb.AppendLine("[ImageEx] cameraTexture: " + (cameraTexture != null ? cameraTexture.name : "NULL"));
-            sb.AppendLine("[ImageEx] sprite: " + (sprite != null ? sprite.name : "NULL")
-                + "  overrideSprite: " + (overrideSprite != null ? overrideSprite.name : "NULL"));
-            sb.AppendLine("[ImageEx] Image.color: " + color);
-
-            if (m != null)
-            {
-                Texture mt = m.GetTexture("_MainTex");
-                string mtDesc = mt != null ? mt.name + "  " + mt.width + "x" + mt.height : "NULL";
-                sb.AppendLine("[ImageEx] material._MainTex: " + mtDesc);
-                sb.AppendLine("[ImageEx] material._Color: " + m.GetColor("_Color"));
-                sb.AppendLine("[ImageEx] material._DrawShape: " + m.GetInt("_DrawShape"));
-                sb.AppendLine("[ImageEx] material._SrcBlend: " + m.GetInt("_SrcBlend")
-                    + "  _DstBlend: " + m.GetInt("_DstBlend"));
-                sb.AppendLine("[ImageEx] material keywords: " + string.Join(", ", m.shaderKeywords));
-            }
-
-            Debug.Log(sb.ToString());
-        }
-        #endif
-
         #endregion
     }
 }
