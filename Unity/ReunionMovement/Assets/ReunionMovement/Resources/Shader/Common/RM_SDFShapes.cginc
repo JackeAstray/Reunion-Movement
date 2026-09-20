@@ -140,7 +140,10 @@ half RM_TriangleScene(float4 additionalData)
     
     half sdf = sdTriangleIsosceles(texcoord - half2(width / 2.0, height), half2(width / 2.0, -height));
     
+    // 圆角约束：底边两角之和 ≤ 宽度，顶角半径 ≤ 短边，否则角圆重叠成双凸包（同 Rectangle）
     half3 rc = max(_TriangleCornerRadius, half3(0.001, 0.001, 0.001));
+    rc.xy *= min(1.0, width / max(rc.x + rc.y, 0.001));
+    rc.z = min(rc.z, min(width, height));
 
     // 左角
     half halfWidth = width / 2.0;
@@ -187,18 +190,24 @@ half RM_PentagonScene(float4 additionalData)
     float2 size = float2(additionalData.z, additionalData.w);
     float width = size.x;
     float height = size.y;
-    
+
+    // 圆角约束：顶部两角之和 ≤ 宽度，其余角/尖端半径 ≤ 短边，尖端尺寸防除零
+    half4 cr = _PentagonCornerRadius;
+    cr.xy *= min(1.0, width / max(cr.x + cr.y, 0.001));
+    cr = min(cr, min(width, height));
+    half ptRadius = min(max(_PentagonTipRadius, 0.001), min(width, height));
+    half tipSize = max(_PentagonTipSize, 0.001);
+
     half baseRect = sdRectanlge(texcoord - half2(width / 2.0, height / 2.0), width, height);
-    half scale = height / _PentagonTipSize;
-    half rhombus = sdRhombus(texcoord - float2(width / 2, _PentagonTipSize * scale), float2(width / 2, _PentagonTipSize) * scale);
+    half scale = height / tipSize;
+    half rhombus = sdRhombus(texcoord - float2(width / 2, tipSize * scale), float2(width / 2, tipSize) * scale);
     half sdfPentagon = sdfDifference(baseRect, sdfDifference(baseRect, rhombus));
     
-    half ptRadius = max(_PentagonTipRadius, 0.001);
     float halfWidth = width / 2;
-    float m = -_PentagonTipSize / halfWidth;
+    float m = -tipSize / halfWidth;
     float d = sqrt(1 + m * m);
-    float c = _PentagonTipSize;
-    float k = ptRadius * d + _PentagonTipSize;
+    float c = tipSize;
+    float k = ptRadius * d + tipSize;
     
     half2 circlePivot = half2(halfWidth, m * halfWidth + k);
     half cornerCircle = sdCircle(texcoord - circlePivot, ptRadius);
@@ -209,27 +218,27 @@ half RM_PentagonScene(float4 additionalData)
     sdfPentagon = texcoord.y < fy ? cornerCircle: sdfPentagon;
     
     // 左中圆角
-    k = _PentagonCornerRadius.w * d + _PentagonTipSize;
-    circlePivot = half2(_PentagonCornerRadius.w, m * _PentagonCornerRadius.w + k);
-    cornerCircle = sdCircle(texcoord - circlePivot, _PentagonCornerRadius.w);
+    k = cr.w * d + tipSize;
+    circlePivot = half2(cr.w, m * cr.w + k);
+    cornerCircle = sdCircle(texcoord - circlePivot, cr.w);
     x = (circlePivot.y + circlePivot.x / m - c) / (m + 1 / m); y = m * x + c;
     fy = map(texcoord.x, x, circlePivot.x, y, circlePivot.y);
     sdfPentagon = texcoord.y > fy && texcoord.y < circlePivot.y ? cornerCircle: sdfPentagon;
     
     // 右中圆角
-    m = -m; k = _PentagonCornerRadius.z * d - _PentagonTipSize;
-    circlePivot = half2(width - _PentagonCornerRadius.z, m * (width - _PentagonCornerRadius.z) + k);
-    cornerCircle = sdCircle(texcoord - circlePivot, _PentagonCornerRadius.z);
+    m = -m; k = cr.z * d - tipSize;
+    circlePivot = half2(width - cr.z, m * (width - cr.z) + k);
+    cornerCircle = sdCircle(texcoord - circlePivot, cr.z);
     x = (circlePivot.y + circlePivot.x / m - c) / (m + 1 / m); y = m * x + c;
     fy = map(texcoord.x, circlePivot.x, x, circlePivot.y, y);
     sdfPentagon = texcoord.y > fy && texcoord.y < circlePivot.y ? cornerCircle: sdfPentagon;
     
     // 顶部圆角
-    cornerCircle = sdCircle(texcoord - half2(_PentagonCornerRadius.x, height - _PentagonCornerRadius.x), _PentagonCornerRadius.x);
-    bool mask = texcoord.x < _PentagonCornerRadius.x && texcoord.y > height - _PentagonCornerRadius.x;
+    cornerCircle = sdCircle(texcoord - half2(cr.x, height - cr.x), cr.x);
+    bool mask = texcoord.x < cr.x && texcoord.y > height - cr.x;
     sdfPentagon = mask ? cornerCircle: sdfPentagon;
-    cornerCircle = sdCircle(texcoord - half2(width - _PentagonCornerRadius.y, height - _PentagonCornerRadius.y), _PentagonCornerRadius.y);
-    mask = texcoord.x > width - _PentagonCornerRadius.y && texcoord.y > height - _PentagonCornerRadius.y;
+    cornerCircle = sdCircle(texcoord - half2(width - cr.y, height - cr.y), cr.y);
+    mask = texcoord.x > width - cr.y && texcoord.y > height - cr.y;
     sdfPentagon = mask ? cornerCircle: sdfPentagon;
     
     return sdfPentagon;
@@ -243,66 +252,74 @@ half RM_HexagonScene(float4 additionalData)
     float2 size = float2(additionalData.z, additionalData.w);
     float width = size.x;
     float height = size.y;
-    
+
+    // 圆角约束：底/顶两角之和 ≤ 宽度，角/尖端半径 ≤ 短边，尖端尺寸防除零
+    half4 cr = _HexagonCornerRadius;
+    cr.xy *= min(1.0, width / max(cr.x + cr.y, 0.001));
+    cr.zw *= min(1.0, width / max(cr.z + cr.w, 0.001));
+    cr = min(cr, min(width, height));
+    half2 tr = min(max(_HexagonTipRadius.xy, 0.001), min(width, height));
+    half2 tipSize = max(_HexagonTipSize.xy, 0.001);
+
     half baseRect = sdRectanlge(texcoord - half2(width / 2.0, height / 2.0), width, height);
-    half scale = width / _HexagonTipSize.x;
-    half rhombus1 = sdRhombus(texcoord - float2(_HexagonTipSize.x * scale, height / 2.0), float2(_HexagonTipSize.x, height / 2.0) * scale);
-    scale = width / _HexagonTipSize.y;
-    half rhombus2 = sdRhombus(texcoord - float2(width - _HexagonTipSize.y * scale, height / 2.0), float2(_HexagonTipSize.y, height / 2.0) * scale);
+    half scale = width / tipSize.x;
+    half rhombus1 = sdRhombus(texcoord - float2(tipSize.x * scale, height / 2.0), float2(tipSize.x, height / 2.0) * scale);
+    scale = width / tipSize.y;
+    half rhombus2 = sdRhombus(texcoord - float2(width - tipSize.y * scale, height / 2.0), float2(tipSize.y, height / 2.0) * scale);
     half sdfHexagon = sdfDifference(sdfDifference(baseRect, -rhombus1), -rhombus2);
 
     // 左圆角
     float halfHeight = height / 2.0;
-    float m = -halfHeight / _HexagonTipSize.x;
+    float m = -halfHeight / tipSize.x;
     float c = halfHeight;
     float d = sqrt(1.0 + m * m);
-    float k = _HexagonTipRadius.x * d + c;
+    float k = tr.x * d + c;
     half2 circlePivot = half2((halfHeight - k) / m, halfHeight);
-    half cornerCircle = sdCircle(texcoord - circlePivot, _HexagonTipRadius.x);
+    half cornerCircle = sdCircle(texcoord - circlePivot, tr.x);
     half x = (circlePivot.y + circlePivot.x / m - c) / (m + 1.0 / m);
     half y = m * x + c;
     half fy = map(texcoord.x, x, circlePivot.x, y, circlePivot.y);
     sdfHexagon = texcoord.y > fy && texcoord.y < height - fy ? cornerCircle: sdfHexagon;
  
     // 底部
-    k = _HexagonCornerRadius.x * d + c;
-    circlePivot = half2((_HexagonCornerRadius.x - k) / m, _HexagonCornerRadius.x);
-    cornerCircle = sdCircle(texcoord - circlePivot, _HexagonCornerRadius.x);
+    k = cr.x * d + c;
+    circlePivot = half2((cr.x - k) / m, cr.x);
+    cornerCircle = sdCircle(texcoord - circlePivot, cr.x);
     x = (circlePivot.y + circlePivot.x / m - c) / (m + 1.0 / m); y = m * x + c;
     fy = map(texcoord.x, x, circlePivot.x, y, circlePivot.y);
     sdfHexagon = texcoord.y < fy && texcoord.x < circlePivot.x ? cornerCircle: sdfHexagon;
 
     // 顶部
-    k = _HexagonCornerRadius.w * d + c;
-    circlePivot = half2((_HexagonCornerRadius.w - k) / m, height - _HexagonCornerRadius.w);
-    cornerCircle = sdCircle(texcoord - circlePivot, _HexagonCornerRadius.w);
-    x = (_HexagonCornerRadius.w + circlePivot.x / m - c) / (m + 1.0 / m); y = m * x + c;
+    k = cr.w * d + c;
+    circlePivot = half2((cr.w - k) / m, height - cr.w);
+    cornerCircle = sdCircle(texcoord - circlePivot, cr.w);
+    x = (cr.w + circlePivot.x / m - c) / (m + 1.0 / m); y = m * x + c;
     fy = map(texcoord.x, x, circlePivot.x, height - y, circlePivot.y);
     sdfHexagon = texcoord.y > fy && texcoord.x < circlePivot.x ? cornerCircle: sdfHexagon;
 
     // 右圆角
-    m = halfHeight / _HexagonTipSize.y;
+    m = halfHeight / tipSize.y;
     d = sqrt(1.0 + m * m);
     c = halfHeight - m * width;
-    k = _HexagonTipRadius.y * d + c;
+    k = tr.y * d + c;
     
     circlePivot = half2((halfHeight - k) / m, halfHeight);
-    cornerCircle = sdCircle(texcoord - circlePivot, _HexagonTipRadius.y);
+    cornerCircle = sdCircle(texcoord - circlePivot, tr.y);
     x = (circlePivot.y + circlePivot.x / m - c) / (m + 1.0 / m); y = m * x + c;
     fy = map(texcoord.x, circlePivot.x, x, circlePivot.y, y);
     sdfHexagon = texcoord.y > fy && texcoord.y < height - fy ? cornerCircle: sdfHexagon;
     
-    k = _HexagonCornerRadius.y * d + c;
-    circlePivot = half2((_HexagonCornerRadius.y - k) / m, _HexagonCornerRadius.y);
-    cornerCircle = sdCircle(texcoord - circlePivot, _HexagonCornerRadius.y);
+    k = cr.y * d + c;
+    circlePivot = half2((cr.y - k) / m, cr.y);
+    cornerCircle = sdCircle(texcoord - circlePivot, cr.y);
     x = (circlePivot.y + circlePivot.x / m - c) / (m + 1.0 / m); y = m * x + c;
     fy = map(texcoord.x, circlePivot.x, x, circlePivot.y, y);
     sdfHexagon = texcoord.y < fy && texcoord.x > circlePivot.x ? cornerCircle: sdfHexagon;
     
-    k = _HexagonCornerRadius.z * d + c;
-    circlePivot = half2((_HexagonCornerRadius.z - k) / m, height - _HexagonCornerRadius.z);
-    cornerCircle = sdCircle(texcoord - circlePivot, _HexagonCornerRadius.z);
-    x = (_HexagonCornerRadius.z + circlePivot.x / m - c) / (m + 1.0 / m); y = m * x + c;
+    k = cr.z * d + c;
+    circlePivot = half2((cr.z - k) / m, height - cr.z);
+    cornerCircle = sdCircle(texcoord - circlePivot, cr.z);
+    x = (cr.z + circlePivot.x / m - c) / (m + 1.0 / m); y = m * x + c;
     fy = map(texcoord.x, circlePivot.x, x, circlePivot.y, height - y);
     sdfHexagon = texcoord.y > fy && texcoord.x > circlePivot.x ? cornerCircle: sdfHexagon;
     
@@ -362,8 +379,10 @@ half RM_NStarPolygonScene(float4 additionalData)
     float2 texcoord = additionalData.xy;
     float width = additionalData.z;
     float height = additionalData.w;
-    float size = height / 2 - _NStarPolygonCornerRadius;
-    half str = sdNStarPolygon(texcoord - half2(width / 2, height / 2) - _NStarPolygonOffset, size, _NStarPolygonSideCount, _NStarPolygonInset) - _NStarPolygonCornerRadius;
+    // 圆角半径超过高的一半时星形尺寸为负，钳制到短边一半以内
+    float cornerRadius = min(_NStarPolygonCornerRadius, height * 0.5);
+    float size = height / 2 - cornerRadius;
+    half str = sdNStarPolygon(texcoord - half2(width / 2, height / 2) - _NStarPolygonOffset, size, _NStarPolygonSideCount, _NStarPolygonInset) - cornerRadius;
     return str;
 }
 #endif
