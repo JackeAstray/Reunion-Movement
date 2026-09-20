@@ -348,7 +348,10 @@ Shader "ReunionMovement/UI/ImageEx"
                 float shapeRotation = radians(_ShapeRotation);
                 size = _ConstrainRotation > 0.0 && frac(abs(shapeRotation) / 3.14159) > 0.1? float2(size.y, size.x) : size;
                 
-                float2 shapeUv = _ConstrainRotation > 0 ? v.uv1 : v.uv1 * size;
+                // uv1 在网格侧被插入 0.001 边距(ImageHelper.AddQuad)，回填成 [0,1] 后
+                // 形状 SDF 才能采到圆角帽顶/圆形极点，否则胶囊帽顶超出采样范围被裁成平头
+                float2 shapeUvRaw = (v.uv1 - 0.001) / 0.998;
+                float2 shapeUv = _ConstrainRotation > 0 ? shapeUvRaw : shapeUvRaw * size;
                 shapeUv = rotateUV(shapeUv, shapeRotation, _ConstrainRotation > 0? float2(0.5, 0.5) : size * 0.5);
                 shapeUv*= _ConstrainRotation > 0.0? size : 1.0;
                 
