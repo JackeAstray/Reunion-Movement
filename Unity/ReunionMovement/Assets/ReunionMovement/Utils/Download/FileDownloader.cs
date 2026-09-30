@@ -1,4 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
@@ -647,7 +647,11 @@ namespace ReunionMovement.Common.Util.Download
         /// <returns></returns>
         public override UniTask<bool> Cancel(string uri)
         {
-            OnCancelIndividual?.Invoke(uri);
+            // 与 Cancel() 保持一致：订阅者异常不得中断取消本身。本调用不是终态语句，
+            // 抛异常会跳过下面的中止与计数递减 ⇒ 该 URI 仍在下载，而调用方已以为取消成功
+            // （Cancel() 的注释里写明了这一后果）。
+            try { OnCancelIndividual?.Invoke(uri); }
+            catch (Exception ex) { Log.Warning("OnCancelIndividual 订阅者异常: {0}", ex.Message); }
 
             int idx = FindExecutorIndex(executors, uri);
             if (idx >= 0)

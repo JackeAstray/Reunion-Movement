@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using Cysharp.Text;
@@ -47,7 +47,14 @@ namespace ReunionMovement.Common.Util
         /// <summary>
         /// 验证路径（是否为全路径）
         /// </summary>
-        public static bool IsFullPath(string path) => !string.IsNullOrEmpty(path) && (path.Contains(":/") || path.Contains(":\\"));
+        public static bool IsFullPath(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return false;
+            // 必须先排除 URI：原实现只判断是否含 ":/"，会把 "https://host/x" 当成本地全路径，
+            // 调用方随后走 Path.GetFullPath/File.Exists 就会得到错误结论
+            if (HasUriScheme(path)) return false;
+            return path.Contains(":/") || path.Contains(":\\");
+        }
 
         /// <summary>
         /// 持续化路径

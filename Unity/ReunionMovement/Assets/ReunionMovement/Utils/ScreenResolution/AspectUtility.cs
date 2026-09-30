@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -112,8 +112,10 @@ namespace ReunionMovement.Common.Util
         {
             bool needRefresh = Screen.width != lastWidth || Screen.height != lastHeight;
             // 运行中切换 ResolutionMgr.fixedAspectRatio / targetAspectRatio 也应即时生效：
-            // 原实现只响应屏幕尺寸变化，开关切换后黑边/裁剪残留到下次分辨率变化才刷新
-            var resMgr = ResolutionMgr.Instance;
+            // 原实现只响应屏幕尺寸变化，开关切换后黑边/裁剪残留到下次分辨率变化才刷新。
+            // 另：必须用 IsInitialized 判断 —— 经 Instance 访问会在没有 ResolutionMgr 的场景
+            // 隐式懒创建 DontDestroyOnLoad 单例，等于每帧读一次就凭空多出一个持久对象。
+            var resMgr = ResolutionMgr.IsInitialized ? ResolutionMgr.Instance : null;
             if (resMgr != null)
             {
                 if (resMgr.fixedAspectRatio != lastFixedAspectRatio

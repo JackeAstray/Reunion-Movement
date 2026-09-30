@@ -1,10 +1,17 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace ReunionMovement.UI.ImageExtensions
 {
     /// <summary>
-    /// ImageEx 效果预设：保存所有 Phase 1-3 的效果参数为 ScriptableObject，
+    /// ImageEx 效果预设：把 <b>大部分</b> Phase 1-3 效果参数保存为 ScriptableObject，
     /// 可在 ImageEx 组件之间共享，也可用于 ImageExTweener 的起止状态。
+    /// <para>
+    /// 未覆盖的字段（既不拷贝也不参与 SameAs 比较，因此也不会被 ImageExReplica 检测到变化）：
+    /// <c>appendShadow</c>（阴影启用开关）、<c>shadowColor</c>、<c>shadowBlurIntensity</c>、
+    /// <c>shadowOffsetLocal</c>、<c>shadowScale</c>、<c>shadowMirror*</c>（镜像方向/缩放/偏移/显示原图/混合）、
+    /// <c>allowOutOfBoundsShadow</c>、<c>samplingWidth</c>、<c>samplingScale</c>。
+    /// 需要完整快照时应补齐这些字段（各需 1 处声明 + ApplyTo/ReadFrom/SameAs 共 4 处引用）。
+    /// </para>
     /// </summary>
     [CreateAssetMenu(menuName = "ReunionMovement/ImageEx Preset", fileName = "ImageExPreset")]
     public class ImageExPreset : ScriptableObject
@@ -22,6 +29,9 @@ namespace ReunionMovement.UI.ImageExtensions
         [Header("采样增强")]
         public ImageEx.SamplingFilter samplingMode;
         [Range(0, 1)] public float samplingIntensity = 0.5f;
+        // 采样细节（此前缺失，同阴影段）
+        public float samplingWidth = 1f;
+        public float samplingScale = 1f;
 
         [Header("目标模式")]
         public ImageEx.TargetMode targetMode;
@@ -86,6 +96,18 @@ namespace ReunionMovement.UI.ImageExtensions
         public ImageEx.ShadowMode shadowMode;
         public ImageEx.ColorMode shadowColorFilter = ImageEx.ColorMode.Replace;
         public bool shadowColorGlow;
+        // 以下为补齐字段（此前缺失 ⇒ 套预设不还原、且 ImageExReplica 检测不到它们的变化）
+        public bool appendShadow = true;
+        public Color shadowColor = new Color(0, 0, 0, 0.5f);
+        [Range(0, 100)] public float shadowBlurIntensity = 1f;
+        public Vector2 shadowOffsetLocal;
+        [Range(0.1f, 4f)] public float shadowScale = 1f;
+        public ImageEx.ShadowDirection shadowMirrorDirection;
+        [Range(0.1f, 4f)] public float shadowMirrorScale = 1f;
+        public Vector2 shadowMirrorOffset;
+        public bool shadowMirrorShowSource;
+        [Range(0, 1)] public float shadowMirrorTintMix;
+        public bool allowOutOfBoundsShadow = true;
 
         /// <summary>
         /// 将预设应用到指定的 ImageEx 组件。
@@ -169,6 +191,19 @@ namespace ReunionMovement.UI.ImageExtensions
             target.Shadow = shadowMode;
             target.ShadowColorFilter = shadowColorFilter;
             target.ShadowColorGlow = shadowColorGlow;
+            target.AppendShadow = appendShadow;
+            target.ShadowColor = shadowColor;
+            target.ShadowBlurIntensity = shadowBlurIntensity;
+            target.ShadowOffsetLocal = shadowOffsetLocal;
+            target.ShadowScale = shadowScale;
+            target.ShadowMirrorDirection = shadowMirrorDirection;
+            target.ShadowMirrorScale = shadowMirrorScale;
+            target.ShadowMirrorOffset = shadowMirrorOffset;
+            target.ShadowMirrorShowSource = shadowMirrorShowSource;
+            target.ShadowMirrorTintMix = shadowMirrorTintMix;
+            target.AllowOutOfBoundsShadow = allowOutOfBoundsShadow;
+            target.SamplingWidth = samplingWidth;
+            target.SamplingScale = samplingScale;
         }
 
         /// <summary>
@@ -243,6 +278,19 @@ namespace ReunionMovement.UI.ImageExtensions
             shadowMode = source.Shadow;
             shadowColorFilter = source.ShadowColorFilter;
             shadowColorGlow = source.ShadowColorGlow;
+            appendShadow = source.AppendShadow;
+            shadowColor = source.ShadowColor;
+            shadowBlurIntensity = source.ShadowBlurIntensity;
+            shadowOffsetLocal = source.ShadowOffsetLocal;
+            shadowScale = source.ShadowScale;
+            shadowMirrorDirection = source.ShadowMirrorDirection;
+            shadowMirrorScale = source.ShadowMirrorScale;
+            shadowMirrorOffset = source.ShadowMirrorOffset;
+            shadowMirrorShowSource = source.ShadowMirrorShowSource;
+            shadowMirrorTintMix = source.ShadowMirrorTintMix;
+            allowOutOfBoundsShadow = source.AllowOutOfBoundsShadow;
+            samplingWidth = source.SamplingWidth;
+            samplingScale = source.SamplingScale;
         }
 
         /// <summary>
@@ -307,7 +355,20 @@ namespace ReunionMovement.UI.ImageExtensions
                 && blendType == other.blendType
                 && shadowMode == other.shadowMode
                 && shadowColorFilter == other.shadowColorFilter
-                && shadowColorGlow == other.shadowColorGlow;
+                && shadowColorGlow == other.shadowColorGlow
+                && appendShadow == other.appendShadow
+                && Near(shadowColor, other.shadowColor)
+                && Near(shadowBlurIntensity, other.shadowBlurIntensity)
+                && Near(shadowOffsetLocal, other.shadowOffsetLocal)
+                && Near(shadowScale, other.shadowScale)
+                && shadowMirrorDirection == other.shadowMirrorDirection
+                && Near(shadowMirrorScale, other.shadowMirrorScale)
+                && Near(shadowMirrorOffset, other.shadowMirrorOffset)
+                && shadowMirrorShowSource == other.shadowMirrorShowSource
+                && Near(shadowMirrorTintMix, other.shadowMirrorTintMix)
+                && allowOutOfBoundsShadow == other.allowOutOfBoundsShadow
+                && Near(samplingWidth, other.samplingWidth)
+                && Near(samplingScale, other.samplingScale);
         }
 
         private static bool Near(float a, float b) => Mathf.Abs(a - b) < 1e-4f;

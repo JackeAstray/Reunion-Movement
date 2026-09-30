@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -47,7 +47,7 @@ namespace ReunionMovement.Common.Util
         /// 重置子节点位置
         /// </summary>
         /// <param name="transform">父对象</param>
-        /// <param name="recursive">父对象一起重置</param>
+        /// <param name="recursive">是否递归重置全部后代（父对象自身不重置）</param>
         public static void ResetChildPositions(this Transform transform, bool recursive = false)
         {
             foreach (Transform child in transform)
@@ -263,9 +263,14 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static int CloserEdge(this Transform transform, Camera camera, int width, int height)
         {
-            // 世界坐标转换为屏幕坐标
-            var worldPointTop = camera.ScreenToWorldPoint(new Vector3(width / 2, height));
-            var worldPointBot = camera.ScreenToWorldPoint(new Vector3(width / 2, 0));
+            // ScreenToWorldPoint 的 z 是"距摄像机的距离"：透视相机下传 0（Vector3 第三分量默认 0）
+            // 会让两个采样点都退化成摄像机自身的位置，两次距离几乎相同、比较结果失去意义。
+            // 统一取目标点所在深度，使上下两点的比较在同一深度平面上进行。
+            float depth = camera.WorldToScreenPoint(transform.position).z;
+
+            // 世界坐标转换为屏幕坐标（width / 2f 用浮点，避免整数截断）
+            var worldPointTop = camera.ScreenToWorldPoint(new Vector3(width / 2f, height, depth));
+            var worldPointBot = camera.ScreenToWorldPoint(new Vector3(width / 2f, 0f, depth));
             // 计算距离
             var deltaTop = Vector2.Distance(worldPointTop, transform.position);
             var deltaBottom = Vector2.Distance(worldPointBot, transform.position);

@@ -1,4 +1,4 @@
-﻿using ReunionMovement.Core.Languages;
+using ReunionMovement.Core.Languages;
 using System;
 using System.IO;
 using System.Linq;
@@ -57,6 +57,15 @@ namespace ReunionMovement.EditorTools.ImageExtensions
             else
             {
                 Canvas c = GetCanvas();
+                // GetCanvas 在"场景无 Canvas 且菜单创建未产出"时可能返回 null（预制体编辑阶段、菜单路径异常等），
+                // 此时原代码会对 c 连续解引用两次（AddAdditionalShaderChannelsToCanvas 内部读 c.additionalShaderChannels
+                // 与 c.transform）而抛 NRE —— 且发生在 AddImageExObject 已 new GameObject 之后，会留下"孤儿对象 + 异常"。
+                // 改为报错并返回 null：调用方用 SetParent(null, false)（合法）把对象留于场景根，不再中途崩溃。
+                if (c == null)
+                {
+                    UnityEngine.Debug.LogError("GetParentTransform: 未找到 Canvas 且自动创建失败，ImageEx 将置于场景根");
+                    return null;
+                }
                 AddAdditionalShaderChannelsToCanvas(c);
                 parent = c.transform;
             }
@@ -90,8 +99,10 @@ namespace ReunionMovement.EditorTools.ImageExtensions
 
             Image img = (Image)command.context;
             GameObject obj = img.gameObject;
-            Object.DestroyImmediate(img);
-            obj.AddComponent<ImageEx>();
+            // 改用 Undo.* 版本：销毁与添加的最终状态与原来完全一致，唯一差别是动作变为可撤销。
+            // 原写法（DestroyImmediate + AddComponent）是不可撤销的破坏性操作，误点后无法 Ctrl+Z 恢复。
+            Undo.DestroyObjectImmediate(img);
+            Undo.AddComponent<ImageEx>(obj);
             UnityEditor.EditorUtility.SetDirty(obj);
 
         }
@@ -108,8 +119,12 @@ namespace ReunionMovement.EditorTools.ImageExtensions
         internal static bool HasAdditionalShaderChannels(Canvas c)
         {
             AdditionalCanvasShaderChannels asc = c.additionalShaderChannels;
+            // 必须与 AddAdditionalShaderChannelsToCanvas 添加的通道集合完全一致：
+            // 该方法会开启 TexCoord1、TexCoord2 与 Tangent 三项，此前这里漏检 Tangent，
+            // 导致"只有 TexCoord1/2 而缺 Tangent"的 Canvas 被误判为已就绪，从而永远不会补上 Tangent
             return (asc & AdditionalCanvasShaderChannels.TexCoord1) != 0 &&
-                   (asc & AdditionalCanvasShaderChannels.TexCoord2) != 0;
+                   (asc & AdditionalCanvasShaderChannels.TexCoord2) != 0 &&
+                   (asc & AdditionalCanvasShaderChannels.Tangent) != 0;
         }
 
         public static void CornerRadiusModeGUI(Rect rect, ref SerializedProperty property, string[] toolBarHeading, string label = "圆角半径")

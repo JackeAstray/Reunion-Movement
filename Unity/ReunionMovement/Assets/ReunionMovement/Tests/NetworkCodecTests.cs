@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using NUnit.Framework;
@@ -167,6 +167,43 @@ namespace ReunionMovement.Tests
 
             Assert.AreEqual(1, received.Count, "仅首帧应被回调");
             Assert.AreEqual(0, assembler.BufferedBytes, "切换后残留缓冲应被清空");
+        }
+
+        [Test]
+        public void Assembler_ReplaceCodec_StreamSwitch_KeepsCoalescedTail()
+        {
+            var plain = new LengthPrefixedCodec(includeMessageId: true);
+            var assembler = new NetworkStreamAssembler(plain);
+            var encrypted = EncryptedCodec.Wrap(new LengthPrefixedCodec(includeMessageId: true), new byte[32]);
+
+            var hello = plain.Encode(NetworkConstants.ReservedHandshakeClientHello, Bytes("hello-nonce"));
+            var encFrame1 = encrypted.Encode(11, Bytes("secret-1"));
+            var encFrame2 = encrypted.Encode(12, Bytes("secret-2"));
+
+            // 模拟 TCP 把"明文握手指令 + 紧随其后的加密帧"合并进同一次 Read
+            var merged = new byte[hello.Length + encFrame1.Length + encFrame2.Length];
+            Buffer.BlockCopy(hello, 0, merged, 0, hello.Length);
+            Buffer.BlockCopy(encFrame1, 0, merged, hello.Length, encFrame1.Length);
+            Buffer.BlockCopy(encFrame2, 0, merged, hello.Length + encFrame1.Length, encFrame2.Length);
+
+            var received = new List<(ushort id, byte[] payload)>();
+            assembler.Feed(merged, (id, f, p) =>
+            {
+                received.Add((id, p.ToArray()));
+                if (id == NetworkConstants.ReservedHandshakeClientHello)
+                {
+                    assembler.ReplaceCodec(encrypted);
+                }
+            });
+
+            // 原实现在回调内直接复位 count/buffer，而 Feed 的帧循环仍以旧 offset 继续推进，
+            // 导致同一字节块中握手指令之后的帧被整体丢弃（表现为"首条加密消息静默丢失"）
+            Assert.AreEqual(3, received.Count, "握手指令之后的同块加密帧不得被丢弃");
+            Assert.AreEqual(11, received[1].id);
+            CollectionAssert.AreEqual(Bytes("secret-1"), received[1].payload);
+            Assert.AreEqual(12, received[2].id);
+            CollectionAssert.AreEqual(Bytes("secret-2"), received[2].payload);
+            Assert.AreEqual(0, assembler.BufferedBytes, "全部帧解析后缓冲应清空");
         }
 
         [Test]

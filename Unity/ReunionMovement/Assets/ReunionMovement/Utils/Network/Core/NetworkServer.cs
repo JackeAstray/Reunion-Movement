@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
@@ -198,10 +198,18 @@ namespace ReunionMovement.Common.Util
         /// <summary>广播消息到全部客户端</summary>
         public void Broadcast(ushort messageId, byte[] payload)
         {
-            var frame = codec.Encode(messageId, payload);
-            foreach (var id in connections.Keys)
+            if (!IsActive) return;
+            // 必须逐连接用 conn.Codec 编码：原先全连接共用全局 codec，
+            // 加密握手完成后已加密的客户端会收到明文帧（MAC 校验失败被静默丢弃，广播实质失效），
+            // 而未握手的连接反而拿到了业务明文
+            foreach (var kv in connections)
             {
-                if (channel.SendMessage(id, frame) && connections.TryGetValue(id, out var conn))
+                var conn = kv.Value;
+                if (conn == null) continue;
+                // 与 Send 保持一致的握手门禁：未完成握手的连接不接收业务帧
+                if (handshakeEnabled && !conn.Secured && !NetworkConstants.IsReservedMessageId(messageId)) continue;
+                var frame = conn.Codec.Encode(messageId, payload);
+                if (channel.SendMessage(kv.Key, frame))
                 {
                     conn.Info.BytesSent += frame.Length;
                 }
@@ -215,11 +223,16 @@ namespace ReunionMovement.Common.Util
         /// <summary>广播消息（排除指定客户端）</summary>
         public void BroadcastExcept(int exceptConnectionId, ushort messageId, byte[] payload)
         {
-            var frame = codec.Encode(messageId, payload);
-            foreach (var id in connections.Keys)
+            if (!IsActive) return;
+            // 同 Broadcast：逐连接用 conn.Codec 编码并遵守握手门禁
+            foreach (var kv in connections)
             {
-                if (id == exceptConnectionId) continue;
-                if (channel.SendMessage(id, frame) && connections.TryGetValue(id, out var conn))
+                if (kv.Key == exceptConnectionId) continue;
+                var conn = kv.Value;
+                if (conn == null) continue;
+                if (handshakeEnabled && !conn.Secured && !NetworkConstants.IsReservedMessageId(messageId)) continue;
+                var frame = conn.Codec.Encode(messageId, payload);
+                if (channel.SendMessage(kv.Key, frame))
                 {
                     conn.Info.BytesSent += frame.Length;
                 }
@@ -408,11 +421,21 @@ namespace ReunionMovement.Common.Util
         {
             if (connections.ContainsKey(connectionId)) return;
             connections[connectionId] = new ServerConnection(connectionId, address, codec, config.maxAssembledFrameSize);
-            // 加密握手：向新连接下发服务端随机数（明文；客户端回 ClientHello 后本连接切换为加密）
+            // 加密握手：向新连接下发 [服务端随机数][服务端持有证明]（明文；客户端回 ClientHello 后本连接切换为加密）
             if (handshakeEnabled && connections.TryGetValue(connectionId, out var handshakeConn))
             {
-                handshakeConn.ServerNonce = NetworkHandshake.GenerateNonce();
-                Send(connectionId, NetworkConstants.ReservedHandshakeServerHello, handshakeConn.ServerNonce);
+                if (handshakeMasterKey == null)
+                {
+                    // 没有主密钥就算不出持有证明，客户端也无法校验 —— 此时不应发出 ServerHello
+                    Log.Error("[NetworkServer] 连接 {0} 已建立，但握手主密钥尚未下发（SetHandshakeMasterKey），无法开始加密握手", connectionId);
+                }
+                else
+                {
+                    handshakeConn.ServerNonce = NetworkHandshake.GenerateNonce();
+                    var serverProof = NetworkHandshake.ComputeServerProof(handshakeMasterKey, handshakeConn.ServerNonce);
+                    Send(connectionId, NetworkConstants.ReservedHandshakeServerHello,
+                         NetworkHandshake.BuildHello(handshakeConn.ServerNonce, serverProof));
+                }
             }
             try { OnClientConnected?.Invoke(connectionId, address); }
             catch (Exception ex) { Log.Warning("[NetworkServer] OnClientConnected 回调异常: {0}", ex.Message); }
@@ -466,11 +489,6 @@ namespace ReunionMovement.Common.Util
             {
                 if (messageId == NetworkConstants.ReservedHandshakeClientHello)
                 {
-                    if (payload.Count != NetworkHandshake.NonceLength)
-                    {
-                        Log.Warning("[NetworkServer] 连接 {0} ClientHello 随机数长度非法，已忽略", connectionId);
-                        return;
-                    }
                     if (conn.Secured)
                     {
                         Log.Warning("[NetworkServer] 连接 {0} 重复 ClientHello，已忽略", connectionId);
@@ -481,9 +499,25 @@ namespace ReunionMovement.Common.Util
                         Log.Error("[NetworkServer] 连接 {0} 发起 ClientHello 但主密钥尚未下发，无法完成握手", connectionId);
                         return;
                     }
-                    byte[] clientNonce = payload.ToArray();
+                    // 关键：必须校验客户端"持有主密钥"的证明。原实现只检查负载长度为 16，
+                    // 任意 16 个随机字节都能让本连接进入 Secured 并触发 OnClientSecured
+                    //（业务层把该事件当作"已认证"信号），同时也让未持有密钥者可无成本占用连接。
+                    if (!NetworkHandshake.TryParseHello(payload, out var clientNonce, out var clientProof))
+                    {
+                        Log.Error("[NetworkServer] 连接 {0} ClientHello 负载非法（期望 {1} 字节：[随机数][持有证明]），已断开",
+                            connectionId, NetworkHandshake.HelloPayloadLength);
+                        DisconnectClient(connectionId);
+                        return;
+                    }
+                    var expectedClientProof = NetworkHandshake.ComputeClientProof(handshakeMasterKey, conn.ServerNonce, clientNonce);
+                    if (!NetworkHandshake.ProofEquals(expectedClientProof, clientProof))
+                    {
+                        Log.Error("[NetworkServer] 连接 {0} ClientHello 持有证明校验失败（对端不持有主密钥），已断开", connectionId);
+                        DisconnectClient(connectionId);
+                        return;
+                    }
                     byte[] sessionKey = NetworkHandshake.DeriveSessionKey(handshakeMasterKey, conn.ServerNonce, clientNonce);
-                    conn.SwapToEncrypted(EncryptedCodec.Wrap(NetworkCodecFactory.Create(config.codec), sessionKey));
+                    conn.SwapToEncrypted(EncryptedCodec.WrapServer(NetworkCodecFactory.Create(config.codec), sessionKey));
                     try { OnClientSecured?.Invoke(connectionId); }
                     catch (Exception ex) { Log.Warning("[NetworkServer] OnClientSecured 回调异常: {0}", ex.Message); }
                     return;

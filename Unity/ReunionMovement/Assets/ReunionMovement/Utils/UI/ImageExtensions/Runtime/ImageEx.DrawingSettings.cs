@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using ReunionMovement.Common;
 using UnityEngine;
 using UnityEngine.UI;
@@ -336,6 +336,10 @@ namespace ReunionMovement.UI.ImageExtensions
                 {
                     // Unity 文档化行为：当前材质/精灵不支持 alpha 命中测试时抛出，属预期，静默忽略
                 }
+
+                // 补上本文件其它 20 余处 setter 都有的脏化调用：alphaThreshold 是着色器属性 _AlphaThreshold 的来源，
+                // 不脏化则"用代码改阈值不会有任何视觉效果"，要等别的操作把材质弄脏才生效（属静默无效）
+                base.SetMaterialDirty();
             }
         }
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -247,8 +247,20 @@ namespace ReunionMovement.Common.Util.Download
         /// <returns></returns>
         public override UnityWebRequestAsyncOperation Download()
         {
-            if (CompletedMultipartDownload || string.IsNullOrEmpty(Uri) || string.IsNullOrEmpty(DownloadPath))
+            // 已完成：返回 null，由 FileDownloader.Dispatch 的 CompletedMultipartDownload 分支收敛计数
+            if (CompletedMultipartDownload)
             {
+                return null;
+            }
+
+            // 参数不完整属于配置错误，必须标记 DidError：
+            // 否则 Download() 会永远返回 null → FileDownloader 的 Dispatch ↔ DispatchCompletion 无限循环
+            if (string.IsNullOrEmpty(Uri) || string.IsNullOrEmpty(DownloadPath))
+            {
+                DidError = true;
+                Log.Error("UWRExecutor.Download 参数不完整（Uri={0}, DownloadPath={1}），中止下载", Uri, DownloadPath);
+                try { OnDownloadError?.Invoke(0, "下载参数不完整（Uri 或 DownloadPath 为空）"); }
+                catch (Exception ex) { Log.Warning("[UWRExecutor] OnDownloadError 回调异常: {0}", ex.Message); }
                 return null;
             }
 
@@ -263,6 +275,13 @@ namespace ReunionMovement.Common.Util.Download
                 currentRequest = uwr;
                 resp.completed += (obj) =>
                 {
+                    // 与分块路径的续体保持一致（见下方"Cancel() 已 Dispose 本请求：跳过回调"）：
+                    // Cancel 与 Pause 都会 Dispose 当前请求并把字段置空，但本闭包捕获的是局部 uwr，
+                    // 仍指向已释放对象 —— 取消/暂停后继续访问会触碰已 Dispose 的 UWR，且这些收尾动作本就无需执行。
+                    if (cancelCalled || paused)
+                    {
+                        return;
+                    }
                     // 必须校验 UWR 结果：失败时不能仅凭文件存在就误报成功
                     // （下方通用回调会处理失败分支：OnDownloadError + Cancel）
                     if (uwr == null || uwr.result != UnityWebRequest.Result.Success)
@@ -314,7 +333,17 @@ namespace ReunionMovement.Common.Util.Download
                     long remaining = expectedSize - fileSize;
                     if (remaining <= 0)
                     {
+                        // 本地文件已达到预期大小（断点续传/上次进程在写完后被杀）：本次下载视为已完成。
+                        // 必须置 CompletedMultipartDownload 并派发成功事件 —— 否则 FileDownloader.DispatchCompletion
+                        // 仍认为需要继续分块，于是再次 Dispatch 本执行器，形成 Dispatch ↔ DispatchCompletion
+                        // 无限循环（每轮刷一条 Warning，CPU/GC 空转且任务永不结束）。
                         Log.Warning("文件已存在且大小符合要求，跳过下载: {0}", DownloadResultPath);
+                        progress = 1.0f;
+                        bytesDownloaded = fileSize;
+                        CompletedMultipartDownload = true;
+                        endTime = Environment.TickCount;
+                        try { OnDownloadSuccess?.Invoke(); }
+                        catch (Exception ex) { Log.Warning("[UWRExecutor] OnDownloadSuccess 回调异常: {0}", ex.Message); }
                         return null;
                     }
 

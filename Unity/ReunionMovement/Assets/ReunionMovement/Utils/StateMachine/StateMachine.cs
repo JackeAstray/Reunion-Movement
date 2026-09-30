@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Newtonsoft.Json;
@@ -324,7 +324,19 @@ namespace ReunionMovement.Common.Util.StateMachine
             // 若未注册条件，默认允许转换；若注册了条件，则按条件判断
             if (transitionConditions.TryGetValue((currentState.label, newState), out var condition))
             {
-                return condition();
+                // 这是全文件唯一没有异常隔离的用户回调：条件里一个 NRE 就会沿
+                // ChangeState → Update 抛出，打断状态机与调用方的每帧逻辑。
+                // 与其余回调保持一致：异常时按"条件不满足"处理。
+                try
+                {
+                    return condition();
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("[StateMachine] 状态转换条件 {0} → {1} 抛出异常，按不满足条件处理: {2}",
+                        currentState.label, newState, ex.Message);
+                    return false;
+                }
             }
             return true;
         }
@@ -394,6 +406,15 @@ namespace ReunionMovement.Common.Util.StateMachine
         {
             try { currentState?.OnStop?.Invoke(); }
             catch (Exception ex) { Log.Error("StateMachine OnStop 异常（已隔离）: {0}", ex.Message); }
+            // ChangeState / RevertToPreviousState 都会在离开状态时广播 OnStateExit，
+            // Reset 也必须补上：订阅者通常在此做"退出状态"的清理（解锁输入、隐藏 HUD），
+            // 漏发会让 Reset 之后残留上一次状态的外显效果。仅在 currentState 非空时发一次，
+            // 与另外两处保持一致（并行状态的生命周期只走 OnStop，此处不额外广播）。
+            if (currentState != null)
+            {
+                try { OnStateExit?.Invoke(currentState.label); }
+                catch (Exception ex) { Log.Error("StateMachine OnStateExit 订阅者异常（已隔离）: {0}", ex.Message); }
+            }
             currentState = null;
             // 并行状态也需停止并清空，否则 Reset 后仍在 Update 中运行（泄漏）
             for (int i = 0; i < parallelStates.Count; i++)

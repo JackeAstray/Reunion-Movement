@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEditor;
 using UnityEditor.UI;
 using UnityEngine;
@@ -1016,6 +1016,9 @@ namespace ReunionMovement.EditorTools.ImageExtensions
                 spMaterialSettings.enumValueIndex = matSett;
                 foreach (Object obj in targets)
                 {
+                    // 与 DetectMissingShaderChannels 的守卫保持一致：targets 可能瞬时含 null（多选编辑中被销毁的对象），
+                    // 硬转换 (ImageEx)obj 会抛 NullReferenceException，SetDirty(null) 同样无效
+                    if (obj == null) continue;
                     ((ImageEx)obj).MaterialMode = (MaterialMode)matSett;
                     UnityEditor.EditorUtility.SetDirty(obj);
                 }
@@ -1044,12 +1047,16 @@ namespace ReunionMovement.EditorTools.ImageExtensions
                     spMaterial.objectReferenceValue = matObj;
                     foreach (Object obj in targets)
                     {
+                        // 与 DetectMissingShaderChannels 及其上方的 MaterialMode 循环保持一致（targets 可能瞬时含 null）
+                        if (obj == null) continue;
                         ((ImageEx)obj).material = (Material)matObj;
                         UnityEditor.EditorUtility.SetDirty(obj);
                     }
                 }
 
-                EditorGUI.BeginDisabledGroup(spMaterial.objectReferenceValue != null);
+                // 反转修正：本按钮的作用是"清空自定义材质、回落到精灵材质"，因此应在**已有材质**时可用、
+                // 材质已为空时禁用。原条件 `!= null` 恰好相反 ⇒ 有材质时按钮被置灰，永远点不到（功能完全不可用）。
+                EditorGUI.BeginDisabledGroup(spMaterial.objectReferenceValue == null);
                 {
                     if (GUILayout.Button("使用精灵材质"))
                     {
@@ -1057,6 +1064,8 @@ namespace ReunionMovement.EditorTools.ImageExtensions
 
                         foreach (Object obj in targets)
                         {
+                            // 与本方法前两处 targets 循环保持一致（targets 可能瞬时含 null）
+                            if (obj == null) continue;
                             ((ImageEx)obj).material = null;
                             UnityEditor.EditorUtility.SetDirty(obj);
                         }

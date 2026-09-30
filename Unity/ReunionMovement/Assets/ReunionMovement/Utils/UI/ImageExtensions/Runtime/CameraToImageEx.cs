@@ -1,4 +1,4 @@
-﻿using ReunionMovement.Common;
+using ReunionMovement.Common;
 using UnityEngine;
 
 namespace ReunionMovement.UI.ImageExtensions
@@ -188,9 +188,25 @@ namespace ReunionMovement.UI.ImageExtensions
             {
                 Vector2 size = rectTransform.rect.size;
                 lastRectSize = size;
+
+                // rect.size 的单位是"画布参考分辨率"，不是物理像素：在启用 CanvasScaler 的
+                // 高分屏上（如参考 1920×1080 跑在 4K，scaleFactor≈2）直接用会把 RT 建得过小，
+                // 相机画面被放大后明显发糊。乘 scaleFactor 换算为实际像素。
+                // 同时以屏幕尺寸为界做**等比例**收缩（只钳单轴会让纵横比失真，与 matchAspectToRect 的本意相反）。
+                Canvas c = GetComponentInParent<Canvas>();
+                float scale = c != null ? c.scaleFactor : 1f;
+                float pixelWidth = size.x * scale;
+                float pixelHeight = size.y * scale;
+                if (Screen.width > 0 && Screen.height > 0 && pixelWidth > 0f && pixelHeight > 0f)
+                {
+                    float fit = Mathf.Min(1f, Mathf.Min(Screen.width / pixelWidth, Screen.height / pixelHeight));
+                    pixelWidth *= fit;
+                    pixelHeight *= fit;
+                }
+
                 return new Vector2Int(
-                    Mathf.Max(2, Mathf.RoundToInt(size.x)),
-                    Mathf.Max(2, Mathf.RoundToInt(size.y)));
+                    Mathf.Max(2, Mathf.RoundToInt(pixelWidth)),
+                    Mathf.Max(2, Mathf.RoundToInt(pixelHeight)));
             }
 
             return new Vector2Int(
@@ -206,7 +222,7 @@ namespace ReunionMovement.UI.ImageExtensions
             if (opaqueRT != null)
             {
                 opaqueRT.Release();
-                Destroy(opaqueRT);
+                DestroyResource(opaqueRT);
                 opaqueRT = null;
             }
 
@@ -237,7 +253,7 @@ namespace ReunionMovement.UI.ImageExtensions
             if (ownedRT != null)
             {
                 ownedRT.Release();
-                Destroy(ownedRT);
+                DestroyResource(ownedRT);
                 ownedRT = null;
             }
         }
@@ -249,15 +265,28 @@ namespace ReunionMovement.UI.ImageExtensions
             if (opaqueRT != null)
             {
                 opaqueRT.Release();
-                Destroy(opaqueRT);
+                DestroyResource(opaqueRT);
                 opaqueRT = null;
             }
 
             if (opaqueMaterial != null)
             {
-                Destroy(opaqueMaterial);
+                DestroyResource(opaqueMaterial);
                 opaqueMaterial = null;
             }
+        }
+
+        /// <summary>
+        /// 释放运行时创建的 Unity 对象。
+        /// 编辑器非播放态（组件被禁用、域重载、退出播放模式）调用 <c>Destroy</c> 是无效的，
+        /// Unity 会报 "Destroy may not be called from edit mode"，资源随即泄漏 ——
+        /// 与工程内 ImageExReplica/ImageEx 的写法保持一致，按运行状态二选一。
+        /// </summary>
+        private static void DestroyResource(UnityEngine.Object obj)
+        {
+            if (obj == null) return;
+            if (Application.isPlaying) UnityEngine.Object.Destroy(obj);
+            else UnityEngine.Object.DestroyImmediate(obj);
         }
 
         #endregion

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using ReunionMovement.Common;
 using UnityEngine;
 using UnityEngine.UI;
@@ -288,11 +288,10 @@ namespace ReunionMovement.UI.ImageExtensions
             InitializeComponents();
             base.Reset();
         }
-#else
-        void Reset() {
-            InitializeComponents();
-        }
 #endif
+        // 玩家构建不再定义 Reset()：它是编辑器专用 Unity 消息，player 中永不被调用；
+        // 原 #else 分支会隐藏 UIBehaviour.Reset() 并让每个 player 构建都产生 CS0114 警告
+        // （已实证全项目无 SendMessage("Reset") 形式的调用，删除后行为不变）
 
         protected override void Awake()
         {

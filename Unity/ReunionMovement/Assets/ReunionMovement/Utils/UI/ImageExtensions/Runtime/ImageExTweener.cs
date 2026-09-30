@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -159,7 +159,15 @@ namespace ReunionMovement.UI.ImageExtensions
             m_Playing = true;
             m_Completed = false;
             m_LastDirection = m_Direction;
-            CaptureBaseValues();
+            // 只在首次捕获基准值：Play() 每次重播都会走到这里，而补间过程中目标属性已被写成插值结果。
+            // 若每次都重新捕获，则"中途重播"或"禁用再启用"（PlayOnEnable.KeepDirection 会走 Play 分支）
+            // 会把当前插值状态当成新的最大值 ⇒ 效果强度随操作次数逐次衰减（UI 面板反复开关即可复现）。
+            // 确需以目标当前值为新基准时，显式调用 RecaptureBaseValues()。
+            if (!m_BaseCaptured)
+            {
+                CaptureBaseValues();
+                m_BaseCaptured = true;
+            }
         }
 
         [ContextMenu("Pause")]
@@ -256,6 +264,20 @@ namespace ReunionMovement.UI.ImageExtensions
 
             float factor = Mathf.Clamp01(activeCurve.Evaluate(rawT));
             ApplyFactor(factor);
+        }
+
+        /// <summary>是否已捕获过基准值（由 Play() 首次捕获，或由 RecaptureBaseValues() 显式刷新）</summary>
+        private bool m_BaseCaptured;
+
+        /// <summary>
+        /// 显式重新捕获基准值。仅在你确实要"以目标当前值为新基准"时调用
+        /// （例如先给目标设置好新的效果强度，再播放补间）。Play() 本身不会重复捕获，否则
+        /// 中途重播会把插值结果当成最大值，导致效果强度逐次衰减。
+        /// </summary>
+        public void RecaptureBaseValues()
+        {
+            CaptureBaseValues();
+            m_BaseCaptured = true;
         }
 
         private void CaptureBaseValues()

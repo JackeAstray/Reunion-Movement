@@ -1,4 +1,4 @@
-﻿using ReunionMovement.Common;
+using ReunionMovement.Common;
 using System;
 using System.Globalization;
 using System.IO;
@@ -104,7 +104,9 @@ namespace ReunionMovement.Common.Util
         ///  - 如果标记文件存在但 PlayerPrefs 记录被清空 -> 认为被篡改（堵住删键绕过）。
         ///  - 如果存在记录且当前 UTC 时间小于记录 - 容忍阈值 -> 认为回拨。
         ///  - 否则更新记录为 max(记录, 当前时间) 并保存哈希。
-        /// 返回 true 表示发现问题（篡改或回拨）。
+        /// 返回 true 表示确认发现问题（哈希不匹配 / 记录缺失 / 确认回拨）。
+        /// 注意：IO 与 PlayerPrefs 访问异常一律不视为篡改（返回 false），
+        /// 因为返回 true 的调用方会 PurgeActiveScene()，不能让环境错误触发破坏性动作。
         /// </summary>
         private bool IsClockRolledBackOrTampered(DateTime nowUtc)
         {
@@ -163,8 +165,11 @@ namespace ReunionMovement.Common.Util
                     }
                     catch (Exception ex)
                     {
-                        Log.Warning("DeadlineMgr: 读取标记文件失败，已视为被篡改。{0}", ex.Message);
-                        return true;
+                        // IO 失败（只读目录/磁盘满/文件被占用）不是篡改证据：
+                        // 过去此处 return true 会走到 PurgeActiveScene() 清空整个场景，
+                        // 把一次瞬时环境错误放大成"游戏被清空"。安全方向应是不执行破坏性动作。
+                        Log.Warning("DeadlineMgr: 读取标记文件失败（按非篡改处理，仅记录）。{0}", ex.Message);
+                        return false;
                     }
                     if (!string.Equals(markerContent, storedTicksStr, StringComparison.Ordinal))
                     {
@@ -195,8 +200,10 @@ namespace ReunionMovement.Common.Util
             }
             catch (Exception ex)
             {
-                Log.Warning("DeadlineMgr: 检测时钟回拨时出现异常，按安全策略处理。异常: {0}", ex.Message);
-                return true;
+                // 兜底：本方法内的异常主要来自文件 IO / PlayerPrefs（非篡改证据）。
+                // 不可返回 true —— 调用方会 PurgeActiveScene()，即用一次 IO 异常清空玩家场景。
+                Log.Warning("DeadlineMgr: 检测时钟回拨时出现异常，按非篡改处理（仅记录）。异常: {0}", ex.Message);
+                return false;
             }
         }
 

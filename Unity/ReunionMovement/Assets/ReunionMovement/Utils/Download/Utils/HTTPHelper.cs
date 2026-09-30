@@ -1,4 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -309,6 +309,14 @@ namespace ReunionMovement.Common.Util.Download
             else
             {
                 string relativePath = GetRelativePathFromUri(uri);
+                if (string.IsNullOrEmpty(relativePath))
+                {
+                    // GetRelativePathFromUri 在 URI 没有有效路径段时返回空串，而
+                    // Path.Combine(path, "") 的结果就是 path 本身（一个目录），
+                    // DownloadHandlerFile 会拿到目录路径并失败。退化为使用文件名。
+                    relativePath = string.IsNullOrEmpty(filename) ? "download.bin" : filename;
+                    Log.Debug("GetRelativePathFromUri 为空，已退化为文件名: {0}", relativePath);
+                }
                 tempPath = Path.Combine(path, relativePath).Replace("/", Path.DirectorySeparatorChar.ToString());
             }
 

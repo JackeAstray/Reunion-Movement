@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using ReunionMovement.Common;
 using UnityEngine;
 using UnityEngine.UI;
@@ -992,7 +992,10 @@ namespace ReunionMovement.UI.ImageExtensions
             get => shadowBlurIntensity;
             set
             {
-                shadowBlurIntensity = Mathf.Clamp(value, 0f, 8f);
+                // 对齐两处既有声明：字段上的 [Range(0, 100)]（ImageEx.cs）与着色器 _ShadowBlurIntensity
+                // 声明的 Range(0,100)（ImageEx.shader:99）。此前此处夹到 8 属孤例 —— 面板可设 0~100 且
+                // 着色器照单执行，而代码赋值却被静默压到 8，同一个设置因入口不同而结果不同。
+                shadowBlurIntensity = Mathf.Clamp(value, 0f, 100f);
                 SetMaterialDirty();
             }
         }

@@ -1,4 +1,4 @@
-﻿using ReunionMovement.Common.Util.HttpService;
+using ReunionMovement.Common.Util.HttpService;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -22,7 +22,10 @@ namespace ReunionMovement.Common.Util
         /// <summary>错误日志文件路径（persistentDataPath/Logs/error_log.txt）</summary>
         public static string LogFilePath { get; private set; }
 
-        /// <summary>上报接口地址（null/空表示不上传；可在初始化后配置）</summary>
+        /// <summary>
+        /// 上报接口地址（null/空表示不上传；可在初始化后配置）。
+        /// 只接受 https（本机回环允许 http，便于开发期自建日志服务），否则 UploadErrorLog 拒绝上报。
+        /// </summary>
         public static string UploadUrl { get; set; }
 
         /// <summary>内存缓冲上限</summary>
@@ -42,19 +45,38 @@ namespace ReunionMovement.Common.Util
         private const long MinUploadIntervalTicks = TimeSpan.TicksPerSecond * 5;
         private static long lastUploadTicks;
 
-        // ===== 上报脱敏（防本地绝对路径/开发机用户名/邮箱随堆栈外泄）=====
-        private static readonly Regex s_winPathRegex = new Regex(@"[A-Za-z]:[\\/][^\s<>|:*?""]*", RegexOptions.Compiled);
+        // ===== 上报脱敏（防本地绝对路径/开发机用户名/邮箱/URL 凭据随堆栈外泄）=====
+        // 前置否定断言 (?<![A-Za-z0-9]) 必须保留：否则 "http://host/path" 中的 "p://host/path"
+        // 会被当成盘符路径，整条 URL 被替换成 "htt[path]"，反而让最需要排查的地址失效
+        private static readonly Regex s_winPathRegex = new Regex(@"(?<![A-Za-z0-9])[A-Za-z]:[\\/][^\s<>|:*?""]*", RegexOptions.Compiled);
         private static readonly Regex s_uncPathRegex = new Regex(@"\\\\(?:[^\\\s]+)\\(?:[^\\\s]+)", RegexOptions.Compiled);
         private static readonly Regex s_emailRegex = new Regex(@"\b[\w.+-]+@[\w-]+\.[\w.-]+\b", RegexOptions.Compiled);
+        // 保留 URL 主体但抹掉 query：签名/令牌通常就在 query 里
+        private static readonly Regex s_urlQueryRegex = new Regex(@"(\bhttps?://[^\s?#]+)\?[^\s]*", RegexOptions.Compiled);
 
-        /// <summary>上报前脱敏：屏蔽盘符路径 / UNC 路径 / 邮箱，防止堆栈泄漏开发机目录结构与个人数据</summary>
+        /// <summary>上报前脱敏：屏蔽盘符路径 / UNC 路径 / 邮箱 / URL query，防止堆栈泄漏开发机目录结构与个人数据</summary>
         internal static string SanitizeForUpload(string text)
         {
             if (string.IsNullOrEmpty(text)) return text;
+            // 顺序：先抹 URL query，再屏蔽路径 —— 反过来的话 URL 会先被盘符正则破坏
+            text = s_urlQueryRegex.Replace(text, "$1?[redacted]");
             text = s_winPathRegex.Replace(text, "[path]");
             text = s_uncPathRegex.Replace(text, "[path]");
             text = s_emailRegex.Replace(text, "[email]");
             return text;
+        }
+
+        /// <summary>
+        /// 校验上报地址是否可接受：仅 https；http 只允许本机回环（开发期自建日志服务）。
+        /// 非 https 会让设备型号、应用版本与完整堆栈以明文上网，不能作为默认行为。
+        /// </summary>
+        internal static bool IsUploadUrlAllowed(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return false;
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return false;
+            if (uri.Scheme == Uri.UriSchemeHttps) return true;
+            if (uri.Scheme == Uri.UriSchemeHttp) return uri.IsLoopback;
+            return false;
         }
 
         // ===== 同类错误聚合（错误风暴防护）=====
@@ -157,6 +179,12 @@ namespace ReunionMovement.Common.Util
             string entry = sb.ToString();
 
             bool aggregated = false;
+            // 去重/缓冲更新、聚合计数读取与文件写入必须处于同一个 lock 内（原实现把文件写入放在锁外）：
+            //  - Unity 的 logMessageReceived 可在任意线程触发，锁外并发 File.AppendAllText /
+            //    File.Move 会交错并抛 IOException，结果是把错误日志本身丢掉；
+            //  - lastLogCount 在锁外读取会读到其他线程改写后的值，聚合行内容不确定。
+            // AppendToFile 内部的 Log.Warning 不会重入：本方法开头的错误级过滤在加锁之前，
+            // Warning 直接被丢弃。
             lock (syncRoot)
             {
                 if (key == lastLogKey && recentErrors.Count > 0)
@@ -178,18 +206,18 @@ namespace ReunionMovement.Common.Util
                         recentErrors.RemoveAt(0);
                     }
                 }
-            }
 
-            // 追加写入本地文件（崩溃前尽量落盘）。同类错误只首次写全文，
-            // 之后每 AggregateFlushInterval 次写一条聚合标记行（轮转限制总大小）
-            if (!aggregated)
-            {
-                AppendToFile(entry);
-            }
-            else if (lastLogCount % AggregateFlushInterval == 0)
-            {
-                AppendToFile(string.Format("[{0}] [{1}] 上述错误已重复 {2} 次\n",
-                    DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), type, lastLogCount));
+                // 追加写入本地文件（崩溃前尽量落盘）。同类错误只首次写全文，
+                // 之后每 AggregateFlushInterval 次写一条聚合标记行（轮转限制总大小）
+                if (!aggregated)
+                {
+                    AppendToFile(entry);
+                }
+                else if (lastLogCount % AggregateFlushInterval == 0)
+                {
+                    AppendToFile(string.Format("[{0}] [{1}] 上述错误已重复 {2} 次\n",
+                        DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), type, lastLogCount));
+                }
             }
 
             // 重入防护（含多线程：Unity 日志回调允许任意线程触发，isDispatching 须持锁读写）：
@@ -256,6 +284,15 @@ namespace ReunionMovement.Common.Util
                 // 与文档一致：未配置 URL 视为“无需上报”，回调 true，
                 // 与“暂无错误”分支语义统一，调用方不得把未配置误判为上传失败
                 onComplete?.Invoke(true);
+                return;
+            }
+
+            // 上报内容包含 SystemInfo.deviceModel / Application.version / 完整堆栈，
+            // 必须是 https（本机回环例外）。配置了非 https 地址时直接拒绝，而不是仅打一条警告后照发。
+            if (!IsUploadUrlAllowed(UploadUrl))
+            {
+                Log.Warning("[ErrorReporter] UploadUrl 必须是 https（仅本机回环可用 http），已拒绝上报以免设备信息与堆栈明文外发: {0}", UploadUrl);
+                onComplete?.Invoke(false);
                 return;
             }
 
