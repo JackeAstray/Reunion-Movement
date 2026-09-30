@@ -264,6 +264,8 @@ namespace ReunionMovement.Common.Util.Download
         {
             if (!Downloading)
             {
+                didError = false;
+                didCancel = false;
                 downloading = true;
                 startTime = Environment.TickCount;
                 initialCount = 1;
