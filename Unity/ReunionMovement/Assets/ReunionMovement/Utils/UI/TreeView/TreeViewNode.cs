@@ -13,7 +13,7 @@ namespace ReunionMovement
     /// 负责节点的渲染、展开/折叠交互、颜色设置、缩进占位符生成等 UI 行为。
     /// 继承自 UIBehaviour，可响应 Unity UI 生命周期事件。
     /// </summary>
-    public class TreeViewNode : UIBehaviour
+    public class TreeViewNode : UIBehaviour, IPointerClickHandler
     {
         /// <summary>当前节点的层级深度，用于控制缩进和颜色</summary>
         public int layer = 0;
@@ -67,17 +67,19 @@ namespace ReunionMovement
 
         /// <summary>节点点击时触发的回调委托</summary>
         private Action<TreeViewData> action;
+        private bool componentsReady;
+        public bool IsExpanded { get; private set; }
 
         /// <summary>
         /// 懒加载方式获取并缓存当前节点所需的全部 UI 组件引用。
-        /// 仅在首次调用时执行查找，后续调用直接返回 true（通过 myTransform != null 判断）。
+        /// 校验成功后缓存组件引用，校验失败允许下次调用重试。
         /// 查找路径基于固定的节点预制体层级结构；
         /// 结构不完整时输出明确错误并禁用节点，返回 false 由调用方短路，避免后续链式调用 NRE。
         /// </summary>
         private bool TryCacheComponents()
         {
             // 已缓存过则跳过，避免重复查找
-            if (myTransform != null) return true;
+            if (componentsReady) return true;
 
             myTransform = this.transform;
             bg = myTransform.GetComponent<Image>();
@@ -110,6 +112,20 @@ namespace ReunionMovement
 
             // Toggle 中的箭头图标
             toggleTransform = toggle.transform.Find("Icon");
+            var input = toggle.GetComponent<EventTrigger>();
+            if (input == null) input = toggle.gameObject.AddComponent<EventTrigger>();
+            var clickEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
+            clickEntry.callback.AddListener(eventData =>
+            {
+                if (this != null && eventData is PointerEventData pointerEvent) OnPointerClick(pointerEvent);
+            });
+            input.triggers.Add(clickEntry);
+            var submitEntry = new EventTrigger.Entry { eventID = EventTriggerType.Submit };
+            submitEntry.callback.AddListener(eventData =>
+            {
+                if (this != null) Activate();
+            });
+            input.triggers.Add(submitEntry);
 
             // 向上逐级查找 TreeView 控制器（替代硬编码三级查找，层级结构变化时仍可靠）
             uiTree = null;
@@ -120,6 +136,7 @@ namespace ReunionMovement
                 if (uiTree != null) break;
                 search = search.parent;
             }
+            componentsReady = true;
             return true;
         }
 
@@ -156,12 +173,12 @@ namespace ReunionMovement
             if (data == null || !TryCacheComponents()) return;
 
             // 先移除旧监听，防止重复注册导致多次回调
-            RemoveListener();
+            Unbind();
             ResetComponent();
 
             treeData = data;
             text.text = data.name;
-            toggle.isOn = false;
+            toggle.SetIsOnWithoutNotify(false);
 
             // 注册 Toggle 值变化回调
             toggle.onValueChanged.AddListener(OpenOrClose);
@@ -173,7 +190,7 @@ namespace ReunionMovement
                 0, 0);
 
             // 叶子节点（无子节点）显示透明占位图代替箭头
-            if (data.childNodes.Count.Equals(0) && toggleTransform != null)
+            if ((data.childNodes == null || data.childNodes.Count == 0) && toggleTransform != null)
             {
                 var arrowImage = toggleTransform.GetComponent<Image>();
                 if (arrowImage != null) arrowImage.sprite = transparent;
@@ -186,9 +203,6 @@ namespace ReunionMovement
             SetColor(data.layer);
             SetDisplayDecorate(data.displayDecorate);
 
-            // 回收旧的已展开子节点：走与 CloseChildren 相同的路径（移除监听 + 递归回收 + 推回对象池），
-            // 裸 Clear() 会使子节点 GameObject 变孤儿且 Toggle 监听残留，多次 Refresh 持续泄漏
-            CloseChildren();
         }
 
         /// <summary>
@@ -202,6 +216,8 @@ namespace ReunionMovement
         /// <param name="layer">当前节点的层级深度</param>
         public void SetColor(int layer)
         {
+            if (!TryCacheComponents()) return;
+            layer = Mathf.Max(0, layer);
             this.layer = layer;
 
             if (multiPlaceholder)
@@ -267,7 +283,7 @@ namespace ReunionMovement
             }
 
             // 从 TreeView 配色方案中取对应层级的背景色
-            if (uiTree != null && layer < uiTree.colors.Count)
+            if (bg != null && uiTree != null && uiTree.colors != null && layer < uiTree.colors.Count)
             {
                 bg.color = uiTree.colors[layer];
             }
@@ -279,6 +295,7 @@ namespace ReunionMovement
         /// <param name="displayDecorate">true 显示装饰，false 隐藏</param>
         public void SetDisplayDecorate(bool displayDecorate)
         {
+            if (treeData != null) treeData.displayDecorate = displayDecorate;
             if (decorate != null)
             {
                 decorate.gameObject.SetActive(displayDecorate);
@@ -286,30 +303,79 @@ namespace ReunionMovement
         }
 
         /// <summary>
-        /// 递归设置当前节点及其所有已展开子节点的装饰元素显示状态。
-        /// 遍历 treeData.childNodes，通过 FindChildNode 找到对应的 UI 节点并递归调用。
+        /// 更新整个数据子树的装饰状态，并同步当前已实例化的视图。
         /// </summary>
         /// <param name="displayDecorate">true 显示装饰，false 隐藏</param>
         public void SetDisplayDecorateRecursive(bool displayDecorate)
         {
-            SetDisplayDecorate(displayDecorate);
-            if (treeData.childNodes != null)
+            if (treeData == null) return;
+            var pending = new Stack<TreeViewData>();
+            pending.Push(treeData);
+            while (pending.Count > 0)
             {
-                foreach (var child in treeData.childNodes)
+                var data = pending.Pop();
+                data.displayDecorate = displayDecorate;
+                if (data.childNodes == null) continue;
+                foreach (var child in data.childNodes)
                 {
-                    var node = FindChildNode(child.name);
-                    node?.SetDisplayDecorateRecursive(displayDecorate);
+                    if (child != null) pending.Push(child);
                 }
+            }
+            ApplyDecorateToVisibleNodes(displayDecorate);
+        }
+
+        private void ApplyDecorateToVisibleNodes(bool displayDecorate)
+        {
+            SetDisplayDecorate(displayDecorate);
+            foreach (var child in children)
+            {
+                if (child != null)
+                    child.GetComponent<TreeViewNode>()?.ApplyDecorateToVisibleNodes(displayDecorate);
             }
         }
 
+        public void Unbind()
+        {
+            RemoveListener();
+            CloseChildren();
+            IsExpanded = false;
+            if (toggle != null) toggle.SetIsOnWithoutNotify(false);
+            treeData = null;
+            action = null;
+        }
+
         /// <summary>
-        /// 刷新当前节点：使用当前持有的 treeData 重新执行 Insert，
-        /// 用于在数据未变但 UI 需要重建时（如回收后重新显示）。
+        /// 重新绑定数据，并按数据引用恢复已展开节点。
         /// </summary>
         public void Refresh()
         {
+            if (treeData == null) return;
+            var expanded = new List<TreeViewData>();
+            CaptureExpanded(expanded);
             Insert(treeData);
+            RestoreExpanded(expanded);
+        }
+
+        private void CaptureExpanded(List<TreeViewData> expanded)
+        {
+            if (toggle != null && toggle.isOn && treeData != null) expanded.Add(treeData);
+            foreach (var child in children)
+            {
+                if (child != null) child.GetComponent<TreeViewNode>()?.CaptureExpanded(expanded);
+            }
+        }
+
+        private void RestoreExpanded(List<TreeViewData> expanded)
+        {
+            if (treeData == null || toggle == null || treeData.childNodes == null || treeData.childNodes.Count == 0) return;
+            bool wasExpanded = expanded.Exists(data => ReferenceEquals(data, treeData));
+            if (!wasExpanded) return;
+            SetExpanded(true);
+            if (toggleTransform != null) toggleTransform.localEulerAngles = Vector3.zero;
+            foreach (var child in children)
+            {
+                if (child != null) child.GetComponent<TreeViewNode>()?.RestoreExpanded(expanded);
+            }
         }
 
         /// <summary>
@@ -330,33 +396,53 @@ namespace ReunionMovement
         /// <param name="isOn">Toggle 当前是否为选中（展开）状态</param>
         private void OpenOrClose(bool isOn)
         {
-            // 叶子节点：作为点击项，每次点击都触发回调
-            if (treeData == null || treeData.childNodes == null || treeData.childNodes.Count == 0)
-            {
-                action?.Invoke(treeData);
-                // 重置 Toggle 为关闭状态，使其可被重复点击
-                toggle.SetIsOnWithoutNotify(false);
-                return;
-            }
+            toggle.SetIsOnWithoutNotify(IsExpanded);
+        }
 
-            // 非叶子节点：展开或折叠
-            if (isOn)
-                OpenChildren();
-            else
-                CloseChildren();
-
-            // 旋转箭头：展开时指向下方 (0°)，折叠时指向右侧 (90°)
-            // 预制体缺 "Icon" 子物体时 toggleTransform 为 null（TryCacheComponents 不校验），
-            // 判空与 ResetComponent 分支保持一致，避免点击展开/折叠即 NRE
+        public void SetExpanded(bool expanded)
+        {
+            if (treeData == null || !TryCacheComponents()) return;
+            expanded = expanded && treeData.childNodes != null && treeData.childNodes.Count > 0;
+            if (IsExpanded == expanded) return;
+            IsExpanded = expanded;
+            toggle.SetIsOnWithoutNotify(expanded);
+            if (expanded) OpenChildren();
+            else CloseChildren();
             if (toggleTransform != null)
-            {
-                toggleTransform.localEulerAngles = isOn
-                    ? new Vector3(0, 0, 0)
-                    : new Vector3(0, 0, 90);
-            }
+                toggleTransform.localEulerAngles = new Vector3(0, 0, expanded ? 0 : 90);
+        }
 
-            // 触发节点点击回调
-            action?.Invoke(treeData);
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (eventData.button != PointerEventData.InputButton.Left || !CanInteract()) return;
+            if (toggleTransform is RectTransform arrowRect &&
+                RectTransformUtility.RectangleContainsScreenPoint(arrowRect, eventData.position, eventData.pressEventCamera))
+                SetExpanded(!IsExpanded);
+            else Activate();
+        }
+
+        private bool CanInteract()
+        {
+            return isActiveAndEnabled && treeData != null && toggle != null && toggle.IsActive() && toggle.IsInteractable();
+        }
+
+        public void Activate()
+        {
+            if (!CanInteract() || !treeData.enableAction) return;
+            if (uiTree != null) uiTree.Select(treeData.Id, true);
+            else action?.Invoke(treeData);
+        }
+
+        public TreeViewNode FindById(string id)
+        {
+            if (treeData != null && treeData.Id == id) return this;
+            foreach (var child in children)
+            {
+                if (child == null) continue;
+                var found = child.GetComponent<TreeViewNode>()?.FindById(id);
+                if (found != null) return found;
+            }
+            return null;
         }
 
         /// <summary>
@@ -431,32 +517,17 @@ namespace ReunionMovement
         /// <returns>找到的 TreeViewNode 组件，未找到则返回 null</returns>
         public TreeViewNode FindChildNode(string name)
         {
-            if (treeData.childNodes == null) return null;
-
-            foreach (var child in treeData.childNodes)
+            foreach (var child in children)
             {
-                // 名称匹配：在当前已实例化的 children 中查找对应的 GameObject
-                if (child.name == name)
-                {
-                    foreach (var go in children)
-                    {
-                        if (go == null) continue;
-                        var node = go.GetComponent<TreeViewNode>();
-                        if (node != null && node.treeData == child)
-                            return node;
-                    }
-                    // 已匹配当前层级名称，跳过递归（避免同名但不同层级时误入更深层级）
-                    continue;
-                }
-
-                // 当前层级未匹配，递归进入每个已展开的子节点继续查找
-                foreach (var go in children)
-                {
-                    if (go == null) continue;
-                    var node = go.GetComponent<TreeViewNode>();
-                    var found = node?.FindChildNode(name);
-                    if (found != null) return found;
-                }
+                if (child == null) continue;
+                var node = child.GetComponent<TreeViewNode>();
+                if (node != null && node.treeData != null && node.treeData.name == name) return node;
+            }
+            foreach (var child in children)
+            {
+                if (child == null) continue;
+                var found = child.GetComponent<TreeViewNode>()?.FindChildNode(name);
+                if (found != null) return found;
             }
             return null;
         }

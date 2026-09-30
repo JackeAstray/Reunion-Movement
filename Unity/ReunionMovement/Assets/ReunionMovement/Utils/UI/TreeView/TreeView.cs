@@ -23,12 +23,7 @@ namespace ReunionMovement
         {
             get
             {
-                // container 可能为 null（Find("Viewport/Content") 未命中）或没有子节点，需防越界
-                if (nodePrefab == null && container != null && container.childCount > 0)
-                {
-                    nodePrefab = container.GetChild(0).gameObject;
-                }
-                return nodePrefab;
+                return nodePrefab != null ? nodePrefab : tvObj != null ? tvObj.gameObject : null;
             }
             set { nodePrefab = value; }
         }
@@ -38,9 +33,93 @@ namespace ReunionMovement
         // 池容量上限：数据反复刷新/高频展开折叠时池无限增长会积压节点；超出直接销毁
         private const int MaxPoolSize = 128;
         private Transform poolParent = null;
-        // 模板节点在容器中的索引缓存（-1 未缓存）：避免每次 Pop 线性扫描 container.childCount（批量展开 O(n²)→O(n)）；
-        // 使用时校验缓存仍指向模板，失效自动重扫
-        private int cachedTemplateIndex = -1;
+        private readonly Dictionary<string, TreeViewData> dataById = new Dictionary<string, TreeViewData>();
+        private readonly Dictionary<string, string> parentById = new Dictionary<string, string>();
+        public event Action<TreeViewData> NodeClicked;
+        public event Action<TreeViewData> SelectionChanged;
+        public TreeViewData SelectedNode { get; private set; }
+
+        public void SetData(IEnumerable<TreeViewData> roots)
+        {
+            if (roots == null) throw new ArgumentNullException(nameof(roots));
+            Insert(new List<TreeViewData>(roots));
+        }
+
+        private void IndexNodes(IEnumerable<TreeViewData> nodes, string parentId,
+            Dictionary<string, TreeViewData> index, Dictionary<string, string> parents)
+        {
+            foreach (var node in nodes)
+            {
+                if (node == null) continue;
+                if (index.ContainsKey(node.Id)) throw new ArgumentException("Duplicate node ID or cyclic tree: " + node.Id);
+                index.Add(node.Id, node);
+                parents.Add(node.Id, parentId);
+                if (node.childNodes != null) IndexNodes(node.childNodes, node.Id, index, parents);
+            }
+        }
+
+        public TreeViewData FindById(string id)
+        {
+            return id != null && dataById.TryGetValue(id, out var data) ? data : null;
+        }
+
+        private TreeViewNode FindView(string id)
+        {
+            foreach (var root in treeRootNodes)
+            {
+                if (root == null) continue;
+                var view = root.FindById(id);
+                if (view != null) return view;
+            }
+            return null;
+        }
+
+        public bool ExpandTo(string id)
+        {
+            if (FindById(id) == null) return false;
+            var ancestors = new Stack<string>();
+            var parentId = parentById[id];
+            while (parentId != null)
+            {
+                ancestors.Push(parentId);
+                parentId = parentById[parentId];
+            }
+            while (ancestors.Count > 0) FindView(ancestors.Pop())?.SetExpanded(true);
+            return FindView(id) != null;
+        }
+
+        public bool Expand(string id)
+        {
+            if (!ExpandTo(id)) return false;
+            FindView(id).SetExpanded(true);
+            return true;
+        }
+
+        public bool Collapse(string id)
+        {
+            var view = FindView(id);
+            if (view == null) return false;
+            view.SetExpanded(false);
+            return true;
+        }
+
+        public bool Select(string id, bool notify = false)
+        {
+            var data = FindById(id);
+            if (data == null) return false;
+            bool changed = !ReferenceEquals(SelectedNode, data);
+            SelectedNode = data;
+            if (notify)
+            {
+                if (changed) SelectionChanged?.Invoke(data);
+                if (data.enableAction)
+                {
+                    if (NodeClicked != null) NodeClicked.Invoke(data);
+                    else data.action?.Invoke(data);
+                }
+            }
+            return true;
+        }
 
         /// <summary>
         /// 插入数据
@@ -48,25 +127,55 @@ namespace ReunionMovement
         /// <param name="rootData"></param>
         public void Insert(List<TreeViewData> rootData)
         {
+            if (rootData == null) throw new ArgumentNullException(nameof(rootData));
             if (container == null)
             {
                 GetComponent();
             }
-            // 销毁旧根节点：仅 Clear 列表会泄漏 GameObject 与 Toggle 监听（数据刷新即累积泄漏）
-            for (int i = 0; i < treeRootNodes.Count; i++)
+            if (container == null || NodePrefab == null || NodePrefab.GetComponent<TreeViewNode>() == null)
             {
-                var oldNode = treeRootNodes[i];
-                if (oldNode != null) Destroy(oldNode.gameObject);
+                Debug.LogError("TreeView requires Viewport/Content and a TreeViewNode prefab.", this);
+                return;
             }
-            treeRootNodes.Clear();
+            var index = new Dictionary<string, TreeViewData>();
+            var parents = new Dictionary<string, string>();
+            IndexNodes(rootData, null, index, parents);
+            var selectedId = SelectedNode?.Id;
+            var expandedIds = new List<string>();
+            foreach (var entry in dataById)
+            {
+                if (FindView(entry.Key)?.IsExpanded == true) expandedIds.Add(entry.Key);
+            }
+            ReleaseRoots();
+            dataById.Clear();
+            parentById.Clear();
+            foreach (var entry in index) dataById.Add(entry.Key, entry.Value);
+            foreach (var entry in parents) parentById.Add(entry.Key, entry.Value);
             foreach (var item in rootData)
             {
-                TreeViewNode treeView = Instantiate(tvObj);
-                treeView.transform.SetParent(container, false);
-                treeView.transform.localScale = Vector3.one;
-                treeView.Insert(item);
-                treeRootNodes.Add(treeView);
+                if (item == null) continue;
+                var root = Pop(item, container.childCount);
+                treeRootNodes.Add(root.GetComponent<TreeViewNode>());
             }
+            SelectedNode = FindById(selectedId);
+            foreach (var id in expandedIds) Expand(id);
+        }
+
+        private void ReleaseRoots()
+        {
+            foreach (var root in treeRootNodes)
+            {
+                if (root != null) Push(root.gameObject);
+            }
+            treeRootNodes.Clear();
+        }
+
+        private static void DestroyNode(GameObject node)
+        {
+            if (node == null) return;
+            node.SetActive(false);
+            if (Application.isPlaying) UnityEngine.Object.Destroy(node);
+            else UnityEngine.Object.DestroyImmediate(node);
         }
 
         /// <summary>
@@ -92,11 +201,10 @@ namespace ReunionMovement
         /// </summary>
         public void RefreshAll()
         {
+            var roots = new List<TreeViewData>();
             foreach (var node in treeRootNodes)
-            {
-                // 同上：跳过被外部销毁的假空节点，避免 Refresh 触发 MissingReferenceException
-                if (node != null) node.Refresh();
-            }
+                if (node != null && node.GetTreeData() != null) roots.Add(node.GetTreeData());
+            SetData(roots);
         }
 
         /// <summary>
@@ -132,8 +240,9 @@ namespace ReunionMovement
             List<GameObject> result = new List<GameObject>();
             for (int i = datas.Count - 1; i >= 0; i--)
             {
-                result.Add(Pop(datas[i], siblingIndex));
+                if (datas[i] != null) result.Add(Pop(datas[i], siblingIndex));
             }
+            result.Reverse();
             return result;
         }
         /// <summary>
@@ -159,38 +268,18 @@ namespace ReunionMovement
             }
             treeNode.transform.SetParent(container, false);
             treeNode.transform.localScale = Vector3.one;
-            treeNode.SetActive(true);
             treeNode.GetComponent<TreeViewNode>().Insert(data);
             treeNode.transform.SetSiblingIndex(GetInsertSiblingIndex(siblingIndex));
+            treeNode.SetActive(true);
             return treeNode;
         }
 
         /// <summary>
-        /// 计算插入位置：不再假设模板节点恒在 index 0，基于模板当前实际位置动态计算（容器布局改动后仍正确）。
-        /// 模板索引带缓存：仅首次/缓存失效时扫描一次，批量展开不再 O(n²)。
+        /// 在父节点的实际同级索引之后插入。
         /// </summary>
         private int GetInsertSiblingIndex(int siblingIndex)
         {
-            int templateIndex = 0;
-            if (nodePrefab != null && container != null)
-            {
-                // 缓存校验：索引越界或该位置不再是模板（布局被外部改动）时重新扫描
-                if (cachedTemplateIndex < 0 || cachedTemplateIndex >= container.childCount
-                    || container.GetChild(cachedTemplateIndex).gameObject != nodePrefab)
-                {
-                    cachedTemplateIndex = 0;
-                    for (int i = 0; i < container.childCount; i++)
-                    {
-                        if (container.GetChild(i).gameObject == nodePrefab)
-                        {
-                            cachedTemplateIndex = i;
-                            break;
-                        }
-                    }
-                }
-                templateIndex = cachedTemplateIndex;
-            }
-            return templateIndex + 1 + siblingIndex;
+            return siblingIndex + 1;
         }
         /// <summary>
         /// 批量回收节点
@@ -209,11 +298,12 @@ namespace ReunionMovement
         /// <param name="treeNode"></param>
         public void Push(GameObject treeNode)
         {
-            if (treeNode == null) return;
+            if (treeNode == null || treeNode == NodePrefab || pool.Contains(treeNode)) return;
+            treeNode.GetComponent<TreeViewNode>()?.Unbind();
             // 容量上限：池满时直接销毁，防止数据反复刷新场景下无限积压节点
             if (pool.Count >= MaxPoolSize)
             {
-                UnityEngine.Object.Destroy(treeNode);
+                DestroyNode(treeNode);
                 return;
             }
             if (poolParent == null)
@@ -228,22 +318,7 @@ namespace ReunionMovement
 
         protected override void OnDestroy()
         {
-            // poolParent 是独立根对象，不随 TreeView 销毁。
-            // 若 Clear() 未被调用（如运行中直接销毁 TreeView），必须在此清理，
-            // 否则池内节点与 CachePool 会变成场景中的孤儿根对象长期累积。
-            if (pool.Count > 0 || poolParent != null)
-            {
-                foreach (var obj in pool)
-                {
-                    if (obj != null) UnityEngine.Object.Destroy(obj);
-                }
-                pool.Clear();
-                if (poolParent != null)
-                {
-                    UnityEngine.Object.Destroy(poolParent.gameObject);
-                    poolParent = null;
-                }
-            }
+            Clear();
             base.OnDestroy();
         }
         /// <summary>
@@ -259,75 +334,23 @@ namespace ReunionMovement
         }
 
         /// <summary>
-        /// 清除所有已创建的节点与缓存（根节点、缓存池和池父对象），并销毁容器中除模板外的子对象。
+        /// 清除本树创建的节点与缓存，保留模板和容器内其他对象。
         /// </summary>
         public void Clear()
         {
-            if (container == null)
-            {
-                GetComponent();
-            }
-
-            // 销毁根节点对应的 GameObject
-            foreach (var node in treeRootNodes)
-            {
-                if (node == null) continue;
-#if UNITY_EDITOR
-                if (!Application.isPlaying)
-                    UnityEngine.Object.DestroyImmediate(node.gameObject);
-                else
-                    UnityEngine.Object.Destroy(node.gameObject);
-#else
-                UnityEngine.Object.Destroy(node.gameObject);
-#endif
-            }
-            treeRootNodes.Clear();
-
-            // 销毁池中对象
+            ReleaseRoots();
+            dataById.Clear();
+            parentById.Clear();
+            SelectedNode = null;
             foreach (var obj in pool)
             {
-                if (obj == null) continue;
-#if UNITY_EDITOR
-                if (!Application.isPlaying)
-                    UnityEngine.Object.DestroyImmediate(obj);
-                else
-                    UnityEngine.Object.Destroy(obj);
-#else
-                UnityEngine.Object.Destroy(obj);
-#endif
+                DestroyNode(obj);
             }
             pool.Clear();
-
-            // 销毁池父对象
             if (poolParent != null)
             {
-#if UNITY_EDITOR
-                if (!Application.isPlaying)
-                    UnityEngine.Object.DestroyImmediate(poolParent.gameObject);
-                else
-                    UnityEngine.Object.Destroy(poolParent.gameObject);
-#else
-                UnityEngine.Object.Destroy(poolParent.gameObject);
-#endif
+                DestroyNode(poolParent.gameObject);
                 poolParent = null;
-            }
-
-            // 清理容器中除模板外的子对象（如果有模板则保留）
-            if (container != null)
-            {
-                for (int i = container.childCount - 1; i >= 0; i--)
-                {
-                    var child = container.GetChild(i);
-                    if (nodePrefab != null && child.gameObject == nodePrefab) continue;
-#if UNITY_EDITOR
-                    if (!Application.isPlaying)
-                        UnityEngine.Object.DestroyImmediate(child.gameObject);
-                    else
-                        UnityEngine.Object.Destroy(child.gameObject);
-#else
-                    UnityEngine.Object.Destroy(child.gameObject);
-#endif
-                }
             }
         }
     }
