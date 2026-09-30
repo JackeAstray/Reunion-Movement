@@ -1,7 +1,7 @@
 /GeneratorSmokeTest/[Bb]in/
 /ReunionMovement.SourceGenerator/[Bb]in/
 
-/GeneratorSmokeTest/[Oo]bj/[Dd]ebug/
-/GeneratorSmokeTest/[Oo]bj/[Rr]elease/
-/ReunionMovement.SourceGenerator/[Oo]bj/[Dd]ebug/
-/ReunionMovement.SourceGenerator/[Oo]bj/[Rr]elease/
+# 整个 obj/ 都是 NuGet/MSBuild 中间产物：原规则只忽略 obj/Debug 与 obj/Release，
+# 导致 obj/ 根下的 project.assets.json、*.nuget.* 被误纳入版本控制（已 git rm --cached 取消跟踪）。
+/GeneratorSmokeTest/[Oo]bj/
+/ReunionMovement.SourceGenerator/[Oo]bj/
