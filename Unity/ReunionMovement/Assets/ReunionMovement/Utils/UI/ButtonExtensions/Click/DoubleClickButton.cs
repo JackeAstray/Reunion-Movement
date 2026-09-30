@@ -58,6 +58,7 @@ namespace ReunionMovement.UI.ButtonClick
         /// <param name="eventData"></param>
         public override void OnPointerDown(PointerEventData eventData)
         {
+            if (eventData == null || eventData.button != PointerEventData.InputButton.Left || !interactable) return;
             base.OnPointerDown(eventData);
             // 仅记录本次按下时间：双击判定移到抬起时，基于两次完整点击（按下→抬起）的间隔。
             // 旧实现基于两次按下间隔，第二次按住超过窗口再抬起仍会误触发双击。
@@ -70,6 +71,7 @@ namespace ReunionMovement.UI.ButtonClick
         /// <param name="eventData"></param>
         public override void OnPointerUp(PointerEventData eventData)
         {
+            if (eventData == null || eventData.button != PointerEventData.InputButton.Left) return;
             base.OnPointerUp(eventData);
             TryHandleClickInterval();
         }
@@ -156,7 +158,11 @@ namespace ReunionMovement.UI.ButtonClick
 
             float now = Time.unscaledTime;
             // 长按（按下到抬起超过窗口）不构成有效点击：直接丢弃本次按压
-            if (now - currentDownTime > DoubleClickWindow) return;
+            if (now - currentDownTime > DoubleClickWindow)
+            {
+                resetTime();
+                return;
+            }
 
             if (firstClickTime < 0f)
             {
@@ -177,6 +183,7 @@ namespace ReunionMovement.UI.ButtonClick
                 // 超过窗口：本次点击成为新的第一次
                 firstClickTime = now;
             }
+            currentDownTime = -1f;
         }
 
         /// <summary>

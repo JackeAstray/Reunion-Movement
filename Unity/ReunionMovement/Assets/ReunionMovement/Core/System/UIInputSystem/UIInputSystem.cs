@@ -253,7 +253,14 @@ namespace ReunionMovement.Core.UIInput
                 var loaded = ResourcesSystem.Instance.Load<InputActionAsset>("InputSystem_Actions");
                 if (loaded != null)
                 {
-                    inputActions = UnityEngine.Object.Instantiate(loaded);
+                    try
+                    {
+                        inputActions = UnityEngine.Object.Instantiate(loaded);
+                    }
+                    finally
+                    {
+                        ResourcesSystem.Instance.DeleteAssetCache("InputSystem_Actions");
+                    }
                     if (inputModule != null)
                     {
                         inputModule.actionsAsset = inputActions;

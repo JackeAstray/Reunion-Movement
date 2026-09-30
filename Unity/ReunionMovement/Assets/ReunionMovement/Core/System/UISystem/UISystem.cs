@@ -170,7 +170,15 @@ namespace ReunionMovement.Core.UI
             var esPrefab = ResourcesSystem.Instance.Load<GameObject>("Prefabs/EventSystem/EventSystem");
             if (esPrefab != null)
             {
-                var esGo = UnityEngine.Object.Instantiate(esPrefab);
+                GameObject esGo;
+                try
+                {
+                    esGo = UnityEngine.Object.Instantiate(esPrefab);
+                }
+                finally
+                {
+                    ResourcesSystem.Instance.DeleteAssetCache("Prefabs/EventSystem/EventSystem");
+                }
                 esGo.name = "EventSystem";
                 EventSystem = esGo.GetComponent<EventSystem>();
                 GameObject.DontDestroyOnLoad(esGo);
@@ -410,16 +418,23 @@ namespace ReunionMovement.Core.UI
                     return null;
                 }
 
-                // 优先从窗口池复用（白名单内轻量窗口），池空才实例化
-                var uiObj = GetPooledWindow(name);
-                if (uiObj == null)
+                GameObject uiObj;
+                try
                 {
-                    uiObj = UnityEngine.Object.Instantiate(prefab);
-                    // 实例化后释放源 Prefab 的 Addressables 引用（Resources 路径无引用计数，无需释放）
-                    if (fromAddressables)
+                    uiObj = GetPooledWindow(name);
+                    if (uiObj == null)
                     {
-                        AddressableSystem.Instance.ReleaseAsset(prefab);
+                        uiObj = UnityEngine.Object.Instantiate(prefab);
+                        if (fromAddressables)
+                        {
+                            AddressableSystem.Instance.ReleaseAsset(prefab);
+                        }
                     }
+                }
+                finally
+                {
+                    if (!fromAddressables)
+                        ResourcesSystem.Instance.DeleteAssetCache(Config.UIPath + name);
                 }
 
                 return SetupLoadedWindow(uiObj, name, openWhenFinish, args);

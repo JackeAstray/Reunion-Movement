@@ -60,6 +60,23 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
+        private void ReleaseDynamicMaterial()
+        {
+            if (dynamicMaterial == null) return;
+            if (Application.isPlaying)
+                UnityEngine.Object.Destroy(dynamicMaterial);
+            else
+                UnityEngine.Object.DestroyImmediate(dynamicMaterial);
+            dynamicMaterial = null;
+        }
+
+        private void RemoveSharedMaterialDiagnostics(Material material)
+        {
+            if (material == null) return;
+            s_sharedMatLastMask.Remove(material);
+            s_sharedMatWarned.Remove(material);
+        }
+
 #if UNITY_EDITOR
         private bool parseAgainOnValidate;
 #endif
@@ -229,7 +246,7 @@ namespace ReunionMovement.UI.ImageExtensions
             }
 
             Texture2D tex = transitionGradient as Texture2D;
-            if (tex != null)
+            if (tex != null && transitionGradientIsRuntime)
             {
                 for (int i = 0; i < width; i++)
                 {
@@ -328,14 +345,8 @@ namespace ReunionMovement.UI.ImageExtensions
             }
 
             // 销毁运行时创建的动态材质，避免长时间运行/切场景时材质泄漏
-            if (dynamicMaterial != null)
-            {
-                if (Application.isPlaying)
-                    UnityEngine.Object.Destroy(dynamicMaterial);
-                else
-                    UnityEngine.Object.DestroyImmediate(dynamicMaterial);
-                dynamicMaterial = null;
-            }
+            ReleaseDynamicMaterial();
+            RemoveSharedMaterialDiagnostics(m_Material);
 
             // 销毁运行时生成的过渡渐变纹理（用户资产不销毁），防止每组件泄漏一张原生纹理
             if (transitionGradient != null && transitionGradientIsRuntime)

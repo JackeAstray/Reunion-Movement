@@ -355,7 +355,12 @@ namespace ReunionMovement.UI.ImageExtensions
             set
             {
                 if (materialMode == value) return;
+                MaterialMode previousMode = materialMode;
                 materialMode = value;
+                if (value == MaterialMode.Shared && previousMode != MaterialMode.Shared)
+                {
+                    ReleaseDynamicMaterial();
+                }
                 InitializeComponents();
                 if (material == m_Material)
                 {
