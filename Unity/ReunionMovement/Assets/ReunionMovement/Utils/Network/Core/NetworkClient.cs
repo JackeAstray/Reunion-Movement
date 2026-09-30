@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
@@ -250,15 +250,13 @@ namespace ReunionMovement.Common.Util
                 }
             }
 
-            // 3) 心跳发送 + 死链检测
-            if (state == ClientState.Connected && config.enableHeartbeat && config.heartbeatInterval > 0f)
+            // 3) 死链检测 + 心跳发送
+            if (state == ClientState.Connected)
             {
-                heartbeatSendTimer += deltaTime;
-                if (heartbeatSendTimer >= config.heartbeatInterval)
-                {
-                    heartbeatSendTimer = 0f;
-                    SendHeartbeat();
-                }
+                // 死链检测必须独立于心跳发送开关：原实现把它嵌在
+                // `enableHeartbeat && heartbeatInterval > 0f` 内部，
+                // 导致只配置 heartbeatTimeout（心跳发送关闭）时该检测完全不生效，与文档不符。
+                // lastReceiveTime 在 HandleConnected 中已初始化，不会一连接就误判。
                 if (config.heartbeatTimeout > 0f
                     && Time.realtimeSinceStartup - lastReceiveTime >= config.heartbeatTimeout)
                 {
@@ -266,6 +264,15 @@ namespace ReunionMovement.Common.Util
                     OnError?.Invoke($"心跳超时（{config.heartbeatTimeout}s），判定死链");
                     CloseChannel();
                     HandleDisconnected();
+                }
+                else if (config.enableHeartbeat && config.heartbeatInterval > 0f)
+                {
+                    heartbeatSendTimer += deltaTime;
+                    if (heartbeatSendTimer >= config.heartbeatInterval)
+                    {
+                        heartbeatSendTimer = 0f;
+                        SendHeartbeat();
+                    }
                 }
             }
 
@@ -556,23 +563,33 @@ namespace ReunionMovement.Common.Util
             {
                 if (messageId == NetworkConstants.ReservedHandshakeServerHello)
                 {
-                    if (payload.Count != NetworkHandshake.NonceLength)
-                    {
-                        Log.Error("[NetworkClient] ServerHello 随机数长度非法，已断开");
-                        Disconnect();
-                        return;
-                    }
                     if (handshakeMasterKey == null)
                     {
                         Log.Error("[NetworkClient] 收到 ServerHello 但主密钥尚未下发（SetHandshakeMasterKey），已断开");
                         Disconnect();
                         return;
                     }
-                    byte[] serverNonce = payload.ToArray();
+                    if (!NetworkHandshake.TryParseHello(payload, out var serverNonce, out var serverProof))
+                    {
+                        Log.Error("[NetworkClient] ServerHello 负载非法（期望 {0} 字节：[随机数][持有证明]），已断开",
+                            NetworkHandshake.HelloPayloadLength);
+                        Disconnect();
+                        return;
+                    }
+                    // 校验应答方持有主密钥：否则任何能注入一个 ServerHello 的人都能让本端
+                    // 派生出一个对端并不知晓的会话密钥（连接静默失联），也谈不上"已建立加密会话"
+                    var expectedServerProof = NetworkHandshake.ComputeServerProof(handshakeMasterKey, serverNonce);
+                    if (!NetworkHandshake.ProofEquals(expectedServerProof, serverProof))
+                    {
+                        Log.Error("[NetworkClient] ServerHello 持有证明校验失败（对端不持有主密钥），已断开");
+                        Disconnect();
+                        return;
+                    }
                     byte[] clientNonce = NetworkHandshake.GenerateNonce();
                     byte[] sessionKey = NetworkHandshake.DeriveSessionKey(handshakeMasterKey, serverNonce, clientNonce);
-                    // 先以明文发送 ClientHello（服务端据此完成握手），再切换本端为加密
-                    if (!Send(NetworkConstants.ReservedHandshakeClientHello, clientNonce))
+                    var clientProof = NetworkHandshake.ComputeClientProof(handshakeMasterKey, serverNonce, clientNonce);
+                    // 先以明文发送 [ClientHello][持有证明]（服务端据此校验并完成握手），再切换本端为加密
+                    if (!Send(NetworkConstants.ReservedHandshakeClientHello, NetworkHandshake.BuildHello(clientNonce, clientProof)))
                     {
                         Log.Error("[NetworkClient] ClientHello 发送失败，已断开");
                         Disconnect();
@@ -663,7 +680,7 @@ namespace ReunionMovement.Common.Util
         /// <summary>切换为加密模式：发送/接收 codec 同步替换为会话密钥加密 codec，并广播会话建立事件</summary>
         void SwapToEncrypted(byte[] sessionKey)
         {
-            codec = EncryptedCodec.Wrap(NetworkCodecFactory.Create(config.codec), sessionKey);
+            codec = EncryptedCodec.WrapClient(NetworkCodecFactory.Create(config.codec), sessionKey);
             assembler.ReplaceCodec(codec);
             sessionEstablished = true;
             try { OnSessionEstablished?.Invoke(); }
@@ -739,12 +756,16 @@ namespace ReunionMovement.Common.Util
             }
             int correlationId = Interlocked.Increment(ref rpcCorrelation);
             var requestFrame = NetworkRpcFrames.EncodeRequest(correlationId, messageId, payload);
+            var tcs = new UniTaskCompletionSource<byte[]>();
+            // 必须先注册再做 Send：Send 在同步派发的传输层上可能立刻触发响应处理，
+            // 那时 pendingRequests 里还没有这个 correlationId，响应会被当成"未知关联 ID"丢弃，
+            // 调用方只能白等一个超时（且失败原因完全不可见）。
+            pendingRequests[correlationId] = tcs;
             if (!Send(NetworkConstants.ReservedRequestMessageId, requestFrame))
             {
+                pendingRequests.Remove(correlationId);
                 return UniTask.FromException<byte[]>(new InvalidOperationException("发送请求失败"));
             }
-            var tcs = new UniTaskCompletionSource<byte[]>();
-            pendingRequests[correlationId] = tcs;
             return WaitResponseAsync(correlationId, tcs, timeout, cancellationToken);
         }
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -78,6 +78,8 @@ namespace ReunionMovement
         {
             foreach (var node in treeRootNodes)
             {
+                // 与 269/284 的销毁循环一致：节点可能被外部销毁而列表尚未清理（假空），需跳过
+                if (node == null) continue;
                 if (node.GetTreeData() != null && node.GetTreeData().name == name) return node;
                 var found = node.FindChildNode(name);
                 if (found != null) return found;
@@ -92,7 +94,8 @@ namespace ReunionMovement
         {
             foreach (var node in treeRootNodes)
             {
-                node.Refresh();
+                // 同上：跳过被外部销毁的假空节点，避免 Refresh 触发 MissingReferenceException
+                if (node != null) node.Refresh();
             }
         }
 
@@ -104,7 +107,9 @@ namespace ReunionMovement
         {
             foreach (var node in treeRootNodes)
             {
-                node.SetDisplayDecorateRecursive(display);
+                // 与 269/284 的销毁循环一致：跳过被外部销毁的假空节点（本文件三处 treeRootNodes
+                // 遍历的守卫至此补齐：FindNodeByName / RefreshAll / 此处）
+                if (node != null) node.SetDisplayDecorateRecursive(display);
             }
         }
 

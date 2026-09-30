@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -34,12 +34,14 @@ namespace ReunionMovement.Common.Util
 
         /// <summary>
         /// 字符串转int64
+        /// 说明：固定使用不变文化 —— 原本依赖当前区域设置，设备语言会让同一份配置解析出不同结果
         /// </summary>
         /// <param name="val"></param>
         /// <returns></returns>
         public static long ToInt64(this string val)
         {
-            if (long.TryParse(val, out long result))
+            if (long.TryParse(val, System.Globalization.NumberStyles.Integer,
+                    System.Globalization.CultureInfo.InvariantCulture, out long result))
             {
                 return result;
             }
@@ -51,12 +53,15 @@ namespace ReunionMovement.Common.Util
 
         /// <summary>
         /// 字符串转float
+        /// 说明：固定使用不变文化。否则在 de-DE/fr-FR 等以逗号为小数点的区域，
+        /// "1.5".ToFloat() 会静默返回 0（解析失败），造成跨区域的数值不一致
         /// </summary>
         /// <param name="val"></param>
         /// <returns></returns>
         public static float ToFloat(this string val)
         {
-            if (float.TryParse(val, out float result))
+            if (float.TryParse(val, System.Globalization.NumberStyles.Float | System.Globalization.NumberStyles.AllowThousands,
+                    System.Globalization.CultureInfo.InvariantCulture, out float result))
             {
                 return result;
             }
@@ -68,12 +73,14 @@ namespace ReunionMovement.Common.Util
 
         /// <summary>
         /// 字符串转int32
+        /// 说明：固定使用不变文化，避免区域设置影响解析
         /// </summary>
         /// <param name="str"></param>
         /// <returns></returns>
         static public Int32 ToInt32(this string str)
         {
-            if (Int32.TryParse(str, out Int32 result))
+            if (Int32.TryParse(str, System.Globalization.NumberStyles.Integer,
+                    System.Globalization.CultureInfo.InvariantCulture, out Int32 result))
             {
                 return result;
             }
@@ -122,12 +129,14 @@ namespace ReunionMovement.Common.Util
 
         /// <summary>
         /// 判断字符串是否是数字
+        /// 说明：固定使用不变文化，否则 "1.5".IsNumber() 在逗号小数点区域会返回 false
         /// </summary>
         /// <param name="str"></param>
         /// <returns></returns>
         public static bool IsNumber(this string str)
         {
-            return double.TryParse(str, out _);
+            return double.TryParse(str, System.Globalization.NumberStyles.Float | System.Globalization.NumberStyles.AllowThousands,
+                System.Globalization.CultureInfo.InvariantCulture, out _);
         }
 
         /// <summary>

@@ -1,10 +1,19 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine.Networking;
 
 namespace ReunionMovement.Common.Util.Download
 {
+    /// <summary>
+    /// 下载执行器基类。
+    /// [Preserve]：DownloadExecutorFactory 是<b>反射</b>枚举本程序集内本类型的子类来建立"类名 → 类型"表的，
+    /// 而 IL2CPP 的托管代码裁剪看不到这种反射用法 ⇒ 若没有 link.xml / [Preserve]，执行器类型可能在
+    /// 目标平台（尤其是本项目主目标的 WebGL）被裁掉，届时工厂只会记一条"未找到执行器"并返回 null，
+    /// 表现为"平台特异的静默功能缺失"。此处以特性声明保留；若将来新增执行器且发现仍被裁剪，
+    /// 请在具体执行器类型上再显式标注一次。
+    /// </summary>
+    [UnityEngine.Scripting.Preserve]
     public abstract class IDownloadExecutor
     {
         /// <summary>
@@ -138,7 +147,10 @@ namespace ReunionMovement.Common.Util.Download
         public abstract int Timeout { get; set; }
 
         /// <summary>
-        /// 下载的时间（毫秒），使用 TickCount64 替代 Environment.TickCount 避免回绕问题
+        /// 下载的时间（毫秒）。
+        /// 注意：当前实现读取的是 32 位的 <c>Environment.TickCount</c>（约 24.9 天回绕），且 <see cref="StartTime"/>/<see cref="EndTime"/>
+        /// 为 <c>int</c>，因此设备长时间不重启后该值会被下面的"负值夹取为 0"保护成 0（表现为计时/速率读数归零，而非崩溃）。
+        /// 若要真正消除回绕，需要把这两个属性改为 <c>long</c> 并改用 <c>Environment.TickCount64</c>（会波及全部执行器实现）。
         /// </summary>
         public long ElapsedTime
         {
@@ -151,12 +163,17 @@ namespace ReunionMovement.Common.Util.Download
 
                 if (EndTime == 0)
                 {
-                    long diff = Environment.TickCount - StartTime;
-                    return diff >= 0 ? diff : 0;
+                    // 无符号差值：32 位 Environment.TickCount 约 24.9 天回绕一次，回绕后
+                    // "TickCount - StartTime" 会变成负数，旧写法把它夹成 0 ⇒ 计时/速率读数归零。
+                    // 按 uint 解释即可得到真实的毫秒差（单次下载远短于 24.9 天，前提恒成立）。
+                    // 注意：StartTime 由本类内部在开始时写入，不存在"未来值"这一输入，
+                    // 故此处无需再保留"负值夹 0"的保护。
+                    long diff = unchecked((uint)(Environment.TickCount - StartTime));
+                    return diff;
                 }
 
-                long endDiff = EndTime - StartTime;
-                return endDiff >= 0 ? endDiff : 0;
+                long endDiff = unchecked((uint)(EndTime - StartTime));
+                return endDiff;
             }
         }
 

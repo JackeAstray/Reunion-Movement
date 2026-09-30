@@ -1,4 +1,4 @@
-﻿using ReunionMovement.Common;
+using ReunionMovement.Common;
 using UnityEngine;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
@@ -76,6 +76,11 @@ namespace ReunionMovement
         int padding = 5;
         Texture2D backgroundTex; // 保存引用以便在销毁时释放
 
+        // Awake 是否完整执行完毕。重复的持久实例会在 Awake 中提前 return（styleText/styleContainer 未创建），
+        // 但 Destroy(gameObject) 延迟到帧末生效，本帧的 OnEnable/Update/OnGUI 仍会被调用，
+        // 此前会因 styleText 为 null 每帧抛 NullReferenceException
+        bool initialized;
+
         public void Awake()
         {
             if (isPersistent)
@@ -105,6 +110,8 @@ namespace ReunionMovement
 
             styleText = new GUIStyle();
             styleText.fontSize = fontSize;
+
+            initialized = true;
         }
 
         void OnDestroy()
@@ -131,6 +138,8 @@ namespace ReunionMovement
 
         void OnEnable()
         {
+            // 未完成初始化的重复实例不订阅日志事件、不参与队列清空（它即将被销毁）
+            if (!initialized) return;
             if (!showInEditor && Application.isEditor) return;
 
             lock (activeInstances)
@@ -160,6 +169,7 @@ namespace ReunionMovement
 
         void Update()
         {
+            if (!initialized) return;
             if (!showInEditor && Application.isEditor) return;
 
             // 防止 lineHeight 为 0 导致除零异常（字体未加载时可能为 0）
@@ -174,6 +184,7 @@ namespace ReunionMovement
 
         void OnGUI()
         {
+            if (!initialized) return;
             if (!showInEditor && Application.isEditor) return;
 
             float w = (Screen.width - 2 * margin) * width;

@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -76,7 +76,15 @@ namespace ReunionMovement.Common.Util
         {
             if (origin == null || mainCamera == null || canvas == null || baseRect == null)
                 return;
-            Vector2 originPosOnScreen = mainCamera.WorldToScreenPoint(origin.position);
+            Vector3 originPosOnScreen = mainCamera.WorldToScreenPoint(origin.position);
+            // 目标位于相机背后时 WorldToScreenPoint 返回的是"镜像"坐标（x/y 取反且 z<0），
+            // 直接使用会把背后的目标指示到屏幕另一侧的完全错误位置 —— 而这恰恰是指示箭头
+            // 最需要正确工作的场景。按屏幕中心做一次镜像，得到与相机前方一致的方位。
+            if (originPosOnScreen.z < 0f)
+            {
+                originPosOnScreen.x = Screen.width - originPosOnScreen.x;
+                originPosOnScreen.y = Screen.height - originPosOnScreen.y;
+            }
             myRect.anchoredPosition = new Vector2(originPosOnScreen.x - Screen.width / 2, originPosOnScreen.y - Screen.height / 2) / canvas.scaleFactor;
             ApplyDirection(originPosOnScreen);
         }

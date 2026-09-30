@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -136,9 +136,11 @@ namespace ReunionMovement.Common.Util
 
             for (int i = 0; i < length; i++)
             {
-                int digit = Math.Abs(array[i]);
+                // 与 CalculateMaximumCommonDivisor 同理，用 long 取绝对值：
+                // Math.Abs(int.MinValue) 会抛 OverflowException（int 无法表示其相反数）
+                long digit = Math.Abs((long)array[i]);
                 // 保证为一位数字（若传入多位，取低位）
-                digit = digit % 10;
+                digit %= 10;
                 result = result * 10 + digit;
 
                 if (result > int.MaxValue)
@@ -307,6 +309,14 @@ namespace ReunionMovement.Common.Util
             int result = 1;
             while (result < num)
             {
+                // 溢出保护：num > 2^30 时 int 范围内不存在满足条件的 2 的幂。
+                // result 到达 2^30 后再 <<= 1 会回绕为 int.MinValue（仍 < num）→ 再移位变 0，
+                // 而 0 < num 恒真 → 死循环（主线程卡死，与 UWRExecutor 的分段下载循环同类）
+                if (result >= (1 << 30))
+                {
+                    Log.Error("GetNearestPower2: 输入 {0} 超出 int 可表示的最大 2 的幂，返回 0", num);
+                    return 0;
+                }
                 result <<= 1;
             }
             return result;
@@ -758,19 +768,19 @@ namespace ReunionMovement.Common.Util
                 return start;
             }
 
-            K a = handler(array[start]);
-            K b = handler(array[mid]);
-            K c = handler(array[end]);
-
-            if (a.CompareTo(b) > 0)
+            // 必须在每次 Swap 之后重新读取位置上的键，不能用调用前捕获的 a/b/c：
+            // 交换会改变位置上的值，用旧值判断时 (start=最大, mid=最小, end=中间) 这一种排列
+            // 会返回最大值而非中位数，破坏"三数取中"契约（排序结果仍正确，但基准退化为极值，
+            // 最坏情况向 O(n²) 退化）。重读版本在全部 6 种排列下都返回中位数。
+            if (handler(array[start]).CompareTo(handler(array[mid])) > 0)
             {
                 Swap(array, start, mid);
             }
-            if (a.CompareTo(c) > 0)
+            if (handler(array[start]).CompareTo(handler(array[end])) > 0)
             {
                 Swap(array, start, end);
             }
-            if (b.CompareTo(c) > 0)
+            if (handler(array[mid]).CompareTo(handler(array[end])) > 0)
             {
                 Swap(array, mid, end);
             }
@@ -1049,8 +1059,8 @@ namespace ReunionMovement.Common.Util
         /// 给哈希集添加批量数据
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="this"></param>
-        /// <param name="items"></param>
+        /// <param name="collection">目标集合</param>
+        /// <param name="other">待添加的项；与 collection 为同一实例时先取快照，避免枚举期修改集合</param>
         /// <returns></returns>
         public static void AddRange<T>(this ICollection<T> collection, IEnumerable<T> other)
         {
@@ -1058,6 +1068,21 @@ namespace ReunionMovement.Common.Util
             {
                 Log.Error("集合为空");
                 return;
+            }
+
+            if (other == null)
+            {
+                // 此前未校验：other 为 null 时 foreach 直接抛 NullReferenceException
+                Log.Error("AddRange: 待添加集合为空");
+                return;
+            }
+
+            // 自追加（collection 与 other 为同一实例）时直接 foreach 会在枚举期间修改集合：
+            // List 等有版本校验的实现抛 InvalidOperationException，无版本校验的实现则可能
+            // 无限增长直至 OOM。先物化快照，使"把自身内容追加到自身"成为可预期的一次复制
+            if (ReferenceEquals(collection, other))
+            {
+                other = other.ToList();
             }
 
             foreach (var obj in other)

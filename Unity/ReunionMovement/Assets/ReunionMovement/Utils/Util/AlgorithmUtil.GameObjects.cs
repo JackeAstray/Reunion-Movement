@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -179,7 +179,22 @@ namespace ReunionMovement.Common.Util
         /// <param name="newSpeed"></param>
         public static void SetSpeed(this Animation anim, float newSpeed)
         {
-            anim[anim.clip.name].speed = newSpeed;
+            // anim.clip 未指定是合法配置（多 clip 但未设默认），此时 clip.name 会抛 NRE；
+            // 状态名不存在时 anim[name] 返回 null，后续 .speed 同样抛 NRE
+            if (anim == null || anim.clip == null)
+            {
+                Log.Error("SetSpeed: Animation 或其默认 clip 为空");
+                return;
+            }
+
+            var state = anim[anim.clip.name];
+            if (state == null)
+            {
+                Log.Error("SetSpeed: 找不到名为 '{0}' 的动画状态", anim.clip.name);
+                return;
+            }
+
+            state.speed = newSpeed;
         }
         /// <summary>
         /// v3转v2
@@ -273,6 +288,10 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         public static Image AddImage(this GameObject target, Sprite sprite)
         {
+            // 必须记录并恢复原有激活状态：此前无条件 SetActive(true)，会给"本来就隐藏"
+            // 的对象带来副作用（例如池中或预配置的隐藏对象会被意外显示出来）
+            bool wasActive = target.activeSelf;
+
             target.SetActive(false);
             Image image = target.GetComponent<Image>();
             if (!image)
@@ -280,8 +299,12 @@ namespace ReunionMovement.Common.Util
                 image = target.AddComponent<Image>();
             }
             image.sprite = sprite;
-            image.SetNativeSize();
-            target.SetActive(true);
+            if (sprite != null)
+            {
+                // sprite 为 null 时 SetNativeSize 会输出 Unity 错误日志
+                image.SetNativeSize();
+            }
+            target.SetActive(wasActive);
             return image;
         }
 
@@ -354,6 +377,11 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static GameObject Peer(this GameObject go, string subnode)
         {
+            // 与 Child 保持一致：空对象（含已销毁）直接返回 null，避免 go.transform 抛 NRE
+            if (!go)
+            {
+                return null;
+            }
             return Peer(go.transform, subnode);
         }
 
@@ -365,6 +393,13 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static GameObject Peer(Transform go, string subnode)
         {
+            // 根对象没有父级，go.parent 为 null —— 这是正常场景而非调用错误，
+            // 此前直接 go.parent.Find(...) 会抛 NullReferenceException
+            if (go == null || go.parent == null)
+            {
+                return null;
+            }
+
             Transform tran = go.parent.Find(subnode);
             return tran?.gameObject;
         }
@@ -412,13 +447,17 @@ namespace ReunionMovement.Common.Util
 
                 if (Application.isEditor && !Application.isPlaying)
                 {
+                    // DestroyImmediate 是同步销毁：销毁后再访问 child.parent 会抛
+                    // MissingReferenceException 并中断循环，导致剩余子节点残留
                     GameObject.DestroyImmediate(child.gameObject);
                 }
                 else
                 {
+                    // Destroy 延迟到帧末执行，必须先脱离父节点让 childCount 立即下降，
+                    // 否则 while (childCount > 0) 会死循环（这一句是循环终止的关键）
+                    child.parent = null;
                     GameObject.Destroy(child.gameObject);
                 }
-                child.parent = null;
             }
         }
         #endregion
@@ -513,6 +552,19 @@ namespace ReunionMovement.Common.Util
                 return i;
             }
 
+            // 字符串必须用不变文化解析：Convert.ToInt32(string) 内部走 CurrentCulture，
+            // 在 de-DE 等区域 "1,234" 会解析失败（返回 0），与已加固的 StringUtil 保持一致
+            if (obj is string s)
+            {
+                if (int.TryParse(s, System.Globalization.NumberStyles.Integer,
+                                System.Globalization.CultureInfo.InvariantCulture, out int parsed))
+                {
+                    return parsed;
+                }
+                Log.Error("ToInt32 : 无法按不变文化解析 \"{0}\"", s);
+                return 0;
+            }
+
             try
             {
                 return Convert.ToInt32(obj);
@@ -534,6 +586,18 @@ namespace ReunionMovement.Common.Util
             if (obj is long l)
             {
                 return l;
+            }
+
+            // 同上：字符串走不变文化解析，避免区域差异导致解析失败返回 0
+            if (obj is string s)
+            {
+                if (long.TryParse(s, System.Globalization.NumberStyles.Integer,
+                                 System.Globalization.CultureInfo.InvariantCulture, out long parsed))
+                {
+                    return parsed;
+                }
+                Log.Error("ToInt64 : 无法按不变文化解析 \"{0}\"", s);
+                return 0;
             }
 
             try
@@ -559,6 +623,21 @@ namespace ReunionMovement.Common.Util
                 return f;
             }
 
+            // 字符串走不变文化解析：Convert.ToSingle(string) 用 CurrentCulture，
+            // 在 de-DE 下小数点被当作千位分隔符，"1.5" 会解析成 15（静默放大 10 倍）
+            if (obj is string s)
+            {
+                // NumberStyles 必须与原始语义一致：float.Parse / Convert.ToSingle(string) 默认是
+                // Float | AllowThousands，此处只把文化固定为不变文化，不放宽也不收紧允许的格式
+                if (float.TryParse(s, System.Globalization.NumberStyles.Float | System.Globalization.NumberStyles.AllowThousands,
+                                   System.Globalization.CultureInfo.InvariantCulture, out float parsed))
+                {
+                    return (float)Math.Round(parsed, 2);
+                }
+                Log.Error("object转float失败 : 无法按不变文化解析 \"{0}\"", s);
+                return 0;
+            }
+
             try
             {
                 return (float)Math.Round(Convert.ToSingle(obj), 2);
@@ -580,6 +659,14 @@ namespace ReunionMovement.Common.Util
             if (obj is string s)
             {
                 return s;
+            }
+
+            // IFormattable（int/long/float/double/decimal 等）默认按 CurrentCulture 格式化：
+            // de-DE 下 ObjToString(1.5f) 得到 "1,5"，而 ObjToFloat 已改为不变文化解析，
+            // 往返不再对应（会解析成 15 或失败）。格式化端同样固定为不变文化，保证成对一致。
+            if (obj is IFormattable formattable)
+            {
+                return formattable.ToString(null, System.Globalization.CultureInfo.InvariantCulture);
             }
 
             try
@@ -710,7 +797,12 @@ namespace ReunionMovement.Common.Util
         public static Texture2D BytesToTexture2D(this byte[] bytes, int width, int height)
         {
             Texture2D texture2D = new Texture2D(width, height);
-            texture2D.LoadImage(bytes);
+            // LoadImage 返回 bool：数据不是可识别图片时它会失败并让纹理内容处于未定义状态。
+            // 此前返回值被直接丢弃，调用方只会拿到一张空纹理而没有任何提示（静默失败）。
+            if (!texture2D.LoadImage(bytes))
+            {
+                Log.Error("BytesToTexture2D: LoadImage 失败，数据不是可识别的图片格式（{0} 字节）", bytes?.Length ?? 0);
+            }
             return texture2D;
         }
 

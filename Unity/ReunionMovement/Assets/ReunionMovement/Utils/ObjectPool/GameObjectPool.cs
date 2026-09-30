@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Pool;
 
@@ -71,7 +71,20 @@ namespace ReunionMovement.Common.Util.Pool
         public GameObject Get()
         {
             EnsureInitialized();
-            return pool.Get();
+            var go = pool.Get();
+            // 池只持有托管引用，实例可能已被外部 Destroy —— 此时 `go != null` 为 false 但
+            // `go == null` 在 Unity 语义下为 true，原实现直接返回，调用方随后会拿到
+            // MissingReferenceException。这里补齐替代实例，保证 Get() 不返回已销毁对象。
+            if (go == null)
+            {
+                Log.Warning("[GameObjectPool] 从池中取出的对象已被销毁，已创建替代实例");
+                go = CreateInstance();
+                if (go != null)
+                {
+                    OnTakeFromPool(go);
+                }
+            }
+            return go;
         }
 
         /// <summary>从池中取出对象并挂到指定父节点（本地坐标归零）</summary>

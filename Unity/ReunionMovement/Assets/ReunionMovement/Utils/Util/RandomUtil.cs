@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace ReunionMovement.Common.Util
 {
@@ -43,7 +43,9 @@ namespace ReunionMovement.Common.Util
             // 限制概率在0~100之间（手动 Clamp 以兼容 .NET Standard 2.0）
             if (chancePercent < 0f) chancePercent = 0f;
             if (chancePercent > 100f) chancePercent = 100f;
-            return GetRandom().NextDouble() * 100.0 <= chancePercent;
+            // 严格小于：NextDouble() 可能精确返回 0.0，用 <= 会让"0% 概率"以约 2^-31 的概率意外发生；
+            // 改为 < 后 0% 必不触发、100% 仍必触发（NextDouble() < 1.0），与 byte 重载语义一致
+            return GetRandom().NextDouble() * 100.0 < chancePercent;
         }
 
         /// <summary>
@@ -81,9 +83,18 @@ namespace ReunionMovement.Common.Util
 
         /// <summary>
         /// 生成随机整数 [0, maxValue)（线程安全），供外部代码直接使用。
+        /// 注意：本方法保持"快速失败"语义 —— <c>maxValue &lt; 0</c> 时先记一条可定位的日志，
+        /// 随后仍由底层 <c>Random.Next</c> 抛 <c>ArgumentOutOfRangeException</c>（不吞掉错误）。
+        /// 若需要"记日志并返回 0"的容错语义，请改用 <see cref="RandomRange(int)"/>
+        /// （本文件三个 RandomRange 重载均已做该处理）。
         /// </summary>
         public static int Next(int maxValue)
         {
+            if (maxValue < 0)
+            {
+                // 与 RandomRange 系列一样给出可定位的日志，但保留快速失败
+                Log.Error("RandomUtil.Next: 非法的 maxValue={0}（应为 >= 0），随后将由 Random.Next 抛出异常", maxValue);
+            }
             return GetRandom().Next(maxValue);
         }
 

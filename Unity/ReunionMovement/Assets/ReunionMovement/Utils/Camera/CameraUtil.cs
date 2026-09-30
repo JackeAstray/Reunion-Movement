@@ -1,4 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using ReunionMovement.Common;
 using System.Threading;
 using UnityEngine;
@@ -53,6 +53,9 @@ namespace ReunionMovement.Common.Util
         [Space(10)]
         // EnhancedTouch 全局引用计数，避免多实例互相关闭
         private static int enhancedTouchRefCount;
+        // 本实例是否真的持有一次引用：Awake 校验失败会提前 return 而不计数，
+        // OnDestroy 必须据此判断，否则会把计数减到 0 并关掉仍在使用的 EnhancedTouch
+        private bool enhancedTouchAcquired;
         // 启用到达 0 距离后继续沿摄像机 Z 轴前进
         [Tooltip("启用到达 0 距离后继续沿摄像机 Z 轴前进")]
         public bool enableForwardZoomAfterZero = false;

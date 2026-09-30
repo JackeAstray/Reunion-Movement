@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -203,8 +203,21 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 保存保底状态到 PlayerPrefs（SetString 为内存操作，Unity 正常退出时统一落盘；
-        /// flush=true 立即强制落盘，供关键节点（账号登出/付费点）使用）。
+        /// 判定保底存档内容是否发生变化（值未变则无需落盘，避免无条件 Save 造成的无意义同步 IO）。
+        /// 抽成纯函数是为了能在 Unity 之外直接断言 —— SavePityState 依赖 PlayerPrefs，脱离 Unity 无法执行。
+        /// </summary>
+        internal static bool PityStateChanged(string storedJson, string newJson)
+        {
+            return !string.Equals(storedJson ?? string.Empty, newJson ?? string.Empty, StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// 保存保底状态到 PlayerPrefs（SetString 为内存操作）。
+        /// 落盘策略：<b>内容发生变化时立即落盘</b>（值未变则跳过，避免无条件 Save 造成的无意义同步 IO —— 与
+        /// DeadlineMgr 的"变更才落盘"一致）；<paramref name="flush"/> 为 true 时无论是否变化都强制落盘，
+        /// 供关键节点（账号登出/付费点）使用。
+        /// 之所以不再只依赖"退出时统一落盘"：WebGL 关页不会可靠触发 OnApplicationQuit，
+        /// 仅靠退出落盘会丢失保底进度（玩家资产级数据）；另有失焦/暂停钩子作为兜底。
         /// </summary>
         public void SavePityState(bool flush = false)
         {
@@ -218,8 +231,11 @@ namespace ReunionMovement.Common.Util
                 isLastPullUp = isLastPullUp,
             };
             data.integrityHash = ComputePityHash(data);
-            PlayerPrefs.SetString(PitySaveKey, JsonUtility.ToJson(data));
-            if (flush) PlayerPrefs.Save();
+
+            string json = JsonUtility.ToJson(data);
+            bool changed = PityStateChanged(PlayerPrefs.GetString(PitySaveKey, string.Empty), json);
+            PlayerPrefs.SetString(PitySaveKey, json);
+            if (flush || changed) PlayerPrefs.Save();
         }
 
         /// <summary>从 PlayerPrefs 恢复保底状态（玩家重启后保底不清零，避免"重开"绕过保底）</summary>
@@ -257,6 +273,26 @@ namespace ReunionMovement.Common.Util
         public void ResetPityState()
         {
             PlayerPrefs.DeleteKey(PitySaveKey);
+            // DeleteKey 只改内存状态；WebGL 下关页不会可靠触发 OnApplicationQuit，不显式落盘则这次删除可能不生效
+            // （与 DeadlineMgrEditor 删除注册表键后紧接 PlayerPrefs.Save() 的做法保持一致）
+            PlayerPrefs.Save();
+        }
+
+        // 生命周期兜底落盘：WebGL 关页/切后台不一定触发 OnApplicationQuit，
+        // 失焦与暂停是浏览器环境下最可靠的落盘时机（主路径仍是 SavePityState 的"值变化即落盘"）。
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (!hasFocus) PlayerPrefs.Save();
+        }
+
+        private void OnApplicationPause(bool pauseStatus)
+        {
+            if (pauseStatus) PlayerPrefs.Save();
+        }
+
+        private void OnApplicationQuit()
+        {
+            PlayerPrefs.Save();
         }
         #endregion
 

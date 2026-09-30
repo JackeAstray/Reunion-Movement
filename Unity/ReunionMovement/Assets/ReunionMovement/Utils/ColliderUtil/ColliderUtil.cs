@@ -1,8 +1,17 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 #if UNITY_EDITOR
 using UnityEditor;
+#endif
+
+#if UNITY_NAVMESH_ENABLED
+// NavMeshObstacle / NavMeshObstacleShape 位于 UnityEngine.AI 命名空间。
+// 注意：经查 Unity 6 为本工程生成的 csproj，Unity 并不会发出 UNITY_NAVMESH_ENABLED 宏
+// （导航相关只有 ENABLE_NAVIGATION_OFFMESHLINK_TO_NAVMESHLINK 等），因此本文件里
+// 所有 UNITY_NAVMESH_ENABLED 分支当前是"永远不会被编译"的死代码；若日后启用该宏，
+// 这里缺少 using 会直接编译失败，故补上。
+using UnityEngine.AI;
 #endif
 
 namespace ReunionMovement.Common.Util

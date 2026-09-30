@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,22 +17,39 @@ namespace ReunionMovement.Common.Util
         public List<Material> Materials
         {
             get { return m_Materials; }
-            set { m_Materials = value; }
+            set { m_Materials = value; InvalidateMeshCache(); }
         }
 
         public List<Vertex> vertices
         {
             get { return m_Vertices; }
-            set { m_Vertices = value; }
+            set { m_Vertices = value; InvalidateMeshCache(); }
         }
 
         public List<List<int>> indices
         {
             get { return m_Indices; }
-            set { m_Indices = value; }
+            set { m_Indices = value; InvalidateMeshCache(); }
         }
 
         private Mesh m_CachedMesh;
+
+        /// <summary>
+        /// 几何数据被整体替换后必须让缓存的 Mesh 失效，否则 .mesh 返回的是旧几何
+        /// （调用方"改数据再取网格"会静默拿到过期结果）。
+        /// 注意：原地修改 List 内容无法被侦测，此时需自行调用 <see cref="InvalidateMeshCache"/>。
+        /// </summary>
+        internal void InvalidateMeshCache()
+        {
+            if (m_CachedMesh != null)
+            {
+                // 运行时 Destroy 延迟到帧末；编辑器（非播放）必须用 DestroyImmediate，
+                // 否则残留的中间 Mesh 会一直存在并报 "Destroy may not be called from edit mode"
+                if (Application.isPlaying) UnityEngine.Object.Destroy(m_CachedMesh);
+                else UnityEngine.Object.DestroyImmediate(m_CachedMesh);
+                m_CachedMesh = null;
+            }
+        }
 
         public Mesh mesh
         {

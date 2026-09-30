@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO.Compression;
 using System.IO;
 using System.Text;
@@ -50,7 +50,9 @@ namespace ReunionMovement.Common.Util
                 string id = UnityEngine.Application.identifier ?? "ReunionMovement";
                 foreach (char c in id)
                     seed = ((seed << 7) | (seed >> 25)) ^ c;
-                seed ^= (uint)UnityEngine.Application.version.GetHashCode();
+                // 刻意不混入 Application.version：版本号每次发版都会变，会让旧版本写出的数据
+                // 在升级后无法解出（位置异或流没有完整性校验，只会静默产出垃圾数据而不报错）。
+                // 确需随版本轮换密钥时，应显式调用 SetKeySeed，并配套数据迁移方案。
             }
             catch { /* 降级：使用编译时常量 */ }
             return seed != 0 ? seed : 0x6D8E2F1A;
@@ -255,6 +257,10 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static bool IsBase64String(string input)
         {
+            if (string.IsNullOrEmpty(input))
+            {
+                return false;
+            }
             try
             {
                 // 尝试将字符串解码为字节数组
@@ -264,6 +270,12 @@ namespace ReunionMovement.Common.Util
             catch (FormatException)
             {
                 return false; // 解码失败，不是有效的Base64编码
+            }
+            catch (ArgumentNullException)
+            {
+                // Convert.FromBase64String(null) 抛的是 ArgumentNullException 而非 FormatException，
+                // 原实现只 catch FormatException，null 输入会直接外溢给调用方
+                return false;
             }
         }
 
@@ -303,6 +315,9 @@ namespace ReunionMovement.Common.Util
                 return Convert.ToBase64String(compressedStream.ToArray());
             }
         }
+        /// <summary>解压输出字节上限（防解压炸弹）</summary>
+        public const int MaxDecompressedBytes = 64 * 1024 * 1024;
+
         /// <summary>
         /// 解压缩字符串
         /// </summary>
@@ -310,12 +325,28 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static string DecompressString(string compressedText)
         {
+            if (string.IsNullOrEmpty(compressedText))
+            {
+                return string.Empty;
+            }
             byte[] data = Convert.FromBase64String(compressedText);
             using (var compressedStream = new MemoryStream(data))
             using (var zipStream = new GZipStream(compressedStream, CompressionMode.Decompress))
             using (var resultStream = new MemoryStream())
             {
-                zipStream.CopyTo(resultStream);
+                // 分块拷贝并检查上限：原实现直接 zipStream.CopyTo（无界），
+                // 一个几十 KB 的压缩输入就能膨胀到数 GB 直接 OOM
+                var buffer = new byte[81920];
+                int read;
+                while ((read = zipStream.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    if (resultStream.Length + read > MaxDecompressedBytes)
+                    {
+                        throw new InvalidDataException(
+                            "解压输出超过上限 " + MaxDecompressedBytes + " 字节，疑似解压炸弹");
+                    }
+                    resultStream.Write(buffer, 0, read);
+                }
                 return Encoding.UTF8.GetString(resultStream.ToArray());
             }
         }

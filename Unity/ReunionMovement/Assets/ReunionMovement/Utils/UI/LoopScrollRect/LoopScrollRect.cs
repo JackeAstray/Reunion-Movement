@@ -1,4 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -154,12 +154,17 @@ namespace ReunionMovement.Common.Util
 
         void OnEnable()
         {
+            // Awake 校验失败时会禁用本组件并 return，此时 scrollRect 为 null；
+            // 若之后被重新启用，直接解引用会抛 NRE。与 OnDestroy 的判空保持一致
+            if (scrollRect == null) return;
             scrollRect.onValueChanged.AddListener(OnScroll);
         }
 
         void OnDisable()
         {
-            scrollRect.onValueChanged.RemoveListener(OnScroll);
+            // 用 if 而非提前 return：下面的拖拽标记复位与指示器隐藏仍须执行。
+            // 判空与 OnDestroy 的写法保持一致（Awake 校验失败时 scrollRect 可能为 null）
+            if (scrollRect != null) scrollRect.onValueChanged.RemoveListener(OnScroll);
             // 组件在拖拽中途被禁用（窗口关闭等）时 OnEndDrag 不会到达：
             // 复位拖拽标记，避免重新启用后 OnScroll 每帧误跑指示器逻辑
             isDragging = false;
@@ -388,22 +393,30 @@ namespace ReunionMovement.Common.Util
                         float shift = totalCount * step;
 
                         isRecentering = true;
-                        StopScrollCoroutineIfAny();
-                        if (scrollRect != null) scrollRect.velocity = Vector2.zero;
-
-                        if (direction == Direction.Vertical)
+                        try
                         {
-                            content.anchoredPosition = new Vector2(content.anchoredPosition.x, content.anchoredPosition.y + shift);
+                            StopScrollCoroutineIfAny();
+                            if (scrollRect != null) scrollRect.velocity = Vector2.zero;
+
+                            if (direction == Direction.Vertical)
+                            {
+                                content.anchoredPosition = new Vector2(content.anchoredPosition.x, content.anchoredPosition.y + shift);
+                            }
+                            else
+                            {
+                                content.anchoredPosition = new Vector2(content.anchoredPosition.x - shift, content.anchoredPosition.y);
+                            }
+
+                            currentFirstIndex += totalCount;
+                            RefreshVisible();
                         }
-                        else
+                        finally
                         {
-                            content.anchoredPosition = new Vector2(content.anchoredPosition.x - shift, content.anchoredPosition.y);
+                            // 与 JumpToIndex / Build / SmoothScrollToAsync 保持一致：RefreshVisible 会调用
+                            // 用户的 BindItem，若其抛异常则必须复位 isRecentering，否则 OnScroll 会永久早退、
+                            // 整个列表从此无法滚动（此前这两处是裸赋值，是文件内唯一漏掉该模式的点）
+                            isRecentering = false;
                         }
-
-                        currentFirstIndex += totalCount;
-                        RefreshVisible();
-
-                        isRecentering = false;
                     }
                     else if (currentFirstIndex >= secondBoundary)
                     {
@@ -411,22 +424,27 @@ namespace ReunionMovement.Common.Util
                         float shift = totalCount * step;
 
                         isRecentering = true;
-                        StopScrollCoroutineIfAny();
-                        if (scrollRect != null) scrollRect.velocity = Vector2.zero;
-
-                        if (direction == Direction.Vertical)
+                        try
                         {
-                            content.anchoredPosition = new Vector2(content.anchoredPosition.x, content.anchoredPosition.y - shift);
+                            StopScrollCoroutineIfAny();
+                            if (scrollRect != null) scrollRect.velocity = Vector2.zero;
+
+                            if (direction == Direction.Vertical)
+                            {
+                                content.anchoredPosition = new Vector2(content.anchoredPosition.x, content.anchoredPosition.y - shift);
+                            }
+                            else
+                            {
+                                content.anchoredPosition = new Vector2(content.anchoredPosition.x + shift, content.anchoredPosition.y);
+                            }
+
+                            currentFirstIndex -= totalCount;
+                            RefreshVisible();
                         }
-                        else
+                        finally
                         {
-                            content.anchoredPosition = new Vector2(content.anchoredPosition.x + shift, content.anchoredPosition.y);
+                            isRecentering = false;
                         }
-
-                        currentFirstIndex -= totalCount;
-                        RefreshVisible();
-
-                        isRecentering = false;
                     }
                 }
 
@@ -444,7 +462,10 @@ namespace ReunionMovement.Common.Util
             }
 
             // 额外：在拖拽过程中实时显示拉动指示器（生成在 viewport 下，避免被 content 内布局影响）
-            if (!enableLooping && isDragging)
+            // 与 TryTriggerPullOnRelease 一致：Build 不访问 viewport，故 pooledItems 非空并不能保证
+            // viewport 已配置，裸用 viewport.rect 会在拖拽中抛 NRE。无 viewport 时 viewSize/maxOffset
+            // 本无定义，故跳过整套实时可视化（若希望改用 content 兜底计算几何量，即为方案 B）
+            if (!enableLooping && isDragging && viewport != null && content != null)
             {
                 float viewSize = (direction == Direction.Vertical) ? viewport.rect.height : viewport.rect.width;
                 float contentSize = (direction == Direction.Vertical) ? content.rect.height : content.rect.width;
@@ -498,6 +519,10 @@ namespace ReunionMovement.Common.Util
             {
                 return;
             }
+            // isRecentering 期间 OnScroll 会在首行早退；若先把索引置为 -1 再调用，索引就会停留在 -1
+            // （RefreshVisible 里 virtualIndex >= 0 对 i=0 不成立 → 首项被隐藏、列表错位）。
+            // 当前所有调用点均为同步、不可能命中，故此为纵深防御：今日永不触发 ⇒ 行为不变
+            if (isRecentering) return;
             currentFirstIndex = -1;
             OnScroll(Vector2.zero);
         }
@@ -630,6 +655,7 @@ namespace ReunionMovement.Common.Util
             }
         }
 
+        /// <summary>取当前选中的数据索引；无选中时返回 -1（ClearSelection/未选状态下即为此值）</summary>
         public int GetSelectedIndex() => selectedDataIndex;
 
         // IBeginDragHandler / IEndDragHandler 用于检测用户拖拽释放以判断是否触发拉动动作
@@ -698,6 +724,11 @@ namespace ReunionMovement.Common.Util
 
             // 在循环模式下禁用拉动刷新/加载以避免与循环重心化逻辑冲突
             if (enableLooping) return;
+
+            // 与 ReboundToEdge 保持一致：未配置 viewport/content 时直接返回。
+            // 本方法由 OnEndDrag 无条件调用（不经过 pooledItems.Count > 0 那道守卫），
+            // 缺此判断时下面的 viewport.rect 会抛 NullReferenceException
+            if (viewport == null || content == null) return;
 
             float viewSize = (direction == Direction.Vertical) ? viewport.rect.height : viewport.rect.width;
             float contentSize = (direction == Direction.Vertical) ? content.rect.height : content.rect.width;
@@ -808,7 +839,11 @@ namespace ReunionMovement.Common.Util
             // 设置尺寸和位置
             if (direction == Direction.Vertical)
             {
-                float width = viewport.rect.width;
+                // 与第 813 行保持同一降级惯例：viewport 为空时退回 content 取几何量。
+                // 此前这两处裸用 viewport.rect，与 813 行的降级自相矛盾（viewport 为空即 NRE）。
+                // content 非空由调用方保证（TryTriggerPullOnRelease 与 OnScroll 都已判过 content）
+                RectTransform geo = viewport != null ? viewport : content;
+                float width = geo.rect.width;
                 if (width <= 0) width = pullStartIndicatorPrefab.rect.width;
                 pullStartIndicatorInstance.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
                 // 高度使用预制体高度或 itemSize 的一部分
@@ -820,7 +855,8 @@ namespace ReunionMovement.Common.Util
             else
             {
                 // Horizontal: 固定在左侧中间
-                float height = viewport.rect.height;
+                RectTransform geo = viewport != null ? viewport : content;
+                float height = geo.rect.height;
                 if (height <= 0) height = pullStartIndicatorPrefab.rect.height;
                 pullStartIndicatorInstance.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
                 float w = pullStartIndicatorPrefab.rect.width > 0 ? pullStartIndicatorPrefab.rect.width : itemSize;
@@ -856,7 +892,7 @@ namespace ReunionMovement.Common.Util
             pullEndIndicatorInstance.anchorMax = new Vector2(0.5f, 0f);
             if (direction == Direction.Vertical)
             {
-                float width = viewport.rect.width;
+                float width = (viewport != null ? viewport : content).rect.width;   // 与 868 行的降级一致
                 if (width <= 0) width = pullEndIndicatorPrefab.rect.width;
                 pullEndIndicatorInstance.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
                 float h = pullEndIndicatorPrefab.rect.height > 0 ? pullEndIndicatorPrefab.rect.height : itemSize;
@@ -866,7 +902,7 @@ namespace ReunionMovement.Common.Util
             else
             {
                 // Horizontal: 固定在右侧中间
-                float height = viewport.rect.height;
+                float height = (viewport != null ? viewport : content).rect.height;  // 与 868 行的降级一致
                 if (height <= 0) height = pullEndIndicatorPrefab.rect.height;
                 pullEndIndicatorInstance.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
                 float w = pullEndIndicatorPrefab.rect.width > 0 ? pullEndIndicatorPrefab.rect.width : itemSize;

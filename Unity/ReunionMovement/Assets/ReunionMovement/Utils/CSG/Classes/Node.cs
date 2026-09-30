@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -83,10 +83,19 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         public void Invert()
         {
-            for (int i = 0; i < this.polygons.Count; i++)
-                this.polygons[i].Flip();
+            // 空节点必须容忍 null：BuildInternal 对空列表提前 return，polygons 与 plane 都保持 null，
+            // 而 ClipPolygons / AllPolygons 都为此加了守卫，唯独此处没有 ——
+            // 0 三角形网格（Mesh 无 Triangles 子网格）会直接抛 NullReferenceException
+            if (this.polygons != null)
+            {
+                for (int i = 0; i < this.polygons.Count; i++)
+                    this.polygons[i].Flip();
+            }
 
-            this.plane.Flip();
+            if (this.plane != null)
+            {
+                this.plane.Flip();
+            }
 
             if (this.front != null)
             {
@@ -224,7 +233,10 @@ namespace ReunionMovement.Common.Util
             if (this.polygons == null)
                 this.polygons = new List<Polygon>();
 
-            List<Polygon> list = this.polygons;
+            // 必须拷贝（参考实现是 slice()）：原实现把节点自身的 polygons 列表直接当作返回值，
+            // 再 AddRange 子树多边形，等于把子节点几何写进本节点的存储 ——
+            // 同一节点第二次调用会把子树几何重复追加一次（非幂等，几何翻倍）
+            List<Polygon> list = new List<Polygon>(this.polygons);
 
             if (this.front != null)
             {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -201,12 +201,13 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 获取BoxCollider内的随机位置
+        /// 获取BoxCollider内的随机位置：以 <c>collider.bounds</c> 为范围，三个轴各自独立均匀采样。
+        /// 注意：边界按 AABB 处理，因此对旋转过的 BoxCollider 而言采样范围是它的世界轴对齐包围盒，而非其实际斜面体积。
+        /// （原先另有一个从未被实现、全工程也无调用方的 <c>method</c> 预留参数，已删除以免签名误导调用方。）
         /// </summary>
-        /// <param name="collider"></param>
-        /// <param name="method"></param>
-        /// <returns></returns>
-        public static Vector3 GetRandomPositionInBoxCollider(BoxCollider collider, int method = 1)
+        /// <param name="collider">取值范围的来源（使用其 <c>bounds</c> 轴对齐包围盒）</param>
+        /// <returns>包围盒内（含边界）的随机世界坐标</returns>
+        public static Vector3 GetRandomPositionInBoxCollider(BoxCollider collider)
         {
             return new Vector3(UnityEngine.Random.Range(collider.bounds.min.x, collider.bounds.max.x),
                                UnityEngine.Random.Range(collider.bounds.min.y, collider.bounds.max.y),
@@ -250,10 +251,16 @@ namespace ReunionMovement.Common.Util
                 maxRadius = miniRadius;
             }
 
-            var randomRadius = UnityEngine.Random.Range(miniRadius, maxRadius);
-            var rndPtr = UnityEngine.Random.insideUnitSphere * randomRadius;
-            var rndPos = rndPtr + center;
-            return rndPos;
+            // 原实现是 insideUnitSphere * Random.Range(miniRadius, maxRadius)：有效半径等于
+            // |insideUnitSphere| * R，其下界是 0 而不是 miniRadius —— 即"环带最小半径"完全不被遵守，
+            // 会生成贴着球心/远小于 miniRadius 的点（半径分布也偏向区间内侧）。
+            // 改为"方向取单位球面 + 半径按体积均匀"，与单半径重载（球内体积均匀）语义一致，
+            // 并严格遵守 [miniRadius, maxRadius]。
+            float minCube = miniRadius * miniRadius * miniRadius;
+            float maxCube = maxRadius * maxRadius * maxRadius;
+            float r = Mathf.Pow(UnityEngine.Random.value * (maxCube - minCube) + minCube, 1f / 3f);
+
+            return center + UnityEngine.Random.onUnitSphere * r;
         }
 
         /// <summary>

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
@@ -37,8 +37,22 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         private static readonly object saveLock = new object();
 
-        /// <summary>非法文件名字符缓存（静态初始化一次，避免每字符 Array.IndexOf）</summary>
-        private static readonly HashSet<char> invalidNameChars = new HashSet<char>(Path.GetInvalidFileNameChars());
+        /// <summary>
+        /// 非法文件名字符：固定集合，刻意不用 <see cref="Path.GetInvalidFileNameChars"/>。
+        /// 后者是平台相关的（Android/Linux 只含 '\0' 与 '/'），会让同一个存档名在 Windows 与
+        /// 移动端落成不同文件名 —— 跨端存档/云存档互相找不到。这里统一使用"Windows 超集 + 控制字符"。
+        /// </summary>
+        private static readonly HashSet<char> invalidNameChars = BuildInvalidNameChars();
+
+        private static HashSet<char> BuildInvalidNameChars()
+        {
+            var set = new HashSet<char>("<>:\"/\\|?*");
+            for (char c = '\0'; c < ' '; c++)
+            {
+                set.Add(c);
+            }
+            return set;
+        }
 
         /// <summary>
         /// 存档版本迁移回调：读取到的存档版本不等于 <see cref="DefaultVersion"/> 时触发。
@@ -59,10 +73,18 @@ namespace ReunionMovement.Common.Util
             var sb = new StringBuilder(saveName.Length);
             foreach (var c in saveName)
             {
-                if (c == '\\' || c == '/' || invalidNameChars.Contains(c)) continue;
+                // invalidNameChars 已包含 '/' 与 '\\'（防路径穿越）
+                if (invalidNameChars.Contains(c)) continue;
                 sb.Append(c);
             }
-            return sb.ToString();
+            string sanitized = sb.ToString();
+            if (!string.Equals(sanitized, saveName, StringComparison.Ordinal))
+            {
+                // 净化是"删除"而不是"替换"，因此不同原始名可能落到同一文件（"a/b" 与 "ab"）。
+                // 在不破坏既有存档文件名的前提下无法彻底消除，至少让改名可见。
+                Log.Warning("[SaveSystem] 存档名 {0} 含非法字符，已净化为 {1}（净化后可能与其他存档名冲突）", saveName, sanitized);
+            }
+            return sanitized;
         }
 
         /// <summary>
@@ -188,8 +210,18 @@ namespace ReunionMovement.Common.Util
                 try
                 {
                     string raw = File.ReadAllText(path);
-                    // 解密失败（损坏/密钥不匹配）时按明文解析，保持对旧存档的向后兼容
-                    string json = EnableEncryption ? (DecryptFromText(raw) ?? raw) : raw;
+                    // 解密失败必须明确失败：ENC1/ENC2 前缀的数据一旦 MAC/解密校验不过，就说明
+                    // 文件已损坏或密钥不匹配。原实现 `DecryptFromText(raw) ?? raw` 会把带 ENC 前缀的
+                    // 密文当作明文 JSON 继续解析，既掩盖真实原因，也让完整性校验形同虚设。
+                    // 注意：启用加密之前写入的明文旧档由 DecryptFromText 内部原样返回（见其末尾分支），
+                    // 向后兼容不依赖这里的回退。
+                    string json = EnableEncryption ? DecryptFromText(raw) : raw;
+                    if (json == null)
+                    {
+                        Log.Error("[SaveSystem] 存档 {0} 解密/完整性校验失败（文件损坏或密钥不匹配），已判定为不可读", path);
+                        LastLoadedVersion = null;
+                        return false;
+                    }
 
                     // 版本信封解包：新格式 {version, payload}；旧格式（无信封）直接按数据解析
                     string payloadJson = json;
@@ -222,8 +254,22 @@ namespace ReunionMovement.Common.Util
                 catch (Exception ex)
                 {
                     Log.Warning("SaveSystem 加载失败 {0}: {1}", saveName, ex.Message);
-                    // 损坏隔离：把损坏文件改名备份，避免每次启动反复解析失败，方便排查
-                    try { if (File.Exists(path)) File.Move(path, path + ".corrupt"); } catch { /* 忽略 */ }
+                    // 损坏隔离：把损坏文件改名备份，避免每次启动反复解析失败，方便排查。
+                    // 目标已存在时 File.Move 会抛异常 —— 原实现把异常整个吞掉，导致损坏档
+                    // 永远得不到隔离、每次加载都重复走这条失败路径且毫无线索。
+                    try
+                    {
+                        if (File.Exists(path))
+                        {
+                            string corruptPath = path + ".corrupt";
+                            if (File.Exists(corruptPath)) File.Delete(corruptPath);
+                            File.Move(path, corruptPath);
+                        }
+                    }
+                    catch (Exception moveEx)
+                    {
+                        Log.Warning("SaveSystem 损坏存档隔离失败 {0}: {1}", saveName, moveEx.Message);
+                    }
                     return false;
                 }
             }

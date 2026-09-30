@@ -1,4 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using ReunionMovement.Common;
 using System.Threading;
 using UnityEngine;
@@ -69,6 +69,7 @@ namespace ReunionMovement.Common.Util
                 EnhancedTouchSupport.Enable();
             }
             enhancedTouchRefCount++;
+            enhancedTouchAcquired = true;
 
             raycastBase = new RaycastBase(layerMask, csmoCamera);
             distance = Mathf.Clamp(distance, GetEffectiveMinDistance(), maxDistance);
@@ -89,10 +90,16 @@ namespace ReunionMovement.Common.Util
             cameraViewCts = null;
             cameraZoomCts = null;
 
-            enhancedTouchRefCount = Mathf.Max(0, enhancedTouchRefCount - 1);
-            if (enhancedTouchRefCount == 0)
+            // 只在真正持有引用时递减：Awake 校验失败（找不到 Camera/Target）会 enabled=false 并 return，
+            // 从未计数；无条件递减会把计数打到 0，导致仍在读取触摸的健康实例被 EnhancedTouchSupport.Disable()
+            if (enhancedTouchAcquired)
             {
-                EnhancedTouchSupport.Disable();
+                enhancedTouchAcquired = false;
+                enhancedTouchRefCount = Mathf.Max(0, enhancedTouchRefCount - 1);
+                if (enhancedTouchRefCount == 0)
+                {
+                    EnhancedTouchSupport.Disable();
+                }
             }
         }
 

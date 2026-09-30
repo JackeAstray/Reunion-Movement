@@ -1,4 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -128,6 +128,16 @@ namespace ReunionMovement.Common.Util
                     if (read == 0) break;
                     offset += read;
                 }
+                // 文件在读取期间被截断时 offset < bytes.Length：必须截断数组返回。
+                // 原实现直接返回定长数组，尾部是 0 填充 —— 对调用方是静默的脏数据
+                //（JSON 解析失败、二进制资源损坏，且没有任何提示）。
+                if (offset != bytes.Length)
+                {
+                    Log.Warning("ReadAllBytes() 文件 {0} 在读取期间被截断（预期 {1} 字节，实际 {2} 字节）", path, bytes.Length, offset);
+                    var truncated = new byte[offset];
+                    if (offset > 0) Buffer.BlockCopy(bytes, 0, truncated, 0, offset);
+                    return truncated;
+                }
                 return bytes;
             }
             catch (Exception e)
@@ -151,7 +161,7 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         /// <param name="fullpath"></param>
         /// <param name="content"></param>
-        /// <returns>写入字节数，失败返回 -1</returns>
+        /// <returns>写入的 UTF-8 字节数，失败返回 -1</returns>
         public static int SaveFileSync(string fullpath, string content)
         {
             try
@@ -162,8 +172,12 @@ namespace ReunionMovement.Common.Util
                 {
                     Directory.CreateDirectory(dir);
                 }
-                File.WriteAllText(fullpath, content, Encoding.UTF8);
-                return content.Length;
+                // 与 SaveFileAsync 保持同一语义：写入无 BOM 的 UTF-8 字节并返回真实字节数。
+                // 原实现返回 content.Length（字符数），文档却写明"字节数"，
+                // 含中文/emoji 时调用方按字节记账会明显偏小。
+                var bytes = Encoding.UTF8.GetBytes(content);
+                File.WriteAllBytes(fullpath, bytes);
+                return bytes.Length;
             }
             catch (Exception e)
             {
@@ -199,9 +213,22 @@ namespace ReunionMovement.Common.Util
             }
         }
 
-        /// <summary>非法文件名字符缓存（与 SaveSystem 对齐，防路径穿越写出 Json 目录）</summary>
-        private static readonly System.Collections.Generic.HashSet<char> s_invalidNameChars
-            = new System.Collections.Generic.HashSet<char>(Path.GetInvalidFileNameChars());
+        /// <summary>
+        /// 非法文件名字符（与 SaveSystem 对齐，固定集合，防路径穿越写出 Json 目录）。
+        /// 刻意不用 Path.GetInvalidFileNameChars()：它是平台相关的，同一文件名在 Windows 与
+        /// Android/iOS 上会被净化为不同结果，导致跨端读写找不到同一文件。
+        /// </summary>
+        private static readonly System.Collections.Generic.HashSet<char> s_invalidNameChars = BuildInvalidNameChars();
+
+        private static System.Collections.Generic.HashSet<char> BuildInvalidNameChars()
+        {
+            var set = new System.Collections.Generic.HashSet<char>("<>:\"/\\|?*");
+            for (char c = '\0'; c < ' '; c++)
+            {
+                set.Add(c);
+            }
+            return set;
+        }
 
         /// <summary>
         /// 净化 Json 文件名：剥离目录分隔符与非法字符，防止外部输入含 ../ 写出 Json 目录。
@@ -285,6 +312,38 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
+        /// 净化相对路径片段：按 '/' 分段，丢弃空段、'.'、'..' 与非法字符。
+        /// filePath 与 fileName 都参与字符串拼接，含 '../' 时可写出 persistentDataPath 之外。
+        /// </summary>
+        private static string SanitizeRelativePath(string relativePath)
+        {
+            if (string.IsNullOrEmpty(relativePath)) return string.Empty;
+            var parts = relativePath.Replace('\\', '/').Split('/');
+            var sb = new StringBuilder(relativePath.Length);
+            foreach (var part in parts)
+            {
+                if (part.Length == 0 || part == "." || part == "..") continue;
+                var cleaned = SanitizeJsonName(part);
+                if (string.IsNullOrEmpty(cleaned)) continue;
+                if (sb.Length > 0) sb.Append('/');
+                sb.Append(cleaned);
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>按 '/' 分段做 URI 转义（不能整体转义，否则分隔符也会被编码）</summary>
+        private static string EscapeUriSegments(string relativePath)
+        {
+            if (string.IsNullOrEmpty(relativePath)) return string.Empty;
+            var parts = relativePath.Split('/');
+            for (int i = 0; i < parts.Length; i++)
+            {
+                parts[i] = Uri.EscapeDataString(parts[i]);
+            }
+            return string.Join("/", parts);
+        }
+
+        /// <summary>
         /// 游戏开始把StreamingAssets文件复制到持久化目录
         /// </summary>
         /// <param name="filePath"></param>
@@ -292,6 +351,16 @@ namespace ReunionMovement.Common.Util
         /// <returns></returns>
         public static IEnumerator CopyFileToTarget(string filePath, string fileName)
         {
+            // 两个参数都会被拼进路径，必须先净化：原实现直接插值，
+            // 传入 "../../.." 即可写到 persistentDataPath 之外
+            filePath = SanitizeRelativePath(filePath);
+            fileName = SanitizeJsonName(fileName);
+            if (string.IsNullOrEmpty(fileName))
+            {
+                Log.Error("CopyFileToTarget 文件名非法（为空或全为非法字符）: {0}", fileName);
+                yield break;
+            }
+
             var originalPath = $"{Application.streamingAssetsPath}/{filePath}/{fileName}";
             var targetDir = $"{Application.persistentDataPath}/{filePath}";
             var targetPath = $"{targetDir}/{fileName}";
@@ -304,7 +373,9 @@ namespace ReunionMovement.Common.Util
             switch (Application.platform)
             {
                 case RuntimePlatform.Android:
-                    using (var www = UnityWebRequest.Get(originalPath))
+                    // 文件名可能含空格等字符：不转义时 '#' 会被当作 fragment、空格会破坏 URL，
+                    // 结果是复制静默失败
+                    using (var www = UnityWebRequest.Get($"{Application.streamingAssetsPath}/{EscapeUriSegments(filePath)}/{Uri.EscapeDataString(fileName)}"))
                     {
                         yield return www.SendWebRequest();
                         if (www.result != UnityWebRequest.Result.Success)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -22,10 +22,19 @@ namespace ReunionMovement.Common.Util.Download
         /// </summary>
         static DownloadExecutorFactory()
         {
-            typeMap = typeof(IDownloadExecutor).Assembly
-                      .GetTypes()
-                      .Where(t => t.IsSubclassOf(typeof(IDownloadExecutor)) && !t.IsAbstract)
-                      .ToDictionary(t => t.Name, t => t);
+            // 注意：这里不能用 ToDictionary(t => t.Name, t => t)。若程序集内存在同名（不同命名空间）的执行器，
+            // 它会在静态构造函数里抛 ArgumentException，使本类第一次被触碰时以 TypeInitializationException 整体崩溃
+            // （而工厂本身"找不到就记日志返回 null"的设计是不会崩的）。改用"后者覆盖前者"：
+            // 名称唯一时与原先行为完全一致；出现重名时退化为一条可读日志，而不是崩掉。
+            foreach (Type t in typeof(IDownloadExecutor).Assembly.GetTypes())
+            {
+                if (t.IsAbstract || !t.IsSubclassOf(typeof(IDownloadExecutor))) continue;
+                if (typeMap.ContainsKey(t.Name))
+                {
+                    Log.Error("下载执行器名称重复：{0}（{1} 与 {2}），仅保留后者", t.Name, typeMap[t.Name].FullName, t.FullName);
+                }
+                typeMap[t.Name] = t;
+            }
         }
 
         /// <summary>
