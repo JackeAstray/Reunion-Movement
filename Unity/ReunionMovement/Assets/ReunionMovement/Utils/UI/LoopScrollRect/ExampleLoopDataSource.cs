@@ -18,6 +18,7 @@ namespace ReunionMovement.Example
     {
         public LoopScrollRect loop;
         public int itemTotal = 100;
+        private LoopScrollRect subscribedLoop;
 
         // 实际数据存储
         List<string> items = new List<string>();
@@ -33,15 +34,36 @@ namespace ReunionMovement.Example
 
         void Start()
         {
+            if (loop == null)
+            {
+                Debug.LogError("ExampleLoopDataSource requires a LoopScrollRect.", this);
+                enabled = false;
+                return;
+            }
             loop.Initialize(this);
+        }
+
+        private void OnEnable()
+        {
+            if (loop == null) return;
+            subscribedLoop = loop;
+            loop.onPullStart ??= new UnityEngine.Events.UnityEvent();
+            loop.onPullEnd ??= new UnityEngine.Events.UnityEvent();
             loop.onPullStart.AddListener(Refresh);
             loop.onPullEnd.AddListener(Load);
         }
 
-        public void OnDestroy()
+        private void OnDisable()
         {
-            loop.onPullStart.RemoveListener(Refresh);
-            loop.onPullEnd.RemoveListener(Load);
+            StopAllCoroutines();
+            if (subscribedLoop != null)
+            {
+                subscribedLoop.onPullStart.RemoveListener(Refresh);
+                subscribedLoop.onPullEnd.RemoveListener(Load);
+                subscribedLoop.CompletePullStart();
+                subscribedLoop.CompletePullEnd();
+            }
+            subscribedLoop = null;
         }
 
         /// <summary>
@@ -83,10 +105,10 @@ namespace ReunionMovement.Example
         IEnumerator DoRefresh()
         {
             // 模拟耗时操作（例如网络请求），期间 pullStartIndicator 保持显示
-            yield return new WaitForSeconds(1f);
+            yield return new WaitForSecondsRealtime(1f);
 
             // 不修改数据，仅在完成后隐藏指示器
-            loop.CompletePullStart();
+            if (loop != null) loop.CompletePullStart();
         }
 
         /// <summary>
@@ -106,10 +128,10 @@ namespace ReunionMovement.Example
         IEnumerator DoLoad()
         {
             // 模拟耗时操作，期间 pullEndIndicator 保持显示
-            yield return new WaitForSeconds(1f);
+            yield return new WaitForSecondsRealtime(1f);
 
             // 不修改数据，仅在完成后隐藏指示器
-            loop.CompletePullEnd();
+            if (loop != null) loop.CompletePullEnd();
         }
 
         /// <summary>

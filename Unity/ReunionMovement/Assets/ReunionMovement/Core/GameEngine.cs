@@ -753,6 +753,16 @@ namespace ReunionMovement.Core
             // 快照遍历：模块 Clear 期间可能修改列表（如移除自身）
             clearSnapshot.Clear();
             clearSnapshot.AddRange(modules);
+            for (int index = clearSnapshot.Count - 1; index >= 0; index--)
+            {
+                if (clearSnapshot[index] is ReunionMovement.Core.Resources.ResourcesSystem)
+                {
+                    var resources = clearSnapshot[index];
+                    clearSnapshot.RemoveAt(index);
+                    clearSnapshot.Add(resources);
+                    break;
+                }
+            }
             foreach (var module in clearSnapshot)
             {
                 try

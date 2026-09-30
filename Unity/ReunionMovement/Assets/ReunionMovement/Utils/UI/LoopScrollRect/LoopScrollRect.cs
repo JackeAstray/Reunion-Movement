@@ -126,6 +126,39 @@ namespace ReunionMovement.Common.Util
 
         // 标记在程序化调整 content 时忽略 OnScroll 回调，防止重入/抖动
         bool isRecentering = false;
+        private bool initialized;
+        private Vector2 lastViewportSize;
+        private EventTrigger dragTrigger;
+        private EventTrigger.Entry beginDragEntry;
+        private EventTrigger.Entry endDragEntry;
+        public event Action<int> ItemClicked;
+        public event Action<int> SelectionChanged;
+        private float Step => Mathf.Max(0.001f, itemSize + spacing);
+        private float ViewSize => direction == Direction.Vertical ? viewport.rect.height : viewport.rect.width;
+        private float Offset => direction == Direction.Vertical ? content.anchoredPosition.y : -content.anchoredPosition.x;
+        private float MaxOffset => Mathf.Max(0f,
+            (direction == Direction.Vertical ? content.rect.height : content.rect.width) - ViewSize);
+
+        private void SetOffset(float offset)
+        {
+            var position = content.anchoredPosition;
+            if (direction == Direction.Vertical) position.y = offset;
+            else position.x = -offset;
+            content.anchoredPosition = position;
+        }
+
+        private bool TryInitializeReferences()
+        {
+            if (scrollRect == null) scrollRect = GetComponentInChildren<ScrollRect>();
+            if (scrollRect == null || scrollRect.content == null || itemPrefab == null)
+            {
+                Debug.LogError("LoopScrollRect requires ScrollRect, Content and Item Prefab.", this);
+                return false;
+            }
+            content = scrollRect.content;
+            viewport = scrollRect.viewport != null ? scrollRect.viewport : scrollRect.GetComponent<RectTransform>();
+            return viewport != null;
+        }
 
         void Awake()
         {
@@ -157,11 +190,46 @@ namespace ReunionMovement.Common.Util
             // Awake 校验失败时会禁用本组件并 return，此时 scrollRect 为 null；
             // 若之后被重新启用，直接解引用会抛 NRE。与 OnDestroy 的判空保持一致
             if (scrollRect == null) return;
+            scrollRect.onValueChanged.RemoveListener(OnScroll);
             scrollRect.onValueChanged.AddListener(OnScroll);
+            RegisterDragEvents();
+            if (initialized) ForceRefresh();
+        }
+
+        private void RegisterDragEvents()
+        {
+            if (scrollRect == null || scrollRect.gameObject == gameObject || beginDragEntry != null) return;
+            dragTrigger = scrollRect.GetComponent<EventTrigger>();
+            if (dragTrigger == null) dragTrigger = scrollRect.gameObject.AddComponent<EventTrigger>();
+            beginDragEntry = new EventTrigger.Entry { eventID = EventTriggerType.BeginDrag };
+            beginDragEntry.callback.AddListener(data => OnBeginDrag((PointerEventData)data));
+            endDragEntry = new EventTrigger.Entry { eventID = EventTriggerType.EndDrag };
+            endDragEntry.callback.AddListener(data => OnEndDrag((PointerEventData)data));
+            dragTrigger.triggers.Add(beginDragEntry);
+            dragTrigger.triggers.Add(endDragEntry);
+        }
+
+        private void LateUpdate()
+        {
+            if (!initialized || viewport == null || content == null) return;
+            if ((viewport.rect.size - lastViewportSize).sqrMagnitude > 0.01f)
+            {
+                Build();
+                ForceRefresh();
+            }
         }
 
         void OnDisable()
         {
+            StopScrollCoroutineIfAny();
+            if (scrollRect != null) scrollRect.StopMovement();
+            if (dragTrigger != null)
+            {
+                dragTrigger.triggers.Remove(beginDragEntry);
+                dragTrigger.triggers.Remove(endDragEntry);
+            }
+            beginDragEntry = null;
+            endDragEntry = null;
             // 用 if 而非提前 return：下面的拖拽标记复位与指示器隐藏仍须执行。
             // 判空与 OnDestroy 的写法保持一致（Awake 校验失败时 scrollRect 可能为 null）
             if (scrollRect != null) scrollRect.onValueChanged.RemoveListener(OnScroll);
@@ -185,6 +253,17 @@ namespace ReunionMovement.Common.Util
             // 销毁时停止平滑滚动协程：否则 UniTaskVoid 协程会继续每帧访问
             // 已销毁的 content.anchoredPosition，导致 MissingReferenceException 持续刷屏。
             StopScrollCoroutineIfAny();
+            foreach (var item in pooledItems)
+            {
+                if (item == null) continue;
+                var component = item.GetComponent<LoopItemBase>();
+                if (component != null) component.onClick = null;
+                item.gameObject.SetActive(false);
+                Destroy(item.gameObject);
+            }
+            pooledItems.Clear();
+            pooledItemComps.Clear();
+            pooledDataIndices.Clear();
             if (scrollRect != null)
             {
                 scrollRect.onValueChanged.RemoveListener(OnScroll);
@@ -210,14 +289,27 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         public void Initialize(IDataSource source)
         {
+            if (!TryInitializeReferences()) return;
+            if (isActiveAndEnabled)
+            {
+                scrollRect.onValueChanged.RemoveListener(OnScroll);
+                scrollRect.onValueChanged.AddListener(OnScroll);
+                RegisterDragEvents();
+            }
             dataSource = source;
             totalCount = dataSource?.GetItemCount() ?? totalCount;
+            selectedDataIndex = -1;
+            isActionInProgressStart = false;
+            isActionInProgressEnd = false;
+            HidePullStartIndicator();
+            HidePullEndIndicator();
             Build();
+            initialized = true;
             ForceRefresh();
         }
 
         /// <summary>
-        /// 构建池和 content（会清理已有池）。
+        /// 更新内容尺寸并调整池容量，复用已有条目。
         /// </summary>
         void Build()
         {
@@ -225,19 +317,14 @@ namespace ReunionMovement.Common.Util
             // 结束后用旧 finalFirstIndex 对新池执行 RefreshVisible，造成跳动/错位
             StopScrollCoroutineIfAny();
 
-            // 清理已有池
-            foreach (var it in pooledItems)
-            {
-                if (it != null)
-                {
-                    Destroy(it.gameObject);
-                }
-            }
-            pooledItems.Clear();
-            pooledItemComps.Clear();
-            pooledDataIndices.Clear();
+            float previousOffset = content != null ? Offset : 0f;
             currentFirstIndex = -1;
             currentPage = -1;
+            totalCount = Mathf.Max(0, totalCount);
+            if (selectedDataIndex >= totalCount) selectedDataIndex = -1;
+            itemsPerPage = Mathf.Max(1, itemsPerPage);
+            extraBuffer = Mathf.Max(1, extraBuffer);
+            lastViewportSize = viewport.rect.size;
 
             // 计算单项大小（使用 prefab 的 rect）
             if (direction == Direction.Vertical)
@@ -268,25 +355,58 @@ namespace ReunionMovement.Common.Util
 
             visibleCount = Mathf.CeilToInt(viewSize / (itemSize + spacing)) + extraBuffer;
             visibleCount = Mathf.Min(visibleCount, Mathf.Max(0, effectiveTotal));
+            for (int index = pooledItems.Count - 1; index >= visibleCount; index--)
+            {
+                if (pooledItemComps[index] != null) pooledItemComps[index].onClick = null;
+                if (pooledItems[index] != null)
+                {
+                    pooledItems[index].gameObject.SetActive(false);
+                    Destroy(pooledItems[index].gameObject);
+                }
+                pooledItems.RemoveAt(index);
+                pooledItemComps.RemoveAt(index);
+                pooledDataIndices.RemoveAt(index);
+            }
 
             // 设置 content 大小以允许滚动（使用 SetSizeWithCurrentAnchors 更可靠）
             if (direction == Direction.Vertical)
             {
-                float contentHeight = effectiveTotal * (itemSize + spacing) - spacing;
+                float contentHeight = CalculateContentSize(effectiveTotal);
                 content.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, contentHeight);
             }
             else
             {
-                float contentWidth = effectiveTotal * (itemSize + spacing) - spacing;
+                float contentWidth = CalculateContentSize(effectiveTotal);
                 content.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, contentWidth);
             }
 
             // 生成池内初始可见项（reuse prefab）
             for (int i = 0; i < visibleCount; i++)
             {
-                var go = Instantiate(itemPrefab.gameObject, content);
-                go.SetActive(true);
-                var rt = go.GetComponent<RectTransform>();
+                RectTransform rt;
+                if (i < pooledItems.Count && pooledItems[i] != null)
+                {
+                    rt = pooledItems[i];
+                    pooledDataIndices[i] = -1;
+                }
+                else
+                {
+                    var go = Instantiate(itemPrefab.gameObject, content);
+                    rt = go.GetComponent<RectTransform>();
+                    if (i < pooledItems.Count)
+                    {
+                        pooledItems[i] = rt;
+                        pooledItemComps[i] = rt.GetComponent<LoopItemBase>();
+                        pooledDataIndices[i] = -1;
+                    }
+                    else
+                    {
+                        pooledItems.Add(rt);
+                        pooledItemComps.Add(rt.GetComponent<LoopItemBase>());
+                        pooledDataIndices.Add(-1);
+                    }
+                }
+                rt.gameObject.SetActive(false);
                 rt.localScale = Vector3.one;
 
                 rt.pivot = new Vector2(0, 1);
@@ -308,15 +428,14 @@ namespace ReunionMovement.Common.Util
                     rt.anchoredPosition = new Vector2(i * (itemSize + spacing), 0f);
                 }
 
-                pooledItems.Add(rt);
-                pooledItemComps.Add(rt.GetComponent<LoopItemBase>());
-                pooledDataIndices.Add(-1);
             }
 
             // 如果启用了循环并且有数据，初始定位到中间 cycle 的起点，避免立刻到达边缘
             if (enableLooping && totalCount > 0)
             {
-                int startFirst = totalCount; // middle cycle
+                int startFirst = initialized
+                    ? totalCount + Mathf.FloorToInt(Mathf.Repeat(previousOffset, totalCount * Step) / Step)
+                    : totalCount;
                 currentFirstIndex = startFirst;
                 Vector2 pos = content.anchoredPosition;
 
@@ -341,6 +460,22 @@ namespace ReunionMovement.Common.Util
                     isRecentering = false;
                 }
             }
+            else
+            {
+                SetOffset(Mathf.Clamp(Offset, 0f, MaxOffset));
+                scrollRect.StopMovement();
+            }
+        }
+
+        private float CalculateContentSize(int count)
+        {
+            float size = Mathf.Max(0f, count * Step - spacing);
+            if (enablePaging && !enableLooping && count > 0)
+            {
+                int lastPage = (count - 1) / Mathf.Max(1, itemsPerPage);
+                size = Mathf.Max(size, lastPage * Mathf.Max(1, itemsPerPage) * Step + ViewSize);
+            }
+            return size;
         }
         /// <summary>
         /// 滚动时回调，计算新的 firstIndex 并刷新可见项。
@@ -352,10 +487,7 @@ namespace ReunionMovement.Common.Util
             if (isRecentering) return;
 
             // 计算应该显示的 firstIndex（基于 content.anchoredPosition）
-            if (totalCount == 0 || pooledItems.Count == 0)
-            {
-                return;
-            }
+            if (!initialized || content == null || viewport == null) return;
 
             int newFirst = 0;
             // 运行时钳制：spacing 可能被外部赋负值使步长 <=0，FloorToInt 与循环重心化会除零/溢出
@@ -373,7 +505,7 @@ namespace ReunionMovement.Common.Util
             }
 
             int effectiveTotal = enableLooping && totalCount > 0 ? totalCount * LOOP_CYCLES : totalCount;
-            newFirst = Mathf.Clamp(newFirst, 0, Math.Max(0, effectiveTotal - visibleCount));
+            newFirst = Mathf.Clamp(newFirst, 0, Math.Max(0, effectiveTotal - 1));
             if (newFirst != currentFirstIndex)
             {
                 currentFirstIndex = newFirst;
@@ -450,7 +582,7 @@ namespace ReunionMovement.Common.Util
 
                 // 当不是由分页主动设置时，也可以计算当前页（用于初始化或直接滚动后的回调）。
                 // 拖拽中（未松手吸附）不通知：整数除法会产生中间页号导致指示器抖动，吸附完成时统一通知
-                if (enablePaging && itemsPerPage > 0 && !enableLooping && !isDragging)
+                if (enablePaging && itemsPerPage > 0 && !enableLooping && !isDragging && scrollCts == null)
                 {
                     int page = currentFirstIndex / itemsPerPage;
                     if (page != currentPage)
@@ -515,10 +647,7 @@ namespace ReunionMovement.Common.Util
         void ForceRefresh()
         {
             // 强制首次计算 firstIndex 并刷新
-            if (totalCount == 0 || pooledItems.Count == 0)
-            {
-                return;
-            }
+            if (!initialized) return;
             // isRecentering 期间 OnScroll 会在首行早退；若先把索引置为 -1 再调用，索引就会停留在 -1
             // （RefreshVisible 里 virtualIndex >= 0 对 i=0 不成立 → 首项被隐藏、列表错位）。
             // 当前所有调用点均为同步、不可能命中，故此为纵深防御：今日永不触发 ⇒ 行为不变
@@ -540,13 +669,12 @@ namespace ReunionMovement.Common.Util
                 int virtualIndex = currentFirstIndex + i;
                 var item = pooledItems[i];
                 var loopItemComp = i < pooledItemComps.Count ? pooledItemComps[i] : null;
-                if (virtualIndex >= 0 && totalCount > 0)
+                if (virtualIndex >= 0 && totalCount > 0 && (enableLooping || virtualIndex < totalCount))
                 {
-                    int dataIndex = ((virtualIndex % totalCount) + totalCount) % totalCount; // modulo
+                    int dataIndex = enableLooping ? virtualIndex % totalCount : virtualIndex;
                     item.gameObject.SetActive(true);
 
-                    // 数据索引未变化时跳过 BindItem（非循环模式滚动一步时大部分项数据不变），
-                    // 组件引用已缓存，避免每次滚动 GetComponent
+                    // 相同槽位仍绑定相同数据时跳过重复绑定。
                     if (i >= pooledDataIndices.Count || pooledDataIndices[i] != dataIndex)
                     {
                         dataSource?.BindItem(item, dataIndex);
@@ -602,6 +730,8 @@ namespace ReunionMovement.Common.Util
 
         void OnItemClicked(int dataIndex)
         {
+            if (!isActiveAndEnabled || dataIndex < 0 || dataIndex >= totalCount) return;
+            bool changed = selectedDataIndex != dataIndex;
             // 选择数据索引（不自动滚动）
             selectedDataIndex = dataIndex;
             // 更新可见项的选中状态（复用已缓存的组件引用，避免 GetComponent 循环）
@@ -615,15 +745,18 @@ namespace ReunionMovement.Common.Util
             }
 
             onItemSelected?.Invoke(dataIndex);
+            if (changed) SelectionChanged?.Invoke(dataIndex);
+            ItemClicked?.Invoke(dataIndex);
         }
 
         /// <summary>
         /// 外部接口：以数据索引选择一个项（可选是否使其可见）
         /// </summary>
-        public void SelectDataIndex(int dataIndex, bool ensureVisible = false, bool animated = false)
+        public void SelectDataIndex(int dataIndex, bool ensureVisible = false, bool animated = false, bool notify = true)
         {
             if (totalCount == 0) return;
             dataIndex = Mathf.Clamp(dataIndex, 0, totalCount - 1);
+            bool changed = selectedDataIndex != dataIndex;
             selectedDataIndex = dataIndex;
 
             // 更新可见项状态（复用已缓存的组件引用，避免 GetComponent 循环）
@@ -636,7 +769,11 @@ namespace ReunionMovement.Common.Util
                 }
             }
 
-            onItemSelected?.Invoke(dataIndex);
+            if (notify)
+            {
+                onItemSelected?.Invoke(dataIndex);
+                if (changed) SelectionChanged?.Invoke(dataIndex);
+            }
 
             if (ensureVisible)
             {
@@ -645,14 +782,16 @@ namespace ReunionMovement.Common.Util
             }
         }
 
-        public void ClearSelection()
+        public void ClearSelection(bool notify = false)
         {
+            bool changed = selectedDataIndex != -1;
             selectedDataIndex = -1;
             for (int i = 0; i < pooledItemComps.Count; i++)
             {
                 var li = pooledItemComps[i];
                 if (li != null) li.SetSelected(false);
             }
+            if (notify && changed) SelectionChanged?.Invoke(-1);
         }
 
         /// <summary>取当前选中的数据索引；无选中时返回 -1（ClearSelection/未选状态下即为此值）</summary>
@@ -661,6 +800,7 @@ namespace ReunionMovement.Common.Util
         // IBeginDragHandler / IEndDragHandler 用于检测用户拖拽释放以判断是否触发拉动动作
         public void OnBeginDrag(PointerEventData eventData)
         {
+            if (!initialized || !isActiveAndEnabled || eventData.button != PointerEventData.InputButton.Left) return;
             isDragging = true;
             // 用户开始拖拽：中断进行中的平滑滚动 tween，避免两者抢写 content.anchoredPosition
             StopScrollCoroutineIfAny();
@@ -668,6 +808,7 @@ namespace ReunionMovement.Common.Util
 
         public void OnEndDrag(PointerEventData eventData)
         {
+            if (!initialized || !isActiveAndEnabled || eventData.button != PointerEventData.InputButton.Left) return;
             isDragging = false;
             TryTriggerPullOnRelease();
 
@@ -780,7 +921,7 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         private void ReboundToEdge(bool toStart)
         {
-            if (content == null || viewport == null) return;
+            if (!isActiveAndEnabled || content == null || viewport == null) return;
             float viewSize = (direction == Direction.Vertical) ? viewport.rect.height : viewport.rect.width;
             float contentSize = (direction == Direction.Vertical) ? content.rect.height : content.rect.width;
             float maxOffset = Mathf.Max(0f, contentSize - viewSize);
@@ -956,7 +1097,8 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         public void JumpToIndex(int index, bool animated = false, float duration = 0.25f)
         {
-            if (totalCount == 0 || pooledItems.Count == 0) return;
+            if (!initialized || !isActiveAndEnabled || totalCount == 0 || pooledItems.Count == 0) return;
+            index = Mathf.Clamp(index, 0, totalCount - 1);
 
             int effectiveTotal = enableLooping && totalCount > 0 ? totalCount * LOOP_CYCLES : totalCount;
 
@@ -967,11 +1109,11 @@ namespace ReunionMovement.Common.Util
             if (enablePaging && itemsPerPage > 0 && !enableLooping)
             {
                 int safeItemsPerPage = Mathf.Max(1, itemsPerPage);
-                maxFirst = Math.Max(0, totalCount - safeItemsPerPage);
+                maxFirst = ((totalCount - 1) / safeItemsPerPage) * safeItemsPerPage;
             }
             else
             {
-                maxFirst = Math.Max(0, effectiveTotal - visibleCount);
+                maxFirst = Math.Max(0, effectiveTotal - 1);
             }
 
             int targetFirst = Mathf.Clamp(index, 0, maxFirst);
@@ -984,14 +1126,16 @@ namespace ReunionMovement.Common.Util
                 targetFirst = Mathf.Clamp(middleBase + index, 0, maxFirst);
             }
 
+            float targetOffset = Mathf.Clamp(targetFirst * Step, 0f, MaxOffset);
+            targetFirst = Mathf.FloorToInt(targetOffset / Step);
             Vector2 targetPos = content.anchoredPosition;
             if (direction == Direction.Vertical)
             {
-                targetPos.y = targetFirst * (itemSize + spacing);
+                targetPos.y = targetOffset;
             }
             else
             {
-                targetPos.x = -targetFirst * (itemSize + spacing);
+                targetPos.x = -targetOffset;
             }
 
             // 立即生效
@@ -1124,7 +1268,8 @@ namespace ReunionMovement.Common.Util
                 try
                 {
                     content.anchoredPosition = targetAnchoredPos;
-                    currentFirstIndex = finalFirstIndex;
+                    currentFirstIndex = Mathf.Clamp(Mathf.FloorToInt(Offset / Step), 0,
+                        Mathf.Max(0, (enableLooping ? totalCount * LOOP_CYCLES : totalCount) - 1));
                     RefreshVisible();
                     // 更新指示器位置（若存在）
                     UpdatePullIndicatorPositions();
@@ -1162,13 +1307,29 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         public void NotifyDataSetChanged()
         {
+            if (!TryInitializeReferences()) return;
             // 重新从 dataSource 更新 totalCount，并重建池和刷新视图
             totalCount = dataSource?.GetItemCount() ?? totalCount;
             Build();
-            // 重置拉动动作状态：数据重建后旧的在途标记若残留，会永久禁用下拉/上拉触发
-            isActionInProgressStart = false;
-            isActionInProgressEnd = false;
+            initialized = true;
             ForceRefresh();
+        }
+
+        public void RefreshItem(int dataIndex)
+        {
+            if (!initialized || dataIndex < 0 || dataIndex >= totalCount) return;
+            for (int index = 0; index < pooledDataIndices.Count; index++)
+            {
+                if (pooledDataIndices[index] == dataIndex) pooledDataIndices[index] = -1;
+            }
+            RefreshVisible();
+        }
+
+        public void RefreshItems()
+        {
+            if (!initialized) return;
+            for (int index = 0; index < pooledDataIndices.Count; index++) pooledDataIndices[index] = -1;
+            RefreshVisible();
         }
     }
 }

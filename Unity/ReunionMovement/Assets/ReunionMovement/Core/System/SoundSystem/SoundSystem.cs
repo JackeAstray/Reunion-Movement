@@ -254,6 +254,9 @@ namespace ReunionMovement.Core.Sound
             fadeTcs = null;
             fadeState = FadeState.None;
 
+            foreach (var path in loadedPoolPaths)
+                ResourcesSystem.Instance.DeleteAssetCache(path);
+            loadedPoolPaths.Clear();
             startupPools.Clear();
 
             // 释放预设对象池中的所有 GameObject（Dispose 比 Clear 更彻底）
@@ -288,14 +291,13 @@ namespace ReunionMovement.Core.Sound
             {
                 foreach (var kv in audioClipCache)
                 {
-                    if (kv.Value == null) continue;
                     if (addressableClips.Contains(kv.Key))
                     {
-                        AddressableSystem.Instance.ReleaseAsset(kv.Value);
+                        if (kv.Value != null) AddressableSystem.Instance.ReleaseAsset(kv.Value);
                     }
                     else
                     {
-                        UnityEngine.Resources.UnloadAsset(kv.Value);
+                        ResourcesSystem.Instance.DeleteAssetCache(kv.Key);
                     }
                 }
                 audioClipCache.Clear();
@@ -306,6 +308,8 @@ namespace ReunionMovement.Core.Sound
             // 取消在途加载的等待方（SingleFlightLoader 的 CancelAll 语义）
             audioClipLoadGate?.CancelAll();
             soundConfigDict?.Clear();
+            if (!ReferenceEquals(soundConfigContainer, null))
+                ResourcesSystem.Instance.DeleteAssetCache("ScriptableObjects/SoundConfigContainer");
             soundConfigContainer = null;
             lastSfxPlayTimes.Clear();
             // 重置音效 prefab 缓存，避免重 Init 时误用旧引用
@@ -712,6 +716,7 @@ namespace ReunionMovement.Core.Sound
             }
 
             startupPools.Add(pool);
+            loadedPoolPaths.Add(poolPath);
 
             // 仅对新添加的 pool 创建对象池（不再冗余重建所有已有池）
             CreatePool(pool.prefab, pool.size, pool.parent);
@@ -723,6 +728,7 @@ namespace ReunionMovement.Core.Sound
 
         // 缓存的音效 prefab（避免 PlaySfx 每次遍历 startupPools）
         private GameObject cachedSfxPrefab;
+        private readonly List<string> loadedPoolPaths = new List<string>();
 
         /// <summary>
         /// 创建对象池

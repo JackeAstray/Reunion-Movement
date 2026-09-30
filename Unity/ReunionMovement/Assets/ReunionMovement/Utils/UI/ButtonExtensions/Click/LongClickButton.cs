@@ -63,7 +63,12 @@ namespace ReunionMovement.UI.ButtonClick
         public float LongPressDuration
         {
             get => longPressDuration;
-            set => longPressDuration = value;
+            set => longPressDuration = SanitizeDuration(value);
+        }
+
+        private static float SanitizeDuration(float value)
+        {
+            return float.IsNaN(value) || float.IsInfinity(value) ? 0.01f : Mathf.Max(0.01f, value);
         }
 
         // 新增：是否启用输入与键表（支持键盘 Space/Enter 与手柄 Gamepad.buttonSouth 为默认）
@@ -99,6 +104,7 @@ namespace ReunionMovement.UI.ButtonClick
         /// <param name="eventData"></param>
         public override void OnPointerDown(PointerEventData eventData)
         {
+            if (eventData == null || eventData.button != PointerEventData.InputButton.Left || !interactable) return;
             base.OnPointerDown(eventData);
             StartPressIfNeeded();
         }
@@ -109,6 +115,7 @@ namespace ReunionMovement.UI.ButtonClick
         /// <param name="eventData"></param>
         public override void OnPointerUp(PointerEventData eventData)
         {
+            if (eventData == null || eventData.button != PointerEventData.InputButton.Left) return;
             base.OnPointerUp(eventData);
             EndPressAndHandle();
         }
@@ -197,6 +204,7 @@ namespace ReunionMovement.UI.ButtonClick
         /// </summary>
         private void StartPressIfNeeded()
         {
+            longPressDuration = SanitizeDuration(longPressDuration);
             if (pressStartTime < 0f)
             {
                 pressStartTime = Time.unscaledTime;

@@ -60,6 +60,7 @@ namespace ReunionMovement.UI.ImageExtensions
         private Material opaqueMaterial; // 强制 alpha=1 的 blit 材质
 
         private Camera boundCamera;
+        private RenderTexture previousTargetTexture;
         private Vector2 lastRectSize;
         private bool hasRenderedOnce; // 相机画面是否已成功渲染/Blit 过（避免把透明 RT 赋给 ImageEx）
 
@@ -299,6 +300,7 @@ namespace ReunionMovement.UI.ImageExtensions
 
             UnbindCamera();
             boundCamera = sourceCamera;
+            previousTargetTexture = boundCamera.targetTexture;
             boundCamera.targetTexture = ownedRT != null ? ownedRT : externalRenderTexture;
 
             if (forceOpaque)
@@ -312,11 +314,12 @@ namespace ReunionMovement.UI.ImageExtensions
             if (forceOpaque)
                 Camera.onPostRender -= OnCameraPostRenderHandler;
 
-            // 只还原本组件绑定的 targetTexture，避免误清用户手动设置的 RT
+            // 仅在相机仍指向本组件纹理时恢复绑定前的配置；期间被其他系统接管则不覆盖。
             if (boundCamera.targetTexture == ownedRT || boundCamera.targetTexture == externalRenderTexture)
-                boundCamera.targetTexture = null;
+                boundCamera.targetTexture = previousTargetTexture;
 
             boundCamera = null;
+            previousTargetTexture = null;
         }
 
         /// <summary>

@@ -36,6 +36,7 @@ namespace ReunionMovement.Common.Util
         /// <param name="eventData"></param>
         public void OnPointerClick(PointerEventData eventData)
         {
+            if (!isActiveAndEnabled || eventData.button != PointerEventData.InputButton.Left || index < 0) return;
             onClick?.Invoke(index);
         }
     }

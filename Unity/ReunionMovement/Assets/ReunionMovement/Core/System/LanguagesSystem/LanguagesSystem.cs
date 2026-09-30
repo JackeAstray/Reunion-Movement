@@ -128,6 +128,8 @@ namespace ReunionMovement.Core.Languages
             // 重置初始化状态和相关数据
             isInited = false;
             initProgress = 0;
+            if (!ReferenceEquals(languagesContainer, null))
+                ResourcesSystem.Instance.DeleteAssetCache("ScriptableObjects/LanguagesContainer");
             languagesContainer = null;
             languagesDict = null;
         }

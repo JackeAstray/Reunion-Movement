@@ -33,6 +33,7 @@ namespace ReunionMovement
         // 池容量上限：数据反复刷新/高频展开折叠时池无限增长会积压节点；超出直接销毁
         private const int MaxPoolSize = 128;
         private Transform poolParent = null;
+        private bool isDestroying;
         private readonly Dictionary<string, TreeViewData> dataById = new Dictionary<string, TreeViewData>();
         private readonly Dictionary<string, string> parentById = new Dictionary<string, string>();
         public event Action<TreeViewData> NodeClicked;
@@ -301,7 +302,7 @@ namespace ReunionMovement
             if (treeNode == null || treeNode == NodePrefab || pool.Contains(treeNode)) return;
             treeNode.GetComponent<TreeViewNode>()?.Unbind();
             // 容量上限：池满时直接销毁，防止数据反复刷新场景下无限积压节点
-            if (pool.Count >= MaxPoolSize)
+            if (isDestroying || pool.Count >= MaxPoolSize)
             {
                 DestroyNode(treeNode);
                 return;
@@ -318,6 +319,7 @@ namespace ReunionMovement
 
         protected override void OnDestroy()
         {
+            isDestroying = true;
             Clear();
             base.OnDestroy();
         }

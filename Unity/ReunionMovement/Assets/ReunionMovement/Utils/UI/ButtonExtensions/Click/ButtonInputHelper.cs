@@ -27,7 +27,7 @@ namespace ReunionMovement.UI.ButtonClick
         /// <summary>指定键中是否有任一在本帧被按下</summary>
         public static bool KeyboardPressedThisFrame(bool enableInput, bool enableKeyboard, Key[] triggerKeys)
         {
-            if (!enableInput || !enableKeyboard || Keyboard.current == null) return false;
+            if (!enableInput || !enableKeyboard || Keyboard.current == null || triggerKeys == null) return false;
             foreach (var k in triggerKeys)
             {
                 var kc = Keyboard.current[k];
@@ -39,7 +39,7 @@ namespace ReunionMovement.UI.ButtonClick
         /// <summary>指定键中是否有任一在本帧被抬起</summary>
         public static bool KeyboardReleasedThisFrame(bool enableInput, bool enableKeyboard, Key[] triggerKeys)
         {
-            if (!enableInput || !enableKeyboard || Keyboard.current == null) return false;
+            if (!enableInput || !enableKeyboard || Keyboard.current == null || triggerKeys == null) return false;
             foreach (var k in triggerKeys)
             {
                 var kc = Keyboard.current[k];
@@ -51,7 +51,7 @@ namespace ReunionMovement.UI.ButtonClick
         /// <summary>指定手柄按键中是否有任一在本帧被按下</summary>
         public static bool GamepadPressedThisFrame(bool enableInput, bool enableGamepad, GamepadButtonType[] triggerButtons)
         {
-            if (!enableInput || !enableGamepad || Gamepad.current == null) return false;
+            if (!enableInput || !enableGamepad || Gamepad.current == null || triggerButtons == null) return false;
             foreach (var b in triggerButtons)
             {
                 if (IsGamepadButtonPressed(b)) return true;
@@ -62,7 +62,7 @@ namespace ReunionMovement.UI.ButtonClick
         /// <summary>指定手柄按键中是否有任一在本帧被抬起</summary>
         public static bool GamepadReleasedThisFrame(bool enableInput, bool enableGamepad, GamepadButtonType[] triggerButtons)
         {
-            if (!enableInput || !enableGamepad || Gamepad.current == null) return false;
+            if (!enableInput || !enableGamepad || Gamepad.current == null || triggerButtons == null) return false;
             foreach (var b in triggerButtons)
             {
                 if (IsGamepadButtonReleased(b)) return true;
