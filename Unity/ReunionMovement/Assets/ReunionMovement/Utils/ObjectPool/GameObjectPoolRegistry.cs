@@ -40,9 +40,12 @@ namespace ReunionMovement.Common.Util.Pool
                 return null;
             }
             string key = GetPrefabKey(prefab);
-            if (pools.TryGetValue(key, out var existing) && existing != null)
+            if (pools.TryGetValue(key, out var existing))
             {
-                return existing;
+                if (existing != null && existing.gameObject != null)
+                    return existing;
+                // Unity fake-null：注册表可能仍保留已销毁的池，先移除再创建新池。
+                pools.Remove(key);
             }
 
             EnsureRoot();
@@ -68,10 +71,14 @@ namespace ReunionMovement.Common.Util.Pool
         public static void Release(GameObject prefab, GameObject instance)
         {
             if (prefab == null || instance == null) return;
-            if (pools.TryGetValue(GetPrefabKey(prefab), out var pool) && pool != null)
+            if (pools.TryGetValue(GetPrefabKey(prefab), out var pool))
             {
-                pool.Release(instance);
-                return;
+                if (pool != null && pool.gameObject != null)
+                {
+                    pool.Release(instance);
+                    return;
+                }
+                pools.Remove(GetPrefabKey(prefab));
             }
             // 池不存在（异常路径）：直接销毁，避免对象泄漏
             Object.Destroy(instance);
@@ -85,11 +92,16 @@ namespace ReunionMovement.Common.Util.Pool
                 if (pool != null) Object.Destroy(pool.gameObject);
             }
             pools.Clear();
+            if (root != null)
+            {
+                Object.Destroy(root.gameObject);
+                root = null;
+            }
         }
 
         private static void EnsureRoot()
         {
-            if (root != null) return;
+            if (root != null && root.gameObject != null) return;
             var go = new GameObject("[SharedObjectPoolRoot]");
             Object.DontDestroyOnLoad(go);
             root = go.transform;
