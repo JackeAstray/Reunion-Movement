@@ -10,6 +10,27 @@ namespace ReunionMovement
     /// </summary>
     public class TreeViewData
     {
+        public string Id { get; private set; } = Guid.NewGuid().ToString("N");
+        public object Tag { get; set; }
+
+        public TreeViewData(string id, string name, object tag)
+        {
+            if (string.IsNullOrEmpty(id)) throw new ArgumentException("Node ID is required.", nameof(id));
+            Id = id;
+            this.name = name;
+            Tag = tag;
+        }
+
+        public bool TryGetData<T>(out T value)
+        {
+            if (Tag is T data)
+            {
+                value = data;
+                return true;
+            }
+            value = default(T);
+            return false;
+        }
         /// <summary>父节点引用，根节点的 parent 为 null</summary>
         public TreeViewData parent;
 
@@ -26,7 +47,7 @@ namespace ReunionMovement
         public Action<TreeViewData> action = null;
 
         /// <summary>是否启用点击操作（供 UI 层判断是否可交互）</summary>
-        public bool enableAction = false;
+        public bool enableAction = true;
 
         /// <summary>是否显示装饰元素（如展开/折叠箭头图标）</summary>
         public bool displayDecorate = false;
@@ -57,9 +78,9 @@ namespace ReunionMovement
         /// <param name="childNodes">子节点列表，为 null 时自动初始化为空列表</param>
         /// <param name="action">节点点击回调</param>
         /// <param name="layer">层级深度，默认为 0</param>
-        /// <param name="enableAction">是否启用点击操作，默认 false</param>
+        /// <param name="enableAction">是否启用点击操作，默认 true</param>
         /// <param name="displayDecorate">是否显示装饰，默认 false</param>
-        public TreeViewData(string name, List<TreeViewData> childNodes, Action<TreeViewData> action, int layer = 0, bool enableAction = false, bool displayDecorate = false)
+        public TreeViewData(string name, List<TreeViewData> childNodes, Action<TreeViewData> action, int layer = 0, bool enableAction = true, bool displayDecorate = false)
         {
             this.name = name;
             parent = null;
@@ -150,7 +171,7 @@ namespace ReunionMovement
         public void AddChild(IEnumerable<TreeViewData> children)
         {
             if (children == null) return;
-            foreach (TreeViewData child in children)
+            foreach (TreeViewData child in new List<TreeViewData>(children))
             {
                 AddChild(child);
             }
@@ -173,7 +194,11 @@ namespace ReunionMovement
                 }
             }
             if (child.parent == this)
+            {
                 child.parent = null;
+                child.layer = 0;
+                ResetChildren(child);
+            }
         }
 
         /// <summary>
@@ -183,7 +208,7 @@ namespace ReunionMovement
         public void RemoveChild(IEnumerable<TreeViewData> children)
         {
             if (children == null) return;
-            foreach (TreeViewData child in children)
+            foreach (TreeViewData child in new List<TreeViewData>(children))
             {
                 RemoveChild(child);
             }
@@ -196,8 +221,13 @@ namespace ReunionMovement
         {
             foreach (var child in childNodes)
             {
+                if (child == null) continue;
                 if (child.parent == this)
+                {
                     child.parent = null;
+                    child.layer = 0;
+                    ResetChildren(child);
+                }
             }
             childNodes.Clear();
         }
@@ -212,6 +242,7 @@ namespace ReunionMovement
             if (treeData.childNodes == null) return;
             foreach (var node in treeData.childNodes)
             {
+                if (node == null) continue;
                 node.parent = treeData;
                 node.layer = treeData.layer + 1;
                 ResetChildren(node);
@@ -230,6 +261,7 @@ namespace ReunionMovement
             if (string.IsNullOrEmpty(name) || childNodes == null) return null;
             foreach (var child in childNodes)
             {
+                if (child == null) continue;
                 if (child.name == name) return child;
                 var found = child.FindChildByName(name);
                 if (found != null) return found;
