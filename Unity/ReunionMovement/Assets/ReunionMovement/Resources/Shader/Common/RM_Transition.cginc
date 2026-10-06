@@ -90,11 +90,20 @@ float RM_TransitionRate()
     return _TransitionRate;
 }
 
-float RM_TransitionAlpha(float2 uvLocal)
+// 在像素空间旋转过渡 UV：归一化 UV 空间下 U/V 像素长度不等，
+// 非正方形矩形直接旋转会把图案剪切变形，故先按四边形宽高比展开再转回来
+float2 RM_RotateTransitionUV(float2 uv, float aspect)
 {
-    float2 uv = uvLocal;
-    if (_TransitionTexRotation != 0)
-        uv = rotateUV(uv, radians(_TransitionTexRotation), float2(0.5, 0.5));
+    if (_TransitionTexRotation == 0)
+        return uv;
+
+    float2 s = float2(max(aspect, 1e-4), 1);
+    return rotateUV(uv * s, radians(_TransitionTexRotation), s * 0.5) / s;
+}
+
+float RM_TransitionAlpha(float2 uvLocal, float aspect)
+{
+    float2 uv = RM_RotateTransitionUV(uvLocal, aspect);
 
     uv = uv * _TransitionTex_ST.xy + _TransitionTex_ST.zw;
 

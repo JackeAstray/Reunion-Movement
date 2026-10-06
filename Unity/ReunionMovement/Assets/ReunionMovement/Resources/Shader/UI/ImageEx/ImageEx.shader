@@ -259,6 +259,7 @@ Shader "ReunionMovement/UI/ImageEx"
                 float2 effectsUv: TEXCOORD2;
                 float4 worldPosition : TEXCOORD3;
                 fixed isShadowVertexFlag : TEXCOORD4; // tangent.w 阴影顶点标记
+                float quadAspect : TEXCOORD5; // 四边形宽高比，用于过渡纹理的各向同性旋转
                 
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -296,11 +297,11 @@ Shader "ReunionMovement/UI/ImageEx"
             #define computeSdfMask(sdf, ps)  RM_ComputeSdfMask(sdf, ps, _StrokeWidth, _OutlineWidth)
             #define ComputeSdfData(IN, sdf, ps) RM_ComputeSdfData(IN.shapeData, _FalloffDistance, sdf, ps)
             #define generateDashedEffect(IN, t, ar, st) RM_GenerateDashedEffect(IN.shapeData, t, ar, st)
-            #define ApplyGradientColor(c, uv)   RM_ApplyGradientColor(c, uv)
+            #define ApplyGradientColor(c, uv, aspect) RM_ApplyGradientColor(c, uv, aspect)
             #define ApplyBlur(uv)               RM_ApplyBlur(uv)
             #define ApplyOutlinedSdf(c, IN, sdf, ps) RM_ApplyOutlinedSdf(c, IN.shapeData, sdf, ps)
             #define apply_transition_filter(c, a, uv, ef)  RM_ApplyTransitionFilter(c, a, uv, ef)
-            #define transition_alpha(uv)         RM_TransitionAlpha(uv)
+            #define transition_alpha(uv, aspect) RM_TransitionAlpha(uv, aspect)
             #define move_transition_filter(m, a) RM_MoveTransitionFilter(m, a)
             #define transition_rate()            RM_TransitionRate()
             #define apply_color_filter(m, c, f, i, g) RM_ApplyColorFilter(m, c, f, i, g)
@@ -370,6 +371,7 @@ Shader "ReunionMovement/UI/ImageEx"
                     OUT.vertex.xy += (_ScreenParams.zw - 1.0) * float2(-1.0, 1.0);
                 #endif
                 OUT.isShadowVertexFlag = v.tangent.w;
+                OUT.quadAspect = max(v.size.x, 1e-4) / max(v.size.y, 1e-4);
                 OUT.color = v.color * _Color;
 
                 return OUT;
@@ -398,14 +400,13 @@ Shader "ReunionMovement/UI/ImageEx"
                     #if TRANSITION_PATTERN
                         const half scale = lerp(100, 1, _TransitionWidth);
                         const half2 time = half2(-transition_rate() * 2, 0);
-                        if (_TransitionTexRotation != 0)
-                            transitionUv = rotateUV(transitionUv, radians(_TransitionTexRotation), float2(0.5, 0.5));
+                        transitionUv = RM_RotateTransitionUV(transitionUv, IN.quadAspect);
                         transitionFilterUv = transitionUv;
                         transitionUv = transitionUv * _TransitionTex_ST.xy * scale + _TransitionTex_ST.zw + time;
                         transAlpha = tex2D(_TransitionTex, transitionUv).a;
                         transAlpha = _TransitionReverse ? 1 - transAlpha : transAlpha;
                     #else
-                        transAlpha = transition_alpha(transitionBaseUv);
+                        transAlpha = transition_alpha(transitionBaseUv, IN.quadAspect);
                     #endif
 
                     // Move UVs for Melt/Burn
@@ -437,7 +438,7 @@ Shader "ReunionMovement/UI/ImageEx"
                     edgeFactor = RM_ComputeEdgeFactor(texcoord, _EdgeWidth);
                 #endif
 
-                ApplyGradientColor(color, effectsUv);
+                ApplyGradientColor(color, effectsUv, IN.quadAspect);
 
                 // 应用色调滤镜（Tone Filter）：灰度化 / 怀旧 / 负片 / 复古 / 色调分离
                 color = RM_ApplyToneFilter(color);
@@ -529,7 +530,7 @@ Shader "ReunionMovement/UI/ImageEx"
 
                 // 应用边缘效果（Edge Mode）：普通边缘发光 / 旋转高光边缘
                 #if EDGE_PLAIN || EDGE_SHINY
-                    color = RM_ApplyEdge(color, edgeFactor, effectsUv);
+                    color = RM_ApplyEdge(color, edgeFactor, effectsUv, IN.quadAspect);
                 #endif
 
                 // 应用细节纹理滤镜（Detail Filter）
