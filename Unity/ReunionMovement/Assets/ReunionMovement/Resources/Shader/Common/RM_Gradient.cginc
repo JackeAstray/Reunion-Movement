@@ -73,7 +73,7 @@
     uniform half4 _CornerGradientColor3;
 #endif
 
-void RM_ApplyGradientColor(inout half4 color, float2 effectsUv)
+void RM_ApplyGradientColor(inout half4 color, float2 effectsUv, float aspect)
 {
     #if GRADIENT_LINEAR || GRADIENT_RADIAL
         _rmGradColors[0] = _GradientColor0;
@@ -96,9 +96,11 @@ void RM_ApplyGradientColor(inout half4 color, float2 effectsUv)
     #endif
 
     #if GRADIENT_LINEAR
-        half gradientRotation = radians(_GradientRotation);
-        half t = cos(gradientRotation) * (effectsUv.x - 0.5) + 
-                 sin(gradientRotation) * (effectsUv.y - 0.5) + 0.5;
+        const float gradientRotation = radians(_GradientRotation);
+        // 屏幕空间等角投影：方向按宽高比校正，再归一化使渐变始终铺满矩形(0°/90° 结果不变)
+        const float2 gradientDir = float2(cos(gradientRotation) * aspect, sin(gradientRotation));
+        const float gradientRange = max(abs(gradientDir.x) + abs(gradientDir.y), 1e-4);
+        float t = (gradientDir.x * (effectsUv.x - 0.5) + gradientDir.y * (effectsUv.y - 0.5)) / gradientRange + 0.5;
         // Phase 3: 应用偏移和缩放
         t = (t - 0.5) * _GradientScale + 0.5 + _GradientOffset;
         t = saturate(t);

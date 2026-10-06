@@ -68,10 +68,12 @@ float RM_ComputeEdgeFactor(float2 uv, float width)
 }
 
 // 计算边缘高光动画（Shiny 模式）：基于角度 + 时间做旋转高光
-float RM_IsEdgeShiny(float2 uvLocal)
+float RM_IsEdgeShiny(float2 uvLocal, float aspect)
 {
     #if EDGE_SHINY
-        const float deg = atan2(uvLocal.y - 0.5, uvLocal.x - 0.5) / 3.14159;
+        // 在按宽高比校正后的空间取角，避免非正方形矩形上扫光角速度不均匀
+        const float2 dir = float2((uvLocal.x - 0.5) * aspect, uvLocal.y - 0.5);
+        const float deg = atan2(dir.y, dir.x) / 3.14159;
         return frac(_EdgeShinyRate + _Time.y * _EdgeShinyAutoPlaySpeed + deg) < _EdgeShinyWidth;
     #else
         return 1;
@@ -79,11 +81,11 @@ float RM_IsEdgeShiny(float2 uvLocal)
 }
 
 // 应用边缘效果：在检测到的边缘区域用边缘颜色替换/混合
-half4 RM_ApplyEdge(half4 color, float edgeFactor, float2 uvLocal)
+half4 RM_ApplyEdge(half4 color, float edgeFactor, float2 uvLocal, float aspect)
 {
     #if EDGE_PLAIN || EDGE_SHINY
         const half4 edgeColor = RM_ApplyColorFilter(_EdgeColorFilter, color, _EdgeColor, 1, _EdgeColorGlow);
-        const float isEdgeShiny = RM_IsEdgeShiny(uvLocal);
+        const float isEdgeShiny = RM_IsEdgeShiny(uvLocal, aspect);
         return lerp(color, edgeColor, edgeFactor * isEdgeShiny);
     #else
         return color;

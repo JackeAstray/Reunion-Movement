@@ -637,15 +637,17 @@ namespace ReunionMovement.UI.ImageExtensions
                 float rectAspect = rectTransform.rect.width / rectTransform.rect.height;
                 float texAspect = (float)transitionTexture.width / transitionTexture.height;
 
+                // 让纹理像素在屏幕上保持各向同性需要 ST.x/ST.y == rectAspect/texAspect，
+                // 因此收缩的是"相对更大"的那一轴（原实现收缩的轴相反，反而把变形放大）
                 if (texAspect > rectAspect)
                 {
-                    scale.y *= rectAspect / texAspect;
-                    offset.y += (1 - rectAspect / texAspect) * 0.5f;
+                    scale.x *= rectAspect / texAspect;
+                    offset.x += (1 - rectAspect / texAspect) * 0.5f;
                 }
                 else
                 {
-                    scale.x *= texAspect / rectAspect;
-                    offset.x += (1 - texAspect / rectAspect) * 0.5f;
+                    scale.y *= texAspect / rectAspect;
+                    offset.y += (1 - texAspect / rectAspect) * 0.5f;
                 }
             }
 
