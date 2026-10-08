@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using ReunionMovement.Common.Util;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace ReunionMovement.Tests
 {
@@ -234,6 +237,9 @@ namespace ReunionMovement.Tests
         {
             var protocol = new NetworkTypedProtocol();
             Assert.IsTrue(protocol.Register<string>(10));
+            // 同一 ID 重复绑定不同类型按设计记录错误日志并拒绝：先声明期望
+            LogAssert.Expect(LogType.Error,
+                new Regex(@"\[NetworkTypedProtocol\] 消息 ID 10 已注册给类型 String，无法再注册给 Int32"));
             Assert.IsFalse(protocol.Register<int>(10), "同一 ID 不能绑定两个类型");
 
             Assert.IsTrue(protocol.TryGetId(typeof(string), out var id));

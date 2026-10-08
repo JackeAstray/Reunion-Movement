@@ -27,7 +27,8 @@ namespace ReunionMovement.Tests
             // 清理测试可能产生的净化文件
             TryDelete(Path.Combine(JsonDir, "....evil.json"));
             TryDelete(Path.Combine(JsonDir, "...nope.json"));
-            TryDelete(Path.Combine(JsonDir, "ac.json"));
+            TryDelete(Path.Combine(JsonDir, "abc.json"));
+            TryDelete(Path.Combine(JsonDir, "unit_test_json.json"));
             TryDelete(Path.Combine(Application.persistentDataPath, "evil.json"));
         }
 
@@ -59,7 +60,8 @@ namespace ReunionMovement.Tests
         {
             bool ok = await FileOperationUtil.SaveJson("{\"value\":2}", "a<b>c");
             Assert.IsTrue(ok);
-            Assert.IsTrue(File.Exists(Path.Combine(JsonDir, "ac.json")), "非法字符 < > 应被剥离");
+            // 只剥离非法字符本身，"a<b>c" 净化后是 "abc"（不是 "ac"）
+            Assert.IsTrue(File.Exists(Path.Combine(JsonDir, "abc.json")), "非法字符 < > 应被剥离（a<b>c → abc）");
         }
 
         [Test]
@@ -71,14 +73,15 @@ namespace ReunionMovement.Tests
         }
 
         [Test]
-        public void LoadJson_SaveLoad_Roundtrip()
+        public async Task LoadJson_SaveLoad_Roundtrip()
         {
-            bool ok = FileOperationUtil.SaveJson("{\"value\":42}", "unit_test_json").GetAwaiter().GetResult();
+            // 必须 await：UniTask 不允许对未完成的操作用 GetAwaiter().GetResult() 阻塞等待
+            // （会抛 InvalidOperationException，且遗留续体会在后续测试里跑成未处理异常）
+            bool ok = await FileOperationUtil.SaveJson("{\"value\":42}", "unit_test_json");
             Assert.IsTrue(ok);
             var loaded = FileOperationUtil.LoadJson<SimpleJson>("unit_test_json");
             Assert.IsNotNull(loaded);
             Assert.AreEqual(42, loaded.value);
-            TryDelete(Path.Combine(JsonDir, "unit_test_json.json"));
         }
     }
 }
