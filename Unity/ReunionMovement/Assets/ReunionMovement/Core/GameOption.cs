@@ -70,21 +70,17 @@ namespace ReunionMovement.Core
         /// <summary>
         /// 加载游戏选项从 PlayerPrefs（默认仅首次加载，后续从内存读取）。
         /// 读取 JSON 格式存档；如不存在或反序列化失败则使用默认选项。
+        ///
+        /// WebGL：PlayerPrefs 同样可用 —— Unity 的 WebGL 播放器在启动时用 runDependency 阻塞，
+        /// 等 IndexedDB 载入完成（FS.syncfs(populate:true)）后才运行 C#，因此启动读取是可靠的；
+        /// 只有写入是异步刷盘的（见 <see cref="SaveOptions"/>）。故不再按平台跳过。
         /// </summary>
         /// <param name="forceReload">强制重新从 PlayerPrefs 读取（例如恢复默认后重新加载）</param>
         public static void LoadOptions(bool forceReload = false)
         {
-            // 守卫与标记放在 #if 之外：WebGL 目标下字段仍被读取，避免 CS0414 且保持幂等语义
             if (isLoaded && !forceReload) return;
             isLoaded = true;
 
-#if UNITY_WEBGL
-            // 与 SaveOptions 对称：WebGL 的 PlayerPrefs 为异步 IndexedDB，跳过实际读取（本次会话不持久化）。
-            // 但选项仍必须应用一次 —— 否则 WebGL 上 masterVolume/亮度等永远停留在引擎默认值
-            // （分辨率/全屏/质量档在 ApplyDisplayOptions 内已按平台跳过，这里不会误伤显示设置）。
-            ApplyOptions();
-            return;
-#else
             const string jsonKey = "game_options_json";
             if (PlayerPrefs.HasKey(jsonKey))
             {
@@ -108,19 +104,17 @@ namespace ReunionMovement.Core
             // 无存档或反序列化失败，使用默认选项
             currentOption = new Option();
             ApplyOptions();
-#endif
         }
 
         /// <summary>
-        /// 保存游戏选项到 PlayerPrefs（JSON 格式，单次写入）
+        /// 保存游戏选项到 PlayerPrefs（JSON 格式，单次写入）。
+        ///
+        /// WebGL：写入本身是内存操作，落盘由 <see cref="PlayerPrefs.Save"/> 触发 IDBFS 异步同步
+        /// （Unity 按帧批处理，并在页面隐藏/退出时补刷）。用户改完设置立刻关标签页可能来不及刷盘，
+        /// 属平台特性；不影响后续会话的读取（启动时会等 IndexedDB 载入完成）。
         /// </summary>
         public static void SaveOptions()
         {
-#if UNITY_WEBGL
-            // WebGL 上 LoadOptions 被跳过（PlayerPrefs 为异步 IndexedDB，同步读写不可靠），
-            // 保存同样跳过，避免写入"永远读不回来"的设置造成行为不一致。
-            return;
-#else
             const string jsonKey = "game_options_json";
             try
             {
@@ -132,7 +126,6 @@ namespace ReunionMovement.Core
             {
                 Log.Error("保存 GameOption 失败: {0}", ex.Message);
             }
-#endif
         }
 
         /// <summary>

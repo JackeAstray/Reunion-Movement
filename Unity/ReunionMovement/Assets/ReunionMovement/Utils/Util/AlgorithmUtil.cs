@@ -615,14 +615,29 @@ namespace ReunionMovement.Common.Util
         }
 
         /// <summary>
-        /// 退出
+        /// 退出游戏。
+        ///
+        /// 编辑器：停止 Play 模式。
+        /// WebGL：浏览器不允许脚本关闭页面 —— <see cref="Application.Quit"/> 只会停掉 Web 播放器
+        /// （canvas 停在最后一帧），页面/标签页仍然存在。这里仍调用它（这是 WebGL 上最接近"退出"的行为），
+        /// 但额外记录警告并返回 false，提示调用方（退出按钮）改为提示用户手动关闭标签页，
+        /// 或在 web 模板里用 JS 处理页面级退出。
+        /// 其他平台：<see cref="Application.Quit"/>。
         /// </summary>
-        public static void Quit()
+        /// <returns>是否真正退出了应用（WebGL 恒为 false，因为页面不会被关闭）。</returns>
+        public static bool Quit()
         {
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
+            return true;
+#elif UNITY_WEBGL
+            Log.Warning("Quit: WebGL 上浏览器不允许脚本关闭页面，Application.Quit 只会停掉播放器而页面仍在；"
+                        + "请提示用户手动关闭标签页，或在 web 模板中用 JS 处理页面级退出");
+            Application.Quit();
+            return false;
 #else
             Application.Quit();
+            return true;
 #endif
         }
 

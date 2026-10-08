@@ -684,11 +684,8 @@ namespace ReunionMovement.Core.UIInput
         /// </summary>
         public void LoadBindings()
         {
-            // 与 GameOption 对齐：WebGL 的 PlayerPrefs 为异步 IndexedDB，同步读取不可靠，跳过
-#if UNITY_WEBGL
-            CurrentBinding = new UIInputBinding();
-            return;
-#else
+            // PlayerPrefs 在 WebGL 上同样可用：Unity 的 WebGL 播放器启动时会以 runDependency 阻塞，
+            // 等 IndexedDB 载入完成（FS.syncfs(populate:true)）后才运行 C#，故不再按平台跳过。
             CurrentBinding = new UIInputBinding
             {
                 navigateUp = PlayerPrefs.GetString("ui_bind_nav_up", "w"),
@@ -704,7 +701,6 @@ namespace ReunionMovement.Core.UIInput
                 toggleToUIGamepadDisplayName = PlayerPrefs.GetString("ui_bind_toggle_ui_gamepad_display", "Start"),
                 toggleToGameplay = PlayerPrefs.GetString("ui_bind_toggle_gameplay", "escape"),
             };
-#endif
         }
 
         /// <summary>
@@ -714,10 +710,6 @@ namespace ReunionMovement.Core.UIInput
         /// </summary>
         public void SaveBindings()
         {
-#if UNITY_WEBGL
-            // 与 LoadBindings 对称：WebGL 跳过持久化，避免写入"同步读不回"的设置造成行为不一致
-            return;
-#else
             PlayerPrefs.SetString("ui_bind_nav_up", CurrentBinding.navigateUp);
             PlayerPrefs.SetString("ui_bind_nav_down", CurrentBinding.navigateDown);
             PlayerPrefs.SetString("ui_bind_nav_left", CurrentBinding.navigateLeft);
@@ -749,7 +741,6 @@ namespace ReunionMovement.Core.UIInput
             }
 
             PlayerPrefs.Save();
-#endif
         }
 
         #endregion

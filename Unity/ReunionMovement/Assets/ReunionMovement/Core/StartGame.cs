@@ -80,8 +80,8 @@ namespace ReunionMovement.Core
             // 预加载配置（后续日志等模块访问 Config 属性时无需再走 Resources.Load）
             ReunionMovement.Config.EnsureLoaded();
 
-            // 所有平台都加载一次：WebGL 分支内部会跳过 PlayerPrefs 读取（异步 IndexedDB），
-            // 但仍应用一次选项（音量/亮度等）。此前 WebGL 完全跳过调用，导致这些设置永不生效。
+            // 所有平台都加载一次。WebGL 的 PlayerPrefs 同样可用（播放器启动时以 runDependency
+            // 阻塞等 IndexedDB 载入，见 GameOption.LoadOptions），故不再按平台跳过。
             GameOption.LoadOptions();
 
             return UniTask.CompletedTask;
@@ -146,8 +146,8 @@ namespace ReunionMovement.Core
         /// 切换全屏模式（设置界面全屏开关的入口）。
         /// WebGL：以 GameOption 内存状态取反（浏览器状态变化回调已把外部变化同步回该字段），
         /// 经 jslib 调用浏览器 Fullscreen API —— 浏览器要求全屏由用户手势触发，因此必须挂在
-        /// 按钮点击等交互回调上，不能代码强制；WebGL 上分辨率/全屏设置由浏览器控制，
-        /// GameOption 仅维护内存状态（存档与 SetResolution 在 WebGL 分支内均被跳过）。
+        /// 按钮点击等交互回调上，不能代码强制；WebGL 上全屏由浏览器控制，GameOption 仅维护该字段
+        /// 的状态（写入存档，但 ApplyDisplayOptions 里的 SetResolution 按平台被跳过）。
         /// 其他平台：更新 GameOption（持久化）并由 ApplyDisplayOptions 走 Screen.SetResolution。
         /// </summary>
         public static void SetFullscreen()
@@ -167,7 +167,8 @@ namespace ReunionMovement.Core
 #if UNITY_WEBGL && !UNITY_EDITOR
         /// <summary>
         /// 浏览器全屏状态变化回调（由 jslib 的 fullscreenchange 触发，含 Esc 与页面按钮退出）。
-        /// 仅同步 GameOption 内存状态：WebGL 下存档写入与分辨率应用均被平台分支跳过。
+        /// 同步 GameOption 的全屏状态并持久化（PlayerPrefs 在 WebGL 可用）；
+        /// 分辨率应用由 ApplyDisplayOptions 按平台跳过，不会因此误切分辨率。
         /// </summary>
         [MonoPInvokeCallback(typeof(Action<int>))]
         private static void OnBrowserFullscreenChanged(int fullscreen)
