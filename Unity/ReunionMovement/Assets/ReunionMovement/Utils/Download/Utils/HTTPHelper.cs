@@ -320,11 +320,6 @@ namespace ReunionMovement.Common.Util.Download
                 tempPath = Path.Combine(path, relativePath).Replace("/", Path.DirectorySeparatorChar.ToString());
             }
 
-            req.downloadHandler = new DownloadHandlerFile(tempPath, append)
-            {
-                removeFileOnAbort = abandonOnFailure
-            };
-
             req.timeout = timeoutSeconds;
 
             if (headers != null)
@@ -334,7 +329,77 @@ namespace ReunionMovement.Common.Util.Download
                     req.SetRequestHeader(kvp.Key, kvp.Value);
                 }
             }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // WebGL 不支持 DownloadHandlerFile（浏览器不暴露可直写的本地文件系统，构造即抛
+            // NotSupportedException），改用 DownloadHandlerBuffer 收进内存，再在请求完成时同步写入
+            // persistentDataPath（Emscripten MEMFS → IDBFS）。
+            // 这里的 completed 回调先于调用方注册，因此先执行 —— 调用方（UWRExecutor）随后做
+            // File.Exists / FileInfo.Length 校验时文件已就绪，无需改动其文件语义。
+            req.downloadHandler = new DownloadHandlerBuffer();
+            var webglOp = req.SendWebRequest();
+            // 不能在外层 lambda 中捕获 ref 参数（CS1628），先取局部引用
+            var webglReq = req;
+            webglOp.completed += _ => WriteBufferToFile(webglReq, tempPath, append, abandonOnFailure);
+            return webglOp;
+#else
+            req.downloadHandler = new DownloadHandlerFile(tempPath, append)
+            {
+                removeFileOnAbort = abandonOnFailure
+            };
             return req.SendWebRequest();
+#endif
         }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        /// <summary>
+        /// WebGL 专用：把 DownloadHandlerBuffer 收到的字节写入目标文件。
+        /// 必须用同步 File IO —— FileStream 的异步方法依赖线程池，在 WebGL 上会导致浏览器挂死。
+        /// </summary>
+        private static void WriteBufferToFile(UnityWebRequest req, string path, bool append, bool removeOnFailure)
+        {
+            try
+            {
+                if (req.result != UnityWebRequest.Result.Success)
+                {
+                    if (removeOnFailure)
+                    {
+                        try { if (File.Exists(path)) File.Delete(path); } catch { /* 清理失败忽略 */ }
+                    }
+                    return;
+                }
+
+                byte[] data = req.downloadHandler?.data;
+                if (data == null)
+                {
+                    Log.Error("[HTTPHelper] WebGL 下载完成但响应数据为空: {0}", req.url);
+                    return;
+                }
+
+                var dir = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                // append 语义与 DownloadHandlerFile(append:true) 对齐：分块续传时追加而非覆盖
+                if (append && File.Exists(path))
+                {
+                    using (var fs = File.Open(path, FileMode.Append, FileAccess.Write, FileShare.Read))
+                    {
+                        fs.Write(data, 0, data.Length);
+                    }
+                }
+                else
+                {
+                    File.WriteAllBytes(path, data);
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Error("[HTTPHelper] WebGL 写入下载文件失败 {0}: {1}", path, e.Message);
+            }
+        }
+#endif
     }
 }

@@ -486,11 +486,15 @@ namespace ReunionMovement.Core.Scene
                 && AddressableKeyExists(AddressableKeys.SceneRoot + levelName, typeof(SceneInstance)))
             {
                 bool loaded = false;
-                // 超时保护：CancelAfter 触发的取消会经由 autoReleaseWhenCanceled 释放句柄，防泄漏
+                // 超时保护：取消会经由 autoReleaseWhenCanceled 释放句柄，防泄漏。
+                // 不用 CancelAfter —— 它依赖 System.Threading.Timer，在 WebGL 上永不触发，
+                // 加载一旦卡住就会永久挂起；改用 PlayerLoop 驱动的 PlatformTimeout。
                 var timeoutCts = new CancellationTokenSource();
+                var timeoutDelayCts = new CancellationTokenSource();
                 if (sceneLoadTimeoutSeconds > 0)
                 {
-                    timeoutCts.CancelAfter(TimeSpan.FromSeconds(sceneLoadTimeoutSeconds));
+                    PlatformTimeout.CancelAfterAsync(timeoutCts, timeoutDelayCts.Token,
+                        TimeSpan.FromSeconds(sceneLoadTimeoutSeconds)).Forget();
                 }
                 try
                 {
@@ -498,6 +502,9 @@ namespace ReunionMovement.Core.Scene
                 }
                 finally
                 {
+                    // 先停掉待触发的超时任务，再释放 CTS（否则它会在超时到点后去 Cancel 已释放的对象）
+                    timeoutDelayCts.Cancel();
+                    timeoutDelayCts.Dispose();
                     timeoutCts.Dispose();
                 }
 

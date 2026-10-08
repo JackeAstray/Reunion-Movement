@@ -54,6 +54,23 @@ namespace ReunionMovement.Common.Util.Download
         private const int SyncLockTimeoutMs = 5000;
 
         /// <summary>
+        /// 同步获取锁（失败返回 false，由调用方抛异常）。
+        ///
+        /// WebGL 专用分支：<see cref="SemaphoreSlim.Wait(int)"/> 的定时等待依赖 Monitor，
+        /// 而 Monitor 在 WebGL 上“执行但无效果”，定时等待会退化为忙等/永不返回；
+        /// 且 WebGL 是单线程，同步等待正在 await 的 LockAsync 必然死锁。
+        /// 因此改为非阻塞尝试（Wait(0)），立即失败而不是挂死主线程。
+        /// </summary>
+        private bool TryEnterSyncLock()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            return semaphore.Wait(0);
+#else
+            return semaphore.Wait(SyncLockTimeoutMs);
+#endif
+        }
+
+        /// <summary>
         /// 同步执行带锁的操作。
         /// 警告：本方法阻塞调用线程。若信号量正被 <see cref="LockAsync"/> 持有，而该异步操作的
         /// 续体又需要回到当前线程（UniTask 默认如此），就会形成死锁 ——
@@ -62,11 +79,11 @@ namespace ReunionMovement.Common.Util.Download
         /// <param name="worker">需要加锁执行的方法</param>
         public void Lock(Action worker)
         {
-            if (!semaphore.Wait(SyncLockTimeoutMs))
+            if (!TryEnterSyncLock())
             {
                 throw new InvalidOperationException(
-                    $"SemaphoreLocker.Lock 等待 {SyncLockTimeoutMs}ms 超时：锁仍被 LockAsync 持有，" +
-                    "继续阻塞会死锁。请改用 await LockAsync。");
+                    $"SemaphoreLocker.Lock 无法获取锁：锁仍被 LockAsync 持有（等待上限 {SyncLockTimeoutMs}ms，"
+                    + "WebGL 上为立即失败），继续阻塞会死锁。请改用 await LockAsync。");
             }
             try
             {
@@ -87,11 +104,11 @@ namespace ReunionMovement.Common.Util.Download
         /// <returns>操作结果</returns>
         public T Lock<T>(Func<T> worker)
         {
-            if (!semaphore.Wait(SyncLockTimeoutMs))
+            if (!TryEnterSyncLock())
             {
                 throw new InvalidOperationException(
-                    $"SemaphoreLocker.Lock<{typeof(T).Name}> 等待 {SyncLockTimeoutMs}ms 超时：锁仍被 LockAsync 持有，" +
-                    "继续阻塞会死锁。请改用 await LockAsync。");
+                    $"SemaphoreLocker.Lock<{typeof(T).Name}> 无法获取锁：锁仍被 LockAsync 持有"
+                    + $"（等待上限 {SyncLockTimeoutMs}ms，WebGL 上为立即失败），继续阻塞会死锁。请改用 await LockAsync。");
             }
             try
             {

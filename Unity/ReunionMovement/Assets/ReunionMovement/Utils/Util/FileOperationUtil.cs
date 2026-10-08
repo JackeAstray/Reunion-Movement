@@ -192,7 +192,7 @@ namespace ReunionMovement.Common.Util
         /// <param name="fullpath"></param>
         /// <param name="content"></param>
         /// <returns>写入字节数，失败返回 -1</returns>
-        public static async UniTask<int> SaveFileAsync(string fullpath, byte[] content)
+        public static UniTask<int> SaveFileAsync(string fullpath, byte[] content)
         {
             try
             {
@@ -203,13 +203,16 @@ namespace ReunionMovement.Common.Util
                     Directory.CreateDirectory(dir);
                 }
 
-                await File.WriteAllBytesAsync(fullpath, content);
-                return content.Length;
+                // 同步写入：File.WriteAllBytesAsync 走 FileStream 异步路径（依赖线程池），
+                // 在 WebGL 上会导致浏览器挂死（Unity 官方文档：FileStream 异步方法不可用），
+                // 故全平台统一用同步 IO。
+                File.WriteAllBytes(fullpath, content);
+                return UniTask.FromResult(content.Length);
             }
             catch (Exception e)
             {
                 Log.Error("SaveFile() 路径:{0}, 错误:{1}", fullpath, e.Message);
-                return -1;
+                return UniTask.FromResult(-1);
             }
         }
 
@@ -285,13 +288,13 @@ namespace ReunionMovement.Common.Util
         /// <param name="jsonStr"></param>
         /// <param name="fileName"></param>
         /// <returns></returns>
-        public static async UniTask<bool> SaveJson(string jsonStr, string fileName)
+        public static UniTask<bool> SaveJson(string jsonStr, string fileName)
         {
             var safeName = SanitizeJsonName(fileName);
             if (safeName == null)
             {
                 Log.Warning("SaveJson() 文件名为空或全部为非法字符: {0}", fileName);
-                return false;
+                return UniTask.FromResult(false);
             }
             var filePath = Path.Combine(Application.persistentDataPath, "Json");
             try
@@ -301,13 +304,15 @@ namespace ReunionMovement.Common.Util
                     Directory.CreateDirectory(filePath);
                 }
                 var fileAbslutePath = Path.Combine(filePath, safeName + ".json");
-                await File.WriteAllTextAsync(fileAbslutePath, jsonStr);
-                return true;
+                // 同步写入：File.WriteAllTextAsync 走 FileStream 异步路径（依赖线程池），
+                // 在 WebGL 上会导致浏览器挂死，故全平台统一用同步 IO。
+                File.WriteAllText(fileAbslutePath, jsonStr);
+                return UniTask.FromResult(true);
             }
             catch (Exception e)
             {
                 Log.Error("SaveJson() 路径:{0}, 文件:{1}, 错误:{2}", filePath, safeName, e.Message);
-                return false;
+                return UniTask.FromResult(false);
             }
         }
 

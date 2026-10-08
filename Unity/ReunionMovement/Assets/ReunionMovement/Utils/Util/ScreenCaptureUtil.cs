@@ -36,7 +36,8 @@ namespace ReunionMovement.Common.Util
                 {
                     tex = ScreenCapture.CaptureScreenshotAsTexture();
                     byte[] jpgData = tex.EncodeToJPG();
-                    await File.WriteAllBytesAsync(filePath, jpgData);
+                    // 同步写入：异步文件 IO 依赖线程池，在 WebGL 上会导致浏览器挂死，故统一用同步 IO
+                    File.WriteAllBytes(filePath, jpgData);
                 }
                 finally
                 {
@@ -93,7 +94,8 @@ namespace ReunionMovement.Common.Util
                     tex.ReadPixels(rect, 0, 0);
                     tex.Apply();
                     byte[] jpgData = tex.EncodeToJPG();
-                    await File.WriteAllBytesAsync(filePath, jpgData);
+                    // 同步写入：异步文件 IO 依赖线程池，在 WebGL 上会导致浏览器挂死，故统一用同步 IO
+                    File.WriteAllBytes(filePath, jpgData);
                 }
                 finally
                 {
