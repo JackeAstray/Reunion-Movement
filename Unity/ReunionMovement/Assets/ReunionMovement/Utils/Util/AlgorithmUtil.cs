@@ -561,14 +561,29 @@ namespace ReunionMovement.Common.Util
 
         #region Engine
         /// <summary>
-        /// 设置屏幕分辨率
+        /// 设置屏幕分辨率。
+        ///
+        /// 移动端（Android/iOS）不执行并返回 false：设备显示分辨率由系统固定，
+        /// <see cref="Screen.SetResolution"/> 不会切换显示模式，只会把 Unity 内部渲染目标
+        /// 改成传入尺寸再由系统拉伸铺满整屏 —— 与设备宽高比不一致时画面被拉伸/压扁
+        /// （AR 应用会直接破坏相机画面与识别坐标）。
+        /// 移动端若要限制渲染分辨率请改用 URP Render Scale（见 Mobile_RPAsset）；
+        /// 确实需要该底层语义时请直接调用 <see cref="Screen.SetResolution"/>。
         /// </summary>
         /// <param name="width">屏幕宽度</param>
         /// <param name="height">屏幕高度</param>
         /// <param name="fullScreen">是否全屏显示</param>
-        public static void SetScreen(int width, int height, bool fullScreen)
+        /// <returns>是否真正应用了分辨率设置（移动端恒为 false）。</returns>
+        public static bool SetScreen(int width, int height, bool fullScreen)
         {
+            if (!PlatformUtil.IsResolutionControllable)
+            {
+                Log.Warning("SetScreen: 当前平台分辨率由系统控制，已忽略 {0}x{1}（全屏 {2}）", width, height, fullScreen);
+                return false;
+            }
+
             Screen.SetResolution(width, height, fullScreen);
+            return true;
         }
 
         /// <summary>

@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using ReunionMovement.Core.EventMessage;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace ReunionMovement.Tests
 {
@@ -72,6 +75,9 @@ namespace ReunionMovement.Tests
         {
             Action<EventData> bad = e => throw new InvalidOperationException("boom");
             bus.AddEventListener(EventMessageType.SendMessage, bad);
+            // 坏监听器异常按设计被隔离并记录错误日志（不向派发方抛出）：先声明期望
+            LogAssert.Expect(LogType.Error,
+                new Regex("EventMessageSystem 监听器异常（已隔离，不影响其他订阅者）: SendMessage, boom"));
             Assert.DoesNotThrow(() => bus.DispatchEvent(EventMessageType.SendMessage, "x"));
         }
     }

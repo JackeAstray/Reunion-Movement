@@ -1,7 +1,9 @@
 ﻿using System.IO;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using ReunionMovement.Common.Util;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace ReunionMovement.Tests
 {
@@ -65,6 +67,8 @@ namespace ReunionMovement.Tests
             bytes[flipIndex] ^= 0xFF;
             File.WriteAllBytes(path, bytes);
 
+            // 篡改后按设计记录错误日志并判定为不可读：先声明期望（路径动态，用正则匹配）
+            LogAssert.Expect(LogType.Error, new Regex(@"\[SaveSystem\] 存档 .* 解密/完整性校验失败"));
             Assert.IsFalse(SaveSystem.TryLoad(TestName, out TestData _), "被篡改的密文不应被解析");
         }
 

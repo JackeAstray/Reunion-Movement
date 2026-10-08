@@ -1,5 +1,8 @@
-﻿using NUnit.Framework;
+﻿using System.Text.RegularExpressions;
+using NUnit.Framework;
 using ReunionMovement.Core.Terminal;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace ReunionMovement.Tests
 {
@@ -19,6 +22,8 @@ namespace ReunionMovement.Tests
         public void Int_Invalid_ReturnsZero()
         {
             var arg = new CommandArg { String = "abc" };
+            // 非法值按设计记录错误日志并回退默认值：先声明期望，否则测试框架会判为未处理日志
+            LogAssert.Expect(LogType.Error, new Regex("类型错误int, 应为<abc>"));
             Assert.AreEqual(0, arg.Int);
         }
 
@@ -35,6 +40,7 @@ namespace ReunionMovement.Tests
             Assert.IsTrue(new CommandArg { String = "TRUE" }.Bool);
             Assert.IsTrue(new CommandArg { String = "true" }.Bool);
             Assert.IsFalse(new CommandArg { String = "False" }.Bool);
+            LogAssert.Expect(LogType.Error, new Regex("类型错误bool, 应为<x>"));
             Assert.IsFalse(new CommandArg { String = "x" }.Bool, "非法值应返回 false");
         }
 

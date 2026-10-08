@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using ReunionMovement.Common.Util;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace ReunionMovement.Tests
 {
@@ -117,15 +119,18 @@ namespace ReunionMovement.Tests
         public void SaveAndLoad_ValidState_Roundtrip()
         {
             // 通过服务端结果推进保底（确定性），再持久化/恢复
-            system.ApplyServerResult(Item(5), isUp: false);   // pity5 重置 → 0
-            system.ApplyServerResult(Item(3));                 // pity5 → 1, pity4 → 1
+            system.ApplyServerResult(Item(5), isUp: false);   // 五星：pity5 重置 → 0，pity4 推进 → 1
+            system.ApplyServerResult(Item(3));                 // 三星：pity5 → 1，pity4 → 2
+            // 先钉住存档前的内存态：语义若变化应在此处先失败，而不是在恢复后
+            Assert.AreEqual(1, system.Pity5Star);
+            Assert.AreEqual(2, system.Pity4Star);
             system.SavePityState();
 
             var restored = new GachaSystem();
             restored.LoadPityState();
 
             Assert.AreEqual(1, restored.Pity5Star);
-            Assert.AreEqual(1, restored.Pity4Star);
+            Assert.AreEqual(2, restored.Pity4Star);
             Assert.IsTrue(restored.IsGuaranteedUp5Star);
         }
 
@@ -134,7 +139,8 @@ namespace ReunionMovement.Tests
         [Test]
         public void PerformPull_AllPoolsEmpty_NoPityAdvance()
         {
-            // 所有卡池为空（默认构造）：直接返回 null，不得推进保底
+            // 所有卡池为空（默认构造）：按设计记录错误日志后直接返回 null，不得推进保底
+            LogAssert.Expect(LogType.Error, new Regex("所有卡池为空！请在 Inspector 中配置卡池列表"));
             var item = system.PerformPull();
 
             Assert.IsNull(item);
@@ -145,6 +151,12 @@ namespace ReunionMovement.Tests
         [Test]
         public void Perform10Pull_AllPoolsEmpty_NoPityAdvance()
         {
+            // 空池十连 = PerformPull 十次，每次都按设计记录一条错误日志
+            for (int i = 0; i < 10; i++)
+            {
+                LogAssert.Expect(LogType.Error, new Regex("所有卡池为空！请在 Inspector 中配置卡池列表"));
+            }
+
             var results = system.Perform10Pull();
 
             Assert.IsNotNull(results);
@@ -167,6 +179,8 @@ namespace ReunionMovement.Tests
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             pityField.SetValue(system, 89);
 
+            // 硬保底触发但双五星池皆空：按设计记录错误日志后返回 null
+            LogAssert.Expect(LogType.Error, new Regex("五星卡池全部为空（UP 与常驻），无法出货"));
             var item = system.PerformPull();
 
             Assert.IsNull(item, "双五星池皆空应返回 null");
