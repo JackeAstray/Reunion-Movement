@@ -25,10 +25,25 @@ namespace ReunionMovement.Tests
         }
 
         [Test]
+        public void WebGL_Is_Not_Resolution_Controllable()
+        {
+            Assert.IsTrue(PlatformUtil.IsWebGLPlatformOn(RuntimePlatform.WebGLPlayer), "WebGL 应判定为 WebGL");
+            Assert.IsFalse(PlatformUtil.IsMobilePlatformOn(RuntimePlatform.WebGLPlayer), "WebGL 不是移动端");
+            // Unity 文档：Screen.SetResolution 在 WebGL 无效（canvas 尺寸由宿主页面控制），
+            // 返回 true 会谎报成功并让 ResolutionMgr/SetScreen 静默失效
+            Assert.IsFalse(PlatformUtil.IsResolutionControllableOn(RuntimePlatform.WebGLPlayer), "WebGL 分辨率由宿主页面控制");
+            Assert.IsTrue(PlatformUtil.IsDisplayPresetByPlatformOn(RuntimePlatform.WebGLPlayer), "WebGL 的显示配置由平台预设决定");
+        }
+
+        [Test]
         public void Desktop_And_Editor_Platforms_Are_Resolution_Controllable()
         {
             Assert.IsFalse(PlatformUtil.IsMobilePlatformOn(RuntimePlatform.WindowsPlayer));
             Assert.IsFalse(PlatformUtil.IsMobilePlatformOn(RuntimePlatform.WindowsEditor));
+            Assert.IsFalse(PlatformUtil.IsDisplayPresetByPlatformOn(RuntimePlatform.WindowsPlayer));
+            Assert.IsFalse(PlatformUtil.IsDisplayPresetByPlatformOn(RuntimePlatform.WindowsEditor));
+            Assert.IsFalse(PlatformUtil.IsDisplayPresetByPlatformOn(RuntimePlatform.OSXPlayer));
+            Assert.IsFalse(PlatformUtil.IsDisplayPresetByPlatformOn(RuntimePlatform.LinuxPlayer));
             Assert.IsTrue(PlatformUtil.IsResolutionControllableOn(RuntimePlatform.WindowsPlayer));
             Assert.IsTrue(PlatformUtil.IsResolutionControllableOn(RuntimePlatform.WindowsEditor));
             Assert.IsTrue(PlatformUtil.IsResolutionControllableOn(RuntimePlatform.OSXPlayer));
@@ -41,6 +56,12 @@ namespace ReunionMovement.Tests
             Assert.AreEqual(
                 PlatformUtil.IsMobilePlatformOn(Application.platform),
                 PlatformUtil.IsMobilePlatform);
+            Assert.AreEqual(
+                PlatformUtil.IsWebGLPlatformOn(Application.platform),
+                PlatformUtil.IsWebGLPlatform);
+            Assert.AreEqual(
+                PlatformUtil.IsDisplayPresetByPlatformOn(Application.platform),
+                PlatformUtil.IsDisplayPresetByPlatform);
             Assert.AreEqual(
                 PlatformUtil.IsResolutionControllableOn(Application.platform),
                 PlatformUtil.IsResolutionControllable);
