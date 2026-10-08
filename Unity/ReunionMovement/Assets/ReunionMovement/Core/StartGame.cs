@@ -80,10 +80,9 @@ namespace ReunionMovement.Core
             // 预加载配置（后续日志等模块访问 Config 属性时无需再走 Resources.Load）
             ReunionMovement.Config.EnsureLoaded();
 
-            if (Application.platform != RuntimePlatform.WebGLPlayer)
-            {
-                GameOption.LoadOptions();
-            }
+            // 所有平台都加载一次：WebGL 分支内部会跳过 PlayerPrefs 读取（异步 IndexedDB），
+            // 但仍应用一次选项（音量/亮度等）。此前 WebGL 完全跳过调用，导致这些设置永不生效。
+            GameOption.LoadOptions();
 
             return UniTask.CompletedTask;
         }
