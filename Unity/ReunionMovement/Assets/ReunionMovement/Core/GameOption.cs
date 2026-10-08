@@ -26,8 +26,8 @@ namespace ReunionMovement.Core
             public int framerate = 60;
             // 多语言支持
             public Multilingual language = Multilingual.ZH_CN;
-            // 图形质量
-            public int graphicsQuality = 2; // 0: 低, 1: 中, 2: 高
+            // 图形质量：0 低 / 1 中 / 2 高（仅桌面应用；移动端交给项目 m_PerPlatformDefaultQuality）
+            public int graphicsQuality = 2;
             // 亮度
             public float brightness = 1.0f;
 
@@ -145,8 +145,8 @@ namespace ReunionMovement.Core
         /// <summary>
         /// 应用分辨率/画质等“重路径”设置。
         /// Screen.SetResolution 会切换显示模式（移动端闪屏/卡顿），仅在相关字段变化时调用。
-        /// 移动端（Android/iOS）不调用 Screen.SetResolution —— 分辨率由系统固定，
-        /// 见 <see cref="ResolutionMgr.IsResolutionControllable"/>。
+        /// 移动端（Android/iOS）不调用 Screen.SetResolution，也不强制质量档 —— 分辨率与质量档
+        /// 均由系统与项目 per-platform 配置决定，见 <see cref="PlatformUtil"/>。
         /// </summary>
         private static void ApplyDisplayOptions()
         {
@@ -167,7 +167,7 @@ namespace ReunionMovement.Core
                 // 不会切换显示模式，只会把 Unity 内部渲染目标改成存档里的桌面尺寸（默认 1920x1080）
                 // 再拉伸铺满整屏 —— 与设备宽高比不一致时画面被拉伸/压扁（AR 应用会直接破坏相机画面），
                 // 并让 Screen.width/height 变成该假分辨率，破坏依赖它做方向/布局判断的逻辑。
-                if (!ResolutionMgr.IsResolutionControllable)
+                if (!PlatformUtil.IsResolutionControllable)
                 {
                     Log.Debug("[GameOption] 当前平台分辨率由系统控制，跳过 SetResolution({0}x{1})",
                         currentOption.resolutionWidth, currentOption.resolutionHeight);
@@ -189,9 +189,20 @@ namespace ReunionMovement.Core
                 Application.targetFrameRate = currentOption.framerate;
 #endif
 
-                // 图形质量
-                int qualityIndex = Mathf.Clamp(currentOption.graphicsQuality, 0, QualitySettings.names.Length - 1);
-                QualitySettings.SetQualityLevel(qualityIndex, true);
+                // 图形质量：移动端不强制，交给项目的 m_PerPlatformDefaultQuality
+                // （项目的 Android/iPhone 已排除 PC 档并默认 Mobile 档；而桌面存档里的
+                //  graphicsQuality 是"0低/1中/2高"的三档语义，被当裸索引 clamp 后会选中
+                //  被排除的档位，等于用桌面默认覆盖项目的 per-platform 配置）
+                if (PlatformUtil.IsMobilePlatform)
+                {
+                    Log.Debug("[GameOption] 移动端质量档由项目 per-platform 默认决定，跳过 SetQualityLevel({0})",
+                        currentOption.graphicsQuality);
+                }
+                else
+                {
+                    int qualityIndex = Mathf.Clamp(currentOption.graphicsQuality, 0, QualitySettings.names.Length - 1);
+                    QualitySettings.SetQualityLevel(qualityIndex, true);
+                }
             }
             catch (Exception ex)
             {
