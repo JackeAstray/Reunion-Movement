@@ -303,7 +303,12 @@ namespace ReunionMovement.Core
             lateUpdateModules.Clear();
 
             // 取消链：外部 ct + 总超时 + Dispose（Dispose 中 Cancel launchCts 中断在途初始化）
-            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(Mathf.Max(1f, timeoutSeconds)));
+            // 超时不用 new CancellationTokenSource(TimeSpan) / CancelAfter：二者依赖 System.Threading.Timer，
+            // 在 WebGL 上永不触发（启动卡住时没有任何兜底），改用 PlayerLoop 驱动的 PlatformTimeout。
+            var timeoutCts = new CancellationTokenSource();
+            var timeoutDelayCts = new CancellationTokenSource();
+            PlatformTimeout.CancelAfterAsync(timeoutCts, timeoutDelayCts.Token,
+                TimeSpan.FromSeconds(Mathf.Max(1f, timeoutSeconds))).Forget();
             launchCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
 
             try
@@ -390,6 +395,9 @@ namespace ReunionMovement.Core
                 // 释放取消链（无论成功失败）；Dispose 中引用的 launchCts 已失效置 null
                 launchCts?.Dispose();
                 launchCts = null;
+                // 先停掉待触发的超时任务，再释放 CTS（否则它会在超时到点后去 Cancel 已释放的对象）
+                timeoutDelayCts.Cancel();
+                timeoutDelayCts.Dispose();
                 timeoutCts.Dispose();
             }
         }
