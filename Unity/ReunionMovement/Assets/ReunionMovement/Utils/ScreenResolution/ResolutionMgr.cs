@@ -14,6 +14,26 @@ namespace ReunionMovement.Common.Util
         /// <summary>分辨率/纵横比为设备级全局设置，保持跨场景存活</summary>
         protected override bool IsPersistentAcrossScenes => true;
 
+        /// <summary>
+        /// 指定平台的分辨率是否可由 <see cref="Screen.SetResolution"/> 控制（纯函数，便于测试/按目标平台预判）。
+        ///
+        /// 移动端（Android/iOS）返回 false：设备显示分辨率由系统固定、<see cref="Screen.resolutions"/> 为空，
+        /// <see cref="Screen.SetResolution"/> 不会切换显示模式，只会把 Unity 的内部渲染目标改成传入尺寸
+        /// 再拉伸铺满整屏 —— 与设备宽高比不一致时画面被拉伸/压扁（AR 应用会直接破坏相机画面与识别坐标），
+        /// 同时 Screen.width/height 会变成这个假分辨率，破坏依赖它做方向/布局判断的逻辑。
+        /// </summary>
+        public static bool IsResolutionControllableOn(RuntimePlatform platform)
+        {
+            return platform != RuntimePlatform.Android
+                && platform != RuntimePlatform.IPhonePlayer;
+        }
+
+        /// <summary>
+        /// 当前平台的分辨率是否可由 <see cref="Screen.SetResolution"/> 控制。
+        /// 移动端必须交给系统决定分辨率（见 <see cref="IsResolutionControllableOn"/>）。
+        /// </summary>
+        public static bool IsResolutionControllable => IsResolutionControllableOn(Application.platform);
+
         public enum AspectRatio
         {
             AspectRatio_2_1,    // 2:1
@@ -102,7 +122,14 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         private async UniTaskVoid InitRoutineAsync()
         {
-            if (Application.platform == RuntimePlatform.OSXPlayer)
+            if (!IsResolutionControllable)
+            {
+                // 移动端：分辨率由系统固定，不做任何探测/切换。
+                // 下面的探测分支在 Screen.resolutions 为空（移动端恒为空）时会临时把窗口切成 Windowed
+                // 再切回全屏，在移动端会破坏沉浸式全屏状态。
+                displayResolution = Screen.currentResolution;
+            }
+            else if (Application.platform == RuntimePlatform.OSXPlayer)
             {
                 displayResolution = Screen.currentResolution;
             }
@@ -240,9 +267,16 @@ namespace ReunionMovement.Common.Util
         /// 从 GameOption 的分辨率配置应用显示设置 —— ResolutionMgr 存在时作为唯一的分辨率应用入口，
         /// 避免 GameOption.ApplyDisplayOptions 与 InitResolutions 两套系统各自 SetResolution 互相覆盖。
         /// 预设列表中不存在目标分辨率时选择最接近项（避免切换到一个不稳定的分辨率）。
+        /// 移动端不做任何切换（见 <see cref="IsResolutionControllable"/>）。
         /// </summary>
         public void ApplyResolutionFromOptions(int width, int height, bool fullscreen)
         {
+            if (!IsResolutionControllable)
+            {
+                Log.Debug("ResolutionMgr: 当前平台分辨率由系统控制，忽略 {0}x{1}", width, height);
+                return;
+            }
+
             var list = fullscreen ? fullscreenResolutions : windowedResolutions;
             if (list == null || list.Count == 0)
             {
@@ -267,9 +301,17 @@ namespace ReunionMovement.Common.Util
 
         /// <summary>
         /// 设置分辨率
+        /// 移动端（Android/iOS）不生效：分辨率由系统固定，SetResolution 只会把内部渲染目标
+        /// 改成该尺寸再拉伸铺满整屏（画面拉伸/压扁），见 <see cref="IsResolutionControllable"/>。
         /// </summary>
         public void SetResolution(int index, bool fullscreen)
         {
+            if (!IsResolutionControllable)
+            {
+                Log.Debug("ResolutionMgr: 当前平台分辨率由系统控制，忽略 SetResolution");
+                return;
+            }
+
             // 列表可能为空（InitResolutions 未填充时 Count-1 = -1 会越界），
             // 统一做边界校验与 clamp，避免 IndexOutOfRangeException
             var list = fullscreen ? fullscreenResolutions : windowedResolutions;
