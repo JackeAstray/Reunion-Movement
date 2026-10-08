@@ -145,6 +145,8 @@ namespace ReunionMovement.Core
         /// <summary>
         /// 应用分辨率/画质等“重路径”设置。
         /// Screen.SetResolution 会切换显示模式（移动端闪屏/卡顿），仅在相关字段变化时调用。
+        /// 移动端（Android/iOS）不调用 Screen.SetResolution —— 分辨率由系统固定，
+        /// 见 <see cref="ResolutionMgr.IsResolutionControllable"/>。
         /// </summary>
         private static void ApplyDisplayOptions()
         {
@@ -159,8 +161,18 @@ namespace ReunionMovement.Core
                 // 因此跳过分辨率/全屏/垂直同步相关设置
 #else
                 // 分辨率与全屏：ResolutionMgr 存在时作为唯一的分辨率应用入口，
-                // 避免两套系统启动时各自 SetResolution 一次互相覆盖
-                if (ResolutionMgr.IsInitialized)
+                // 避免两套系统启动时各自 SetResolution 一次互相覆盖。
+                //
+                // 移动端（Android/iOS）整段跳过：设备分辨率由系统固定，Screen.SetResolution
+                // 不会切换显示模式，只会把 Unity 内部渲染目标改成存档里的桌面尺寸（默认 1920x1080）
+                // 再拉伸铺满整屏 —— 与设备宽高比不一致时画面被拉伸/压扁（AR 应用会直接破坏相机画面），
+                // 并让 Screen.width/height 变成该假分辨率，破坏依赖它做方向/布局判断的逻辑。
+                if (!ResolutionMgr.IsResolutionControllable)
+                {
+                    Log.Debug("[GameOption] 当前平台分辨率由系统控制，跳过 SetResolution({0}x{1})",
+                        currentOption.resolutionWidth, currentOption.resolutionHeight);
+                }
+                else if (ResolutionMgr.IsInitialized)
                 {
                     ResolutionMgr.Instance.ApplyResolutionFromOptions(
                         currentOption.resolutionWidth, currentOption.resolutionHeight, currentOption.fullscreen);

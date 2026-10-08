@@ -82,7 +82,7 @@ Unity Game Framework | Unity游戏框架
 | `StateMachine` | 泛型状态机（并行状态 / 超时 / 历史回退 / 序列化快照） |
 | `GachaSystem` | 加密随机抽卡系统（无可预测性 / 保底持久化 + 完整性校验） |
 | `GameObjectPool` | 通用对象池（IPoolable 生命周期 / 注册表） |
-| `ResolutionMgr` | 屏幕分辨率 / 全屏 / 帧率 |
+| `ResolutionMgr` | 屏幕分辨率 / 全屏 / 帧率（仅桌面平台；移动端分辨率由系统控制，不会调用 `Screen.SetResolution`） |
 | `SafeArea` | 刘海屏安全区适配 |
 | `ScreenLogger` | 屏幕日志显示 |
 | `DeadlineMgr` | 截止日期检测 |
