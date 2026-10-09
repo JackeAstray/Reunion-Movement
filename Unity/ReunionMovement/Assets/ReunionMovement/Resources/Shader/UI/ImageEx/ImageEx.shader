@@ -220,25 +220,19 @@ Shader "ReunionMovement/UI/ImageEx"
             
             #pragma multi_compile_local _ UNITY_UI_CLIP_RECT
             #pragma multi_compile_local _ UNITY_UI_ALPHACLIP
-            
-            #pragma multi_compile_local _ CIRCLE TRIANGLE RECTANGLE PENTAGON HEXAGON CHAMFERBOX QUADRILATERAL NSTAR_POLYGON HEART BLOBBYCROSS SQUIRCLE NTRIANGLE_ROUNDED
 
-            #pragma multi_compile_local _ STROKE OUTLINED OUTLINED_STROKE
-            // 渐变（GRADIENT_LINEAR/RADIAL/CORNER）与渐变纹理（GRADIENT_TEXTURE）已改为
-            // RM_Gradient.cginc 内的 uniform 运行时分支，不再声明关键字：
-            // shader_feature 变体在打包时会因「构建期无材质启用该关键字」被裁剪，
+            // 形状与描边原先也是 multi_compile（13 形状 × 4 描边 = 52 倍变体膨胀）。
+            // 改为运行时分支后，ImageEx 只剩下面这两轴变体（4 个），
+            // 而每个变体装下全部形状与特效代码 —— 实测总体积小于改造前，
+            // 且形状/描边/所有特效都能在运行时自由切换（不再受打包裁剪影响）。
+            //
+            // 其余特效（渐变/过渡/模糊/色调/颜色滤镜/边缘/采样/目标/细节）同样改为
+            // 各模块内的 uniform 运行时分支，不再声明关键字：
+            // shader_feature 变体在打包时会因「构建期无材质启用该关键字」被整体裁剪，
             // 导致 Player 中运行时 EnableKeyword 静默失效（编辑器正常、真机没效果）。
-            #pragma shader_feature_local _ BLUR_FAST BLUR_MEDIUM BLUR_DETAIL
-            #pragma shader_feature_local _ TRANSITION_FADE TRANSITION_CUTOFF TRANSITION_DISSOLVE TRANSITION_SHINY TRANSITION_MASK TRANSITION_MELT TRANSITION_BURN TRANSITION_PATTERN TRANSITION_BLAZE
             #pragma shader_feature_local _ DASHED_OUTLINE_STATIC
             #pragma shader_feature_local _ TRANSITION_CLAMP_STATIC
             #pragma shader_feature_local _ TRANSITION_UV_EFFECT_STATIC
-            #pragma shader_feature_local _ TONE_GRAYSCALE TONE_SEPIA TONE_NEGATIVE TONE_RETRO TONE_POSTERIZE
-            #pragma shader_feature_local _ COLOR_FILTER
-            #pragma shader_feature_local _ EDGE_PLAIN EDGE_SHINY
-            #pragma shader_feature_local _ SAMPLING_PIXELATION SAMPLING_RGB_SHIFT SAMPLING_EDGE_LUMINANCE SAMPLING_EDGE_ALPHA
-            #pragma shader_feature_local _ TARGET_HUE TARGET_LUMINANCE
-            #pragma shader_feature_local _ DETAIL_MASKING DETAIL_MULTIPLY DETAIL_ADDITIVE DETAIL_SUBTRACTIVE DETAIL_REPLACE DETAIL_MULTIPLY_ADDITIVE
 
             struct appdata_t
             {
@@ -398,8 +392,10 @@ Shader "ReunionMovement/UI/ImageEx"
 
                 // 过渡逻辑（计算 transAlpha，并为 Melt/Burn 模式允许移动 UV）
                 float transAlpha = 1;
-                #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
-                    #if TRANSITION_PATTERN
+                if (_TransitionMode != 0)
+                {
+                    if (_TransitionMode == 8) // Pattern
+                    {
                         const half scale = lerp(100, 1, _TransitionWidth);
                         const half2 time = half2(-transition_rate() * 2, 0);
                         transitionUv = RM_RotateTransitionUV(transitionUv, IN.quadAspect);
@@ -407,14 +403,16 @@ Shader "ReunionMovement/UI/ImageEx"
                         transitionUv = transitionUv * _TransitionTex_ST.xy * scale + _TransitionTex_ST.zw + time;
                         transAlpha = tex2D(_TransitionTex, transitionUv).a;
                         transAlpha = _TransitionReverse ? 1 - transAlpha : transAlpha;
-                    #else
+                    }
+                    else
+                    {
                         transAlpha = transition_alpha(transitionBaseUv, IN.quadAspect);
-                    #endif
+                    }
 
                     // Move UVs for Melt/Burn
                     float4 uvMask = float4(0, 0, 1, 1); // Simplified mask for full rect
                     texcoord += move_transition_filter(uvMask, transAlpha);
-                #endif
+                }
 
                 // 检测是否为阴影顶点，并使用单独逻辑渲染阴影（仍包含过渡处理）
                 // 使用 tangent.w 标记检测阴影顶点，避免黑色 Tint 导致误判
@@ -423,12 +421,19 @@ Shader "ReunionMovement/UI/ImageEx"
                     return RM_RenderShadow(IN.shapeData, _FalloffDistance, _StrokeWidth, _OutlineWidth, texcoord, transAlpha, transitionFilterUv, IN.color.a);
                 }
 
-                // 统一采样入口：模糊（BLUR_*）或 Phase2 采样模式（Pixelation/RGB Shift/Edge）
-                #if SAMPLING_PIXELATION || SAMPLING_RGB_SHIFT || SAMPLING_EDGE_LUMINANCE || SAMPLING_EDGE_ALPHA
+                // 统一采样入口：采样模式（Pixelation/RGB Shift/Edge）优先，其次模糊（Blur），否则直接采样
+                if (_SamplingMode != 0)
+                {
                     color = RM_ApplySampling(texcoord) * color;
-                #else
+                }
+                else if (_BlurType != 0)
+                {
                     color = ApplyBlur(texcoord) * color;
-                #endif
+                }
+                else
+                {
+                    color = (tex2D(_MainTex, texcoord) + _TextureSampleAdd) * color;
+                }
 
                 // 继续主片元路径：先对主纹理进行可选模糊采样（ApplyBlur），然后按功能模块（渐变、SDF、描边、过渡）依次处理颜色与 alpha
                 // 保留原始的基础采样颜色
@@ -436,54 +441,65 @@ Shader "ReunionMovement/UI/ImageEx"
 
                 // 计算边缘因子（在渐变之前，基于原始纹理 alpha 做 12 方向邻域检测）
                 float edgeFactor = 0;
-                #if EDGE_PLAIN || EDGE_SHINY
+                if (_EdgeMode != 0)
+                {
                     edgeFactor = RM_ComputeEdgeFactor(texcoord, _EdgeWidth);
-                #endif
+                }
 
                 ApplyGradientColor(color, effectsUv, IN.quadAspect);
 
                 // 应用色调滤镜（Tone Filter）：灰度化 / 怀旧 / 负片 / 复古 / 色调分离
                 color = RM_ApplyToneFilter(color);
                 
-                #if RECTANGLE || CIRCLE || PENTAGON || TRIANGLE || HEXAGON || CHAMFERBOX || QUADRILATERAL || NSTAR_POLYGON || HEART || BLOBBYCROSS || SQUIRCLE || NTRIANGLE_ROUNDED
+                if (_DrawShape != 0) // 原 RECTANGLE || CIRCLE || ... 分支：_DrawShape != 0 走 SDF 形状
+                {
                     float sdfData;
                     float pixelScale;
                     ComputeSdfData(IN, sdfData, pixelScale);
 
-                    #if !OUTLINED && !STROKE && !OUTLINED_STROKE
-                        float sdf = sampleSdf(sdfData, pixelScale);
-                        color.a *= sdf;
-                    #endif
-
-                    #if STROKE
+                    // 四种描边状态（对齐 C# 的 strokeState 判定），逐一还原原语义：
+                    //   有点有轮 → OUTLINED_STROKE；只有点 → STROKE；
+                    //   只有轮 → OUTLINED（由 ApplyOutlinedSdf 内部处理）；都没有 → 直接 SDF 采样
+                    if (_StrokeWidth > 0 && _OutlineWidth <= 0) // 原 STROKE
+                    {
                         float sdf = sampleSdfStrip(sdfData, _StrokeWidth + _OutlineWidth, pixelScale);
                         color.a *= sdf;
-                    #endif
-                    
+                    }
+                    else if (_StrokeWidth <= 0 && _OutlineWidth <= 0) // 原「无描边无轮廓」
+                    {
+                        float sdf = sampleSdf(sdfData, pixelScale);
+                        color.a *= sdf;
+                    }
+
                     ApplyOutlinedSdf(color, IN, sdfData, pixelScale);
-                     
-                    #if OUTLINED_STROKE
+
+                    if (_StrokeWidth > 0 && _OutlineWidth > 0) // 原 OUTLINED_STROKE
+                    {
                         float alpha = sampleSdfStrip(sdfData, _OutlineWidth + _StrokeWidth, pixelScale);
                         float lerpFac = sampleSdfStrip(sdfData + _OutlineWidth, _StrokeWidth + _FalloffDistance, pixelScale);
                         lerpFac = clamp(lerpFac, 0, 1);
                         color = half4(lerp(_OutlineColor.rgb, color.rgb, lerpFac), lerp(_OutlineColor.a * color.a, color.a, lerpFac));
                         color.a *= alpha;
-                    #endif
-                #endif
+                    }
+                }
 
                 // 应用过渡过滤器
-                #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
+                if (_TransitionMode != 0)
+                {
                     // transAlpha 和 transitionFilterUv 已在前面计算，可在此处使用
                     color = apply_transition_filter(color, transAlpha, transitionFilterUv, edgeFactor);
-                #endif
+                }
 
-                #if !RECTANGLE && !CIRCLE && !PENTAGON && !TRIANGLE && !HEXAGON && !CHAMFERBOX && !QUADRILATERAL && !NSTAR_POLYGON && !HEART && !BLOBBYCROSS && !SQUIRCLE && !NTRIANGLE_ROUNDED
-                    #if OUTLINED || STROKE || OUTLINED_STROKE
+                if (_DrawShape == 0) // 无形状时走纹理描边（原 !RECTANGLE && !CIRCLE && ... 分支）
+                {
+                    if (_OutlineWidth > 0 || _StrokeWidth > 0) // 原 OUTLINED || STROKE || OUTLINED_STROKE
+                    {
                         float width = _OutlineWidth;
 
-                        #if STROKE || OUTLINED_STROKE
+                        if (_StrokeWidth > 0) // 原 STROKE || OUTLINED_STROKE
+                        {
                             width += _StrokeWidth;
-                        #endif
+                        }
 
                         if (width > 0)
                         {
@@ -504,45 +520,49 @@ Shader "ReunionMovement/UI/ImageEx"
                             half sobel = sqrt(sobel_h * sobel_h + sobel_v * sobel_v);
                             sobel = saturate(sobel);
 
-                            // 原有描边逻辑
-                            #if STROKE
+                            // 原有描边逻辑（STROKE = 有笔宽且无轮廓宽）
+                            if (_StrokeWidth > 0 && _OutlineWidth <= 0)
+                            {
                                 color.a = sobel * _OutlineColor.a * IN.color.a;
-                            #else
+                            }
+                            else
+                            {
                                 color.rgb = lerp(color.rgb, _OutlineColor.rgb, sobel);
                                 color.a = max(color.a, sobel * _OutlineColor.a * IN.color.a);
-                            #endif
+                            }
                         }
-                        #if STROKE
-                        else
+                        else if (_StrokeWidth > 0 && _OutlineWidth <= 0) // 原 STROKE 的 else 分支
                         {
                             color.a = 0;
                         }
-                        #endif
-                    #endif
-                #endif
+                    }
+                }
 
                 #ifdef UNITY_UI_CLIP_RECT
                     color.a *= UnityGet2DClipping(IN.worldPosition.xy, _ClipRect);
                 #endif
 
                 // 应用独立颜色滤镜（Color Filter）：乘法 / 加法 / 减法 / 替换 / HSV 偏移 / 对比度
-                #if COLOR_FILTER
+                if (_ColorFilter != 0)
+                {
                     color = RM_ApplyStandaloneColorFilter(color);
-                #endif
+                }
 
                 // 应用边缘效果（Edge Mode）：普通边缘发光 / 旋转高光边缘
-                #if EDGE_PLAIN || EDGE_SHINY
+                if (_EdgeMode != 0)
+                {
                     color = RM_ApplyEdge(color, edgeFactor, effectsUv, IN.quadAspect);
-                #endif
+                }
 
                 // 应用细节纹理滤镜（Detail Filter）
                 color = RM_ApplyDetailFilter(color, effectsUv);
 
                 // 应用目标模式（Target Mode）：基于色相/亮度的目标颜色过滤
-                #if TARGET_HUE || TARGET_LUMINANCE
+                if (_TargetMode != 0)
+                {
                     half targetRate = RM_GetTargetRate(baseSample.rgb);
                     color = RM_ApplyTarget(color, baseSample, targetRate);
-                #endif
+                }
 
                 #ifdef UNITY_UI_ALPHACLIP
                     clip(color.a - 0.001);

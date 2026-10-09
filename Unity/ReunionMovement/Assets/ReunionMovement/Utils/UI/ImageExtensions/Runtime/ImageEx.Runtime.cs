@@ -18,7 +18,7 @@ namespace ReunionMovement.UI.ImageExtensions
         private Material dynamicMaterial;
 
         // ===== Shared 模式串扰诊断 =====
-        // 同一共享材质被 keywordMask 不同的多个 ImageEx 使用时，渲染由最后写入者决定，
+        // 同一共享材质被特效设置不同的多个 ImageEx 使用时，渲染由最后写入者决定，
         // 形状/特效会互相覆盖。以下静态注册表用于检测并告警一次（不改变渲染行为）。
         private static readonly System.Collections.Generic.Dictionary<Material, int> s_sharedMatLastMask
             = new System.Collections.Generic.Dictionary<Material, int>(8);
@@ -515,63 +515,60 @@ namespace ReunionMovement.UI.ImageExtensions
             }
         }
 
-        // 关键字掩码缓存（Dynamic 模式性能优化）：掩码与材质未变化时跳过 ~60 次 DisableKeyword 调用
-        private int appliedKeywordMask = -1;
-        private Material appliedKeywordMaterial;
         // 非法枚举值限频告警标记（渲染路径不抛异常，防 ArgumentOutOfRangeException 打断 Canvas 重建）
         private bool m_invalidDrawShapeLogged;
         private bool m_invalidImageTypeLogged;
 
         /// <summary>
-        /// 计算当前期望的关键字掩码。
-        /// 必须覆盖 GetModifiedMaterial 中所有会被 Enable 的关键字来源；
-        /// 掩码不变 ⇒ 关键字状态必然不变（可安全跳过 DisableAllMaterialKeywords）。
+        /// 计算当前「特效设置签名」。
+        /// 所有特效（形状/描边/过渡/模糊/色调/颜色滤镜/边缘/采样/目标/细节/渐变）现已改为
+        /// 读取材质 uniform 的运行时分支，不再使用任何 EnableKeyword/DisableKeyword，
+        /// 因此这里不再承担「关键字缓存失效键」的职责，只用于 Shared 模式的串扰诊断：
+        /// 共享材质下每个实例都会覆写同一份 uniform，设置不一致时结果由最后写入者决定。
         /// </summary>
-        private int ComputeKeywordMask()
+        private int ComputeSettingsSignature()
         {
-            int mask = (int)transitionMode;                                 // bits 0-3  TRANSITION_*
-            mask |= ((int)blurType & 0x3) << 4;                             // bits 4-5  BLUR_*
+            int signature = 0;
             int strokeState;
             if (strokeWidth > 0 && outlineWidth > 0) strokeState = 1;       // OUTLINED_STROKE
-            else if (strokeWidth > 0) strokeState = 2;                      // STROKE
-            else if (outlineWidth > 0) strokeState = 3;                     // OUTLINED
+            else if (strokeWidth > 0) strokeState = 2;                     // STROKE
+            else if (outlineWidth > 0) strokeState = 3;                    // OUTLINED
             else strokeState = 0;
-            mask |= strokeState << 6;                                       // bits 6-7
-            mask |= ((int)DrawShape & 0xF) << 8;                            // bits 8-11 形状关键字
-            mask |= ((int)m_ToneFilter & 0x7) << 12;                        // bits 12-14 TONE_*
-            mask |= (m_ColorFilterMode != ColorMode.None ? 1 : 0) << 15;    // bit 15    COLOR_FILTER
-            mask |= ((int)m_EdgeMode & 0x3) << 16;                          // bits 16-17 EDGE_*
-            mask |= ((int)m_SamplingMode & 0x7) << 18;                      // bits 18-20 SAMPLING_*
-            mask |= ((int)m_TargetMode & 0x3) << 21;                        // bits 21-22 TARGET_*
-            mask |= (m_EnableGradientTex && m_GradientTex != null ? 1 : 0) << 23; // bit 23 GRADIENT_TEXTURE
-            mask |= ((int)m_DetailMode & 0x7) << 24;                        // bits 24-26 DETAIL_*
-            // 渐变效果：GradientEffect.ModifyMaterial 负责写入 _EnableGradient/_GradientType 等
-            // uniform（shader 侧已改为运行时分支，不再贡献任何关键字；此处仅作为缓存失效键保留）
+            signature |= strokeState & 0x3;                                // bits 0-1  描边状态
+            signature |= ((int)DrawShape & 0xF) << 2;                      // bits 2-5  形状
+            signature |= ((int)transitionMode & 0xF) << 6;                 // bits 6-9  过渡模式
+            signature |= ((int)blurType & 0x3) << 10;                      // bits 10-11 模糊
+            signature |= ((int)m_ToneFilter & 0x7) << 12;                  // bits 12-14 色调
+            signature |= ((int)m_ColorFilterMode & 0xF) << 15;             // bits 15-18 颜色滤镜
+            signature |= ((int)m_EdgeMode & 0x3) << 19;                    // bits 19-20 边缘
+            signature |= ((int)m_SamplingMode & 0x7) << 21;                // bits 21-23 采样
+            signature |= ((int)m_TargetMode & 0x3) << 24;                  // bits 24-25 目标
+            signature |= ((int)m_DetailMode & 0x7) << 26;                  // bits 26-28 细节
             int gradState = gradientEffect.Enabled ? ((int)gradientEffect.GradientType + 1) : 0;
-            mask |= (gradState & 0x3) << 27;                                // bits 27-28 GRADIENT_LINEAR/CORNER/RADIAL
-            return mask;
+            signature |= (gradState & 0x3) << 29;                          // bits 29-30 渐变
+            return signature;
         }
 
         /// <summary>
         /// Shared 模式串扰诊断：同一共享材质被设置不同的多个 ImageEx 使用时告警一次。
-        /// Shared 模式下每个实例都会 DisableAll 后写入自己的关键字/属性，最终状态由最后调用者决定。
+        /// 共享材质由多个实例共同写入同一份 uniform，最终状态由最后调用者决定。
         /// </summary>
-        private static void DiagnoseSharedMaterialContention(Material shared, int keywordMask)
+        private static void DiagnoseSharedMaterialContention(Material shared, int settingsSignature)
         {
             if (shared == null) return;
             if (s_sharedMatLastMask.TryGetValue(shared, out int prevMask))
             {
-                if (prevMask != keywordMask && s_sharedMatWarned.Add(shared))
+                if (prevMask != settingsSignature && s_sharedMatWarned.Add(shared))
                 {
-                    Log.Warning("[ImageEx] 检测到共享材质被多个设置不同的 ImageEx 使用（关键字掩码不一致），"
+                    Log.Warning("[ImageEx] 检测到共享材质被多个设置不同的 ImageEx 使用（特效设置签名不一致），"
                         + "渲染结果将由最后一个实例决定，形状/特效可能互相覆盖。"
                         + "建议为每个实例使用独立材质（Material Mode = Dynamic）或保持各实例设置一致。");
                 }
-                s_sharedMatLastMask[shared] = keywordMask;
+                s_sharedMatLastMask[shared] = settingsSignature;
             }
             else
             {
-                s_sharedMatLastMask[shared] = keywordMask;
+                s_sharedMatLastMask[shared] = settingsSignature;
             }
         }
 
@@ -595,18 +592,17 @@ namespace ReunionMovement.UI.ImageExtensions
                 InitValuesFromSharedMaterial();
             }
 
-            // 关键字掩码缓存：掩码与材质未变化时跳过全部关键字调用
-            // （DisableAll ~51 次 + ApplyActiveKeywords 的 Enable/Disable）。
-            // 仅 Dynamic 模式生效——共享材质由多个实例共同写入，不做缓存以保持原语义。
-            int keywordMask = ComputeKeywordMask();
-            if (m_Material != null || appliedKeywordMaterial != mat || appliedKeywordMask != keywordMask)
+            // 特效全部走 uniform 运行时分支，已无关键字需要写入；
+            // 仅保留 Shared 模式的串扰诊断（同一共享材质被设置不同的多实例使用时告警一次）。
+            DiagnoseSharedMaterialContention(m_Material, ComputeSettingsSignature());
+
+            // 非法 DrawShape（旧版本序列化残留）：不抛异常，避免打断 Canvas 重建；限频告警。
+            // shader 侧对非法 _DrawShape 保持 sdfData=0（不渲染形状），与原「不启用形状关键字」语义一致。
+            int drawShapeValue = (int)DrawShape;
+            if ((drawShapeValue < 0 || drawShapeValue > 12) && !m_invalidDrawShapeLogged)
             {
-                // Shared 模式：检测多实例串扰（不同 keywordMask 共用同一材质）并告警一次
-                DiagnoseSharedMaterialContention(m_Material, keywordMask);
-                DisableAllMaterialKeywords(mat);
-                ApplyActiveKeywords(mat);
-                appliedKeywordMask = keywordMask;
-                appliedKeywordMaterial = mat;
+                m_invalidDrawShapeLogged = true;
+                Log.Warning("ImageEx.DrawShape 存在非法值 {0}，已跳过形状渲染", drawShapeValue);
             }
 
             RectTransform rt = rectTransform;
@@ -793,187 +789,6 @@ namespace ReunionMovement.UI.ImageExtensions
             }
 
             return mat;
-        }
-
-        /// <summary>
-        /// 应用当前状态对应的全部 Enable 关键字（须在 DisableAllMaterialKeywords 之后调用）。
-        /// 与关键字掩码缓存配合：掩码与材质未变化时整体跳过，
-        /// 消除动画期间每帧 ~15-30 次字符串关键字查找（None 分支的 Disable 由 DisableAll 覆盖，不重复）。
-        /// </summary>
-        private void ApplyActiveKeywords(Material mat)
-        {
-            switch (transitionMode)
-            {
-                case TransitionMode.Fade: mat.EnableKeyword("TRANSITION_FADE"); break;
-                case TransitionMode.Cutoff: mat.EnableKeyword("TRANSITION_CUTOFF"); break;
-                case TransitionMode.Dissolve: mat.EnableKeyword("TRANSITION_DISSOLVE"); break;
-                case TransitionMode.Shiny: mat.EnableKeyword("TRANSITION_SHINY"); break;
-                case TransitionMode.Mask: mat.EnableKeyword("TRANSITION_MASK"); break;
-                case TransitionMode.Melt: mat.EnableKeyword("TRANSITION_MELT"); break;
-                case TransitionMode.Burn: mat.EnableKeyword("TRANSITION_BURN"); break;
-                case TransitionMode.Pattern: mat.EnableKeyword("TRANSITION_PATTERN"); break;
-                case TransitionMode.Blaze: mat.EnableKeyword("TRANSITION_BLAZE"); break;
-            }
-
-            switch (blurType)
-            {
-                case BlurType.Fast: mat.EnableKeyword("BLUR_FAST"); break;
-                case BlurType.Medium: mat.EnableKeyword("BLUR_MEDIUM"); break;
-                case BlurType.Detail: mat.EnableKeyword("BLUR_DETAIL"); break;
-            }
-
-            if (strokeWidth > 0 && outlineWidth > 0)
-            {
-                mat.EnableKeyword("OUTLINED_STROKE");
-            }
-            else if (strokeWidth > 0)
-            {
-                mat.EnableKeyword("STROKE");
-            }
-            else if (outlineWidth > 0)
-            {
-                mat.EnableKeyword("OUTLINED");
-            }
-
-            switch (DrawShape)
-            {
-                case DrawShape.None: break; // 无形状：不启用任何形状关键字
-                case DrawShape.Circle: mat.EnableKeyword("CIRCLE"); break;
-                case DrawShape.Triangle: mat.EnableKeyword("TRIANGLE"); break;
-                case DrawShape.Rectangle: mat.EnableKeyword("RECTANGLE"); break;
-                case DrawShape.Pentagon: mat.EnableKeyword("PENTAGON"); break;
-                case DrawShape.NStarPolygon: mat.EnableKeyword("NSTAR_POLYGON"); break;
-                case DrawShape.Hexagon: mat.EnableKeyword("HEXAGON"); break;
-                case DrawShape.ChamferBox: mat.EnableKeyword("CHAMFERBOX"); break;
-                case DrawShape.Quadrilateral: mat.EnableKeyword("QUADRILATERAL"); break;
-                case DrawShape.Heart: mat.EnableKeyword("HEART"); break;
-                case DrawShape.BlobbyCross: mat.EnableKeyword("BLOBBYCROSS"); break;
-                case DrawShape.Squircle: mat.EnableKeyword("SQUIRCLE"); break;
-                case DrawShape.NTriangleRounded: mat.EnableKeyword("NTRIANGLE_ROUNDED"); break;
-                default:
-                    // 非法枚举值（如旧版本序列化残留）：不抛异常，避免打断 Canvas 重建；限频告警
-                    if (!m_invalidDrawShapeLogged)
-                    {
-                        m_invalidDrawShapeLogged = true;
-                        Log.Warning("ImageEx.DrawShape 存在非法值 {0}，已跳过形状关键字", (int)DrawShape);
-                    }
-                    break;
-            }
-
-            switch (m_ToneFilter)
-            {
-                case ToneFilter.Grayscale: mat.EnableKeyword("TONE_GRAYSCALE"); break;
-                case ToneFilter.Sepia: mat.EnableKeyword("TONE_SEPIA"); break;
-                case ToneFilter.Negative: mat.EnableKeyword("TONE_NEGATIVE"); break;
-                case ToneFilter.Retro: mat.EnableKeyword("TONE_RETRO"); break;
-                case ToneFilter.Posterize: mat.EnableKeyword("TONE_POSTERIZE"); break;
-            }
-
-            if (m_ColorFilterMode != ColorMode.None)
-            {
-                mat.EnableKeyword("COLOR_FILTER");
-            }
-
-            switch (m_EdgeMode)
-            {
-                case EdgeMode.Plain: mat.EnableKeyword("EDGE_PLAIN"); break;
-                case EdgeMode.Shiny: mat.EnableKeyword("EDGE_SHINY"); break;
-            }
-
-            switch (m_SamplingMode)
-            {
-                case SamplingFilter.Pixelation: mat.EnableKeyword("SAMPLING_PIXELATION"); break;
-                case SamplingFilter.RgbShift: mat.EnableKeyword("SAMPLING_RGB_SHIFT"); break;
-                case SamplingFilter.EdgeLuminance: mat.EnableKeyword("SAMPLING_EDGE_LUMINANCE"); break;
-                case SamplingFilter.EdgeAlpha: mat.EnableKeyword("SAMPLING_EDGE_ALPHA"); break;
-            }
-
-            switch (m_TargetMode)
-            {
-                case TargetMode.Hue: mat.EnableKeyword("TARGET_HUE"); break;
-                case TargetMode.Luminance: mat.EnableKeyword("TARGET_LUMINANCE"); break;
-            }
-
-            // 渐变纹理（GRADIENT_TEXTURE）不再是关键字：由 _EnableGradientTex uniform 驱动，
-            // 已在 GetModifiedMaterial 写入材质参数时同步（见 _EnableGradientTex 赋值处）
-
-            switch (m_DetailMode)
-            {
-                case DetailFilter.Masking: mat.EnableKeyword("DETAIL_MASKING"); break;
-                case DetailFilter.Multiply: mat.EnableKeyword("DETAIL_MULTIPLY"); break;
-                case DetailFilter.Additive: mat.EnableKeyword("DETAIL_ADDITIVE"); break;
-                case DetailFilter.Subtractive: mat.EnableKeyword("DETAIL_SUBTRACTIVE"); break;
-                case DetailFilter.Replace: mat.EnableKeyword("DETAIL_REPLACE"); break;
-                case DetailFilter.MultiplyAdditive: mat.EnableKeyword("DETAIL_MULTIPLY_ADDITIVE"); break;
-            }
-        }
-
-        /// <summary>
-        /// 禁用所有材质关键字
-        /// </summary>
-        /// <param name="mat"></param>
-        private void DisableAllMaterialKeywords(Material mat)
-        {
-            // 已移除 shader 中不存在的无效关键字：PROCEDURAL / HYBRID / ROUNDED_CORNERS
-            mat.DisableKeyword("CIRCLE");
-            mat.DisableKeyword("TRIANGLE");
-            mat.DisableKeyword("RECTANGLE");
-            mat.DisableKeyword("PENTAGON");
-            mat.DisableKeyword("HEXAGON");
-            mat.DisableKeyword("CHAMFERBOX");
-            mat.DisableKeyword("QUADRILATERAL");
-            mat.DisableKeyword("NSTAR_POLYGON");
-            mat.DisableKeyword("HEART");
-            mat.DisableKeyword("BLOBBYCROSS");
-            mat.DisableKeyword("SQUIRCLE");
-            mat.DisableKeyword("NTRIANGLE_ROUNDED");
-
-            mat.DisableKeyword("STROKE");
-            mat.DisableKeyword("OUTLINED");
-            mat.DisableKeyword("OUTLINED_STROKE");
-
-            // 渐变相关关键字已废弃：GRADIENT_LINEAR/CORNER/RADIAL 与 GRADIENT_TEXTURE 改为
-            // shader 内 uniform 分支（见 RM_Gradient.cginc），不再需要 Disable
-
-            mat.DisableKeyword("BLUR_FAST");
-            mat.DisableKeyword("BLUR_MEDIUM");
-            mat.DisableKeyword("BLUR_DETAIL");
-
-            mat.DisableKeyword("TRANSITION_FADE");
-            mat.DisableKeyword("TRANSITION_CUTOFF");
-            mat.DisableKeyword("TRANSITION_DISSOLVE");
-            mat.DisableKeyword("TRANSITION_SHINY");
-            mat.DisableKeyword("TRANSITION_MASK");
-            mat.DisableKeyword("TRANSITION_MELT");
-            mat.DisableKeyword("TRANSITION_BURN");
-            mat.DisableKeyword("TRANSITION_PATTERN");
-            mat.DisableKeyword("TRANSITION_BLAZE");
-
-            mat.DisableKeyword("TONE_GRAYSCALE");
-            mat.DisableKeyword("TONE_SEPIA");
-            mat.DisableKeyword("TONE_NEGATIVE");
-            mat.DisableKeyword("TONE_RETRO");
-            mat.DisableKeyword("TONE_POSTERIZE");
-
-            mat.DisableKeyword("COLOR_FILTER");
-
-            mat.DisableKeyword("EDGE_PLAIN");
-            mat.DisableKeyword("EDGE_SHINY");
-
-            mat.DisableKeyword("SAMPLING_PIXELATION");
-            mat.DisableKeyword("SAMPLING_RGB_SHIFT");
-            mat.DisableKeyword("SAMPLING_EDGE_LUMINANCE");
-            mat.DisableKeyword("SAMPLING_EDGE_ALPHA");
-
-            mat.DisableKeyword("TARGET_HUE");
-            mat.DisableKeyword("TARGET_LUMINANCE");
-
-            mat.DisableKeyword("DETAIL_MASKING");
-            mat.DisableKeyword("DETAIL_MULTIPLY");
-            mat.DisableKeyword("DETAIL_ADDITIVE");
-            mat.DisableKeyword("DETAIL_SUBTRACTIVE");
-            mat.DisableKeyword("DETAIL_REPLACE");
-            mat.DisableKeyword("DETAIL_MULTIPLY_ADDITIVE");
         }
 
         /// <summary>
