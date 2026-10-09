@@ -109,7 +109,7 @@
 
         //根据屏幕宽高设置UV比率
         #if ENABLE_SCREEN_ASPECT_RATIO
-        i.uv = screen_aspect_ratio(i.uv, ratio);
+        i.uv = screenAspectRatio(i.uv, ratio);
         #endif
 
         float4 color = baseColor;
