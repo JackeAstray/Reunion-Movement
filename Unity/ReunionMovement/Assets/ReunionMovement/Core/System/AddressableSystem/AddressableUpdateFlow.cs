@@ -46,7 +46,7 @@ namespace ReunionMovement.Core.Resources
 
         /// <summary>
         /// 运行完整热更流程（重复调用安全：运行中直接返回当前状态）。
-        /// 仅 Remote 模式有意义；Off/LocalOnly 模式直接返回 UpToDate。
+        /// 仅 Remote 模式有意义；Off 模式（未开启热更新）直接返回 UpToDate。
         /// </summary>
         public async UniTask<FlowState> RunAsync(CancellationToken ct = default)
         {

@@ -480,7 +480,7 @@ namespace ReunionMovement.Core.Scene
         private async UniTask OnLoadTargetSceneAsync(string levelName, LoadSceneMode loadSceneMode)
         {
             // 双轨：Addressables 优先（场景已标记为 Addressable 时），失败/未标记则降级 SceneManager。
-            // 注意：Addressables 关闭或未初始化时（含 enableAddressables=false），恒走 SceneManager。
+            // 注意：未开启热更新（enableHotUpdate=false，即 AddressablesMode.Off）或未初始化时，恒走 SceneManager。
             if (Config.AddressablesMode != AddressablesMode.Off
                 && AddressableSystem.Instance.isInited
                 && AddressableKeyExists(AddressableKeys.SceneRoot + levelName, typeof(SceneInstance)))
