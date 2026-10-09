@@ -224,7 +224,10 @@ Shader "ReunionMovement/UI/ImageEx"
             #pragma multi_compile_local _ CIRCLE TRIANGLE RECTANGLE PENTAGON HEXAGON CHAMFERBOX QUADRILATERAL NSTAR_POLYGON HEART BLOBBYCROSS SQUIRCLE NTRIANGLE_ROUNDED
 
             #pragma multi_compile_local _ STROKE OUTLINED OUTLINED_STROKE
-            #pragma shader_feature_local _ GRADIENT_LINEAR GRADIENT_RADIAL GRADIENT_CORNER
+            // 渐变（GRADIENT_LINEAR/RADIAL/CORNER）与渐变纹理（GRADIENT_TEXTURE）已改为
+            // RM_Gradient.cginc 内的 uniform 运行时分支，不再声明关键字：
+            // shader_feature 变体在打包时会因「构建期无材质启用该关键字」被裁剪，
+            // 导致 Player 中运行时 EnableKeyword 静默失效（编辑器正常、真机没效果）。
             #pragma shader_feature_local _ BLUR_FAST BLUR_MEDIUM BLUR_DETAIL
             #pragma shader_feature_local _ TRANSITION_FADE TRANSITION_CUTOFF TRANSITION_DISSOLVE TRANSITION_SHINY TRANSITION_MASK TRANSITION_MELT TRANSITION_BURN TRANSITION_PATTERN TRANSITION_BLAZE
             #pragma shader_feature_local _ DASHED_OUTLINE_STATIC
@@ -235,7 +238,6 @@ Shader "ReunionMovement/UI/ImageEx"
             #pragma shader_feature_local _ EDGE_PLAIN EDGE_SHINY
             #pragma shader_feature_local _ SAMPLING_PIXELATION SAMPLING_RGB_SHIFT SAMPLING_EDGE_LUMINANCE SAMPLING_EDGE_ALPHA
             #pragma shader_feature_local _ TARGET_HUE TARGET_LUMINANCE
-            #pragma shader_feature_local _ GRADIENT_TEXTURE
             #pragma shader_feature_local _ DETAIL_MASKING DETAIL_MULTIPLY DETAIL_ADDITIVE DETAIL_SUBTRACTIVE DETAIL_REPLACE DETAIL_MULTIPLY_ADDITIVE
 
             struct appdata_t

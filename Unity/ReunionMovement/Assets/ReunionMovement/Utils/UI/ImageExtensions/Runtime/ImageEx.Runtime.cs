@@ -545,7 +545,8 @@ namespace ReunionMovement.UI.ImageExtensions
             mask |= ((int)m_TargetMode & 0x3) << 21;                        // bits 21-22 TARGET_*
             mask |= (m_EnableGradientTex && m_GradientTex != null ? 1 : 0) << 23; // bit 23 GRADIENT_TEXTURE
             mask |= ((int)m_DetailMode & 0x7) << 24;                        // bits 24-26 DETAIL_*
-            // 渐变效果关键字（gradientEffect.ModifyMaterial 负责 Enable/Disable，纳入掩码）
+            // 渐变效果：GradientEffect.ModifyMaterial 负责写入 _EnableGradient/_GradientType 等
+            // uniform（shader 侧已改为运行时分支，不再贡献任何关键字；此处仅作为缓存失效键保留）
             int gradState = gradientEffect.Enabled ? ((int)gradientEffect.GradientType + 1) : 0;
             mask |= (gradState & 0x3) << 27;                                // bits 27-28 GRADIENT_LINEAR/CORNER/RADIAL
             return mask;
@@ -893,10 +894,8 @@ namespace ReunionMovement.UI.ImageExtensions
                 case TargetMode.Luminance: mat.EnableKeyword("TARGET_LUMINANCE"); break;
             }
 
-            if (m_EnableGradientTex && m_GradientTex != null)
-            {
-                mat.EnableKeyword("GRADIENT_TEXTURE");
-            }
+            // 渐变纹理（GRADIENT_TEXTURE）不再是关键字：由 _EnableGradientTex uniform 驱动，
+            // 已在 GetModifiedMaterial 写入材质参数时同步（见 _EnableGradientTex 赋值处）
 
             switch (m_DetailMode)
             {
@@ -933,9 +932,8 @@ namespace ReunionMovement.UI.ImageExtensions
             mat.DisableKeyword("OUTLINED");
             mat.DisableKeyword("OUTLINED_STROKE");
 
-            mat.DisableKeyword("GRADIENT_LINEAR");
-            mat.DisableKeyword("GRADIENT_CORNER");
-            mat.DisableKeyword("GRADIENT_RADIAL");
+            // 渐变相关关键字已废弃：GRADIENT_LINEAR/CORNER/RADIAL 与 GRADIENT_TEXTURE 改为
+            // shader 内 uniform 分支（见 RM_Gradient.cginc），不再需要 Disable
 
             mat.DisableKeyword("BLUR_FAST");
             mat.DisableKeyword("BLUR_MEDIUM");
@@ -969,8 +967,6 @@ namespace ReunionMovement.UI.ImageExtensions
 
             mat.DisableKeyword("TARGET_HUE");
             mat.DisableKeyword("TARGET_LUMINANCE");
-
-            mat.DisableKeyword("GRADIENT_TEXTURE");
 
             mat.DisableKeyword("DETAIL_MASKING");
             mat.DisableKeyword("DETAIL_MULTIPLY");
