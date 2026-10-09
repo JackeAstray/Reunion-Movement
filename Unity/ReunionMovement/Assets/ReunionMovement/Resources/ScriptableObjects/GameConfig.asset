@@ -16,8 +16,7 @@ MonoBehaviour:
   uiPath: Prefabs/UIs/
   uiToolkitUxmlPath: UI/UIToolkit/
   uiToolkitUssPath: UI/UIToolkit/Styles/
-  enableAddressables: 0
-  addressablesMode: 1
+  enableHotUpdate: 0
   remoteBundleUrl: 
   remoteCatalogUrl: 
   enableLog: 1

@@ -278,7 +278,7 @@ namespace ReunionMovement.Core.Resources
 | --- | --- | --- |
 | `Core/System/ResourcesSystem/ResourcesSystem.cs` | 删除 `#region Addressables 集成`（4 方法迁至 AddressableSystem），保留 Resources 职责 | 小 |
 | `Core/StartGame.cs` | `CreateModules()` 插入 `AddressableSystem`；`OnGameStartAsync` 前加 `AddressableSystem.InitAsync` | 小 |
-| `Common/Config/Config.cs` + `Core/GameConfig.cs` | 新增 `enableAddressables`、`remoteBundleUrl`、`remoteCatalogUrl`、`addressablesMode(Off/LocalOnly/Remote)` | 小 |
+| `Common/Config/Config.cs` + `Common/Config/GameConfig.cs` | 新增 `enableHotUpdate`（唯一开关，派生 `AddressablesMode` 为 Remote/Off）、`remoteBundleUrl`、`remoteCatalogUrl` | 小 |
 | `Core/System/UISystem/UISystem.cs` | UI Prefab 加载走 `AddressableSystem.LoadAssetAsync`（`Config.UIPath` 前缀），失败降级 Resources | 中 |
 | `Core/System/SoundSystem/` | 音频加载走 Addressables（Remote_Sounds），预载常用音效 | 中 |
 | `Core/System/SceneSystem/` | `LoadScene` 增加 Addressable 模式（Remote_Scenes），保留原有加载路径 | 中 |
@@ -336,7 +336,7 @@ Bootstrap → GameEngine
 ### Phase 2：运行时接入（约 2~3 天）【估算】
 - 目标：业务代码切换入口，双轨降级生效。
 - 操作：接入 §7 全部改造点；UISystem/SoundSystem/SceneSystem 双轨验证；对象池计数专项。
-- 验收：`addressablesMode=Off` 时行为与改造前完全一致（回归基线）；`LocalOnly` 时全部走 Addressables 且内存/释放无泄漏（结合既有 Code Review 关注点）。
+- 验收：`enableHotUpdate=false`（`AddressablesMode.Off`）时行为与改造前完全一致（回归基线）；`true`（`Remote`）时全部走 Addressables 且内存/释放无泄漏（结合既有 Code Review 关注点）。
 
 ### Phase 3：远程更新（约 2 天）【估算】
 - 目标：WebGL CDN 热更闭环。

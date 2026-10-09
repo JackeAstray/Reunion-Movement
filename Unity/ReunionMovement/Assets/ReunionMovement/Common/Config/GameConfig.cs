@@ -17,9 +17,10 @@ namespace ReunionMovement
         public string uiToolkitUxmlPath = "UI/UIToolkit/";
         public string uiToolkitUssPath = "UI/UIToolkit/Styles/";
 
-        [Header("Addressables")]
-        public bool enableAddressables = true;
-        public AddressablesMode addressablesMode = AddressablesMode.LocalOnly;
+        [Header("Addressables 热更新")]
+        [Tooltip("仅在需要热更新时开启。开启：Addressables 以 Remote 模式运行（从 CDN 加载并检查更新）；"
+                 + "关闭：完全不启用 Addressables，全部走 Resources。")]
+        public bool enableHotUpdate = false;
         public string remoteBundleUrl = "";
         public string remoteCatalogUrl = "";
 

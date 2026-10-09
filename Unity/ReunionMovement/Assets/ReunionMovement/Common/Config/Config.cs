@@ -212,23 +212,22 @@ namespace ReunionMovement
         // ============================================================
         //  Addressables 配置
         // ============================================================
-        /// <summary>是否启用 Addressables（false 时 AddressableSystem 处于 Off 模式）</summary>
-        public static bool EnableAddressables
+        /// <summary>
+        /// 是否启用热更新。开启时 Addressables 以 <see cref="AddressablesMode.Remote"/> 运行
+        /// （从 CDN 加载并检查更新）；关闭时 <see cref="AddressablesMode.Off"/>，全部走 Resources。
+        /// </summary>
+        public static bool EnableHotUpdate
         {
-            get => Cfg?.enableAddressables ?? true;
-            set { if (Cfg != null) Cfg.enableAddressables = value; }
+            get => Cfg?.enableHotUpdate ?? false;
+            set { if (Cfg != null) Cfg.enableHotUpdate = value; }
         }
 
-        /// <summary>Addressables 运行模式（Off/LocalOnly/Remote）；enableAddressables 关闭时恒为 Off</summary>
+        /// <summary>
+        /// Addressables 运行模式 —— 由 <see cref="EnableHotUpdate"/> 派生，因此只读。
+        /// 设计意图：Addressables 只在需要热更新时启用，不存在"启用了 Addressables 但没有热更"的中间态。
+        /// </summary>
         public static AddressablesMode AddressablesMode
-        {
-            get
-            {
-                var cfg = Cfg;
-                return (cfg != null && cfg.enableAddressables) ? cfg.addressablesMode : AddressablesMode.Off;
-            }
-            set { if (Cfg != null) Cfg.addressablesMode = value; }
-        }
+            => (Cfg != null && Cfg.enableHotUpdate) ? AddressablesMode.Remote : AddressablesMode.Off;
 
         /// <summary>远程 Bundle 根地址（Remote 模式构建/部署时回填，用于 CDN）</summary>
         public static string RemoteBundleUrl => Cfg?.remoteBundleUrl ?? string.Empty;
