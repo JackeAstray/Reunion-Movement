@@ -275,35 +275,30 @@ namespace ReunionMovement.UI.ImageExtensions
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public void ModifyMaterial(ref Material material, params object[] otherProperties)
         {
-            material.DisableKeyword("GRADIENT_LINEAR");
-            material.DisableKeyword("GRADIENT_RADIAL");
-            material.DisableKeyword("GRADIENT_CORNER");
-
-
-            if (!enabled) return;
+            // 渐变类型/渐变纹理已改为 shader 内的 uniform 运行时分支（见 RM_Gradient.cginc），
+            // 不再使用 GRADIENT_* 关键字：shader_feature 变体在打包时会因「构建期无材质
+            // 启用该关键字」被裁剪，导致 Player 里运行时 EnableKeyword 静默失效。
+            //
+            // 必须无条件同步 _EnableGradient：关闭渐变时若提前 return，shader 会读到上一次的
+            // 残留值而继续叠加渐变。
             material.SetInt(enableGradient_Sp, enabled ? 1 : 0);
             material.SetInt(gradientType_Sp, (int)gradientType);
-            switch (gradientType)
-            {
-                case GradientType.Linear:
-                    material.EnableKeyword("GRADIENT_LINEAR");
-                    break;
-                case GradientType.Radial:
-                    material.EnableKeyword("GRADIENT_RADIAL");
-                    break;
-                case GradientType.Corner:
-                    material.EnableKeyword("GRADIENT_CORNER");
-                    break;
-                default:
-                    // 非法枚举值（如旧版本序列化残留）：不抛异常，避免打断渲染；静态标记限频告警
-                    if (s_invalidGradientTypeLogged != (int)gradientType)
-                    {
-                        s_invalidGradientTypeLogged = (int)gradientType;
-                        Log.Warning("GradientEffect.gradientType 存在非法值 {0}，已跳过渐变关键字", (int)gradientType);
-                    }
-                    break;
-            }
 
+            if (!enabled) return;
+
+            // 非法枚举值（如旧版本序列化残留）：不抛异常，避免打断渲染；静态标记限频告警。
+            // shader 侧对非法 _GradientType 不叠加任何渐变，与旧版「无关键字 ⇒ 无渐变」语义一致。
+            if (gradientType != GradientType.Linear &&
+                gradientType != GradientType.Corner &&
+                gradientType != GradientType.Radial)
+            {
+                if (s_invalidGradientTypeLogged != (int)gradientType)
+                {
+                    s_invalidGradientTypeLogged = (int)gradientType;
+                    Log.Warning("GradientEffect.gradientType 存在非法值 {0}，已跳过渐变", (int)gradientType);
+                }
+                return;
+            }
 
             if (gradientType == GradientType.Corner)
             {
