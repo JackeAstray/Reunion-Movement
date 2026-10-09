@@ -16,7 +16,7 @@ uniform float _CustomTime;
 uniform half _StrokeWidth;
 uniform half _StrokeFill;
 uniform half _FalloffDistance;
-uniform int _DrawShape;
+// 注：_DrawShape 已在 RM_SDFShapes.cginc（更早包含）中声明
 
 // 生成虚线效果（支持圆形和矩形）
 float RM_GenerateDashedEffect(float4 shapeData, float time, float aspectRatio, int shapeType)
@@ -27,7 +27,6 @@ float RM_GenerateDashedEffect(float4 shapeData, float time, float aspectRatio, i
 
     if (shapeType == 1) // CIRCLE
     {
-        #if CIRCLE
         float2 center = float2(shapeData.z * 0.5, shapeData.w * 0.5);
         float angle = atan2(shapeData.y - center.y, shapeData.x - center.x); 
         float normalizedAngle = (angle + 3.1415926) / (2.0 * 3.1415926);
@@ -45,7 +44,6 @@ float RM_GenerateDashedEffect(float4 shapeData, float time, float aspectRatio, i
 
         float dashPattern = step(0.5, frac(normalizedAngle * 15.0 + _CustomTime));
         dashedEffect = dashPattern * edgeMask;
-        #endif
     }
     else if (shapeType == 3) // RECTANGLE
     {
@@ -74,7 +72,10 @@ float RM_GenerateDashedEffect(float4 shapeData, float time, float aspectRatio, i
 // 应用 SDF 描边效果
 void RM_ApplyOutlinedSdf(inout half4 color, float4 shapeData, float sdfData, float pixelScale)
 {
-    #if OUTLINED
+    // 原为 OUTLINED 关键字：即「有轮廓宽且没有笔宽」（对齐 C# strokeState 判定）。
+    // OUTLINED_STROKE（两者都有）由调用方单独处理，此处必须排除，否则会多叠一层描边。
+    if (_OutlineWidth > 0 && _StrokeWidth <= 0)
+    {
         float alpha = sampleSdf(sdfData, pixelScale);
         float lerpFac = sampleSdf(sdfData + _OutlineWidth, pixelScale);
 
@@ -112,7 +113,7 @@ void RM_ApplyOutlinedSdf(inout half4 color, float4 shapeData, float sdfData, flo
             }
         #endif
         color.a *= alpha;
-    #endif
+    }
 }
 
 #endif // RM_OUTLINE

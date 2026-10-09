@@ -83,9 +83,10 @@ half4 RM_RenderShadow(
         {
             half4 tint = lerp(_ShadowColor, _Color, clamp(_ShadowMirrorTintMix, 0.0, 1.0));
             half4 src = mirrorSample * tint;
-            #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
+            if (_TransitionMode != 0)
+            {
                 src = RM_ApplyTransitionFilter(src, transAlpha, transitionFilterUv, 0);
-            #endif
+            }
             return src;
         }
 
@@ -94,23 +95,24 @@ half4 RM_RenderShadow(
 
     float shadowMask = baseSample.a;
 
-    // SDF 形状遮罩
-    #if RECTANGLE || CIRCLE || PENTAGON || TRIANGLE || HEXAGON || CHAMFERBOX || QUADRILATERAL || NSTAR_POLYGON || HEART || BLOBBYCROSS || SQUIRCLE || NTRIANGLE_ROUNDED
-        float sdfDataShadow = 0;
+    // SDF 形状遮罩（原为 RECTANGLE||CIRCLE||... 关键字：改为按 _DrawShape 运行时判定）
+    if (_DrawShape != 0)
+    {        float sdfDataShadow = 0;
         float shadowFalloffDistance = max(_ShadowBlurIntensity, 0.0001);
         float pixelScaleShadow = clamp(1.0 / shadowFalloffDistance, 1.0 / 2048.0, 2048.0);
 
         RM_ComputeSdfData(shapeData, falloffDistance, sdfDataShadow, pixelScaleShadow);
 
         shadowMask *= RM_ComputeSdfMask(sdfDataShadow, pixelScaleShadow, strokeWidth, outlineWidth);
-    #endif
+    }
 
     float shadowAlpha = shadowMask * _ShadowColor.a * vertexAlpha;
     shadowOut = half4(_ShadowColor.rgb * shadowAlpha, shadowAlpha);
 
-    #if TRANSITION_FADE || TRANSITION_CUTOFF || TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN || TRANSITION_PATTERN || TRANSITION_BLAZE
+    if (_TransitionMode != 0)
+    {
         shadowOut = RM_ApplyTransitionFilter(shadowOut, transAlpha, transitionFilterUv, 0);
-    #endif
+    }
 
     // 应用阴影颜色滤镜
     if (_ShadowColorFilter > 0)

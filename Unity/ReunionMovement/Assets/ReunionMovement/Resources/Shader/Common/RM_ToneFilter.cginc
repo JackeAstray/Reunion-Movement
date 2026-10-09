@@ -10,30 +10,40 @@
 // 需要在包含此文件的 Shader 中声明：
 //   uniform half _ToneIntensity;
 // 
-// 关键字：
-//   TONE_GRAYSCALE  - 灰度化
-//   TONE_SEPIA      - 怀旧棕褐
-//   TONE_NEGATIVE   - 负片反相
-//   TONE_RETRO      - 复古像素风格
-//   TONE_POSTERIZE  - 色调分离
+// 模式（uniform _ToneFilter）：
+//   1 - 灰度化
+//   2 - 怀旧棕褐
+//   3 - 负片反相
+//   4 - 复古像素风格
+//   5 - 色调分离
 // ============================================================
 
 #include "../Base/Common.cginc"
 
 uniform half _ToneIntensity;
+uniform half _ToneFilter;   // 0=None 1=Grayscale 2=Sepia 3=Negative 4=Retro 5=Posterize
 
 half4 RM_ApplyToneFilter(half4 color)
 {
-    #if TONE_GRAYSCALE
+    const int tone = _ToneFilter;
+
+    if (tone == 1)
+    {
         // 灰度化：将颜色与亮度值按强度混合
         color.rgb = lerp(color.rgb, Luminance(color.rgb), _ToneIntensity);
-    #elif TONE_SEPIA
+    }
+    else if (tone == 2)
+    {
         // 怀旧棕褐：先灰度化，再乘以棕褐色调
         color.rgb = lerp(color.rgb, Luminance(color.rgb) * half3(1.07, 0.74, 0.43), _ToneIntensity);
-    #elif TONE_NEGATIVE
+    }
+    else if (tone == 3)
+    {
         // 负片反相：反转 RGB，保持 Alpha
         color.rgb = lerp(color.rgb, (1 - color.rgb) * color.a, _ToneIntensity);
-    #elif TONE_RETRO
+    }
+    else if (tone == 4)
+    {
         // 复古像素风格：基于亮度分4级映射到 NES 调色板
         const half l = Luminance(color.rgb);
         const half r0 = step(l, 0.25);
@@ -44,12 +54,14 @@ half4 RM_ApplyToneFilter(half4 color)
             + half3(0.54, 0.67, 0.06) * (1 - r1) * r2                 // 0.50–0.75: (139,172,15)
             + half3(0.60, 0.74, 0.06) * (1 - r2);                     // 0.75–1.00: (155,188,15)
         color.rgb = lerp(color.rgb, retro * color.a, _ToneIntensity);
-    #elif TONE_POSTERIZE
+    }
+    else if (tone == 5)
+    {
         // 色调分离：将 HSV 的每个通道量化为离散级别
         const half3 hsv = rgb_to_hsv(color.rgb);
         const float div = round(lerp(48, 4, _ToneIntensity) / 2) * 2;
         color.rgb = hsv_to_rgb((floor(hsv * div) + 0.5) / div) * color.a;
-    #endif
+    }
 
     return color;
 }

@@ -10,82 +10,67 @@
 
 #include "../Base/2D_SDF.cginc"
 
+uniform int _DrawShape;   // 对齐 C# DrawShape 枚举：0=None 1=Circle ... 12=NTriangleRounded
+
+// 注：以下形状参数与形状函数原先由 RECTANGLE/CIRCLE/... 关键字包起来，用于按变体裁剪。
+// 现改为全部随变体一起编译，运行时按 _DrawShape 分发（见文件末尾 RM_ComputeSdfData）：
+// 形状关键字是 multi_compile，会让变体数 ×13，而每个变体都要装下全部特效代码，
+// 实测体积膨胀近 8 倍；改为运行时分发后变体数从 208 降到 4（仅剩 UI 裁剪两轴），
+// 总体积反而小于改造前，且 13 种形状都能在运行时自由切换。
+
 // ---------- 形状参数 uniform 声明（按需由 Shader 提供） ----------
 
-#if RECTANGLE
     uniform float4 _RectangleCornerRadius;
-#endif
 
-#if CIRCLE
     uniform float _CircleRadius;
     uniform float _CircleFitRadius;
-#endif
 
-#if PENTAGON
     uniform float4 _PentagonCornerRadius;
     uniform float _PentagonTipRadius;
     uniform float _PentagonTipSize;
-#endif
 
-#if TRIANGLE
     uniform float3 _TriangleCornerRadius;
-#endif
 
-#if HEXAGON
     uniform half2 _HexagonTipSize;
     uniform half2 _HexagonTipRadius;
     uniform half4 _HexagonCornerRadius;
-#endif
 
-#if CHAMFERBOX
     uniform float2 _ChamferBoxSize;
     uniform float4 _ChamferBoxRadius;
-#endif
 
-#if QUADRILATERAL
     uniform float2 _QuadTopLeft;
     uniform float2 _QuadTopRight;
     uniform float2 _QuadBottomLeft;
     uniform float2 _QuadBottomRight;
-#endif
 
-#if NSTAR_POLYGON
     uniform float _NStarPolygonSideCount;
     uniform float _NStarPolygonCornerRadius;
     uniform float _NStarPolygonInset;
     uniform float2 _NStarPolygonOffset;
-#endif
 
-#if BLOBBYCROSS
     uniform float _BlobbyCrossTime;
-#endif
 
-#if SQUIRCLE
     uniform float _SquircleTime;
-#endif
 
-#if NTRIANGLE_ROUNDED
     uniform float _NTriangleRoundedTime;
     uniform float _NTriangleRoundedNumber;
-#endif
 
 // ---------- 公共辅助函数 ----------
 
 // 计算 SDF 遮罩：供主图和阴影复用
 float RM_ComputeSdfMask(float sdfData, float pixelScale, float strokeWidth, float outlineWidth)
 {
-    #if STROKE
+    // 原为 STROKE / OUTLINED_STROKE 关键字：两者都是「按笔宽+轮廓宽做带状采样」，
+    // 仅参数顺序不同（求和结果一致），故统一按 strokeWidth 判定
+    if (strokeWidth > 0)
+    {
         return sampleSdfStrip(sdfData, strokeWidth + outlineWidth, pixelScale);
-    #elif OUTLINED_STROKE
-        return sampleSdfStrip(sdfData, outlineWidth + strokeWidth, pixelScale);
-    #else
-        return sampleSdf(sdfData, pixelScale);
-    #endif
+    }
+    return sampleSdf(sdfData, pixelScale);
 }
 
 // ---------- 形状场景函数 ----------
 
-#if RECTANGLE
 half RM_RectangleScene(float4 additionalData)
 {
     float2 texcoord = additionalData.xy;
@@ -115,9 +100,7 @@ half RM_RectangleScene(float4 additionalData)
 
     return rect*(cornerMask-1) - corners;
 }
-#endif
 
-#if CIRCLE
 float RM_CircleScene(float4 additionalData)
 {
     float2 texcoord = additionalData.xy;
@@ -128,9 +111,7 @@ float RM_CircleScene(float4 additionalData)
     half sdf = sdCircle(texcoord - float2(width / 2.0, height / 2.0), radius);
     return sdf;
 }
-#endif
 
-#if TRIANGLE
 half RM_TriangleScene(float4 additionalData)
 {
     float2 texcoord = additionalData.xy;
@@ -181,9 +162,7 @@ half RM_TriangleScene(float4 additionalData)
     
     return sdf;
 }
-#endif
 
-#if PENTAGON
 half RM_PentagonScene(float4 additionalData)
 {
     float2 texcoord = additionalData.xy;
@@ -243,9 +222,7 @@ half RM_PentagonScene(float4 additionalData)
     
     return sdfPentagon;
 }
-#endif
 
-#if HEXAGON
 half RM_HexagonScene(float4 additionalData)
 {
     float2 texcoord = additionalData.xy;
@@ -325,9 +302,7 @@ half RM_HexagonScene(float4 additionalData)
     
     return sdfHexagon;
 }
-#endif
 
-#if CHAMFERBOX
 half RM_ChamferBoxScene(float4 additionalData)
 {
     float2 texcoord = additionalData.xy;
@@ -346,9 +321,7 @@ half RM_ChamferBoxScene(float4 additionalData)
     float d = min(min(d0, d1), min(d2, d3));
     return d * 80.0;
 }
-#endif
 
-#if QUADRILATERAL
 // 四边形（梯形 / 平行四边形等）：四个角可独立偏移。
 // 偏移值为矩形宽/高比例（-0.5 ~ 0.5），正值朝矩形内部收缩。
 // 四个角（像素空间，y 向上）按逆时针排列：BL -> BR -> TR -> TL。
@@ -371,9 +344,7 @@ half RM_QuadrilateralScene(float4 additionalData)
 
     return sdQuad(texcoord, bl, br, tr, tl);
 }
-#endif
 
-#if NSTAR_POLYGON
 half RM_NStarPolygonScene(float4 additionalData)
 {
     float2 texcoord = additionalData.xy;
@@ -385,9 +356,7 @@ half RM_NStarPolygonScene(float4 additionalData)
     half str = sdNStarPolygon(texcoord - half2(width / 2, height / 2) - _NStarPolygonOffset, size, _NStarPolygonSideCount, _NStarPolygonInset) - cornerRadius;
     return str;
 }
-#endif
 
-#if HEART
 half RM_HeartScene(float4 additionalData)
 {
     float2 texcoord = additionalData.xy;
@@ -398,9 +367,7 @@ half RM_HeartScene(float4 additionalData)
     half sdf = sdHeart(value, radius) * 110;
     return sdf;
 }
-#endif
 
-#if BLOBBYCROSS
 half RM_BlobbyCrossScene(float4 additionalData)
 {
     float2 texcoord = additionalData.xy;
@@ -416,9 +383,7 @@ half RM_BlobbyCrossScene(float4 additionalData)
     d = d * 35;
     return d;
 }
-#endif
 
-#if SQUIRCLE
 half RM_SquircleScene(float4 additionalData)
 {
     float2 texcoord = additionalData.xy;
@@ -430,9 +395,7 @@ half RM_SquircleScene(float4 additionalData)
     d = d * 80;
     return d;
 }
-#endif
 
-#if NTRIANGLE_ROUNDED
 half RM_NTriangleRoundedScene(float4 additionalData)
 {
     float2 texcoord = additionalData.xy;
@@ -450,7 +413,6 @@ half RM_NTriangleRoundedScene(float4 additionalData)
     float d = sdTriangleIsoscelesRounded(p.yx, float2(0.5 * side_length, r_in), rounding);
     return d * 80.0;
 }
-#endif
 
 // ---------- SDF 分发 ----------
 
@@ -459,31 +421,19 @@ void RM_ComputeSdfData(float4 shapeData, float falloffDistance, out float sdfDat
     sdfData = 0;
     pixelScale = clamp(1.0 / falloffDistance, 1.0 / 2048.0, 2048.0);
 
-    #if RECTANGLE
-        sdfData = RM_RectangleScene(shapeData);
-    #elif CIRCLE
-        sdfData = RM_CircleScene(shapeData);
-    #elif PENTAGON
-        sdfData = RM_PentagonScene(shapeData);
-    #elif TRIANGLE
-        sdfData = RM_TriangleScene(shapeData);
-    #elif HEXAGON
-        sdfData = RM_HexagonScene(shapeData);
-    #elif CHAMFERBOX
-        sdfData = RM_ChamferBoxScene(shapeData);
-    #elif QUADRILATERAL
-        sdfData = RM_QuadrilateralScene(shapeData);
-    #elif NSTAR_POLYGON
-        sdfData = RM_NStarPolygonScene(shapeData);
-    #elif HEART
-        sdfData = RM_HeartScene(shapeData);
-    #elif BLOBBYCROSS
-        sdfData = RM_BlobbyCrossScene(shapeData);
-    #elif SQUIRCLE
-        sdfData = RM_SquircleScene(shapeData);
-    #elif NTRIANGLE_ROUNDED
-        sdfData = RM_NTriangleRoundedScene(shapeData);
-    #endif
+    // 运行时按 _DrawShape 分发（0=None 时保持 sdfData=0，调用方不会走 SDF 路径）
+    if (_DrawShape == 3)        sdfData = RM_RectangleScene(shapeData);
+    else if (_DrawShape == 1)   sdfData = RM_CircleScene(shapeData);
+    else if (_DrawShape == 4)   sdfData = RM_PentagonScene(shapeData);
+    else if (_DrawShape == 2)   sdfData = RM_TriangleScene(shapeData);
+    else if (_DrawShape == 5)   sdfData = RM_HexagonScene(shapeData);
+    else if (_DrawShape == 6)   sdfData = RM_ChamferBoxScene(shapeData);
+    else if (_DrawShape == 7)   sdfData = RM_QuadrilateralScene(shapeData);
+    else if (_DrawShape == 8)   sdfData = RM_NStarPolygonScene(shapeData);
+    else if (_DrawShape == 9)   sdfData = RM_HeartScene(shapeData);
+    else if (_DrawShape == 10)  sdfData = RM_BlobbyCrossScene(shapeData);
+    else if (_DrawShape == 11)  sdfData = RM_SquircleScene(shapeData);
+    else if (_DrawShape == 12)  sdfData = RM_NTriangleRoundedScene(shapeData);
 }
 
 #endif // RM_SDF_SHAPES

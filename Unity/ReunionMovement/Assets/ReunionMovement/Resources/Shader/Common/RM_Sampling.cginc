@@ -10,11 +10,11 @@
 //   - RGB Shift 色散
 //   - Edge Detection (Luminance/Alpha) Sobel 边缘检测
 // 
-// 关键字：
-//   SAMPLING_PIXELATION     - 像素化/马赛克
-//   SAMPLING_RGB_SHIFT      - RGB 通道色散偏移
-//   SAMPLING_EDGE_LUMINANCE - 亮度 Sobel 边缘检测
-//   SAMPLING_EDGE_ALPHA     - Alpha Sobel 边缘检测
+// 模式（uniform _SamplingMode）：
+//   4 - 像素化/马赛克
+//   5 - RGB 通道色散偏移
+//   6 - 亮度 Sobel 边缘检测
+//   7 - Alpha Sobel 边缘检测
 // 
 // 需要在包含此文件的 Shader 中声明：
 //   sampler2D _MainTex; float4 _MainTex_TexelSize; float4 _TextureSampleAdd;
@@ -26,33 +26,38 @@
 // 注：_MainTex, _MainTex_TexelSize, _TextureSampleAdd 由包含此文件的 Shader 声明
 // 注：_SamplingWidth 已在 RM_Shadow.cginc 中声明（共用）
 uniform half _SamplingIntensity;
+uniform half _SamplingMode;   // 0=None 4=Pixelation 5=RgbShift 6=EdgeLuminance 7=EdgeAlpha
 
 // 获取用于边缘检测的通道值
 half RM_SampleEdgeValue(float4 c)
 {
-    #if SAMPLING_EDGE_LUMINANCE
+    if (_SamplingMode == 6) // EdgeLuminance
+    {
         return Luminance(c) * c.a;
-    #elif SAMPLING_EDGE_ALPHA
+    }
+    if (_SamplingMode == 7) // EdgeAlpha
+    {
         return c.a;
-    #endif
+    }
     return 0;
 }
 
-// 统一采样入口：根据当前激活的采样关键字返回采样结果
-// 注意：BLUR_FAST/MEDIUM/DETAIL 在 RM_Blur.cginc 中处理，此处仅处理非模糊模式
+// 统一采样入口：根据当前采样模式返回采样结果
+// 注意：模糊模式在 RM_Blur.cginc 中处理，此处仅处理非模糊模式
 half4 RM_ApplySampling(float2 uv)
 {
+    const int mode = _SamplingMode;
+
     // 像素化：将 UV 量化为离散块再采样
-    #if SAMPLING_PIXELATION
+    if (mode == 4)
     {
         const half2 pixelSize = max(2, (1 - lerp(0.5, 0.95, _SamplingIntensity)) / _MainTex_TexelSize.xy);
         float2 quantizedUv = round(uv * pixelSize) / pixelSize;
         return (tex2D(_MainTex, quantizedUv) + _TextureSampleAdd);
     }
-    #endif
 
     // RGB 色散偏移：R/G/B 分别在 X 方向偏移采样
-    #if SAMPLING_RGB_SHIFT
+    if (mode == 5)
     {
         const half2 offset = half2(_SamplingIntensity * _MainTex_TexelSize.x * 20, 0);
         const half2 r = (tex2D(_MainTex, uv + offset) + _TextureSampleAdd).ra;
@@ -60,10 +65,9 @@ half4 RM_ApplySampling(float2 uv)
         const half2 b = (tex2D(_MainTex, uv - offset) + _TextureSampleAdd).ba;
         return half4(r.x * r.y, g.x * g.y, b.x * b.y, (r.y + g.y + b.y) / 3);
     }
-    #endif
 
     // Sobel 边缘检测：3x3 邻域 + Sobel 算子
-    #if SAMPLING_EDGE_LUMINANCE || SAMPLING_EDGE_ALPHA
+    if (mode == 6 || mode == 7)
     {
         const float2 d = _MainTex_TexelSize.xy * _SamplingWidth;
 
@@ -83,7 +87,6 @@ half4 RM_ApplySampling(float2 uv)
         const half4 original = (tex2D(_MainTex, uv) + _TextureSampleAdd);
         return lerp(half4(0, 0, 0, 0), original, inv_lerp(0.5, 1, sobel));
     }
-    #endif
 
     // 无特殊采样模式时返回标准采样
     return (tex2D(_MainTex, uv) + _TextureSampleAdd);

@@ -31,6 +31,18 @@ uniform half _TransitionTexClampPadding;
 uniform half _TransitionUseUv0;
 uniform int _PatternArea;
 
+// ---- 过渡模式判定（对齐 C# 的 TransitionMode 枚举）----
+// 0=None 1=Fade 2=Cutoff 3=Dissolve 4=Shiny 5=Mask 6=Melt 7=Burn 8=Pattern 9=Blaze
+//
+// 【为什么用运行时分支而不是 shader 关键字】
+// 这些模式由 C# 在运行时用 Material.EnableKeyword 打开，而 #pragma shader_feature
+// 的变体只有在「构建期存在启用该关键字的材质」时才会被编进包，否则整组被裁剪，
+// Player 里 EnableKeyword 静默失效（编辑器正常、真机没效果）。
+// 改为读 uniform 后不产生任何额外变体，且 Android/WebGL 无条件生效。
+#define RM_TMODE_WRAP(m) ((m) == 4 || (m) == 5 || (m) == 6 || (m) == 7)  // 需要 UV 平铺钳制的模式
+#define RM_TMODE_BAND(m) ((m) >= 3 && (m) <= 7)                          // 走带状过渡的模式
+#define RM_TMODE_MOVE(m) ((m) == 6 || (m) == 7)                          // Melt/Burn 需要偏移采样 UV
+
 half4 RM_ApplyColorFilter(int mode, half4 inColor, half4 factor, float intensity, float glow)
 {
     half4 color = inColor;
@@ -107,63 +119,75 @@ float RM_TransitionAlpha(float2 uvLocal, float aspect)
 
     uv = uv * _TransitionTex_ST.xy + _TransitionTex_ST.zw;
 
-#if TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN
-        uv = saturate(uv);
-#else
-    #if TRANSITION_CLAMP_STATIC
-        uv = saturate(uv);
-    #else
-    if (_TransitionClamp > 0.5)
+    if (RM_TMODE_WRAP(_TransitionMode))
     {
         uv = saturate(uv);
     }
+    else
+    {
+    #if TRANSITION_CLAMP_STATIC
+        uv = saturate(uv);
+    #else
+        if (_TransitionClamp > 0.5)
+        {
+            uv = saturate(uv);
+        }
     #endif
-#endif
+    }
 
     float2 uvSample = uv + _Time.y * _TransitionTex_Speed;
 
-#if TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN
+    if (RM_TMODE_WRAP(_TransitionMode))
+    {
         float2 pad = _TransitionTex_TexelSize.xy * max(_TransitionTexClampPadding, 0);
         float2 tileUv = frac(uvSample);
         tileUv = clamp(tileUv, pad, 1.0 - pad);
         uvSample = floor(uvSample) + tileUv;
-#endif
+    }
 
     float alpha = tex2Dlod(_TransitionTex, float4(uvSample, 0, 0)).a;
     alpha = _TransitionReverse ? 1 - alpha : alpha;
 
-#if TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN
+    if (RM_TMODE_WRAP(_TransitionMode))
+    {
         alpha = clamp(alpha, 1e-4, 1.0 - 1e-4);
-#endif
+    }
 
     return alpha;
 }
 
 float2 RM_MoveTransitionFilter(float4 uvMask, float alpha)
 {
-#if !TRANSITION_MELT && !TRANSITION_BURN
-    return 0;
-#endif
+    if (!RM_TMODE_MOVE(_TransitionMode))
+    {
+        return 0;
+    }
 
     const float factor = alpha - RM_TransitionRate() * (1 + _TransitionWidth * 1.5) + _TransitionWidth;
     const float band = max(0, _TransitionWidth - factor);
 
-#if TRANSITION_MELT
+    if (_TransitionMode == 6) // Melt
+    {
         return float2(0, +band * band * (uvMask.w - uvMask.y) / max(0.01, _TransitionWidth));
-#elif TRANSITION_BURN
-        return float2(0, -band * band * (uvMask.w - uvMask.y) / max(0.01, _TransitionWidth));
-#endif
-
-    return 0;
+    }
+    // Burn(7)
+    return float2(0, -band * band * (uvMask.w - uvMask.y) / max(0.01, _TransitionWidth));
 }
 
 half4 RM_ApplyTransitionFilter(half4 color, float alpha, float2 uvLocal, float edgeFactor)
 {
-#if TRANSITION_FADE
+    const int mode = _TransitionMode;
+
+    if (mode == 1) // Fade
+    {
         color *= saturate(alpha + 1 - RM_TransitionRate() * 2);
-#elif TRANSITION_CUTOFF
+    }
+    else if (mode == 2) // Cutoff
+    {
         color *= step(0.001, alpha - RM_TransitionRate());
-#elif TRANSITION_PATTERN
+    }
+    else if (mode == 8) // Pattern
+    {
         const half4 patternColor = RM_ApplyColorFilter(_TransitionColorFilter, half4(color.rgb, 1), half4(_TransitionColor.rgb * color.a, 1), _TransitionColor.a, _TransitionColorGlow);
 
         float isPattern = min(inv_lerp(_TransitionRange.x, _TransitionRange.y, uvLocal.x), 0.995) < (_TransitionPatternReverse ? alpha : 1 - alpha);
@@ -175,7 +199,9 @@ half4 RM_ApplyTransitionFilter(half4 color, float alpha, float2 uvLocal, float e
         else if (_PatternArea == 2) patternFactor = edgeFactor;
 
         color.rgb = lerp(color.rgb, patternColor.rgb, patternFactor * isPattern);
-#elif TRANSITION_DISSOLVE || TRANSITION_SHINY || TRANSITION_MASK || TRANSITION_MELT || TRANSITION_BURN
+    }
+    else if (RM_TMODE_BAND(mode)) // Dissolve(3) / Shiny(4) / Mask(5) / Melt(6) / Burn(7)
+    {
         const float factor = alpha - RM_TransitionRate() * (1 + _TransitionWidth) + _TransitionWidth;
         const float softness = max(0.0001, _TransitionWidth * _TransitionSoftness);
         const half bandLerp = saturate((_TransitionWidth - factor) * 2 / softness);
@@ -185,25 +211,33 @@ half4 RM_ApplyTransitionFilter(half4 color, float alpha, float2 uvLocal, float e
                                  half4(_TransitionColor.rgb, 1), _TransitionColor.a, _TransitionColorGlow);
         bandColor *= color.a;
 
-#if TRANSITION_MELT
+        if (mode == 6) // Melt
+        {
             color = lerp(color, bandColor, bandLerp);
             return color;
-#elif TRANSITION_BURN
+        }
+        if (mode == 7) // Burn
+        {
             color = lerp(color, bandColor, bandLerp * 1.25);
             color.a *= 1 - inv_lerp(0.85, 1.0, bandLerp * 1.25);
             color.rgb *= (1 - inv_lerp(0.85, 1.0, bandLerp * 1.3)) * color.a;
             return color;
-#endif
+        }
 
         half lerpFactor = bandLerp * softLerp;
         color = lerp(color, bandColor, lerpFactor);
 
-#if TRANSITION_DISSOLVE
+        if (mode == 3) // Dissolve
+        {
             color *= softLerp;
-#elif TRANSITION_MASK
+        }
+        else if (mode == 5) // Mask
+        {
             color *= bandLerp * softLerp;
-#endif
-#elif TRANSITION_BLAZE
+        }
+    }
+    else if (mode == 9) // Blaze
+    {
         const float maxValue = RM_TransitionRate();
         const float minValue = maxValue - _TransitionWidth / 2;
         const float rate = 1 - inv_lerp(minValue, maxValue, alpha * (1 - _TransitionWidth / 2));
@@ -213,7 +247,7 @@ half4 RM_ApplyTransitionFilter(half4 color, float alpha, float2 uvLocal, float e
 
         color = lerp(burntColor, flameColor, step(0.5, rate));
         color.rgb *= color.a;
-#endif
+    }
 
     return color;
 }

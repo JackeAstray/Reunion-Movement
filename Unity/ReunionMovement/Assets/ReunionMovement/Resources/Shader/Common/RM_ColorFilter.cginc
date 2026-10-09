@@ -14,8 +14,7 @@
 //   uniform half _ColorIntensity;
 //   uniform int _ColorGlow;
 // 
-// 关键字：
-//   COLOR_FILTER - 启用独立颜色滤镜
+// 启用方式：uniform _ColorFilter != 0（0 = None，不做处理）
 // 
 // 滤镜模式（_ColorFilter 值）：
 //   1 = Multiply        - 乘法混合
@@ -39,11 +38,12 @@ uniform int _ColorGlow;
 
 half4 RM_ApplyStandaloneColorFilter(half4 color)
 {
-    #if COLOR_FILTER
-        return RM_ApplyColorFilter(_ColorFilter, color, _ColorValue, _ColorIntensity, _ColorGlow);
-    #else
+    // 0 = None：不做任何处理（原为 COLOR_FILTER 关键字开关）
+    if (_ColorFilter == 0)
+    {
         return color;
-    #endif
+    }
+    return RM_ApplyColorFilter(_ColorFilter, color, _ColorValue, _ColorIntensity, _ColorGlow);
 }
 
 #endif // RM_COLOR_FILTER
