@@ -11,13 +11,13 @@
   <Project Path="ReunionMovement.Utils.UI.ImageExtensions.Editor.csproj" />
   <Project Path="ReunionMovement.Core.csproj" />
   <Project Path="ReunionMovement.Base.csproj" />
+  <Project Path="ReunionMovement.Tests.csproj" />
   <Project Path="ReunionMovement.Utils.UI.ButtonExtensions.Click.Editor.csproj" />
   <Project Path="UniTask.TextMeshPro.csproj" />
   <Project Path="ReunionMovement.Utils.Deadline.Editor.csproj" />
   <Project Path="ReunionMovement.Utils.ColliderUtil.Editor.csproj" />
   <Project Path="ReunionMovement.Telepathy.csproj" />
   <Project Path="ReunionMovement.Utils.CSG.Example.Editor.csproj" />
-  <Project Path="ReunionMovement.Tests.csproj" />
   <Project Path="ReunionMovement.Utils.Network.Editor.csproj" />
   <Project Path="UniTask.Editor.csproj" />
   <Project Path="ReunionMovement.EditorTools.csproj" />
