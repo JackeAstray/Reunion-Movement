@@ -139,6 +139,69 @@ namespace ReunionMovement.Core
         }
 
         /// <summary>
+        /// 场景加载完成后校准 AudioListener，并订阅后续场景切换（幂等）。
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void OnAfterSceneLoad()
+        {
+            SyncAudioListener();
+
+            // 关闭 Domain Reload 时静态事件订阅会跨 Play 会话残留，先移除再订阅避免重复回调
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        /// <summary>场景切换后重新校准（首个场景可能自带监听器，后续场景可能没有）</summary>
+        private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene,
+            UnityEngine.SceneManagement.LoadSceneMode mode)
+        {
+            SyncAudioListener();
+        }
+
+        /// <summary>
+        /// 保证任意场景下都有且仅有一个可用 AudioListener：
+        /// 场景自带监听器时移除 Driver 上的监听器，场景没有监听器时挂到 Driver 上。
+        /// 必须在场景加载完成后调用 —— 对象的 Awake/OnEnable 已执行、状态为激活，
+        /// FindObjectsByType 才能正确枚举到场景内的监听器。
+        /// </summary>
+        private static void SyncAudioListener()
+        {
+            // driverGo 为 null（ForceDisable / 启动失败已清理）时无需处理
+            if (driverGo == null) return;
+
+            var driverListener = driverGo.GetComponent<AudioListener>();
+            var listeners = UnityEngine.Object.FindObjectsByType<AudioListener>(FindObjectsSortMode.None);
+
+            // 除 Driver 自身外是否还有可用监听器
+            bool hasSceneListener = false;
+            for (int i = 0; i < listeners.Length; i++)
+            {
+                if (listeners[i] != null && listeners[i] != driverListener)
+                {
+                    hasSceneListener = true;
+                    break;
+                }
+            }
+
+            if (hasSceneListener)
+            {
+                // 场景已提供监听器，移除 Driver 上的，避免出现双监听器警告。
+                // Destroy 要到帧末才生效，先置 enabled=false 立即退出启用计数，避免过渡帧告警
+                if (driverListener != null)
+                {
+                    driverListener.enabled = false;
+                    UnityEngine.Object.Destroy(driverListener);
+                    Log.Debug("[Bootstrap] 场景已存在 AudioListener，移除 Driver 上的监听器");
+                }
+            }
+            else if (driverListener == null)
+            {
+                driverGo.AddComponent<AudioListener>(); // 兼容旧版场景，避免缺少 AudioListener 报错
+                Log.Debug("[Bootstrap] 当前场景无 AudioListener，已在 Driver 上补建");
+            }
+        }
+
+        /// <summary>
         /// 初始化引擎的异步流程
         /// </summary>
         private static async UniTask InitializeEngineAsync()
@@ -154,13 +217,11 @@ namespace ReunionMovement.Core
             }
 
             // 创建持久化 GameObject 承载 GameEngineDriver
+            // 注意：AudioListener 不在此处挂载。此处处于 BeforeSceneLoad，场景对象虽已载入但尚未激活，
+            // FindFirstObjectByType 在 Unity 2022.2+ 找不到它们，会把"场景自带监听器"误判为"没有监听器"
+            // 而重复创建。改由 OnAfterSceneLoad / OnSceneLoaded（场景就绪后）统一校准。
             var go = new GameObject("[GameEngineDriver]");
             driverGo = go;
-            // 仅当场景确实无 AudioListener 时才挂载，避免与场景相机自带监听器形成双监听器警告
-            if (UnityEngine.Object.FindFirstObjectByType<AudioListener>() == null)
-            {
-                go.AddComponent<AudioListener>(); // 兼容旧版场景，避免缺少 AudioListener 报错
-            }
             UnityEngine.Object.DontDestroyOnLoad(go);
             var driver = go.AddComponent<GameEngineDriver>();
 
