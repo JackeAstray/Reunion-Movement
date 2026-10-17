@@ -1,6 +1,9 @@
 ﻿using System;
 using UnityEngine;
 using System.Runtime.InteropServices;
+#if UNITY_IOS
+using UnityEngine.iOS;
+#endif
 
 namespace ReunionMovement.Common.Util
 {
