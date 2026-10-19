@@ -513,9 +513,8 @@ namespace ReunionMovement
                 // 动态生成 ScriptableObject 文件路径
                 string assetPath = scriptableOutPutPath + containerName + "Container.asset";
 
-                // 动态获取容器类类型（用程序集实例获取，避免硬编码程序集名在引入 asmdef 后失效）
-                var runtimeAssembly = typeof(ReunionMovement.Core.Resources.ResourcesSystem).Assembly;
-                Type containerType = runtimeAssembly.GetType($"ReunionMovement.{containerName}Container");
+                // 动态获取容器类类型（兼容 asmdef 拆分：类型可能不在 Core 程序集中）
+                Type containerType = ResolveRuntimeType($"ReunionMovement.{containerName}Container");
                 if (containerType == null)
                 {
                     Log.Error($"无法获取类型：ReunionMovement.{containerName}Container");
@@ -525,7 +524,7 @@ namespace ReunionMovement
                 // 动态创建容器实例
                 ScriptableObject asset = ScriptableObject.CreateInstance(containerType);
 
-                Type configType = runtimeAssembly.GetType($"ReunionMovement.{tableName}");
+                Type configType = ResolveRuntimeType($"ReunionMovement.{tableName}");
                 if (configType == null)
                 {
                     Log.Error($"无法获取类型：ReunionMovement.{tableName}");
@@ -704,6 +703,54 @@ namespace ReunionMovement
         #endregion
 
         #region 工具
+
+        /// <summary>
+        /// 解析运行时类型：优先从相关程序集查找，再回退到所有已加载程序集。
+        /// </summary>
+        private static Type ResolveRuntimeType(string fullTypeName)
+        {
+            if (string.IsNullOrEmpty(fullTypeName))
+            {
+                return null;
+            }
+
+            // 优先检查最相关的程序集，减少遍历和重名歧义概率。
+            Assembly[] preferredAssemblies =
+            {
+                typeof(ReunionMovement.Core.Resources.ResourcesSystem).Assembly,
+                typeof(ReunionMovement.EditorTools.ExcelSystem).Assembly
+            };
+
+            foreach (var assembly in preferredAssemblies)
+            {
+                if (assembly == null || assembly.IsDynamic)
+                {
+                    continue;
+                }
+
+                Type type = assembly.GetType(fullTypeName, false);
+                if (type != null)
+                {
+                    return type;
+                }
+            }
+
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (assembly == null || assembly.IsDynamic)
+                {
+                    continue;
+                }
+
+                Type type = assembly.GetType(fullTypeName, false);
+                if (type != null)
+                {
+                    return type;
+                }
+            }
+
+            return null;
+        }
 
         /// <summary>
         /// 解析单元格字符串到目标类型
