@@ -1,65 +1,88 @@
 ﻿using System;
-using R3;
-using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.UI;
+using System.Collections.Generic;
 using ReunionMovement.Common;
 using ReunionMovement.Core.UI;
 using ReunionMovement.Core.UIInput;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.Events;
+using UnityEngine.UI;
 
 namespace ReunionMovement.UI.Select
 {
     /// <summary>
-    /// 轮播式选择控制器 —— 适用于"选择角色/车辆"等界面。
-    /// 方向键/手柄左摇杆切换选项：
+    /// 轮播式选择控制器 —— 适用于“选择角色/车辆/颜色”等界面。
+    ///
+    /// 方向输入（键盘 WASD/方向键、手柄十字键/左摇杆、方向盘 hat、飞行摇杆 stick/hat）切换选项：
     /// - columns &gt; 1：矩阵模式，上下左右同时响应（左右行内/行间切换，上下跨行，均环绕）
     ///   支持不规则行：rowSizes 配置每行个数（如 4,4,2），留空则按 columns 均匀分列（最后一行可不满）
     ///   支持空位（洞）：options 中为 null 或不可交互的项会被导航自动跳过
     /// - columns = 1：线性模式，按 navigateAxis 取横向或纵向
-    /// Enter/手柄A 确认，Esc/手柄B 关闭。
+    /// 确认/取消：
+    /// - 键盘：Enter / Escape
+    /// - 手柄：A / B
+    /// - 赛车方向盘：默认 button1（A / ✕）；取消按型号区分：Xbox 为 button2（B），罗技 PS 版为 button3（○）
+    /// - 无十字键的方向盘（RS50 等）：左右打方向 = 上一项/下一项，回正后可再次切换
+    /// - 飞行摇杆：默认 trigger / button2
+    /// 鼠标：
+    /// - 悬停切换（可关闭）、点击选中、再次点击确认（可关闭）、滚轮切换
+    ///
+    /// 多方向盘同时操作：
+    /// - 每个选择框设置不同的 Player Slot（0 = 键盘/鼠标 + 第一个实体控制器，1 = 第二个方向盘……）
+    /// - 同一玩家需要操作多个选择框时，用 CarouselSelectionGroup 自动切换活动选择框
     ///
     /// 使用说明：
-    /// 1. 挂到选择窗口根节点（继承 UIController）。
-    /// 2. 将每个选项的 Image/Button 填入 options（若用 Button，请把其 Navigation 设为 None，
-    ///    避免与 NavigateSubject 双重响应；确认逻辑写在选项 Button 的 onClick 或本类 Confirm 中）。
+    /// 1. 本组件是普通 MonoBehaviour，挂在窗口节点或子节点上即可（同一窗口可放多个）；
+    ///    窗口本身由 UIController 管理，不要把本组件再当成第二个 UIController。
+    /// 2. 将每个选项的 Button 填入 options（Button 的 Navigation 建议设为 None；本控制器不再依赖 EventSystem 导航）。
     /// 3. previews 为按选项索引显示的角色模型/立绘（可空）。
-    /// 4. 在 UIController.firstSelected 中填入任一选项，窗口打开时会被自动聚焦。
-    /// 5. 矩阵模式：把 options 按行优先摆放；规则网格设 Columns 列数；不规则行再填 Row Sizes（每行个数，如 4,4,2）。
-    ///
-    /// 注意：输入订阅在 OnEnable/OnDisable 中建立/释放，不依赖 UISystem.OpenWindow，
-    /// 场景中直接激活窗口同样生效。
+    /// 4. UI 控制模式由窗口焦点域（UIFocusScope/UIController）负责；Auto Enable UI Control 只在
+    ///    没有 UIController 的纯 Canvas 场景创建焦点域时作为提示。
+    /// 5. 多个方向盘控制不同选择框时，给每个选择框分配不同的 Player Slot，并关闭 Set Event System Focus，
+    ///    避免多个选择框互相抢焦点。
     /// </summary>
-    public class CarouselSelectionController : UIController
+    public class CarouselSelectionController : MonoBehaviour, IUINavigationTarget
     {
+        [Tooltip("所属窗口名；留空时向上查找最近的 UIController 窗口")]
+        [SerializeField] private string uiName;
+
         /// <summary>线性模式导航响应轴：横向（左右键/左摇杆 X）或纵向（上下键/左摇杆 Y）</summary>
         private enum NavigateAxis { Horizontal, Vertical }
+
         [Header("选项列表（按索引顺序）")]
         [SerializeField] private Button[] options;
 
         [Header("预览对象（与选项一一对应，切换时显示当前项）")]
         [SerializeField] private GameObject[] previews;
 
-        [Header("普通高亮色 / 当前选中高亮色")]
+        [Header("普通高亮色 / 当前选中高亮色 / 非激活选择框高亮色")]
         [SerializeField] private Color normalColor = new Color(0.8f, 0.8f, 0.8f, 1f);
         [SerializeField] private Color selectedColor = Color.white;
+        [SerializeField] private Color inactiveSelectedColor = new Color(0.55f, 0.55f, 0.55f, 1f);
 
-        [Header("交互")]
-        [Tooltip("矩阵列数：>1 时启用矩阵模式（上下左右同时响应）；=1 时为线性模式（按 navigateAxis 取轴）")]
+        [Header("布局")]
+        [Tooltip("矩阵最大列数：>1 启用矩阵模式；=1 为线性模式。Row Sizes 为空时用它把选项均匀分列")]
         [SerializeField] private int columns = 1;
-        [Tooltip("矩阵模式每行的选项数（可选）：支持不规则行（如 4,4,2）。留空则按 Columns 均匀分列，最后一行允许不满")]
+        [Tooltip("每行实际选项数（不是列号），如 3,2,2,3；总和必须等于 Options 数量。留空则按 Columns 均匀分列")]
         [SerializeField] private int[] rowSizes;
         [Tooltip("线性模式响应导航的方向轴：横向（左右键/左摇杆 X）或纵向（上下键/左摇杆 Y）")]
         [SerializeField] private NavigateAxis navigateAxis = NavigateAxis.Horizontal;
-        [Tooltip("导航响应阈值（手柄左摇杆死区，0~1）")]
-        [SerializeField, Range(0f, 1f)] private float navigateDeadzone = 0.5f;
-        [Tooltip("导航切换节流（秒）：两次切换的最小间隔。摇杆为模拟量，推入过程中每帧都会触发导航事件，" +
-                 "若无节流一次推入会连跳多格；方向键快速连按也会被限制为该间隔，避免切换过快")]
-        [SerializeField, Range(0f, 0.5f)] private float navigateRepeatDelay = 0.15f;
+
+        [Header("多设备输入")]
+        [Tooltip("玩家槽位：0 = 键盘/鼠标 + 第一个实体控制器；1 = 第二个方向盘/手柄；-1 = 任意玩家")]
+        [SerializeField] private int playerSlot = 0;
+        [Tooltip("激活时自动进入 UI 控制模式（选择角色等纯 UI 场景建议开启）")]
+        [SerializeField] private bool autoEnableUIControl = true;
+        [Tooltip("导航时是否移动 EventSystem 焦点。多个选择框（多个方向盘）同时操作时建议关闭，避免互相抢焦点")]
+        [SerializeField] private bool setEventSystemFocus = true;
+        [Tooltip("鼠标悬停到选项时是否切换选中项")]
+        [SerializeField] private bool mouseSelectOnHover = true;
+        [Tooltip("鼠标点击已选中的选项时是否确认（若 Button 的 onClick 已包含确认逻辑，请关闭此项避免重复确认）")]
+        [SerializeField] private bool confirmOnSecondClick = true;
+        [Tooltip("与其它导航目标冲突时的优先级，越大越先收到输入")]
+        [SerializeField] private int inputPriority = 0;
 
         private int currentIndex = 0;
-
-        /// <summary>上次响应导航的时间（unscaledTime），用于导航节流（摇杆推入过程/按键连按去抖）</summary>
-        private float lastNavigateTime = -1f;
 
         // 矩阵行布局缓存（由 rowSizes 或 columns 推导），避免每次按键重复分配
         private int[] cachedRowTable;
@@ -69,19 +92,83 @@ namespace ReunionMovement.UI.Select
 
         /// <summary>上一次显示的预览索引（-1 表示尚未显示过，用于只切换变化的预览对象）</summary>
         private int lastPreviewIndex = -1;
-        private IDisposable navSub;
-        private IDisposable submitSub;
-        private IDisposable cancelSub;
+
+        /// <summary>上一次高亮的选项索引（-1 表示尚未 Refresh 过）</summary>
+        private int lastHighlightedIndex = -1;
+
+        /// <summary>UIInputSystem 就绪前是否已请求订阅（防止初始化时序问题）</summary>
+        private bool bindRequested;
+
+        /// <summary>是否已注册到 UIInputSystem</summary>
+        private bool registered;
+
+        /// <summary>上次绑定时的 UIInputSystem 初始化代数（Clear/Init 循环后重新注册）</summary>
+        private int lastInitVersion = -1;
+
+        /// <summary>选择组内是否为当前活动选择框（非组模式恒为 true）</summary>
+        private bool groupActive = true;
+
+        /// <summary>是否接收输入（选择组会关闭组内选择框的独立输入）</summary>
+        private bool inputEnabled = true;
+
+        private readonly List<Button> pointerButtons = new List<Button>(8);
+        private readonly List<UnityAction> pointerActions = new List<UnityAction>(8);
+        private readonly List<CarouselPointerBridge> pointerBridges = new List<CarouselPointerBridge>(8);
+
+        /// <summary>所属选择组（鼠标操作时同步活动选择框）</summary>
+        private CarouselSelectionGroup ownerGroup;
 
         /// <summary>当前选中的索引（外部可读）</summary>
         public int CurrentIndex => currentIndex;
 
-        /// <summary>UIInputSystem 就绪前是否已请求订阅（防止初始化时序问题）</summary>
-        private bool bindRequested = false;
+        /// <summary>玩家槽位（可运行时修改）</summary>
+        public int PlayerSlot { get => playerSlot; set => playerSlot = value; }
+
+        /// <summary>是否请求窗口焦点域自动进入 UI 控制模式（仅作创建焦点域时的提示）。</summary>
+        public bool AutoEnableUIControl => autoEnableUIControl;
+
+        /// <summary>是否启用独立输入（选择组会关闭组内选择框的独立输入）</summary>
+        public bool InputEnabled { get => inputEnabled; private set => inputEnabled = value; }
+
+        /// <summary>选择组内是否为当前活动选择框</summary>
+        public bool GroupActive => groupActive;
+
+        /// <summary>矩阵模式（上下左右都用于选择项，而不是切换选择框）</summary>
+        public bool IsMatrixNavigation => columns > 1;
+
+        /// <summary>线性横向模式（左右选项，上下可留给选择组切换）</summary>
+        public bool IsHorizontalNavigation => columns <= 1 && navigateAxis == NavigateAxis.Horizontal;
+
+        /// <summary>线性纵向模式（上下选项，左右可留给选择组切换）</summary>
+        public bool IsVerticalNavigation => columns <= 1 && navigateAxis == NavigateAxis.Vertical;
+
+        /// <summary>确认选择事件（参数：选中项索引），外部订阅即可拿到选择结果</summary>
+        public event Action<int> onConfirmed;
+
+        /// <summary>选项变化事件（参数：新索引）</summary>
+        public event Action<int> onSelectionChanged;
+
+        /// <summary>取消事件（关闭窗口前触发）</summary>
+        public event Action onCancelled;
+
+        [Header("关闭行为")]
+        [Tooltip("确认后是否自动关闭窗口（默认 true；多个选择框时建议关闭，由外部统一处理）")]
+        [SerializeField] private bool closeOnConfirm = true;
+        [Tooltip("取消时是否自动关闭窗口/子面板")]
+        [SerializeField] private bool closeOnCancel = true;
+        [Tooltip("确认/取消时关闭的对象（可指向子面板根节点）；留空则关闭所属 UIController 窗口")]
+        [SerializeField] private GameObject closeTarget;
+
+        public bool CloseOnConfirm { get => closeOnConfirm; set => closeOnConfirm = value; }
+
+        public bool CloseOnCancel { get => closeOnCancel; set => closeOnCancel = value; }
+
+        /// <summary>子菜单面板：确认/取消时只关闭该对象，而不是整个父窗口。</summary>
+        public GameObject CloseTarget { get => closeTarget; set => closeTarget = value; }
 
         private void OnEnable()
         {
-            // UIInputSystem 可能在启动早期尚未初始化，等它就绪后再订阅
+            // UIInputSystem 可能在启动早期尚未初始化，等它就绪后再注册
             if (!UIInputSystem.Instance.isInited)
             {
                 bindRequested = true;
@@ -92,48 +179,106 @@ namespace ReunionMovement.UI.Select
 
         private void OnDisable()
         {
-            bindRequested = false;
+            Unbind();
+        }
+
+        private void OnDestroy()
+        {
             Unbind();
         }
 
         private void Update()
         {
-            // 若窗口在 UIInputSystem 初始化前就激活，初始化完成后补订阅
-            if (bindRequested && UIInputSystem.Instance.isInited)
+            var inputSystem = UIInputSystem.Instance;
+            if (!inputSystem.isInited) return;
+
+            // UIInputSystem 初始化前激活，或引擎 Clear/Init 循环后，重新注册到当前焦点域
+            int version = inputSystem.InitVersion;
+            if (bindRequested || lastInitVersion != version)
             {
-                bindRequested = false;
+                lastInitVersion = version;
                 Bind();
             }
         }
 
-        /// <summary>
-        /// 订阅导航/确认/取消并初始化显示（窗口激活时自动调用，
-        /// 不依赖 UISystem.OpenWindow —— 场景中直接激活同样生效）
-        /// </summary>
+        /// <summary>注册导航目标并初始化显示（窗口激活时自动调用，不依赖 UISystem.OpenWindow）。</summary>
         private void Bind()
         {
-            Unbind(); // 防重复订阅
+            // 总是先清理上一次的指针/注册状态，组内模式也不会重复添加 onClick
+            Unbind();
 
-            navSub = UIInputSystem.Instance.NavigateSubject.Subscribe(OnNavigate);
-            // 全局 Subject 会被所有激活的轮播窗口收到：仅顶层窗口响应确认/取消，
-            // 避免叠层窗口同时 Move/Confirm/CloseWindow 互相抢输入
-            submitSub = UIInputSystem.Instance.SubmitSubject.Subscribe(_ => { if (IsTopmostWindow()) Confirm(); });
-            cancelSub = UIInputSystem.Instance.CancelSubject.Subscribe(_ => { if (IsTopmostWindow()) CloseWindow(); });
+            if (!UIInputSystem.Instance.isInited)
+            {
+                bindRequested = true;
+                return;
+            }
+
+            bindRequested = false;
+
+            // 组内选择框由 CarouselSelectionGroup 统一注册；组外才直接注册到窗口焦点域
+            if (ownerGroup == null)
+            {
+                UIInputSystem.Instance.RegisterNavigationTarget(this, autoEnableUIControl);
+                registered = true;
+            }
+            else
+            {
+                registered = false;
+            }
 
             ValidateFields();
+            SetupPointer();
+            InitializeSelection();
+        }
 
-            // 聚焦当前项（默认第一项）
-            if (options != null && options.Length > 0)
+        private void Unbind()
+        {
+            bindRequested = false;
+
+            if (registered)
             {
-                currentIndex = Mathf.Clamp(currentIndex, 0, options.Length - 1);
-                FocusCurrent();
+                UIInputSystem.Instance.UnregisterNavigationTarget(this);
+                registered = false;
             }
+
+            RemovePointer();
+        }
+
+        private void InitializeSelection()
+        {
+            if (options == null || options.Length == 0)
+            {
+                Refresh();
+                return;
+            }
+
+            currentIndex = Mathf.Clamp(currentIndex, 0, options.Length - 1);
+            NormalizeCurrentIndex();
+            FocusCurrent();
             Refresh();
         }
 
+        /// <summary>把当前索引收敛到最近的可导航项，避免 options 变化后停在空位/禁用项上。</summary>
+        private void NormalizeCurrentIndex()
+        {
+            if (options == null || options.Length == 0)
+            {
+                currentIndex = 0;
+                return;
+            }
+
+            currentIndex = Mathf.Clamp(currentIndex, 0, options.Length - 1);
+            if (IsNavigable(currentIndex)) return;
+
+            int nearest = FindNearestInteractableIndex(currentIndex);
+            if (nearest >= 0)
+            {
+                currentIndex = nearest;
+            }
+        }
+
         /// <summary>
-        /// 校验配置（仅告警，不阻断运行）：options 空位、previews 长度不一致、
-        /// Button 的 Navigation 未设为 None（会导致 EventSystem 导航与 Move 双重响应）。
+        /// 校验配置（仅告警，不阻断运行）：options 空位、previews 长度不一致。
         /// </summary>
         private void ValidateFields()
         {
@@ -148,12 +293,6 @@ namespace ReunionMovement.UI.Select
                 if (options[i] == null)
                 {
                     Log.Warning($"[CarouselSelection] options[{i}] 为空，请检查配置。");
-                    continue;
-                }
-                if (options[i].navigation.mode != Navigation.Mode.None)
-                {
-                    Log.Warning($"[CarouselSelection] options[{i}] '{options[i].name}' 的 Navigation 未设为 None，" +
-                                "方向键会同时触发 EventSystem 导航与本控制器 Move，造成双重响应。");
                 }
             }
 
@@ -175,61 +314,374 @@ namespace ReunionMovement.UI.Select
             }
         }
 
-        private void Unbind()
+        /// <summary>
+        /// Inspector 右键菜单：打印每个选项的索引、屏幕坐标与矩阵行列，
+        /// 用来核对“视觉位置”和 columns/rowSizes 是否一致。
+        /// </summary>
+        [ContextMenu("打印布局索引")]
+        private void LogLayoutIndices()
         {
-            navSub?.Dispose();
-            submitSub?.Dispose();
-            cancelSub?.Dispose();
-            navSub = null;
-            submitSub = null;
-            cancelSub = null;
-        }
+            if (options == null || options.Length == 0)
+            {
+                Log.Warning("[CarouselSelection] options 为空，无法打印布局。");
+                return;
+            }
 
-        private void OnNavigate(Vector2 dir)
-        {
-            // 叠层窗口同时激活时，只有顶层窗口响应导航
-            if (!IsTopmostWindow()) return;
-
-            // 导航节流：两次切换至少间隔 navigateRepeatDelay。摇杆为模拟量，
-            // 推入过程中值每帧变化都会触发导航事件，若无节流一次推入会连跳多格；
-            // 方向键快速连按也会被限制为该间隔，避免切换过快。
-            float now = Time.unscaledTime;
-            if (now - lastNavigateTime < navigateRepeatDelay) return;
-            lastNavigateTime = now;
+            string rowSizeText = rowSizes == null || rowSizes.Length == 0
+                ? "空"
+                : string.Join(",", rowSizes);
+            Log.Info("[CarouselSelection] 布局检查：options={0}，columns={1}，rowSizes={2}",
+                options.Length, columns, rowSizeText);
 
             if (columns > 1)
             {
-                // 矩阵模式：主轴优先。斜向摇杆推入时横纵同时过死区，旧实现一次斜推触发
-                // MoveHorizontal + MoveVertical 两步（两次 SetIndex + 两次全量 Refresh）。
-                // 仅响应绝对值较大的轴，两轴相等时优先横向。
-                float ax = Mathf.Abs(dir.x);
-                float ay = Mathf.Abs(dir.y);
-                if (ax >= navigateDeadzone || ay >= navigateDeadzone)
+                var table = BuildRowTable();
+                int index = 0;
+                for (int row = 0; row < table.Length; row++)
                 {
-                    if (ax >= ay)
+                    for (int col = 0; col < table[row] && index < options.Length; col++, index++)
                     {
-                        MoveHorizontal(dir.x > 0 ? 1 : -1);
+                        LogOptionIndex(index, row, col);
+                    }
+                }
+
+                if (index < options.Length)
+                {
+                    Log.Warning("[CarouselSelection] 行表只覆盖 {0}/{1} 个选项，请检查 rowSizes 总和。",
+                        index, options.Length);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < options.Length; i++)
+                {
+                    LogOptionIndex(i, i, 0);
+                }
+            }
+
+            LogSuggestedRowSizes();
+        }
+
+        /// <summary>按按钮实际坐标推导行数，提示应填写的 Row Sizes（仅矩阵模式）。</summary>
+        private void LogSuggestedRowSizes()
+        {
+            if (columns <= 1 || options == null || options.Length == 0) return;
+
+            var rowYs = new List<float>();
+            var rowIndices = new List<List<int>>();
+            const float tolerance = 1f;
+
+            for (int i = 0; i < options.Length; i++)
+            {
+                var button = options[i];
+                var rect = button != null ? button.transform as RectTransform : null;
+                if (rect == null) continue;
+
+                float y = rect.position.y;
+                int row = -1;
+                for (int r = 0; r < rowYs.Count; r++)
+                {
+                    if (Mathf.Abs(rowYs[r] - y) <= tolerance)
+                    {
+                        row = r;
+                        break;
+                    }
+                }
+
+                if (row < 0)
+                {
+                    row = rowYs.Count;
+                    rowYs.Add(y);
+                    rowIndices.Add(new List<int>());
+                }
+                rowIndices[row].Add(i);
+            }
+
+            if (rowYs.Count <= 1) return;
+
+            var rowOrder = new List<int>();
+            for (int r = 0; r < rowYs.Count; r++) rowOrder.Add(r);
+            rowOrder.Sort((a, b) => rowYs[b].CompareTo(rowYs[a]));
+
+            var ordered = new List<int>();
+            var counts = new List<int>();
+            for (int i = 0; i < rowOrder.Count; i++)
+            {
+                var indices = rowIndices[rowOrder[i]];
+                indices.Sort((a, b) => GetOptionWorldX(a).CompareTo(GetOptionWorldX(b)));
+                counts.Add(indices.Count);
+                ordered.AddRange(indices);
+            }
+
+            bool matches = ordered.Count == options.Length;
+            for (int i = 0; matches && i < ordered.Count; i++)
+            {
+                if (ordered[i] != i) matches = false;
+            }
+
+            string countsText = string.Join(",", counts);
+            if (matches)
+            {
+                Log.Info($"[CarouselSelection] 按坐标检测到 {rowYs.Count} 行，Options 顺序已经是行优先。建议 Row Sizes = {countsText}");
+            }
+            else
+            {
+                Log.Warning($"[CarouselSelection] 按坐标的行优先顺序是 [{string.Join(",", ordered)}]，与当前 Options 顺序不一致；" +
+                            $"请先重排 Options，再填 Row Sizes = {countsText}");
+            }
+        }
+
+        private float GetOptionWorldX(int index)
+        {
+            var button = options[index];
+            var rect = button != null ? button.transform as RectTransform : null;
+            return rect != null ? rect.position.x : 0f;
+        }
+
+        private void LogOptionIndex(int index, int row, int col)
+        {
+            var button = options[index];
+            string name = button != null ? button.name : "<null>";
+            var rect = button != null ? button.transform as RectTransform : null;
+            string position = rect != null
+                ? $"({rect.anchoredPosition.x:0},{rect.anchoredPosition.y:0})"
+                : "";
+
+            Log.Info("[CarouselSelection] [{0}] {1} {2} -> row {3}, col {4}",
+                index, name, position, row, col);
+        }
+
+        #region IUINavigationTarget
+
+        /// <summary>选择组优先级高于组内选择框；组外选择框使用自身配置值。</summary>
+        public int InputPriority => inputPriority;
+
+        public bool AcceptsPlayer(int playerIndex)
+        {
+            if (!isActiveAndEnabled || !inputEnabled) return false;
+            return playerSlot < 0 || playerIndex == playerSlot;
+        }
+
+        public bool HandleNavigate(in UINavigateEvent e)
+        {
+            if (!AcceptsPlayer(e.PlayerIndex)) return false;
+
+            // 没有十字键的方向盘：左右转向 = 上一项/下一项（与布局轴无关）
+            if (e.IsWheelSteering)
+            {
+                return ApplySteering(e.Step.x);
+            }
+
+            return ApplyStep(e.Step);
+        }
+
+        /// <summary>
+        /// 方向盘转向导航：右转 = 下一项，左转 = 上一项。
+        /// 矩阵选择框按行优先顺序移动，保证只用转向也能遍历全部选项。
+        /// </summary>
+        public bool ApplySteering(int direction)
+        {
+            if (direction == 0) return false;
+            Move(direction);
+            return true;
+        }
+
+        public bool HandleSubmit(in UIButtonEvent e)
+        {
+            if (!AcceptsPlayer(e.PlayerIndex) || !groupActive) return false;
+            Confirm();
+            return true;
+        }
+
+        public bool HandleCancel(in UIButtonEvent e)
+        {
+            if (!AcceptsPlayer(e.PlayerIndex) || !groupActive) return false;
+            CancelSelection();
+            return true;
+        }
+
+        /// <summary>执行取消（关闭窗口）。选择组会直接调用此方法。</summary>
+        public void CancelSelection()
+        {
+            try { onCancelled?.Invoke(); }
+            catch (Exception ex) { Log.Warning($"[CarouselSelection] onCancelled 订阅者异常: {ex.Message}"); }
+
+            if (closeOnCancel)
+            {
+                CloseOwningWindow();
+            }
+        }
+
+        /// <summary>
+        /// 关闭所属窗口：优先使用自身 uiName；作为子节点使用时向上找最近的 UIController 窗口。
+        /// 找不到窗口时只隐藏自身。
+        /// </summary>
+        private void CloseOwningWindow()
+        {
+            var uiSystem = UISystem.Instance;
+
+            // 子菜单：只关闭指定面板；面板若带 UIFocusScope，SetActive(false) 会自动出栈并恢复父面板输入
+            if (closeTarget != null)
+            {
+                var targetController = closeTarget.GetComponent<UIController>();
+                if (targetController != null)
+                {
+                    if (!string.IsNullOrEmpty(targetController.uiName) &&
+                        uiSystem != null && uiSystem.IsOpen(targetController.uiName))
+                    {
+                        uiSystem.CloseWindow(targetController.uiName);
                     }
                     else
                     {
-                        MoveVertical(dir.y > 0 ? 1 : -1);
+                        targetController.OnClose();
                     }
+                }
+                else
+                {
+                    closeTarget.SetActive(false);
                 }
                 return;
             }
 
-            // 线性模式：按配置的方向轴取输入
+            // 只关闭确实由 UISystem 加载的窗口；场景里自带的 UI 没有注册时直接隐藏自身，
+            // 避免 CloseWindow 打印“没有加载的 UIWindow”错误。
+            if (!string.IsNullOrEmpty(uiName) && uiSystem != null && uiSystem.IsOpen(uiName))
+            {
+                uiSystem.CloseWindow(uiName);
+                return;
+            }
+
+            var controllers = GetComponentsInParent<UIController>(true);
+            for (int i = 0; i < controllers.Length; i++)
+            {
+                var controller = controllers[i];
+                if (controller == null) continue;
+
+                if (!string.IsNullOrEmpty(controller.uiName) &&
+                    uiSystem != null && uiSystem.IsOpen(controller.uiName))
+                {
+                    uiSystem.CloseWindow(controller.uiName);
+                    return;
+                }
+
+                // 场景自带的 UI 没有注册到 UISystem：走窗口控制器自己的关闭逻辑
+                controller.OnClose();
+                return;
+            }
+
+            gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// 直接应用一个四向步进（选择组调用，不检查玩家槽位）。
+        /// 返回 true 表示该轴由本选择框消费。
+        /// </summary>
+        public bool ApplyStep(Vector2Int step)
+        {
+            if (step == Vector2Int.zero) return false;
+
+            if (columns > 1)
+            {
+                // 矩阵模式：斜向输入只取主轴，避免一次推入触发两格
+                if (Mathf.Abs(step.x) >= Mathf.Abs(step.y))
+                {
+                    if (step.x == 0) return false;
+                    MoveHorizontal(step.x);
+                }
+                else
+                {
+                    MoveVertical(step.y);
+                }
+                return true;
+            }
+
             if (navigateAxis == NavigateAxis.Horizontal)
             {
-                if (Mathf.Abs(dir.x) < navigateDeadzone) return;
-                Move(dir.x > 0 ? 1 : -1); // 右=下一项
+                if (step.x == 0) return false;
+                Move(step.x);
+                return true;
             }
-            else
+
+            if (step.y != 0)
             {
-                if (Mathf.Abs(dir.y) < navigateDeadzone) return;
-                Move(dir.y > 0 ? -1 : 1); // 上=上一项，下=下一项
+                Move(-step.y); // 上 = 上一项，下 = 下一项
+                return true;
+            }
+
+            // 纵向列表允许横向输入作为兜底（例如被识别成 Gamepad 的方向盘只有转向轴）
+            if (step.x != 0)
+            {
+                Move(step.x);
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>选择组控制：关闭/开启独立输入。</summary>
+        public void SetInputEnabled(bool enabled)
+        {
+            inputEnabled = enabled;
+        }
+
+        /// <summary>选择组控制：标记当前活动选择框。非活动选择框仍显示自己的选中项（灰色）。</summary>
+        public void SetGroupActive(bool active)
+        {
+            if (groupActive == active) return;
+            groupActive = active;
+            Refresh();
+            if (active)
+            {
+                FocusCurrent();
             }
         }
+
+        /// <summary>选择组控制：修改玩家槽位。</summary>
+        public void SetPlayerSlot(int slot)
+        {
+            if (playerSlot == slot) return;
+
+            bool reRegister = registered && ownerGroup == null;
+            if (reRegister)
+            {
+                UIInputSystem.Instance.UnregisterNavigationTarget(this);
+                registered = false;
+            }
+
+            playerSlot = slot;
+
+            if (reRegister && isActiveAndEnabled && UIInputSystem.Instance.isInited)
+            {
+                UIInputSystem.Instance.RegisterNavigationTarget(this, autoEnableUIControl);
+                registered = true;
+            }
+        }
+
+        /// <summary>选择组控制：绑定/解绑所属选择组。</summary>
+        public void AttachGroup(CarouselSelectionGroup group)
+        {
+            if (ownerGroup == group) return;
+
+            if (group != null)
+            {
+                // 组内由组统一接收输入，选择框不再直接注册到焦点域
+                if (registered)
+                {
+                    UIInputSystem.Instance.UnregisterNavigationTarget(this);
+                    registered = false;
+                }
+                ownerGroup = group;
+                return;
+            }
+
+            ownerGroup = null;
+            if (isActiveAndEnabled && UIInputSystem.Instance.isInited && !registered)
+            {
+                UIInputSystem.Instance.RegisterNavigationTarget(this, autoEnableUIControl);
+                registered = true;
+            }
+        }
+
+        #endregion
 
         /// <summary>矩阵模式横向移动（正=向右，负=向左）：行尾自动换到下一行行首、行首回上一行行尾，末尾环绕；跳过空位/不可交互项（洞）</summary>
         public void MoveHorizontal(int step)
@@ -246,7 +698,6 @@ namespace ReunionMovement.UI.Select
                     return;
                 }
             }
-            // 全部不可导航：保持原位
         }
 
         /// <summary>矩阵模式纵向移动（正=向下，负=向上）：按行布局跨行，顶部/底部环绕；目标行更短时列号自动收拢；跳过空位/不可交互项（洞）</summary>
@@ -262,19 +713,34 @@ namespace ReunionMovement.UI.Select
             for (int i = 1; i <= rows; i++)
             {
                 int r = ((row + step * i) % rows + rows) % rows;
-                // 空行（rowSizes 配置为 0）无实际元素：跳过，避免列号计算错位跳到错误选项
-                if (table[r] <= 0) continue;
-                // 目标行可能比当前列短（不规则行），列号收拢；空行兜底 0
-                int c = Mathf.Max(0, Mathf.Min(col, table[r] - 1));
-                int candidate = RowOffset(table, r) + c;
-                if (candidate == currentIndex) break; // 整列扫描一圈无其他可导航项
-                if (IsNavigable(candidate))
+                int count = table[r];
+                // 空行（rowSizes 配置为 0）无实际元素：跳过，避免列号计算错位
+                if (count <= 0) continue;
+
+                int rowStart = RowOffset(table, r);
+                int clampedCol = Mathf.Clamp(col, 0, count - 1);
+                int best = -1;
+                int bestDistance = int.MaxValue;
+
+                // 目标行的同一列可能是洞：在该行内按列距离找最近的可导航项
+                for (int c = 0; c < count; c++)
                 {
-                    SetIndex(candidate);
-                    return;
+                    int candidate = rowStart + c;
+                    if (!IsNavigable(candidate)) continue;
+
+                    int distance = Mathf.Abs(c - clampedCol);
+                    if (distance < bestDistance)
+                    {
+                        bestDistance = distance;
+                        best = candidate;
+                    }
                 }
+
+                if (best < 0) continue;
+                if (best == currentIndex) break; // 整列扫描一圈无其他可导航项
+                SetIndex(best);
+                return;
             }
-            // 该列方向无可导航项：保持原位
         }
 
         /// <summary>
@@ -293,17 +759,24 @@ namespace ReunionMovement.UI.Select
             if (rowSizes != null && rowSizes.Length > 0)
             {
                 int total = 0;
+                bool valid = true;
                 for (int i = 0; i < rowSizes.Length; i++)
                 {
-                    total += Mathf.Max(0, rowSizes[i]);
+                    if (rowSizes[i] < 0)
+                    {
+                        valid = false;
+                        break;
+                    }
+                    total += rowSizes[i];
                 }
-                if (total == len)
+
+                if (valid && total == len)
                 {
                     table = rowSizes;
                 }
                 else
                 {
-                    Log.Warning($"[CarouselSelection] rowSizes 总和({total})与 options 数量({len})不一致，已回退为按 columns={columns} 均匀分列。");
+                    Log.Warning($"[CarouselSelection] rowSizes 无效或总和({total})与 options 数量({len})不一致，已回退为按 columns={columns} 均匀分列。");
                     table = BuildUniformRowTable(len);
                 }
             }
@@ -322,6 +795,8 @@ namespace ReunionMovement.UI.Select
         /// <summary>均匀分列的行布局（最后一行可不满）</summary>
         private int[] BuildUniformRowTable(int len)
         {
+            if (len <= 0) return Array.Empty<int>();
+
             int cols = Mathf.Max(1, columns);
             int rows = (len + cols - 1) / cols;
             var table = new int[rows];
@@ -350,33 +825,6 @@ namespace ReunionMovement.UI.Select
             return acc;
         }
 
-        /// <summary>
-        /// 判断本窗口是否为当前最顶层打开窗口（同父节点下兄弟层级最高）。
-        /// 不同父节点（如独立弹窗）不构成遮挡关系，视为可响应。
-        /// </summary>
-        private bool IsTopmostWindow()
-        {
-            if (!gameObject.activeInHierarchy) return false;
-
-            var windows = UISystem.Instance?.GetAllOpenWindows();
-            if (windows == null || windows.Count == 0) return true;
-
-            Transform myTransform = transform;
-            Transform myParent = myTransform.parent;
-            for (int i = 0; i < windows.Count; i++)
-            {
-                var other = windows[i];
-                if (other == null || other == this || !other.gameObject.activeInHierarchy) continue;
-                // 只比较同父节点下的兄弟窗口（不同父节点不构成遮挡关系）
-                if (other.transform.parent != myParent) continue;
-                if (other.transform.GetSiblingIndex() > myTransform.GetSiblingIndex())
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
         /// <summary>按步长移动（正=下一项，负=上一项），循环；跳过空位/不可交互项（洞）</summary>
         public void Move(int step)
         {
@@ -392,7 +840,6 @@ namespace ReunionMovement.UI.Select
                     return;
                 }
             }
-            // 全部不可导航：保持原位
         }
 
         /// <summary>索引是否可导航（选项非空且可交互；null 或不可交互 = 洞，导航跳过）</summary>
@@ -406,23 +853,32 @@ namespace ReunionMovement.UI.Select
         public void SetIndex(int index)
         {
             if (options == null || options.Length == 0) return;
-            currentIndex = Mathf.Clamp(index, 0, options.Length - 1);
 
-            // 焦点跟随到当前项（若使用 Button + Navigation，Enter 会触发该项 onClick）
+            int previous = currentIndex;
+            currentIndex = Mathf.Clamp(index, 0, options.Length - 1);
+            NormalizeCurrentIndex();
+
             FocusCurrent();
             Refresh();
+
+            if (previous != currentIndex)
+            {
+                try { onSelectionChanged?.Invoke(currentIndex); }
+                catch (Exception ex) { Log.Warning($"[CarouselSelection] onSelectionChanged 订阅者异常: {ex.Message}"); }
+            }
         }
 
         /// <summary>
         /// 设置当前选项为 EventSystem 焦点。
         /// 注意：不走 UIInputSystem.SetSelectedGameObject —— 该方法会压入焦点栈（用于弹窗
-        /// 层级跳转）；轮播式窗口内部切换焦点不应压栈，否则焦点栈会无限增长，
-        /// 触发"焦点栈深度异常"警告。直接设置 EventSystem 后，UIInputSystem.Update
-        /// 会自动轮询同步 CurrentSelected 与 SelectionChangedSubject。
+        /// 层级跳转）；轮播式窗口内部切换焦点不应压栈，否则焦点栈会无限增长。
+        /// 多个选择框同时操作时请关闭 setEventSystemFocus，避免互相抢焦点。
         /// </summary>
         private void FocusCurrent()
         {
+            if (!setEventSystemFocus || !groupActive) return;
             if (options == null || options.Length == 0) return;
+
             var selectable = options[currentIndex];
             int targetIndex = currentIndex;
             if (selectable != null && !selectable.interactable)
@@ -460,13 +916,36 @@ namespace ReunionMovement.UI.Select
             return -1;
         }
 
+        /// <summary>
+        /// 通过 Button 的 ColorBlock 设置高亮。当前项同时设置 selectedColor，
+        /// 避免 EventSystem 选中时用默认 selectedColor 覆盖 normalColor。
+        /// </summary>
+        private static void SetButtonColor(Button button, Color color, bool alsoSelected)
+        {
+            var colors = button.colors;
+            bool changed = false;
+
+            if (colors.normalColor != color)
+            {
+                colors.normalColor = color;
+                changed = true;
+            }
+            if (alsoSelected && colors.selectedColor != color)
+            {
+                colors.selectedColor = color;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                button.colors = colors;
+            }
+        }
+
         private void Refresh()
         {
-            // options 为空时直接返回：Bind() 中 ValidateFields 仅告警不阻断，
-            // 此处必须有空保护，否则 options.Length 会抛 NullReferenceException
             if (options == null || options.Length == 0)
             {
-                // 无选项时隐藏所有预览，避免残留上次显示的预览对象
                 if (previews != null)
                 {
                     for (int i = 0; i < previews.Length; i++)
@@ -475,31 +954,41 @@ namespace ReunionMovement.UI.Select
                     }
                 }
                 lastPreviewIndex = -1;
+                lastHighlightedIndex = -1;
                 return;
             }
 
-            for (int i = 0; i < options.Length; i++)
+            // 首次 Refresh 或选项长度变化时重置全部普通色；之后只更新上一项/当前项，避免每步 O(n)
+            if (lastHighlightedIndex < 0 || lastHighlightedIndex >= options.Length)
             {
-                // 高亮当前项。通过 ColorBlock 常态色设置：直接写 targetGraphic.color 会在
-                // 鼠标悬停/按下瞬间被 Button 自身状态色覆盖（两套高亮互斥闪烁）；
-                // 设置 normalColor 使选中即常态，与 Button 状态机一致。
-                var btn = options[i];
-                if (btn == null) continue;
-                Color targetColor = i == currentIndex ? selectedColor : normalColor;
-                var colors = btn.colors;
-                if (colors.normalColor != targetColor)
+                for (int i = 0; i < options.Length; i++)
                 {
-                    colors.normalColor = targetColor;
-                    btn.colors = colors;
+                    if (i == currentIndex) continue;
+                    var btn = options[i];
+                    if (btn != null) SetButtonColor(btn, normalColor, alsoSelected: false);
                 }
             }
+            else if (lastHighlightedIndex != currentIndex)
+            {
+                var previous = options[lastHighlightedIndex];
+                if (previous != null) SetButtonColor(previous, normalColor, alsoSelected: false);
+            }
+
+            if (currentIndex >= 0 && currentIndex < options.Length && options[currentIndex] != null)
+            {
+                SetButtonColor(
+                    options[currentIndex],
+                    groupActive ? selectedColor : inactiveSelectedColor,
+                    alsoSelected: true);
+            }
+            lastHighlightedIndex = currentIndex;
 
             // 只切换变化的预览对象，避免大量 SetActive 触发 Canvas 重建
             if (previews == null || previews.Length == 0) return;
 
             if (lastPreviewIndex < 0)
             {
-                // 首次刷新：先隐藏全部预览，确保只有当前项可见（兼容场景中手动激活了多个预览的情况）
+                // 首次刷新：先隐藏全部预览，确保只有当前项可见
                 for (int i = 0; i < previews.Length; i++)
                 {
                     if (previews[i] != null)
@@ -520,42 +1009,128 @@ namespace ReunionMovement.UI.Select
             }
         }
 
-        /// <summary>确认选择事件（参数：选中项索引），外部订阅即可拿到选择结果，无需改源码</summary>
-        public event Action<int> onConfirmed;
+        #region 鼠标
 
-        /// <summary>确认后是否自动关闭窗口（默认 true，一步到位；设为 false 由外部自行处理关闭时机）</summary>
-        public bool closeOnConfirm = true;
+        private void SetupPointer()
+        {
+            if (options == null) return;
+
+            for (int i = 0; i < options.Length; i++)
+            {
+                var btn = options[i];
+                if (btn == null) continue;
+
+                int index = i;
+                var action = new UnityAction(() => OnOptionClicked(index));
+                btn.onClick.AddListener(action);
+                pointerButtons.Add(btn);
+                pointerActions.Add(action);
+
+                var bridge = btn.GetComponent<CarouselPointerBridge>();
+                if (bridge == null)
+                {
+                    bridge = btn.gameObject.AddComponent<CarouselPointerBridge>();
+                }
+                bridge.Owner = this;
+                bridge.Index = i;
+                pointerBridges.Add(bridge);
+            }
+        }
+
+        private void RemovePointer()
+        {
+            // 按注册时保存的 Button 引用精确移除，运行时替换 options 也不会残留旧 listener
+            for (int i = 0; i < pointerButtons.Count; i++)
+            {
+                var button = pointerButtons[i];
+                var action = i < pointerActions.Count ? pointerActions[i] : null;
+                if (button != null && action != null)
+                {
+                    button.onClick.RemoveListener(action);
+                }
+            }
+            pointerButtons.Clear();
+            pointerActions.Clear();
+
+            for (int i = 0; i < pointerBridges.Count; i++)
+            {
+                if (pointerBridges[i] != null)
+                {
+                    pointerBridges[i].Owner = null;
+                }
+            }
+            pointerBridges.Clear();
+        }
+
+        internal void OnPointerEnterOption(int index)
+        {
+            // 鼠标不受选择组的 inputEnabled 限制：指针直接指向某个选择框，
+            // 组模式下也应能悬停/点击任意选择框。
+            if (!isActiveAndEnabled || !mouseSelectOnHover) return;
+            if (!IsNavigable(index)) return;
+
+            if (ownerGroup != null) ownerGroup.NotifyPointerFocus(this);
+            if (index != currentIndex)
+            {
+                SetIndex(index);
+            }
+        }
+
+        internal void OnOptionClicked(int index)
+        {
+            if (!isActiveAndEnabled || !IsNavigable(index)) return;
+
+            if (ownerGroup != null) ownerGroup.NotifyPointerFocus(this);
+
+            if (index != currentIndex)
+            {
+                SetIndex(index);
+                return;
+            }
+
+            if (confirmOnSecondClick)
+            {
+                Confirm();
+            }
+        }
+
+        internal void OnPointerScroll(float delta)
+        {
+            if (!isActiveAndEnabled || Mathf.Abs(delta) < 0.01f) return;
+            if (ownerGroup != null) ownerGroup.NotifyPointerFocus(this);
+            Move(delta > 0f ? -1 : 1);
+        }
+
+        #endregion
 
         /// <summary>确认当前选择（可被选项 Button 的 onClick 复用）</summary>
         public void Confirm()
         {
             if (options == null || options.Length == 0) return;
-            var selected = options[currentIndex];
-            if (selected == null)
+
+            int indexBeforeNormalize = currentIndex;
+            NormalizeCurrentIndex();
+            if (indexBeforeNormalize != currentIndex)
             {
-                Log.Warning($"[CarouselSelection] options[{currentIndex}] 为空，无法确认。");
+                FocusCurrent();
+                Refresh();
+            }
+
+            var selected = options[currentIndex];
+            if (selected == null || !selected.interactable)
+            {
+                Log.Warning($"[CarouselSelection] options[{currentIndex}] 为空或不可交互，无法确认。");
                 return;
             }
             Log.Debug($"[CarouselSelection] 确认选择：{selected.name} (index={currentIndex})");
 
-            // 对外广播选择结果（订阅者异常隔离，不阻断关闭流程）
             try { onConfirmed?.Invoke(currentIndex); }
             catch (Exception ex) { Log.Warning($"[CarouselSelection] onConfirmed 订阅者异常: {ex.Message}"); }
 
             if (closeOnConfirm)
             {
-                // 按字段文档自动关闭；仅当窗口由 UISystem 管理时关闭
-                // （场景直接激活、非 UISystem 打开的窗口由外部自行处理，避免刷"未加载的UIWindow"错误）
-                if (UISystem.Instance.IsOpen(uiName))
-                {
-                    CloseWindow();
-                }
+                CloseOwningWindow();
             }
-        }
-
-        public void Cancel()
-        {
-            Log.Debug($"CloseWindow");
         }
     }
 }

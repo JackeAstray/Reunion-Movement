@@ -1,5 +1,6 @@
 ﻿using ReunionMovement.Common.Util;
 using ReunionMovement.Common;
+using ReunionMovement.Core.UIInput;
 using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
@@ -16,6 +17,11 @@ namespace ReunionMovement.Core.UI
         public string uiName = "";
         // 界面优先级，数值越大优先级越高
         public int priority { get; set; } = 0;
+
+        [Tooltip("窗口打开时是否请求 UI 控制模式；HUD 等常驻界面可关闭")]
+        [SerializeField] protected bool requestUIControl = true;
+
+        private UIFocusScope focusScope;
 
         /// <summary>
         /// 键盘/手柄导航时，该窗口打开后默认选中的 GameObject（如第一个按钮）
@@ -85,6 +91,7 @@ namespace ReunionMovement.Core.UI
         public virtual void OnOpen(params object[] args)
         {
             IsVisiable = true;
+            EnsureFocusScope(bringToFront: true);
         }
 
         /// <summary>
@@ -93,7 +100,29 @@ namespace ReunionMovement.Core.UI
         /// <param name="args"></param>
         public virtual void OnSet(params object[] args)
         {
+            // Set 只更新已打开窗口，不抢当前最上层窗口的焦点
+            EnsureFocusScope(bringToFront: false);
+        }
 
+        /// <summary>
+        /// 确保窗口有一个焦点域。所有窗口（即使没有轮播）都应压住下层窗口的输入。
+        /// </summary>
+        private void EnsureFocusScope(bool bringToFront)
+        {
+            if (focusScope == null)
+            {
+                focusScope = GetComponent<UIFocusScope>();
+                if (focusScope == null)
+                {
+                    focusScope = gameObject.AddComponent<UIFocusScope>();
+                }
+            }
+
+            focusScope.RequestUIControl = requestUIControl;
+            if (bringToFront)
+            {
+                focusScope.BringToFront();
+            }
         }
 
         /// <summary>
@@ -111,6 +140,7 @@ namespace ReunionMovement.Core.UI
         /// </summary>
         public virtual void OnSpawned()
         {
+            EnsureFocusScope(bringToFront: true);
         }
 
         /// <summary>
