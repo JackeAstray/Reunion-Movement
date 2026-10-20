@@ -438,7 +438,11 @@ namespace ReunionMovement.Common
         private void LogFormatInternal(LogLevel level, LogChannel channel, string format,
             params object[] args)
         {
-            string message = ZString.Format(format, args);
+            // 不能写 ZString.Format(format, args)：它会绑定到泛型 Format<T1>(string, T1)，
+            // 把整个 object[] 当成 arg0，导致 {1} 及以上抛 FormatException。
+            string message = args == null || args.Length == 0
+                ? format
+                : string.Format(format, args);
             Dispatch(level, BuildConsoleString(level, channel, message), null);
             WriteToFileLine(level, channel, message);
         }
