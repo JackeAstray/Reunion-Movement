@@ -41,6 +41,7 @@ namespace ReunionMovement.UI.Select
         private int positionCursor;
         private int colorCursor;
         private bool colorHasNoneOption;
+        private bool legacyPositionButtonsWithSkip;
         private CardRow activeRow = CardRow.Color;
         private bool registered;
         private bool bindRequested;
@@ -57,6 +58,24 @@ namespace ReunionMovement.UI.Select
             playerSlot = slot;
             colorHasNoneOption = manager != null && colorButtons != null &&
                                  colorButtons.Length == manager.ColorCount + 1;
+            legacyPositionButtonsWithSkip = manager != null && positionButtons != null &&
+                                            positionButtons.Length == manager.PositionCount + 1;
+
+            if (legacyPositionButtonsWithSkip)
+            {
+                // 兼容旧场景：旧版位置行第一个是「不参加」，运行时隐藏并把剩余按钮排成 4 个位置。
+                if (positionButtons[0] != null) positionButtons[0].gameObject.SetActive(false);
+                for (int i = 1; i < positionButtons.Length; i++)
+                {
+                    var button = positionButtons[i];
+                    if (button == null) continue;
+                    var rect = button.GetComponent<RectTransform>();
+                    if (rect != null)
+                    {
+                        rect.anchoredPosition = new Vector2(-126f + (i - 1) * 84f, rect.anchoredPosition.y);
+                    }
+                }
+            }
 
             if (playerLabel != null)
             {
@@ -133,8 +152,9 @@ namespace ReunionMovement.UI.Select
                 for (int i = 0; i < positionButtons.Length; i++)
                 {
                     if (positionButtons[i] == null) continue;
+                    if (legacyPositionButtonsWithSkip && i == 0) continue;
 
-                    int option = i - 1; // 0 号按钮 = 不参加，1..N = 位置 1..N
+                    int option = legacyPositionButtonsWithSkip ? i - 1 : i;
                     UnityAction action = () => OnPositionClicked(option);
                     positionButtons[i].onClick.AddListener(action);
                     buttonActions.Add(action);
@@ -203,8 +223,8 @@ namespace ReunionMovement.UI.Select
 
             if (manager.SelectPosition(playerSlot, positionIndex))
             {
-                positionCursor = positionIndex < 0 ? 0 : positionIndex + 1;
-                activeRow = positionIndex < 0 ? CardRow.Color : CardRow.Ready;
+                positionCursor = positionIndex;
+                activeRow = CardRow.Ready;
                 RefreshVisuals();
             }
         }
@@ -266,11 +286,10 @@ namespace ReunionMovement.UI.Select
                 }
                 case CardRow.Position:
                 {
-                    int value = positionCursor == 0 ? -1 : positionCursor - 1;
+                    int value = positionCursor;
                     if (!manager.SelectPosition(playerSlot, value)) return false;
 
-                    positionCursor = value < 0 ? 0 : value + 1;
-                    activeRow = value < 0 ? CardRow.Color : CardRow.Ready;
+                    activeRow = CardRow.Ready;
                     RefreshVisuals();
                     return true;
                 }
@@ -317,14 +336,13 @@ namespace ReunionMovement.UI.Select
 
         private bool MovePosition(int direction)
         {
-            int count = manager.PositionCount + 1;
+            int count = manager.PositionCount;
             if (count <= 0) return false;
 
             for (int offset = 1; offset <= count; offset++)
             {
                 int next = Wrap(positionCursor + direction * offset, count);
-                int value = next == 0 ? -1 : next - 1;
-                if (!manager.CanSelectPosition(playerSlot, value)) continue;
+                if (!manager.CanSelectPosition(playerSlot, next)) continue;
 
                 positionCursor = next;
                 RefreshVisuals();
@@ -414,15 +432,14 @@ namespace ReunionMovement.UI.Select
 
             if (activeRow == CardRow.Position)
             {
-                int value = positionCursor == 0 ? -1 : positionCursor - 1;
-                if (!manager.CanSelectPosition(playerSlot, value))
+                if (!manager.CanSelectPosition(playerSlot, positionCursor))
                 {
                     positionCursor = FindAvailablePositionCursor();
                 }
             }
             else
             {
-                positionCursor = state.positionIndex >= 0 ? state.positionIndex + 1 : 0;
+                positionCursor = state.positionIndex >= 0 ? state.positionIndex : 0;
             }
         }
 
@@ -439,11 +456,10 @@ namespace ReunionMovement.UI.Select
 
         private int FindAvailablePositionCursor()
         {
-            int count = manager.PositionCount + 1;
+            int count = manager.PositionCount;
             for (int i = 0; i < count; i++)
             {
-                int value = i == 0 ? -1 : i - 1;
-                if (manager.CanSelectPosition(playerSlot, value)) return i;
+                if (manager.CanSelectPosition(playerSlot, i)) return i;
             }
             return 0;
         }
@@ -515,13 +531,15 @@ namespace ReunionMovement.UI.Select
             bool active = activeRow == CardRow.Position;
             for (int i = 0; i < positionButtons.Length; i++)
             {
+                if (legacyPositionButtonsWithSkip && i == 0) continue;
+
                 var button = positionButtons[i];
                 if (button == null) continue;
 
-                int value = i - 1;
+                int value = legacyPositionButtonsWithSkip ? i - 1 : i;
                 bool selected = active
-                    ? (value < 0 ? positionCursor == 0 : positionCursor == value + 1)
-                    : (value < 0 ? !state.participating : state.positionIndex == value);
+                    ? positionCursor == value
+                    : state.positionIndex == value;
                 bool available = active && manager.CanSelectPosition(playerSlot, value);
                 SetButtonVisual(button, selected, available);
             }

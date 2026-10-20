@@ -686,15 +686,14 @@ namespace ReunionMovement.EditorTools
             CreateText("PositionTitle", cardGo.transform, "位置", 20, new Vector2(-175f, 92f), new Vector2(60f, 28f))
                 .alignment = TextAnchor.MiddleLeft;
 
-            var positionButtons = new Button[5];
+            var positionButtons = new Button[4];
             for (int i = 0; i < positionButtons.Length; i++)
             {
-                string label = i == 0 ? "不参加" : i.ToString();
                 positionButtons[i] = CreateButton(
                     $"Position_{i}",
-                    label,
+                    (i + 1).ToString(),
                     cardGo.transform,
-                    new Vector2(-144f + i * 72f, 52f),
+                    new Vector2(-126f + i * 84f, 52f),
                     new Vector2(66f, 44f),
                     new Color(0.18f, 0.18f, 0.18f, 1f));
             }
