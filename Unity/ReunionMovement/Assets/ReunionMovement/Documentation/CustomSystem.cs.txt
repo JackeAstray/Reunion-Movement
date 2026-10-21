@@ -6,6 +6,10 @@ namespace ReunionMovement.Core.Custom
 {
     // 保存到 Core/System/CustomSystem/CustomSystem.cs，沿用 Core 的 asmdef。
     // 在 StartGame.CreateModules() 中显式注册 CustomSystem.Instance。
+    //
+    // [ModuleOrder] 是必须的：序号决定 Init 顺序（现存模块用 10..140，间隔 10），
+    // 后面的 typeof(...) 是依赖，ModuleCatalog 启动时会校验缺依赖 / 成环。
+    [ModuleOrder(150, typeof(ReunionMovement.Core.EventMessage.EventMessageSystem))]
     public sealed class CustomSystem : ICustomSystem, ISystemUpdatable, ISystemDisposable
     {
         private static readonly Lazy<CustomSystem> instance =
