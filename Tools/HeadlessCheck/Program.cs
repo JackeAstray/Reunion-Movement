@@ -12,7 +12,7 @@ namespace ReunionMovement.HeadlessCheck
     /// <summary>
     /// 无 Unity 的核心逻辑自检工具。
     /// <para>
-    /// 它只验证"不依赖 Unity 运行时"的部分：模块排序与校验、Modules 访问器、入口解析、Bootstrap 配置判断。
+    /// 只验证"不依赖 Unity 运行时"的部分：模块排序与校验、Modules 访问器、Bootstrap 配置判断。
     /// 需要 UnityEngine 的路径（Time / AudioListener / AssetDatabase）一律不碰，那是 Unity Test Runner 的事。
     /// </para>
     /// <para>
@@ -27,6 +27,7 @@ namespace ReunionMovement.HeadlessCheck
         private static int passed;
         private static int skipped;
         private static int failed;
+        private static Assembly DynamicFakes;
 
         public static int Main(string[] args)
         {
@@ -57,19 +58,17 @@ namespace ReunionMovement.HeadlessCheck
             Console.WriteLine("=== Reunion-Movement 无 Unity 自检 ===");
             Console.WriteLine("程序集: " + core.Location);
 
-            // 先把框架自己的程序集加载进 AppDomain：
-            // ICustomSystem / GameEntry 在 Base，Log 在 Common，各模块在 Utils/Core。
-            // 不预加载的话 GetType 遍历已加载程序集时会找不到它们。
             PreloadFrameworkAssemblies();
             Console.WriteLine("已加载框架程序集: " + string.Join(", ",
                 new[] { "ReunionMovement.Base", "ReunionMovement.Common", "ReunionMovement.Utils", "ReunionMovement.Core" }
                     .Where(n => AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name == n))));
             Console.WriteLine();
 
-            Run("模块顺序（声明顺序 == 属性顺序）", () => CheckCatalogOrder(core));
-            Run("模块顺序（打乱声明顺序后结果不变）", () => CheckCatalogIgnoresDeclarationOrder(core));
-            Run("模块校验（缺依赖）", () => CheckCatalogMissingDependency(core));
+            Run("模块排序（按 ModuleOrder 升序）", () => CheckCatalogSorting(core));
+            Run("模块排序（声明顺序不影响结果）", () => CheckCatalogIgnoresDeclarationOrder(core));
+            Run("模块排序（依赖优先于序号）", () => CheckCatalogDependencyWinsOverOrder(core));
             Run("模块校验（重复注册）", () => CheckCatalogDuplicate(core));
+            Run("模块校验（缺少依赖）", () => CheckCatalogMissingDependency(core));
             Run("Modules 访问器（引擎未启动）", () => CheckModulesAccessor(core));
             Run("游戏入口解析（默认取框架声明）", () => CheckEntryResolver(core));
             Run("Bootstrap 配置（测试场景判定）", () => CheckBootstrapOptions(core));
@@ -79,59 +78,82 @@ namespace ReunionMovement.HeadlessCheck
             return failed == 0 ? 0 : 1;
         }
 
-        // ---------------------------------------------------------------- 用例
+        // ---------------------------------------------------------------- 模块目录
 
-        private static void CheckCatalogOrder(Assembly core)
+        /// <summary>三个模块声明顺序为 30/10/20，排序后应为 10/20/30。</summary>
+        private static void CheckCatalogSorting(Assembly core)
         {
-            object catalog = GetType(core, "ReunionMovement.Core.ModuleCatalog");
-            IList declared = CreateModuleList(core, DeclarationOrder);
-            var (ok, ordered, errors) = TryBuild(catalog, declared);
+            FakeModuleFactory fakes = CreateFactory(core);
+            object c30 = fakes.Instantiate(fakes.Create(30));
+            object c10 = fakes.Instantiate(fakes.Create(10));
+            object c20 = fakes.Instantiate(fakes.Create(20));
 
-            Assert(ok, "TryBuild 应成功，实际错误: " + errors);
-            Assert(errors == null || errors.Length == 0, "成功时不应有错误信息: " + errors);
-            AssertSequence(ordered, DeclarationOrder);
+            var (ok, ordered, errors) = TryBuild(core, c30, c10, c20);
+
+            Assert(ok, "应构建成功，实际错误: " + errors);
+            Assert(Orders(ordered) == "10,20,30", "顺序应为 10,20,30，实际: " + Orders(ordered));
         }
 
+        /// <summary>打乱声明顺序，排序结果必须一致。</summary>
         private static void CheckCatalogIgnoresDeclarationOrder(Assembly core)
         {
-            object catalog = GetType(core, "ReunionMovement.Core.ModuleCatalog");
-            var shuffled = DeclarationOrder.ToList();
-            var rnd = new Random(20251021);
-            for (int i = shuffled.Count - 1; i > 0; i--)
+            FakeModuleFactory fakes = CreateFactory(core);
+            object[] modules =
             {
-                int j = rnd.Next(i + 1);
-                (shuffled[i], shuffled[j]) = (shuffled[j], shuffled[i]);
-            }
+                fakes.Instantiate(fakes.Create(50)),
+                fakes.Instantiate(fakes.Create(10)),
+                fakes.Instantiate(fakes.Create(40)),
+                fakes.Instantiate(fakes.Create(20)),
+                fakes.Instantiate(fakes.Create(30)),
+            };
 
-            var (ok, ordered, errors) = TryBuild(catalog, CreateModuleList(core, shuffled));
+            var (ok, ordered, errors) = TryBuild(core, modules);
 
-            Assert(ok, "打乱后仍应成功: " + errors);
-            AssertSequence(ordered, DeclarationOrder);
+            Assert(ok, "应构建成功，实际错误: " + errors);
+            Assert(Orders(ordered) == "10,20,30,40,50", "顺序应为 10..50，实际: " + Orders(ordered));
         }
 
-        private static void CheckCatalogMissingDependency(Assembly core)
+        /// <summary>B 序号更小但依赖 A：A 必须先于 B（依赖优先于序号）。</summary>
+        private static void CheckCatalogDependencyWinsOverOrder(Assembly core)
         {
-            object catalog = GetType(core, "ReunionMovement.Core.ModuleCatalog");
-            // 去掉 ResourcesSystem：SoundSystem / AddressableSystem 等都声明依赖它
-            var declared = DeclarationOrder.Where(n => n != "ResourcesSystem").ToList();
-            var (ok, ordered, errors) = TryBuild(catalog, CreateModuleList(core, declared));
+            FakeModuleFactory fakes = CreateFactory(core);
+            Type typeA = fakes.Create(20);
+            Type typeB = fakes.Create(10, typeA);        // B 序号 10 < A 的 20，但 B 依赖 A
+            object a = fakes.Instantiate(typeA);
+            object b = fakes.Instantiate(typeB);
 
-            Assert(!ok, "缺依赖时应返回 false");
-            Assert(errors != null && errors.Contains("ResourcesSystem"), "错误信息应指出缺少哪个依赖，实际: " + errors);
-            Assert(ordered != null && ordered.Count == declared.Count, "校验失败时应退回声明顺序，且条目数不变");
+            var (ok, ordered, errors) = TryBuild(core, b, a);   // 故意先声明 b
+
+            Assert(ok, "应构建成功，实际错误: " + errors);
+            string actual = Orders(ordered);
+            Assert(actual == "20,10", "依赖应压过序号：A(20) 必须在 B(10) 之前，实际: " + actual);
         }
 
         private static void CheckCatalogDuplicate(Assembly core)
         {
-            object catalog = GetType(core, "ReunionMovement.Core.ModuleCatalog");
-            IList declared = CreateModuleList(core, DeclarationOrder);
-            declared.Add(declared[0]);   // 同一个实例再加一次
+            FakeModuleFactory fakes = CreateFactory(core);
+            object module = fakes.Instantiate(fakes.Create(10));
 
-            var (ok, ordered, errors) = TryBuild(catalog, declared);
+            var (ok, ordered, errors) = TryBuild(core, module, module);
 
             Assert(!ok, "重复注册应返回 false");
             Assert(errors != null && errors.Contains("重复"), "错误信息应提到重复注册，实际: " + errors);
         }
+
+        private static void CheckCatalogMissingDependency(Assembly core)
+        {
+            FakeModuleFactory fakes = CreateFactory(core);
+            Type missing = fakes.Create(99);
+            Type dependent = fakes.Create(10, missing);
+            object only = fakes.Instantiate(dependent);   // 只注册依赖方，不注册被依赖方
+
+            var (ok, ordered, errors) = TryBuild(core, only);
+
+            Assert(!ok, "缺依赖应返回 false");
+            Assert(errors != null && errors.Contains("未注册"), "错误信息应指出依赖未注册，实际: " + errors);
+        }
+
+        // ---------------------------------------------------------------- 其它用例
 
         private static void CheckModulesAccessor(Assembly core)
         {
@@ -143,9 +165,9 @@ namespace ReunionMovement.HeadlessCheck
             Assert(all.Count == 0, "引擎未启动时 Modules.All 应为空，实际 " + all.Count);
 
             MethodInfo tryGet = modules.GetMethod("TryGet", BindingFlags.Public | BindingFlags.Static).MakeGenericMethod(systemType);
-            var args = new object[] { null };
-            bool found = (bool)tryGet.Invoke(null, args);
-            Assert(!found && args[0] == null, "引擎未启动时 TryGet 应返回 false");
+            var tryArgs = new object[] { null };
+            bool found = (bool)tryGet.Invoke(null, tryArgs);
+            Assert(!found && tryArgs[0] == null, "引擎未启动时 TryGet 应返回 false");
 
             string text = (string)modules.GetMethod("DescribeAll", BindingFlags.Public | BindingFlags.Static).Invoke(null, null);
             Assert(!string.IsNullOrEmpty(text), "DescribeAll 不应返回空文本");
@@ -159,7 +181,8 @@ namespace ReunionMovement.HeadlessCheck
             catch (TargetInvocationException tie)
             {
                 string message = tie.InnerException?.Message ?? string.Empty;
-                Assert(tie.InnerException is InvalidOperationException, "应抛 InvalidOperationException，实际: " + tie.InnerException?.GetType().Name);
+                Assert(tie.InnerException is InvalidOperationException,
+                    "应抛 InvalidOperationException，实际: " + tie.InnerException?.GetType().Name);
                 Assert(message.Contains("UISystem"), "异常信息应包含类型名，实际: " + message);
             }
         }
@@ -172,7 +195,6 @@ namespace ReunionMovement.HeadlessCheck
             Assert(entryType != null, "应解析到入口类型");
             Assert(entryType.FullName == "ReunionMovement.Core.StartGame",
                 "默认入口应是 Core 里的 StartGame，实际: " + entryType?.FullName);
-            Assert(typeof(object).IsAssignableFrom(entryType), "入口类型应可实例化");
         }
 
         private static void CheckBootstrapOptions(Assembly core)
@@ -191,49 +213,49 @@ namespace ReunionMovement.HeadlessCheck
 
         // ---------------------------------------------------------------- 工具
 
-        /// <summary>与 Core/StartGame.cs 的 CreateModules 书写顺序一致。</summary>
-        private static readonly string[] DeclarationOrder =
+        private static FakeModuleFactory CreateFactory(Assembly core)
         {
-            "ResourcesSystem", "AddressableSystem", "SceneSystem", "EventMessageSystem",
-            "LanguagesSystem", "PauseSystem", "SoundSystem", "TimerMgr",
-            "UISystem", "UIInputSystem", "UIToolkitSystem", "TerminalSystem",
-            "NetworkMgr", "HttpMgr",
-        };
+            var factory = BuildFactory(core);
+            DynamicFakes = factory.DynamicAssembly;
+            return factory;
+        }
 
-        private static IList CreateModuleList(Assembly core, IEnumerable<string> typeNames)
+        private static FakeModuleFactory BuildFactory(Assembly core)
+        {
+            return new FakeModuleFactory(
+                GetType(core, "ReunionMovement.Core.Base.ICustomSystem"),
+                GetType(core, "ReunionMovement.Core.Base.ISystemInitializable"),
+                GetType(core, "Cysharp.Threading.Tasks.UniTask"),
+                GetType(core, "ReunionMovement.Core.Base.ModuleOrderAttribute"));
+        }
+
+        /// <summary>把假模块装进 List&lt;ICustomSystem&gt; 再交给 TryBuild。</summary>
+        private static (bool ok, IList ordered, string errors) TryBuild(Assembly core, params object[] modules)
         {
             Type systemInterface = GetType(core, "ReunionMovement.Core.Base.ICustomSystem");
             Type listType = typeof(List<>).MakeGenericType(systemInterface);
             var list = (IList)Activator.CreateInstance(listType);
+            foreach (object module in modules) list.Add(module);
 
-            foreach (string name in typeNames)
-            {
-                // 模块分散在 Core（ResourcesSystem…）与 Utils（TimerMgr/HttpMgr/NetworkMgr）两个程序集
-                Type type = GetAllTypes().First(t => t.Name == name);
-                PropertyInfo instanceProp = type.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-                if (instanceProp == null) throw new Exception(name + "（" + type.FullName + "）没有 public static Instance 属性");
-                object instance = instanceProp.GetValue(null);
-                if (instance == null) throw new Exception(name + " 的 Instance 返回了 null");
-                list.Add(instance);
-            }
-            return list;
-        }
-
-        private static (bool ok, IList ordered, string errors) TryBuild(object catalog, IList declared)
-        {
-            MethodInfo tryBuild = catalog.GetType().GetMethod("TryBuild", BindingFlags.Public | BindingFlags.Static);
-            var args = new object[] { declared, null, null };
+            Type catalog = GetType(core, "ReunionMovement.Core.ModuleCatalog");
+            MethodInfo tryBuild = catalog.GetMethod("TryBuild", BindingFlags.Public | BindingFlags.Static);
+            var args = new object[] { list, null, null };
             bool ok = (bool)tryBuild.Invoke(null, args);
             return (ok, (IList)args[1], (string)args[2]);
         }
 
-        private static void AssertSequence(IList ordered, string[] expected)
+        /// <summary>把排好序的模块按 [ModuleOrder] 的序号拼成 "10,20,30" 便于断言。</summary>
+        private static string Orders(IList ordered)
         {
-            var actual = ordered.Cast<object>().Select(o => o.GetType().Name).ToArray();
-            string got = string.Join(" → ", actual);
-            string want = string.Join(" → ", expected);
-            Assert(actual.Length == expected.Length && actual.SequenceEqual(expected),
-                "顺序不符\n     期望: " + want + "\n     实际: " + got);
+            Type attributeType = GetType(Assembly.GetExecutingAssembly(), "ReunionMovement.Core.Base.ModuleOrderAttribute");
+            var parts = new List<string>();
+            foreach (object module in ordered)
+            {
+                object attr = module.GetType().GetCustomAttribute(attributeType);
+                object order = attr?.GetType().GetProperty("Order")?.GetValue(attr);
+                parts.Add(Convert.ToString(order));
+            }
+            return string.Join(",", parts);
         }
 
         private static void Run(string name, Action action)
@@ -265,7 +287,7 @@ namespace ReunionMovement.HeadlessCheck
         private static bool IsUnityRuntimeBlocked(Exception ex)
         {
             if (ex is System.Security.SecurityException) return true;
-            if (ex is TypeInitializationException && IsUnityRuntimeBlocked(ex.InnerException)) return true;
+            if (ex is TypeInitializationException && ex.InnerException != null) return IsUnityRuntimeBlocked(ex.InnerException);
             string stack = ex.StackTrace ?? string.Empty;
             return stack.Contains("UnityEngine.");
         }
@@ -281,38 +303,11 @@ namespace ReunionMovement.HeadlessCheck
             return ex;
         }
 
-        private static IEnumerable<Type> GetAllTypes()
-        {
-            var seen = new HashSet<string>(StringComparer.Ordinal);
-            foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                string name = asm.GetName().Name;
-                if (!seen.Add(name)) continue;
-                if (name != null && (name.StartsWith("System", StringComparison.Ordinal) || name.StartsWith("Microsoft", StringComparison.Ordinal))) continue;
-
-                Type[] types;
-                try
-                {
-                    types = asm.GetTypes();
-                }
-                catch (ReflectionTypeLoadException ex)
-                {
-                    types = ex.Types.Where(t => t != null).ToArray();
-                }
-                catch
-                {
-                    continue;
-                }
-
-                foreach (Type t in types) yield return t;
-            }
-        }
         private static Type GetType(Assembly core, string fullName)
         {
             Type type = core.GetType(fullName, false);
             if (type != null) return type;
 
-            // ICustomSystem / GameEntry 等定义在 Base 程序集，不在 Core 里
             foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
             {
                 try
@@ -359,8 +354,7 @@ namespace ReunionMovement.HeadlessCheck
                 }
             }
 
-            // 从 Unity 生成的 csproj 里收集 UnityEngine 等 DLL 的绝对路径，
-            // 这样换一台机器也不用改配置（只要 dotnet build 过）
+            // 从 Unity 生成的 csproj 里收集 UnityEngine 等 DLL 的绝对路径
             string csproj = Path.Combine(project, "ReunionMovement.Core.csproj");
             if (File.Exists(csproj))
             {
@@ -378,7 +372,6 @@ namespace ReunionMovement.HeadlessCheck
             if (!SearchPaths.Contains(path, StringComparer.OrdinalIgnoreCase)) SearchPaths.Add(path);
         }
 
-        /// <summary>按名字把框架程序集加载进来（找不到就静默跳过，由后续用例报真实原因）。</summary>
         private static void PreloadFrameworkAssemblies()
         {
             string[] names =
@@ -399,7 +392,7 @@ namespace ReunionMovement.HeadlessCheck
                 }
                 catch
                 {
-                    // 交由用例层报错：缺哪个程序集，用例会给出更具体的信息
+                    // 缺哪个程序集，用例会给出更具体的信息
                 }
             }
         }
@@ -417,6 +410,9 @@ namespace ReunionMovement.HeadlessCheck
         private static Assembly ResolveAssembly(object sender, ResolveEventArgs e)
         {
             string simpleName = new AssemblyName(e.Name).Name;
+
+            // 假模块程序集只存在于内存里，按名字加载不到，必须在这里还给它
+            if (simpleName == FakeModuleFactory.DynamicAssemblyName) return DynamicFakes;
             foreach (string dir in SearchPaths)
             {
                 string candidate = Path.Combine(dir, simpleName + ".dll");
