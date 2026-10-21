@@ -30,7 +30,7 @@ namespace ReunionMovement.EditorTools
             }
         }
 
-        [MenuItem("ReunionMovement/清除截止日期数据（编辑器 + 打包程序）")]
+        [MenuItem("ReunionMovement/开发/清除截止日期数据", false, 106)]
         private static void ClearDeadlineDataMenu()
         {
             if (EditorUtility.DisplayDialog(
