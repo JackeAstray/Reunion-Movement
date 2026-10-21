@@ -1,4 +1,4 @@
-﻿using ReunionMovement.Common;
+using ReunionMovement.Common;
 using ReunionMovement.Common.Util;
 using ReunionMovement.Common.Util.HttpService;
 using ReunionMovement.Common.Util.Timer;
@@ -28,6 +28,11 @@ namespace ReunionMovement.Core
     /// </summary>
     public class StartGame : GameEntry
     {
+        /// <summary>进入游戏后加载的首个场景名（业务配置，不是框架约定）。</summary>
+        public const string BootSceneName = "Temp";
+
+        /// <summary>启动界面窗口名（与 <see cref="UINames.StartGame"/> 一致）。</summary>
+        public const string StartupWindowName = UINames.StartGame;
 #if UNITY_WEBGL && !UNITY_EDITOR
         [DllImport("__Internal")]
         private static extern void SetFullscreenState(int value);
@@ -129,10 +134,10 @@ namespace ReunionMovement.Core
             // SceneSystem.Instance.ExcludeWindowFromSceneHide(UINames.StartGame);
 
             // 加载初始场景
-            await SceneSystem.Instance.LoadScene("Temp", true, null, null);
+            await SceneSystem.Instance.LoadScene(BootSceneName, true, null, null);
 
             // 打开启动界面（Addressables 双轨加载，失败自动降级 Resources）
-            await UISystem.Instance.OpenWindowAsync(UINames.StartGame);
+            await UISystem.Instance.OpenWindowAsync(StartupWindowName);
         }
 
         /// <summary>
