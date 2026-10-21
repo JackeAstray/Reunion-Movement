@@ -110,10 +110,13 @@ namespace ReunionMovement.Editor.Guards
         /// 但它们只能变小不能变大；未登记的文件一旦超过阈值立即失败。
         /// </para>
         /// </summary>
-        public static bool CheckFileSizes()
+        public static bool CheckFileSizes() => CheckFileSizes(out _);
+
+        /// <summary>同上，并返回违规清单（供工具箱面板展示）。</summary>
+        public static bool CheckFileSizes(out IList<string> offenders)
         {
             Dictionary<string, int> baseline = LoadBaseline();
-            var offenders = new List<string>();
+            var found = new List<string>();
             var stale = new List<string>();
 
             foreach (string path in EnumerateSources("*.cs"))
@@ -125,7 +128,7 @@ namespace ReunionMovement.Editor.Guards
                 {
                     if (lines > allowed)
                     {
-                        offenders.Add($"{path}：{lines} 行，超过基线 {allowed} 行（基线只允许变小）");
+                        found.Add($"{path}：{lines} 行，超过基线 {allowed} 行（基线只允许变小）");
                     }
                     else if (lines <= MaxLines)
                     {
@@ -134,21 +137,22 @@ namespace ReunionMovement.Editor.Guards
                     continue;
                 }
 
-                if (lines > MaxLines) offenders.Add($"{path}：{lines} 行，超过阈值 {MaxLines} 行");
+                if (lines > MaxLines) found.Add($"{path}：{lines} 行，超过阈值 {MaxLines} 行");
             }
 
             foreach (string s in stale) Debug.Log($"[架构守卫] 基线可清理：{s}");
 
-            if (offenders.Count == 0)
+            offenders = found;
+            if (found.Count == 0)
             {
                 Debug.Log($"[架构守卫] 行数检查通过（阈值 {MaxLines} 行，基线豁免 {baseline.Count} 个文件）");
                 return true;
             }
 
-            offenders.Sort(StringComparer.Ordinal);
+            found.Sort(StringComparer.Ordinal);
             var sb = new StringBuilder();
-            sb.AppendLine($"[架构守卫] {offenders.Count} 个文件行数违规：");
-            foreach (string o in offenders) sb.AppendLine("  " + o);
+            sb.AppendLine($"[架构守卫] {found.Count} 个文件行数违规：");
+            foreach (string o in found) sb.AppendLine("  " + o);
             Debug.LogError(sb.ToString());
             return false;
         }
@@ -175,7 +179,10 @@ namespace ReunionMovement.Editor.Guards
         }
 
         /// <summary>检查项 2：每个源文件都要有 .meta。</summary>
-        public static bool CheckMetaFiles()
+        public static bool CheckMetaFiles() => CheckMetaFiles(out _);
+
+        /// <summary>同上，并返回缺失 .meta 的文件清单。</summary>
+        public static bool CheckMetaFiles(out IList<string> offenders)
         {
             var missing = new List<string>();
             foreach (string path in EnumerateSources("*.cs"))
@@ -187,6 +194,7 @@ namespace ReunionMovement.Editor.Guards
                 if (!File.Exists(path + ".meta")) missing.Add(path);
             }
 
+            offenders = missing;
             if (missing.Count == 0)
             {
                 Debug.Log("[架构守卫] .meta 检查通过");
@@ -259,16 +267,20 @@ namespace ReunionMovement.Editor.Guards
         /// 是新人最容易绕晕的地方。历史量先冻结，新增调用点立即失败——只减不增。
         /// </para>
         /// </summary>
-        public static bool CheckInstanceUsage()
+        public static bool CheckInstanceUsage() => CheckInstanceUsage(out _);
+
+        /// <summary>同上，并返回超基线的系统清单。</summary>
+        public static bool CheckInstanceUsage(out IList<string> offenders)
         {
             Dictionary<string, int> baseline = LoadCountBaseline(InstanceBaselinePath);
             if (baseline.Count == 0)
             {
                 Debug.Log("[架构守卫] 未找到 .Instance 基线，跳过该检查");
+                offenders = Array.Empty<string>();
                 return true;
             }
 
-            var offenders = new List<string>();
+            var found = new List<string>();
             var reduced = new List<string>();
             string[] files = GetCheckedSourceFiles();
 
@@ -281,13 +293,14 @@ namespace ReunionMovement.Editor.Guards
                     count += Regex.Matches(File.ReadAllText(file), pattern).Count;
                 }
 
-                if (count > pair.Value) offenders.Add($"{pair.Key}.Instance：{count} 处，超过基线 {pair.Value} 处");
+                if (count > pair.Value) found.Add($"{pair.Key}.Instance：{count} 处，超过基线 {pair.Value} 处");
                 else if (count < pair.Value) reduced.Add($"{pair.Key}.Instance：{count} 处（基线 {pair.Value}，可下调）");
             }
 
             foreach (string r in reduced) Debug.Log($"[架构守卫] 可收紧基线：{r}");
 
-            if (offenders.Count == 0)
+            offenders = found;
+            if (found.Count == 0)
             {
                 Debug.Log($"[架构守卫] .Instance 使用点检查通过（{baseline.Count} 个系统，基线总计 {SumBaseline(baseline)} 处）");
                 return true;
@@ -295,7 +308,7 @@ namespace ReunionMovement.Editor.Guards
 
             var sb = new StringBuilder();
             sb.AppendLine("[架构守卫] 新增了 .Instance 调用点（应改用 Modules.Get<T>()）：");
-            foreach (string o in offenders) sb.AppendLine("  " + o);
+            foreach (string o in found) sb.AppendLine("  " + o);
             Debug.LogError(sb.ToString());
             return false;
         }
