@@ -75,6 +75,17 @@ namespace ReunionMovement.Tests
         }
 
         [Test]
+        public void Repeated_Dependency_Is_Not_A_Cycle()
+        {
+            // 同一个依赖写两遍：不能因此判成环，也不能把模块漏掉
+            var declared = new List<ICustomSystem> { new ConsumerWithRepeatedDependency(), new ProviderWithLargeOrder() };
+
+            Assert.IsTrue(ModuleCatalog.TryBuild(declared, out var ordered, out var errors), errors);
+            Assert.IsInstanceOf<ProviderWithLargeOrder>(ordered[0]);
+            Assert.IsInstanceOf<ConsumerWithRepeatedDependency>(ordered[1]);
+        }
+
+        [Test]
         public void Two_Instances_Of_Same_Type_Are_Reported()
         {
             // 同一类型的两个不同实例：只按实例判重会漏掉，导致重复 Init/Update
@@ -149,6 +160,9 @@ namespace ReunionMovement.Tests
 
         [ModuleOrder(1, typeof(ProviderWithLargeOrder))]
         private sealed class ConsumerWithLargeDependency : FakeModule { }
+
+        [ModuleOrder(1, typeof(ProviderWithLargeOrder), typeof(ProviderWithLargeOrder))]
+        private sealed class ConsumerWithRepeatedDependency : FakeModule { }
 
         [ModuleOrder(1, typeof(CycleB))]
         private sealed class CycleA : FakeModule { }

@@ -59,15 +59,29 @@ dotnet run --project Tools/HeadlessCheck
 > 这让"直接测真实模块"变成不可能。想彻底解决，得让模块构造保持无副作用（依赖在 `Init()` 里才取），
 > 那是阶段 3 之后可以做的事。
 
-### 造不出来的那个用例：依赖成环
+### Reflection.Emit 的天花板：特性里的 `Type` 身份不稳定
 
-"环"需要两个类型互相引用，而 `Reflection.Emit` 做不到：
+造出来的假模块只能覆盖"单个依赖"的场景。以下两种写法过不去：
 
-- 先 `CreateType()` 的 A 在特性里引用还没落地的 B，特性 blob 里存的是 B 的 `TypeBuilder`
-- 等 B 落地后再读 A 的特性，拿到的 B 与 `CreateType()` 出来的 B **不是同一个 Type 标识**
-- 于是 `ModuleCatalog` 认为"A 依赖的 B 没注册"，报的是缺依赖而不是环
+| 想造的用例 | 现象 | 原因 |
+|---|---|---|
+| 依赖成环（A↔B） | 报"依赖未注册"而不是"环" | 特性 blob 里引用未落地的 `TypeBuilder`，落地后拿到的 `Type` 与 `CreateType()` 的不是同一个标识 |
+| 同一个依赖写两遍 | 同样报"依赖未注册" | 重复的 `Type` 在 blob 里解析出另一个 `Type` 实例，`IsInstanceOfType` 判不等 |
 
-所以这条留给 Unity 的 `Tests/ModuleCatalogTests.cs`（它用真实的嵌套私有类，没有这个问题）。
+实测打印确认过：
+
+```
+[debug] consumer.DependsOn.Length=2
+[debug]   [0] FakeModule1 sameAsProvider=False equalsProvider=False
+```
+
+**结论**：这两类用例改用真实编译的类型写，放在 `Tests/ModuleCatalogTests.cs` 里
+（`Cycle_Is_Reported`、`Repeated_Dependency_Is_Not_A_Cycle`）。它们是真正的 C# 类，
+没有 `Type` 身份问题，而且**同样能在本工具里跑**——因为测试代码就在 `ReunionMovement.Tests.dll` 里。
+
+> 换句话说：要测"依赖关系"就写 NUnit 用例，别指望 Reflection.Emit。
+> `Repeated_Dependency_Is_Not_A_Cycle` 这条一开始写成假模块，报的是缺依赖；
+> 换成真实嵌套类之后立刻通过——**产品是对的，是工具错了**。
 
 ### `GameEntryResolver` 为什么跳过
 
