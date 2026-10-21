@@ -1,0 +1,29 @@
+# 行数基线（架构守卫使用）
+# 这些文件是重构前的历史遗留，允许暂时超过 600 行，但只能变小不能变大。
+# 拆分完成后请把对应行删掉；格式：<行数> <相对路径>，路径从工程根算起。
+
+808 Assets/ReunionMovement/Core/System/AddressableSystem/AddressableSystem.cs
+713 Assets/ReunionMovement/Core/System/EventMessageSystem/EventMessageSystem.cs
+743 Assets/ReunionMovement/Core/System/SceneSystem/SceneSystem.cs
+1037 Assets/ReunionMovement/Core/System/UIInputSystem/UIInputDeviceProfile.cs
+902 Assets/ReunionMovement/Core/System/UIInputSystem/UIInputSystem.Navigation.cs
+844 Assets/ReunionMovement/Core/System/UIInputSystem/UIInputSystem.Targets.cs
+623 Assets/ReunionMovement/Editor/Addressables/AddressablesCdnUploader.cs
+932 Assets/ReunionMovement/Editor/Excel/Scripts/ExcelSystem.cs
+691 Assets/ReunionMovement/Editor/Toolbox/ReunionMovementToolboxWindow.cs
+929 Assets/ReunionMovement/Editor/UIExamples/CreateLocalMultiplayerSelectionExample.cs
+1136 Assets/ReunionMovement/UI/Select/CarouselSelectionController.cs
+615 Assets/ReunionMovement/UI/Select/LocalMultiplayerPlayerCard.cs
+666 Assets/ReunionMovement/Utils/ColliderUtil/ColliderUtil.cs
+791 Assets/ReunionMovement/Utils/Download/FileDownloader.cs
+854 Assets/ReunionMovement/Utils/Network/Core/NetworkClient.cs
+747 Assets/ReunionMovement/Utils/Network/Core/NetworkServer.cs
+1079 Assets/ReunionMovement/Utils/UI/ImageExtensions/Editor/Scripts/ImageExEditor.cs
+636 Assets/ReunionMovement/Utils/UI/ImageExtensions/Runtime/Common/ImageHelper.cs
+1068 Assets/ReunionMovement/Utils/UI/ImageExtensions/Runtime/ImageEx.Properties.cs
+984 Assets/ReunionMovement/Utils/UI/ImageExtensions/Runtime/ImageEx.Runtime.cs
+1335 Assets/ReunionMovement/Utils/UI/LoopScrollRect/LoopScrollRect.cs
+610 Assets/ReunionMovement/Utils/Util/AlgorithmUtil.Components.cs
+942 Assets/ReunionMovement/Utils/Util/AlgorithmUtil.GameObjects.cs
+778 Assets/ReunionMovement/Utils/Util/AlgorithmUtil.Transforms.cs
+655 Assets/ReunionMovement/Utils/Util/SaveSystem.cs

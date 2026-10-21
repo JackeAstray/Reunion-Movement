@@ -1,0 +1,168 @@
+name: Unity CI
+
+# 说明：
+#   - 需要仓库 Secrets: UNITY_LICENSE（GameCI 的 Personal License / Pro 授权文件内容）
+#     获取方式见 https://game.ci/docs/github/activation
+#   - EditMode 测试里已经包含「架构守卫」三个用例（超大文件 / 缺失 meta / asmdef 依赖方向），
+#     所以测试绿灯 = 守卫绿灯，不需要单独一步。
+#   - WebGL 构建默认只在手动触发和 main 分支上跑，避免每个 PR 都烧构建时长。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UNITY_PROJECT_PATH: Unity/ReunionMovement
+
+jobs:
+  editmode-tests:
+    name: EditMode 测试 + 架构守卫
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 1
+
+      - name: 缓存 Library
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.UNITY_PROJECT_PATH }}/Library
+          key: Library-${{ runner.os }}-${{ hashFiles('Unity/ReunionMovement/Packages/packages-lock.json') }}
+          restore-keys: |
+            Library-${{ runner.os }}-
+
+      - name: 运行 EditMode 测试
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          projectPath: ${{ env.UNITY_PROJECT_PATH }}
+          testMode: editmode
+          artifactsPath: editmode-results
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: EditMode 测试
+          customParameters: -nographics
+
+      - name: 上传测试结果
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: editmode-results
+          path: editmode-results
+          if-no-files-found: warn
+
+  webgl-build:
+    name: WebGL 构建
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 1
+
+      - name: 缓存 Library
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.UNITY_PROJECT_PATH }}/Library
+          key: Library-WebGL-${{ runner.os }}-${{ hashFiles('Unity/ReunionMovement/Packages/packages-lock.json') }}
+          restore-keys: |
+            Library-WebGL-${{ runner.os }}-
+            Library-${{ runner.os }}-
+
+      - name: 构建 WebGL
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          projectPath: ${{ env.UNITY_PROJECT_PATH }}
+          targetPlatform: WebGL
+          allowDirtyBuild: true
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: webgl-build
+          path: build/WebGL
+          if-no-files-found: warn
+
+  guard-only:
+    name: 架构守卫（不跑 Unity 的快速检查）
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 1
+
+      - name: 缺少 .meta 的源文件
+        run: |
+          set -euo pipefail
+          missing=0
+          while IFS= read -r f; do
+            if [ ! -f "$f.meta" ]; then
+              echo "::error file=$f::缺少 .meta（移动/新建文件时必须一起提交）"
+              missing=1
+            fi
+          done < <(find Unity/ReunionMovement/Assets/ReunionMovement \( -name '*.cs' -o -name '*.asmdef' \) -type f)
+          exit $missing
+
+      - name: 单文件行数（新文件不得超过 600 行）
+        run: |
+          set -euo pipefail
+          cd Unity/ReunionMovement
+          baseline="Assets/ReunionMovement/Editor/Toolbox/Guards/file-size-baseline.txt"
+          fail=0
+          while IFS= read -r f; do
+            case "$f" in
+              */Plugins/*|*/ThirdParty/*|*/3rd/*|*/GenerateScript/*|*/Examples/*|*/Samples/*) continue ;;
+            esac
+            lines=$(wc -l < "$f" | tr -d ' ')
+            allowed=$(awk -v p="$f" '$2==p {print $1}' "$baseline")
+            if [ -n "$allowed" ]; then
+              if [ "$lines" -gt "$allowed" ]; then
+                echo "::error file=$f::$lines 行，超过基线 $allowed 行（基线只允许变小）"
+                fail=1
+              fi
+            elif [ "$lines" -gt 600 ]; then
+              echo "::error file=$f::$lines 行，超过 600 行且未登记基线"
+              fail=1
+            fi
+          done < <(find Assets/ReunionMovement -name '*.cs' -type f)
+          exit $fail
+
+      - name: asmdef 依赖方向
+        run: |
+          set -euo pipefail
+          fail=0
+          check() {
+            asmdef="$1"; layer="$2"; shift 2
+            [ -f "$asmdef" ] || return 0
+            for bad in "$@"; do
+              if grep -q "\"$bad\"" "$asmdef"; then
+                echo "::error file=$asmdef::$layer 不应引用上层程序集 $bad"
+                fail=1
+              fi
+            done
+          }
+          base=Unity/ReunionMovement/Assets/ReunionMovement
+          check "$base/Core/Base/ReunionMovement.Base.asmdef" "ReunionMovement.Base" ReunionMovement.Common ReunionMovement.Utils ReunionMovement.Core
+          check "$base/Common/ReunionMovement.Common.asmdef" "ReunionMovement.Common" ReunionMovement.Utils ReunionMovement.Core
+          check "$base/Utils/ReunionMovement.Utils.asmdef" "ReunionMovement.Utils" ReunionMovement.Core
+          check "$base/Core/ReunionMovement.Core.asmdef" "ReunionMovement.Core" ReunionMovement.EditorTools ReunionMovement.Toolbox.Editor ReunionMovement.Tests
+          exit $fail
