@@ -1,4 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using R3;
 using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
@@ -17,7 +17,8 @@ namespace ReunionMovement.Core.Pause
     /// 注意：暂停期间 Unity 的 FixedUpdate 停摆（ISystemFixedUpdatable 模块不被驱动），
     /// Update 路径模块正常驱动（logicTime 归零），需要"暂停时仍运行"的逻辑请使用 realTime。
     /// </summary>
-    public class PauseSystem : ICustomSystem, ISystemDisposable
+    [ModuleOrder(60)]
+    public class PauseSystem : ICustomSystem, ISystemDisposable, IGamePauseHandler
     {
         #region 单例与初始化
         private static readonly Lazy<PauseSystem> instance = new(() => new PauseSystem());
@@ -31,6 +32,12 @@ namespace ReunionMovement.Core.Pause
 
         /// <summary>当前是否暂停（R3 可观测属性，UI 直接绑定）</summary>
         public ReactiveProperty<bool> IsPaused { get; private set; } = new ReactiveProperty<bool>(false);
+
+        /// <summary>
+        /// <see cref="IGamePauseHandler"/> 的显式实现：供引擎按接口读取暂停状态，
+        /// 与上面的可观测属性同源（显式实现以避免与同名的 ReactiveProperty 冲突）。
+        /// </summary>
+        bool IGamePauseHandler.IsPaused => IsPaused != null && IsPaused.Value;
 
         /// <summary>暂停时是否同步暂停全局音频（AudioListener）；默认开启</summary>
         public bool pauseAudioOnPause = true;

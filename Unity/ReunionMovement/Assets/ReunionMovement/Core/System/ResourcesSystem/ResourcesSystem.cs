@@ -13,6 +13,7 @@ namespace ReunionMovement.Core.Resources
     /// <summary>
     /// 资源系统
     /// </summary>
+    [ModuleOrder(10)]
     public class ResourcesSystem : ICustomSystem, ISystemDisposable
     {
         #region 单例与初始化

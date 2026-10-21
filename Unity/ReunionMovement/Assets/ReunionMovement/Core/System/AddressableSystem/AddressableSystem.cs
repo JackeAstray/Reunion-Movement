@@ -35,6 +35,7 @@ namespace ReunionMovement.Core.Resources
     /// 生命周期由 Addressables 自带引用计数管理，调用方须成对调用 Load / Release。
     /// 设计文档：仓库 Docs/Addressables/Addressables集成设计方案.md §5
     /// </summary>
+    [ModuleOrder(20, typeof(ReunionMovement.Core.Resources.ResourcesSystem))]
     public class AddressableSystem : ICustomSystem, ISystemDisposable
     {
         #region 单例与初始化

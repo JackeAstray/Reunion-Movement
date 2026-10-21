@@ -50,6 +50,7 @@ namespace ReunionMovement.Core.EventMessage
     /// 主线程分发 + 后台线程自动入队（ISystemUpdatable.Update 排空），
     /// 网络/下载回调线程可直接 DispatchEvent 而无需手动切主线程。
     /// </summary>
+    [ModuleOrder(40)]
     public class EventMessageSystem : ICustomSystem, ISystemDisposable, ISystemUpdatable
     {
         #region 单例与初始化

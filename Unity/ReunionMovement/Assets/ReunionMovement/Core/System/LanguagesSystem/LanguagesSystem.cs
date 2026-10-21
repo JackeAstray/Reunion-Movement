@@ -13,6 +13,7 @@ namespace ReunionMovement.Core.Languages
     /// <summary>
     /// 语言系统 —— 使用 R3 ReactiveProperty 管理语言切换通知
     /// </summary>
+    [ModuleOrder(50, typeof(ReunionMovement.Core.Resources.ResourcesSystem))]
     public class LanguagesSystem : ICustomSystem, ISystemDisposable
     {
         #region 单例与初始化

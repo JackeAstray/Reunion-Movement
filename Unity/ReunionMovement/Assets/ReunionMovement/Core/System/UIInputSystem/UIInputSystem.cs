@@ -21,6 +21,7 @@ namespace ReunionMovement.Core.UIInput
     /// 导航/确认/取消由本系统的轮询器派发；InputSystemUIInputModule 只保留指针动作，
     /// 避免同一次按键被 EventSystem 与本系统重复处理。
     /// </summary>
+    [ModuleOrder(100, typeof(ReunionMovement.Core.UI.UISystem), typeof(ReunionMovement.Core.Resources.ResourcesSystem))]
     public class UIInputSystem : ICustomSystem, ISystemUpdatable, ISystemDisposable
     {
         #region 单例与初始化

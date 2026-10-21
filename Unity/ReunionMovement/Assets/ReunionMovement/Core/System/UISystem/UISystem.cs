@@ -13,6 +13,7 @@ namespace ReunionMovement.Core.UI
     /// <summary>
     /// UI系统 —— UI 生命周期事件使用 R3 Subject 替代 static event
     /// </summary>
+    [ModuleOrder(90, typeof(ReunionMovement.Core.Resources.ResourcesSystem), typeof(ReunionMovement.Core.Resources.AddressableSystem), typeof(ReunionMovement.Core.Scene.SceneSystem))]
     public class UISystem : ICustomSystem, ISystemDisposable
     {
         #region 单例与初始化

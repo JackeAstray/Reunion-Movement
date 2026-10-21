@@ -14,6 +14,7 @@ namespace ReunionMovement.Core.UIToolkit
     /// UI Toolkit 系统 —— 基于 UIDocument + UXML/USS 的声明式 UI 模块。
     /// 与现有 UISystem (uGUI/Canvas) 并存，可按界面粒度混用两种 UI 方案。
     /// </summary>
+    [ModuleOrder(110, typeof(ReunionMovement.Core.Resources.ResourcesSystem))]
     public class UIToolkitSystem : ICustomSystem, ISystemDisposable
     {
         #region 单例与初始化

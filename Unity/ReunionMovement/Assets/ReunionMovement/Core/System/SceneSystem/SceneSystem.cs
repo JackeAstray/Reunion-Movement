@@ -34,6 +34,7 @@ namespace ReunionMovement.Core.Scene
     /// <summary>
     /// 场景系统 —— 使用 R3 Subject/ReactiveProperty 管理场景加载状态与进度
     /// </summary>
+    [ModuleOrder(30, typeof(ReunionMovement.Core.Resources.ResourcesSystem), typeof(ReunionMovement.Core.Resources.AddressableSystem))]
     public class SceneSystem : ICustomSystem, ISystemDisposable
     {
         #region 单例与初始化

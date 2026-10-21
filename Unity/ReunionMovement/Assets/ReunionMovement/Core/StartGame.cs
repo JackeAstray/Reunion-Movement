@@ -50,27 +50,32 @@ namespace ReunionMovement.Core
 #endif
 
         /// <summary>
-        /// 注册所有游戏模块。列表顺序决定初始化顺序（先注册的先初始化）。
-        /// ResourcesSystem 必须在最前面（其他模块依赖它加载资源）。
+        /// 注册所有游戏模块。
+        /// <para>
+        /// 初始化顺序由各模块类上的 <c>[ModuleOrder(order, DependsOn...)]</c> 决定，
+        /// 这里是"注册哪些模块"的清单，<b>不再是</b>"谁先谁后"的清单。
+        /// 启动时 <see cref="ModuleCatalog"/> 会做拓扑排序并校验（缺依赖 / 重复注册 / 成环），
+        /// 结果打印在启动日志的 "模块顺序: ..." 一行。
+        /// </para>
         /// </summary>
         public override IList<ICustomSystem> CreateModules()
         {
             var modules = new List<ICustomSystem>(14);
 
-            modules.Add(ResourcesSystem.Instance);    // 0: 资源加载（同步/兜底，最高依赖）
-            modules.Add(AddressableSystem.Instance);  // 1: Addressables（受管异步/远程）【新增】
-            modules.Add(SceneSystem.Instance);        // 2: 场景管理
-            modules.Add(EventMessageSystem.Instance); // 3: 事件总线
-            modules.Add(LanguagesSystem.Instance);    // 4: 多语言
-            modules.Add(PauseSystem.Instance);        // 5: 暂停管理（Time.timeScale 统一切换）【新增】
-            modules.Add(SoundSystem.Instance);        // 6: 音频（需要 Update 驱动淡入淡出）
-            modules.Add(TimerMgr.Instance);           // 7: 计时器（需要 Update 驱动）
-            modules.Add(UISystem.Instance);           // 8: UI 管理
-            modules.Add(UIInputSystem.Instance);      // 9: UI 输入（需要 Update 驱动导航）
-            modules.Add(UIToolkitSystem.Instance);    // 10: UI Toolkit
-            modules.Add(TerminalSystem.Instance);     // 11: 终端（需要 Update 检测按键）
-            modules.Add(NetworkMgr.Instance);         // 12: 网络通道管理（需要 Update 消费移除队列）
-            modules.Add(HttpMgr.Instance);            // 13: HTTP 请求（需要 Update 轮询进度）
+            modules.Add(ResourcesSystem.Instance);    // 10  资源加载（同步/兜底，多个模块依赖它）
+            modules.Add(AddressableSystem.Instance);  // 20  Addressables（受管异步/远程）
+            modules.Add(SceneSystem.Instance);        // 30  场景管理
+            modules.Add(EventMessageSystem.Instance); // 40  事件总线
+            modules.Add(LanguagesSystem.Instance);    // 50  多语言
+            modules.Add(PauseSystem.Instance);        // 60  暂停管理（Time.timeScale 统一切换）
+            modules.Add(SoundSystem.Instance);        // 70  音频（需要 Update 驱动淡入淡出）
+            modules.Add(TimerMgr.Instance);           // 80  计时器（需要 Update 驱动）
+            modules.Add(UISystem.Instance);           // 90  UI 管理
+            modules.Add(UIInputSystem.Instance);      // 100 UI 输入（需要 Update 驱动导航）
+            modules.Add(UIToolkitSystem.Instance);    // 110 UI Toolkit
+            modules.Add(TerminalSystem.Instance);     // 120 终端（需要 Update 检测按键）
+            modules.Add(NetworkMgr.Instance);         // 130 网络通道管理（需要 Update 消费移除队列）
+            modules.Add(HttpMgr.Instance);            // 140 HTTP 请求（需要 Update 轮询进度）
 
             return modules;
         }
