@@ -36,7 +36,7 @@
 - **ImageEx Editor**：形状/特效参数可视化编辑，含相机画面（Camera Feed）接入
 - **Shader 变体剥离器**：WebGL 构建体积优化
 - **Addressables 流水线**：一键迁移（UI/音频/图片/配置/预制体/场景/字体）→ 构建 Content → 上传 OSS（菜单：ReunionMovement → Addressables）
-- **打包工具**：一键导出 `ReunionMovement.unitypackage`（菜单：ReunionMovement → 打包）
+- **打包工具**：一键导出 `ReunionMovement.unitypackage`（菜单：ReunionMovement → 导出 unitypackage）
 - **轮播选择控制器**：`CarouselSelectionController` 线性 / 矩阵模式选择（角色 / 车辆等界面，键盘 / 手柄导航）
 
 > **框架保留工具**（暂无调用点，作为框架能力保留，请勿删除）：`VibrationUtil`、`ScreenCaptureUtil`、`AssemblyUtil`、`ColorUtil`、`EncryptUtil`、`TimeUtil`、`GachaSystem`、`Billboard`、`DeadlineMgr`。

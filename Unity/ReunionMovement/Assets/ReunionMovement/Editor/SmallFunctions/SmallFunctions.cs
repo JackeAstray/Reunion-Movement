@@ -22,7 +22,7 @@ namespace ReunionMovement.EditorTools
         /// <summary>
         /// 小功能窗口
         /// </summary>
-        [MenuItem("ReunionMovement/小功能", false, 100)]
+        [MenuItem("ReunionMovement/开发/小功能", false, 107)]
         public static void SmallFunctionsWindow()
         {
             //version = new System.Version(PlayerSettings.bundleVersion);

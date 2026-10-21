@@ -146,7 +146,7 @@ namespace ReunionMovement.EditorTools.Toolbox
                 string refreshed = lastRefreshAt == default ? "尚未检查" : "最近检查 " + lastRefreshAt.ToString("HH:mm:ss");
                 EditorGUILayout.LabelField(refreshed, EditorStyles.centeredGreyMiniLabel, GUILayout.Width(160f));
                 GUILayout.FlexibleSpace();
-                EditorGUILayout.LabelField("文档 Docs/ · 守卫 ReunionMovement/守卫 · 完整方案 Docs/重构方案.md",
+                EditorGUILayout.LabelField("文档 Docs/ · 守卫 ReunionMovement/开发/守卫 · 方案 Docs/重构方案.md",
                     EditorStyles.centeredGreyMiniLabel);
             }
         }

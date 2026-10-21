@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEditor;
 using UnityEngine;
 
@@ -20,7 +20,7 @@ namespace ReunionMovement.EditorTools.Toolbox
                         "运行 Addressables 一键流水线？",
                         "会补齐配置、迁移资源、切到 WebGL 并构建，可能启用远程 Catalog；OSS 凭据已配置时还会上传到外部服务。\n\n" +
                         "目标平台固定 WebGL。请先保存并备份项目。")),
-                    new ToolButton("导出 unitypackage", () => ExecuteMenu("ReunionMovement/打包/导出 ReunionMovement.unitypackage")));
+                    new ToolButton("导出 unitypackage", () => ExecuteMenu("ReunionMovement/导出 unitypackage")));
 
                 DrawToolRow("Addressables",
                     new ToolButton("初始化/补齐配置…", () => ExecuteMenu(
@@ -37,12 +37,12 @@ namespace ReunionMovement.EditorTools.Toolbox
                         "会生成或覆盖当前平台的构建产物。请先确认 Profile 与目标平台。")));
 
                 DrawToolRow("数据与辅助",
-                    new ToolButton("Excel → 脚本", () => ExecuteMenu("ReunionMovement/表格处理/表格 -> 脚本")),
-                    new ToolButton("Excel → JSON", () => ExecuteMenu("ReunionMovement/表格处理/表格 -> JSON")),
-                    new ToolButton("小功能", () => ExecuteMenu("ReunionMovement/小功能")));
+                    new ToolButton("Excel → 脚本", () => ExecuteMenu("ReunionMovement/内容/表格 -> 脚本")),
+                    new ToolButton("Excel → JSON", () => ExecuteMenu("ReunionMovement/内容/表格 -> JSON")),
+                    new ToolButton("小功能", () => ExecuteMenu("ReunionMovement/开发/小功能")));
 
                 DrawToolRow("窗口生成",
-                    new ToolButton("UI 窗口生成器", () => ExecuteMenu("ReunionMovement/UI工具")),
+                    new ToolButton("UI 窗口生成器", () => ExecuteMenu("ReunionMovement/内容/生成 UI 窗口")),
                     new ToolButton("模块模板", () => OpenDocumentation("02-新增一个系统.md")),
                     new ToolButton("窗口文档", () => OpenDocumentation("03-新增一个窗口.md")));
             }

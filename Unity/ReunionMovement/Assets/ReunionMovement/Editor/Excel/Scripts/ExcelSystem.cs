@@ -93,7 +93,7 @@ namespace ReunionMovement.EditorTools
         #endregion
 
         #region 表格 -> 脚本
-        [MenuItem("ReunionMovement/表格处理/表格 -> 脚本", false, 1)]
+        [MenuItem("ReunionMovement/内容/表格 -> 脚本", false, 50)]
         public static void ExcelToScripts()
         {
             List<string> xlsxFiles = GetAllConfigFiles(toDirSO);
@@ -437,7 +437,7 @@ namespace ReunionMovement
         #endregion
 
         #region 表格 -> ScriptableObject
-        [MenuItem("ReunionMovement/表格处理/表格 -> ScriptableObject", false, 2)]
+        [MenuItem("ReunionMovement/内容/表格 -> ScriptableObject", false, 51)]
         public static void ExcelToScriptableObject()
         {
             List<string> xlsxFiles = GetAllConfigFiles(toDirSO);
@@ -634,7 +634,7 @@ namespace ReunionMovement
         #endregion
 
         #region 表格 -> Json
-        [MenuItem("ReunionMovement/表格处理/表格 -> JSON", false, 3)]
+        [MenuItem("ReunionMovement/内容/表格 -> JSON", false, 52)]
         public static void ExcelToJson()
         {
             List<string> xlsxFiles = GetAllConfigFiles(toDirSO);

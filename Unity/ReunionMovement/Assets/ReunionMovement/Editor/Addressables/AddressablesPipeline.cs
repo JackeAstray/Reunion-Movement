@@ -26,7 +26,7 @@ namespace ReunionMovement.EditorTools.Addressables
         private const string ResultFile = "Build/Addressables/pipeline_result.txt";
 
         /// <summary>编辑器菜单入口（目标平台 WebGL）</summary>
-        [MenuItem("ReunionMovement/Addressables/一键流水线（迁移+构建+上传 OSS）", priority = 0)]
+        [MenuItem("ReunionMovement/Addressables/一键流水线（迁移+构建+上传 OSS）", priority = 5)]
         public static void RunPipelineMenu()
         {
             RunPipeline(BuildTarget.WebGL);
