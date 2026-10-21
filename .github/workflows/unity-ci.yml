@@ -166,3 +166,44 @@ jobs:
           check "$base/Utils/ReunionMovement.Utils.asmdef" "ReunionMovement.Utils" ReunionMovement.Core
           check "$base/Core/ReunionMovement.Core.asmdef" "ReunionMovement.Core" ReunionMovement.EditorTools ReunionMovement.Toolbox.Editor ReunionMovement.Tests
           exit $fail
+
+      - name: .Instance 使用点只减不增
+        run: |
+          set -euo pipefail
+          cd Unity/ReunionMovement
+          baseline="Assets/ReunionMovement/Editor/Toolbox/Guards/instance-usage-baseline.txt"
+          fail=0
+          while read -r name limit; do
+            case "$name" in ''|\#*) continue ;; esac
+            actual=$(grep -rho --include='*.cs' --exclude-dir=Plugins --exclude-dir=3rd \
+                       --exclude-dir=GenerateScript --exclude-dir=Examples --exclude-dir=Samples \
+                       "\\b${name}\\.Instance\\b" Assets/ReunionMovement 2>/dev/null | wc -l | tr -d ' \r')
+            if [ -z "$actual" ] || [ -z "$limit" ]; then
+              echo "::error::基线行解析失败：name=[$name] actual=[$actual] limit=[$limit]"
+              fail=1
+              continue
+            fi
+            if [ "$actual" -gt "$limit" ]; then
+              echo "::error::$name.Instance 有 $actual 处，超过基线 $limit 处（运行时请改用 Modules.Get<T>()）"
+              fail=1
+            elif [ "$actual" -lt "$limit" ]; then
+              echo "::notice::$name.Instance 已降到 $actual 处（基线 $limit），可下调基线条目"
+            fi
+          done < <(tr -d '\r' < "$baseline")
+          exit $fail
+
+      - name: ICustomSystem 必须声明 ModuleOrder
+        run: |
+          set -euo pipefail
+          cd Unity/ReunionMovement
+          fail=0
+          while IFS= read -r f; do
+            case "$f" in */Tests/*|*/Editor/*|*ModuleOrderAttribute.cs) continue ;; esac
+            if perl -0777 -ne 'exit(/class\s+\w+\s*:\s*[^{]{0,400}?ICustomSystem/s ? 0 : 1)' "$f"; then
+              if ! grep -q '\[ModuleOrder(' "$f"; then
+                echo "::error file=$f::实现 ICustomSystem 却没有 [ModuleOrder]，初始化顺序会退化成书写顺序"
+                fail=1
+              fi
+            fi
+          done < <(find Assets/ReunionMovement -name '*.cs' -type f)
+          exit $fail

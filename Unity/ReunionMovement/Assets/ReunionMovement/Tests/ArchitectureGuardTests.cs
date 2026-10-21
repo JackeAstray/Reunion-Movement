@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 using ReunionMovement.Editor.Guards;
 
 namespace ReunionMovement.Tests
@@ -24,6 +24,24 @@ namespace ReunionMovement.Tests
             Assert.IsTrue(
                 ArchitectureGuard.CheckMetaFiles(),
                 "存在缺少 .meta 的源文件。移动/新建文件时必须连同 .meta 一起提交，否则引用会断。");
+        }
+
+        [Test]
+        public void InstanceUsage_DoesNotGrow()
+        {
+            Assert.IsTrue(
+                ArchitectureGuard.CheckInstanceUsage(),
+                "新增了 XxxSystem.Instance 调用点。运行时请改用 Modules.Get<T>()，"
+                + "编辑器/测试里才用 Instance（它不依赖引擎是否启动）。");
+        }
+
+        [Test]
+        public void EveryCustomSystem_DeclaresModuleOrder()
+        {
+            Assert.IsTrue(
+                ArchitectureGuard.CheckModuleOrder(),
+                "有 ICustomSystem 实现没写 [ModuleOrder]。没有它，初始化顺序就取决于 CreateModules() 里的书写位置，"
+                + "加一行就可能悄悄改变启动顺序。");
         }
 
         [Test]

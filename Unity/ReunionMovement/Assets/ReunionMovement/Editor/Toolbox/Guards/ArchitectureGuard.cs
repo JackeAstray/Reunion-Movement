@@ -28,6 +28,9 @@ namespace ReunionMovement.Editor.Guards
         /// <summary>行数基线文件：记录历史遗留的超大文件，只允许变小。</summary>
         private const string BaselinePath = "Assets/ReunionMovement/Editor/Toolbox/Guards/file-size-baseline.txt";
 
+        /// <summary>.Instance 使用点基线：记录每个系统的现有调用数，只允许变少。</summary>
+        private const string InstanceBaselinePath = "Assets/ReunionMovement/Editor/Toolbox/Guards/instance-usage-baseline.txt";
+
         /// <summary>第三方、生成代码与示例不参与行数检查。</summary>
         private static readonly string[] ExcludedSegments =
         {
@@ -74,7 +77,9 @@ namespace ReunionMovement.Editor.Guards
             bool sizes = CheckFileSizes();
             bool metas = CheckMetaFiles();
             bool layers = CheckAssemblyLayers();
-            bool ok = sizes && metas && layers;
+            bool instances = CheckInstanceUsage();
+            bool orders = CheckModuleOrder();
+            bool ok = sizes && metas && layers && instances && orders;
 
             if (ok)
             {
@@ -247,6 +252,131 @@ namespace ReunionMovement.Editor.Guards
             return false;
         }
 
+        /// <summary>
+        /// 检查项 4：<c>XxxSystem.Instance</c> 使用点棘轮。
+        /// <para>
+        /// 项目里同时存在"单例直取"和"<c>Modules.Get&lt;T&gt;()</c> 统一访问"两套方式，
+        /// 是新人最容易绕晕的地方。历史量先冻结，新增调用点立即失败——只减不增。
+        /// </para>
+        /// </summary>
+        public static bool CheckInstanceUsage()
+        {
+            Dictionary<string, int> baseline = LoadCountBaseline(InstanceBaselinePath);
+            if (baseline.Count == 0)
+            {
+                Debug.Log("[架构守卫] 未找到 .Instance 基线，跳过该检查");
+                return true;
+            }
+
+            var offenders = new List<string>();
+            var reduced = new List<string>();
+            string[] files = GetCheckedSourceFiles();
+
+            foreach (KeyValuePair<string, int> pair in baseline)
+            {
+                string pattern = $@"\b{Regex.Escape(pair.Key)}\.Instance\b";
+                int count = 0;
+                foreach (string file in files)
+                {
+                    count += Regex.Matches(File.ReadAllText(file), pattern).Count;
+                }
+
+                if (count > pair.Value) offenders.Add($"{pair.Key}.Instance：{count} 处，超过基线 {pair.Value} 处");
+                else if (count < pair.Value) reduced.Add($"{pair.Key}.Instance：{count} 处（基线 {pair.Value}，可下调）");
+            }
+
+            foreach (string r in reduced) Debug.Log($"[架构守卫] 可收紧基线：{r}");
+
+            if (offenders.Count == 0)
+            {
+                Debug.Log($"[架构守卫] .Instance 使用点检查通过（{baseline.Count} 个系统，基线总计 {SumBaseline(baseline)} 处）");
+                return true;
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine("[架构守卫] 新增了 .Instance 调用点（应改用 Modules.Get<T>()）：");
+            foreach (string o in offenders) sb.AppendLine("  " + o);
+            Debug.LogError(sb.ToString());
+            return false;
+        }
+
+        /// <summary>
+        /// 检查项 5：每个 <c>ICustomSystem</c> 实现都必须声明 <c>[ModuleOrder]</c>。
+        /// <para>
+        /// 没有顺序声明的模块只能靠 <c>CreateModules()</c> 里的书写位置决定初始化次序，
+        /// 加一行就会悄悄改变启动顺序——阶段 2 的契约要靠这条规则守住。
+        /// </para>
+        /// </summary>
+        public static bool CheckModuleOrder()
+        {
+            var missing = new List<string>();
+            var declaration = new Regex(@"class\s+\w+\s*:\s*[^{]{0,400}?\bICustomSystem\b", RegexOptions.Singleline);
+
+            foreach (string path in GetCheckedSourceFiles())
+            {
+                if (path.IndexOf("/Tests/", StringComparison.Ordinal) >= 0) continue;
+                if (path.IndexOf("/Editor/", StringComparison.Ordinal) >= 0) continue;
+                if (path.EndsWith("ModuleOrderAttribute.cs", StringComparison.Ordinal)) continue;
+
+                string text = File.ReadAllText(path);
+                if (!declaration.IsMatch(text)) continue;
+                if (text.IndexOf("[ModuleOrder(", StringComparison.Ordinal) < 0)
+                {
+                    missing.Add(path);
+                }
+            }
+
+            if (missing.Count == 0)
+            {
+                Debug.Log("[架构守卫] 模块顺序声明检查通过");
+                return true;
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"[架构守卫] {missing.Count} 个 ICustomSystem 实现缺少 [ModuleOrder]：");
+            foreach (string m in missing) sb.AppendLine("  " + m);
+            Debug.LogError(sb.ToString());
+            return false;
+        }
+
+        /// <summary>读取"名字 → 次数"形式的基线。</summary>
+        private static Dictionary<string, int> LoadCountBaseline(string path)
+        {
+            var result = new Dictionary<string, int>(StringComparer.Ordinal);
+            if (!File.Exists(path)) return result;
+
+            foreach (string raw in File.ReadAllLines(path))
+            {
+                string line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith("#", StringComparison.Ordinal)) continue;
+
+                string[] parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length < 2) continue;
+                if (!int.TryParse(parts[1], out int count)) continue;
+                result[parts[0]] = count;
+            }
+            return result;
+        }
+
+        private static int SumBaseline(Dictionary<string, int> baseline)
+        {
+            int sum = 0;
+            foreach (int v in baseline.Values) sum += v;
+            return sum;
+        }
+
+        /// <summary>按守卫的根目录与排除规则列出参与检查的源文件。</summary>
+        private static string[] GetCheckedSourceFiles()
+        {
+            var list = new List<string>();
+            foreach (string path in EnumerateSources("*.cs"))
+            {
+                if (IsExcluded(path)) continue;
+                list.Add(path);
+            }
+            return list.ToArray();
+        }
+
         /// <summary>把 GUID 形式的 asmdef 引用还原成程序集名。</summary>
         private static string ResolveAssemblyNameByGuid(string guid)
         {
@@ -291,8 +421,9 @@ namespace ReunionMovement.Editor.Guards
         [Serializable]
         private class AsmdefData
         {
-            public string name;
-            public string[] references;
+            // JsonUtility 通过反射赋值，编译器看不到，故显式初始化以消除 CS0649
+            public string name = string.Empty;
+            public string[] references = Array.Empty<string>();
         }
     }
 }
