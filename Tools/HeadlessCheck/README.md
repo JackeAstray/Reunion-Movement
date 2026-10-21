@@ -33,27 +33,43 @@ dotnet run --project Tools/HeadlessCheck
 |---|---|---|
 | `Modules` 访问器（引擎未启动） | ✅ | `All` 为空、`TryGet` 返回 false、`Get` 抛 `InvalidOperationException` 且信息里带类型名 |
 | `BootstrapOptions.IsTestScene` | ✅ | 前缀命中、关键字命中、正常场景不误判、空串不误判 |
-| `ModuleCatalog` 排序与校验 | ⏭ | 见下 |
+| `ModuleCatalog` 排序与校验（5 条） | ✅ | 用 Reflection.Emit 造假模块，见下 |
 | `GameEntryResolver` 入口解析 | ⏭ | 见下 |
 
 ### 为什么模块排序验不了
 
 `ModuleCatalog.TryBuild` 需要**真实的模块实例**，而 14 个模块里多数继承自 `SingletonMgr<T> : MonoBehaviour`，
 拿到 `Instance` 就等于 `new GameObject()` + `AddComponent` —— 这是 Unity 原生调用，纯 .NET 进程里必然抛
-`SecurityException`。所以这几个用例会被标成 `[SKIP]` 而不是 `[FAIL]`：
+`SecurityException`。
 
-```
-[SKIP] 模块顺序（声明顺序 == 属性顺序）
-       该路径会触到 Unity 原生调用（SecurityException），只能在 Unity 里跑
-```
+解决办法不是跳过，而是**造假模块**：`ModuleCatalog` 只关心 `ICustomSystem` 和 `[ModuleOrder]` 两件事，
+所以用 `Reflection.Emit` 在内存里造几个只实现接口 + 打上特性的最小类型就够了（见 `FakeModuleFactory.cs`）。
 
-模块排序的覆盖由 Unity Test Runner 里的 `Tests/ModuleCatalogTests.cs`（9 个用例）负责。
+这样排序与校验逻辑都能真跑：
+
+| 检查 | 验证的行为 |
+|---|---|
+| 按 `ModuleOrder` 升序 | 声明 30/10/20 → 排成 10/20/30 |
+| 声明顺序不影响结果 | 打乱 5 个模块的声明顺序 → 结果不变 |
+| 依赖优先于序号 | B(10) 依赖 A(20) → 输出仍是 A 在前 |
+| 重复注册 | 同一实例注册两次 → 返回 false，错误信息含"重复" |
+| 缺少依赖 | 依赖的模块没注册 → 返回 false，错误信息含"未注册" |
 
 > 顺带记一条设计观察：模块单例在构造期就触碰 Unity（`GameObject`、`Resources.Load`），
-> 这让"纯逻辑可测"变成不可能。想彻底解决，得让模块构造保持无副作用（依赖在 `Init()` 里才取），
+> 这让"直接测真实模块"变成不可能。想彻底解决，得让模块构造保持无副作用（依赖在 `Init()` 里才取），
 > 那是阶段 3 之后可以做的事。
 
-### `GameEntryResolver` 为什么也跳过
+### 造不出来的那个用例：依赖成环
+
+"环"需要两个类型互相引用，而 `Reflection.Emit` 做不到：
+
+- 先 `CreateType()` 的 A 在特性里引用还没落地的 B，特性 blob 里存的是 B 的 `TypeBuilder`
+- 等 B 落地后再读 A 的特性，拿到的 B 与 `CreateType()` 出来的 B **不是同一个 Type 标识**
+- 于是 `ModuleCatalog` 认为"A 依赖的 B 没注册"，报的是缺依赖而不是环
+
+所以这条留给 Unity 的 `Tests/ModuleCatalogTests.cs`（它用真实的嵌套私有类，没有这个问题）。
+
+### `GameEntryResolver` 为什么跳过
 
 它要遍历程序集上的 `ReunionGameEntryAttribute`，一旦 `typeof(StartGame)` 被实体化，
 `StartGame` 的静态构造会去读 `Config`（`Resources.Load`）→ 同样撞上 Unity 原生调用。
