@@ -8,6 +8,7 @@ namespace ReunionMovement.Common.Util
     /// <summary>
     /// 网络通道管理器 —— 同时作为 MonoBehaviour 单例和 GameEngine 模块（ISystemUpdatable 驱动移除队列消费）。
     /// </summary>
+    [ModuleOrder(130)]
     public sealed class NetworkMgr : SingletonMgr<NetworkMgr>, ICustomSystem, ISystemUpdatable
     {
         /// <summary>网络通道（KCP/Telepathy 的线程与连接）跨场景保持，避免切场景断开连接</summary>

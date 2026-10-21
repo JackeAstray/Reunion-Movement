@@ -19,8 +19,14 @@
 `Bootstrap.Disable()` + `Bootstrap.StartAsync(new MyGameEntry())`。
 测试场景判定、启动超时等配置在 `BootstrapOptions`（`Bootstrap.Options`）。
 
+**启动顺序相关**：
+
+- `ModuleCatalog.cs` —— 读各模块上的 `[ModuleOrder(order, DependsOn...)]`，做稳定拓扑排序 + 校验（缺依赖 / 重复注册 / 成环），失败只写日志不中断。
+- `Modules.cs` —— 统一访问入口：`Modules.Get<T>()` 只返回真正注册过的模块，取不到时异常里列出已注册清单。
+- `Base/IGamePauseHandler.cs` —— 引擎按接口找暂停实现者，不直接引用 `PauseSystem`。
+
 **命名空间**：`ReunionMovement.Core.*`
 
-**依赖方向**：`Core → Utils → Common`。**不要**让 `Utils` 反向引用 `Core`（会形成程序集环；`Core/Base/ModuleRuntime.cs` 就是为此而生的补丁）。
+**依赖方向**：`Core → Utils → Common`。**不要**让 `Utils` 反向引用 `Core`（会形成程序集环；`Core/Base/ModuleRuntime.cs` 就是为此而生的补丁，尚未移除）。
 
-**新增一个系统**：参考 `Documentation/CustomSystem.cs.txt`，放到 `Core/System/<你的系统>/`，然后在 `StartGame.CreateModules()` 注册。
+**新增一个系统**：参考 `Documentation/CustomSystem.cs.txt`，放到 `Core/System/<你的系统>/`，加上 `[ModuleOrder(排序值, 依赖...)]`，然后在 `StartGame.CreateModules()` 注册。

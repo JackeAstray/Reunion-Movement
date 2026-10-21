@@ -13,6 +13,7 @@ namespace ReunionMovement.Common.Util.HttpService
     /// <summary>
     /// HTTP管理器 —— 同时作为 MonoBehaviour 单例和 GameEngine 模块（ISystemUpdatable 驱动进度轮询）。
     /// </summary>
+    [ModuleOrder(140)]
     public class HttpMgr : SingletonMgr<HttpMgr>, ICustomSystem, ISystemUpdatable
     {
         /// <summary>HTTP 请求可能在切场景期间仍在途，保持跨场景存活</summary>

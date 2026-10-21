@@ -15,6 +15,7 @@ namespace ReunionMovement.Core.Sound
     /// <summary>
     /// 声音系统
     /// </summary>
+    [ModuleOrder(70, typeof(ReunionMovement.Core.Resources.ResourcesSystem), typeof(ReunionMovement.Core.Resources.AddressableSystem))]
     public class SoundSystem : ICustomSystem, ISystemUpdatable, ISystemDisposable
     {
         #region 单例与初始化

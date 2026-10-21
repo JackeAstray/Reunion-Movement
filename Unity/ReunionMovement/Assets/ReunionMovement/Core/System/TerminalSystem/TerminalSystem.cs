@@ -8,6 +8,7 @@ using UnityEngine.InputSystem;
 
 namespace ReunionMovement.Core.Terminal
 {
+    [ModuleOrder(120, typeof(ReunionMovement.Core.UI.UISystem))]
     public class TerminalSystem : ICustomSystem, ISystemUpdatable, ISystemDisposable
     {
         #region 单例与初始化

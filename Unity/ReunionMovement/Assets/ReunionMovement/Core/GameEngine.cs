@@ -1,6 +1,5 @@
-﻿using ReunionMovement.Common;
+using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
-using ReunionMovement.Core.Pause;
 using Cysharp.Threading.Tasks;
 using R3;
 using System;
@@ -64,6 +63,20 @@ namespace ReunionMovement.Core
         /// <summary>已注册的游戏模块（只读）</summary>
         public IList<ICustomSystem> Modules => modules;
         private IList<ICustomSystem> modules;
+
+        /// <summary>
+        /// 在已注册模块中查找第一个 <typeparamref name="T"/> 的实现（类型或接口），不存在时返回 null。
+        /// 引擎层用它按接口取能力，避免直接引用具体模块类型。
+        /// </summary>
+        private T FindModule<T>() where T : class
+        {
+            if (modules == null) return null;
+            for (int i = 0; i < modules.Count; i++)
+            {
+                if (modules[i] is T match) return match;
+            }
+            return null;
+        }
 
         /// <summary>需要每帧 Update 的模块（预过滤，避免空调用）</summary>
         private readonly List<ISystemUpdatable> updatableModules = new List<ISystemUpdatable>();
@@ -295,7 +308,19 @@ namespace ReunionMovement.Core
             }
 
             GameEntry = entry;
-            modules = moduleList;
+
+            // 模块顺序：优先按 [ModuleOrder] 声明的依赖与序号排序；
+            // 校验失败（缺依赖 / 重复注册 / 成环）沿用注册顺序，保证不比改造前更差，同时把问题写进启动日志。
+            if (ModuleCatalog.TryBuild(moduleList, out var orderedModules, out var catalogErrors))
+            {
+                modules = orderedModules;
+                Log.Debug("[GameEngine] 模块顺序: {0}", ModuleCatalog.Describe(modules));
+            }
+            else
+            {
+                Log.Warning("[GameEngine] 模块顺序校验未通过，沿用注册顺序: {0}", catalogErrors);
+                modules = moduleList;
+            }
 
             // 失败重试时清空上次已注册的更新模块，避免重复添加导致模块每帧被 Update/LateUpdate 多次
             updatableModules.Clear();
@@ -700,13 +725,12 @@ namespace ReunionMovement.Core
             {
                 if (GameOption.CurrentOption.autoPause)
                 {
-                    // 与 PauseSystem 的音频暂停状态协调：游戏级暂停（PauseSystem 已静音）期间
-                    // 切后台再回前台，不能无条件恢复音频 —— 最终状态 = 应用级暂停 || 游戏级暂停。
+                    // 与游戏级暂停的音频状态协调：游戏级暂停（已静音）期间切后台再回前台，
+                    // 不能无条件恢复音频 —— 最终状态 = 应用级暂停 || 游戏级暂停。
                     // （反之 PauseSystem.ApplyPausedState 恢复时已用 IsApplicationPaused && autoPause 还原本状态，
                     //   本处补上另一半对称逻辑，避免两套系统互相覆盖。）
-                    bool pausedByGame = PauseSystem.Instance != null
-                        && PauseSystem.Instance.IsPaused != null
-                        && PauseSystem.Instance.IsPaused.Value;
+                    // 引擎不直接引用 PauseSystem：只向已注册模块找 IGamePauseHandler 实现者。
+                    bool pausedByGame = FindModule<IGamePauseHandler>()?.IsPaused == true;
                     AudioListener.pause = pause || pausedByGame;
                 }
             }
@@ -735,14 +759,14 @@ namespace ReunionMovement.Core
             State = paused ? EngineState.Paused : EngineState.Running;
             Log.Debug("[GameEngine] 引擎{0}", paused ? "已暂停" : "已恢复");
 
-            // 委托 PauseSystem 执行 timeScale/音频暂停（未注册为模块时降级为仅状态切换）
+            // 委托暂停执行者处理 timeScale/音频（未注册实现者时降级为仅状态切换）
             try
             {
-                PauseSystem.Instance.SetPaused(paused);
+                FindModule<IGamePauseHandler>()?.SetPaused(paused);
             }
             catch (Exception ex)
             {
-                Log.Error("[GameEngine] PauseSystem 暂停执行异常: {0}", ex.Message);
+                Log.Error("[GameEngine] GamePauseHandler 暂停执行异常: {0}", ex.Message);
             }
         }
 
