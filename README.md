@@ -1,15 +1,52 @@
 # Reunion-Movement 整合运动
-Unity Game Framework | Unity游戏框架
 
-**Unity Version** : 6000.3.10f1（Unity 6 / URP 17.3）<br>
+Unity 游戏框架 —— 纯 C# 生命周期、模块化系统、四传输网络层、Addressables 热更、SDF 形状 UI。
 
-> 说明：此项目是重构的 LLAFramework，由于 LLAFramework 有太多多余代码，所以从零开始重构本项目。
+**Unity**：6000.3.10f1（Unity 6 / URP 17.3）<br>
+**定位**：重构版 LLAFramework。去掉历史包袱后从零搭建，保留经过验证的能力。
 
-## 环境与依赖
-- 必须开启：**TextMesh Pro**、**New Input System**（Project Settings → Player → Active Input Handling 需包含 Input System Package）。
-- 低版本兼容：低于 2022.3 的版本在示例中 TextMesh Pro 可能报错，需要重新生成 Font Asset（报错不影响框架逻辑）；更低版本（如 2019）可能需要手动解决少量语法差异。
+---
 
-### 主要依赖（Packages / Plugins）
+## 快速开始
+
+1. 用 Unity Hub 打开 `Unity/ReunionMovement`。
+2. 等首次导入完成（Package 解析 + 编译，Console 无红色报错）。
+3. 打开场景 `Assets/ReunionMovement/Scenes/StartGame.unity`。
+4. 按 Play。`Bootstrap` 会自动创建引擎、初始化 14 个模块、加载 `Temp` 场景并打开启动界面。
+5. 想单独看某个功能：打开 `Assets/ReunionMovement/Scenes/Example/` 下对应场景再 Play（场景名命中测试规则时会跳过自动跳转）。
+
+> 更细的步骤、地址见 [Docs/00-快速开始.md](Docs/00-快速开始.md)。
+> 包内还有一份随框架分发的简明指南：`Assets/ReunionMovement/Documentation/ReunionMovement 使用指南.md`。
+
+## 目录地图
+
+```
+Assets/ReunionMovement/
+├── Common/      最底层：日志、配置、枚举、单例基类        （无 asmdef 依赖）
+├── Core/        引擎与系统：Bootstrap、GameEngine、System/*  ← 从这里开始读
+├── Utils/       运行时系统 + 通用工具 + 可复用 UI 组件
+├── UI/          项目自带的界面逻辑（示例 / 业务混合）
+├── Editor/      编辑器工具：导表、打包、Addressables 流水线、工具箱
+├── Plugins/     第三方：UniTask、R3、DOTween、ZString、kcp2k、Telepathy、SimpleWebTransport
+├── 3rd/         外部素材与插件：Joystick Pack、WebGLSupport、Animated Loading Icons
+├── Scenes/      启动 / 加载 / 业务场景 + Example 示例场景
+├── Resources/   运行时资源（材质、预制体、音频、着色器、UI）
+└── GenerateScript/  代码生成产物（UI 面板、配置数据）
+```
+
+每个代码目录下都有一份 `README.md`，写明"放什么 / 不放什么"。
+
+## 架构与重构
+
+| 文档 | 内容 |
+|---|---|
+| [Docs/00-快速开始.md](Docs/00-快速开始.md) | 10 分钟跑起来，第一个改动 |
+| [Docs/01-架构总览.md](Docs/01-架构总览.md) | 分层、启动时序、模块表 |
+| [Docs/重构方案.md](Docs/重构方案.md) | 现状体检、问题清单、六阶段改造计划 |
+| [Docs/features.md](Docs/features.md) | 完整特性清单与示例 GIF |
+
+## 依赖
+
 | 依赖 | 版本 | 用途 |
 |---|---|---|
 | com.unity.inputsystem | 1.18.0 | 新输入系统（键盘 / 手柄 / UI 导航） |
@@ -22,187 +59,25 @@ Unity Game Framework | Unity游戏框架
 | DOTween | Plugins | 补间动画 |
 | kcp2k / Telepathy / SimpleWebTransport | Plugins | KCP / TCP / WebSocket 网络传输 |
 
+**必开**：TextMesh Pro、New Input System（Project Settings → Player → Active Input Handling 需包含 Input System Package）。
+
+**低版本兼容**：低于 2022.3 的版本在示例中 TextMesh Pro 可能报错，需重新生成 Font Asset（不影响框架逻辑）；更低版本（如 2019）可能需要手动解决少量语法差异。
+
 ## 特性
-- **零分配日志**：ZString 池化缓冲 + `[Conditional]` 条件编译，日志格式化零 GC。
-- **响应式事件总线**：R3 Subject 驱动的 `EventMessageSystem`，含泛型零装箱通道。
-- **统一生命周期引擎**：纯 C# `GameEngine` + `GameEngineDriver` 桥接，模块化 `ICustomSystem`，`[RuntimeInitializeOnLoadMethod]` 自动启动。
-- **四传输网络层**：TCP(Telepathy) / KCP(kcp2k) / WebSocket(SimpleWebTransport) / RawTcp(原生 Socket) 统一 `INetworkChannel` 抽象，可插拔帧编解码器（MessageId / LengthPrefixed / Passthrough）+ 压缩 + 加密（Encrypt-then-MAC）+ 心跳、自动重连、断线可靠消息重发、RPC 请求/响应。
-- **断点续传下载**：HTTP 分块下载（>2GB 支持）、MD5 校验、多线程并发调度、超时兜底、暂停 / 恢复。
-- **热更完整性保护**：Remote 模式强制 `https://`（拒绝明文 http）；首次远程 Catalog 与内嵌 `version.json` 锚点（catalogHash）核对，防中间人替换热更内容；单文件下载按 Content-Length 校验完整性。
-- **SDF 形状 UI**：`ImageEx` 基于 SDF 着色器实现 12 种形状（四边形 / 心形 / 六边形 / 星形 / 圆角等）+ 渐变 / 模糊 / 描边 / 过渡特效；`ImageExReplica`（相机画面投影）、`ImageExTweener`（参数动画）。
-- **循环滚动列表**：`LoopScrollRect` 对象池 + 虚拟化 + 数据索引缓存，滚动零 GC、选中状态零 GetComponent。
-- **UI Toolkit 面板系统**：`UIToolkitSystem` 异步加载 UXML/USS，面板栈管理。
-- **WebGL 体积优化**：ImageEx Shader 变体剥离器（过渡 / 模糊 / 描边组合裁剪）。
-- **崩溃日志上报**：`ErrorReporter` 全局错误捕获（Error/Exception/Assert）+ 本地落盘（1MB 轮转）+ 同类错误聚合 + 可选 HTTP 上报。
-- **通用存档**：`SaveSystem` JSON 原子写入存档（版本字段 + 自动迁移）。
-- **性能监控**：`PerformanceMonitor` 每秒 FPS/托管内存采样 + 防抖告警。
-- **网络消息协议**：`NetworkMessageCodec` / `NetworkMessageDispatcher` 消息 ID 编解码与分发（异常隔离）。
-- **热更状态机**：`AddressableUpdateFlow` 检查→下载→应用流程（R3 可观测，UI 可直接绑定）。
-- **Addressables 统一封装**：`AddressableSystem` 加载 / 实例化 / 场景 / 释放 / 双轨降级 / 远程更新；一键流水线（迁移→构建 Content→上传 OSS）。
-- **并发去重加载**：`SingleFlightLoader` 同 key 并发请求合并为一次（UI / 音频 / 面板接入）。
-- **暂停系统**：`PauseSystem` 统一暂停 / 恢复（多原因互斥 + R3 可观测 + 全局音频协调，兼容慢动作）。
-- **通用对象池**：`GameObjectPool` + `IPoolable` 生命周期 + 注册表管理。
-- **轮播式选择**：`CarouselSelectionController` 线性 / 矩阵模式导航（键盘 / 手柄），支持不规则行与空位。
 
-## 工具：<a name="Tool"></a>
-- **表格工具**：Excel → 脚本 / ScriptableObject / JSON（批量生成，支持自定义数组类型）
-- **碰撞器工具**：编辑模式 Gizmo 可视化显示碰撞器
-- **文件夹工具**：项目内快速打开/定位文件夹
-- **UI 工具**：CreateUIPlane 一键生成 UI 面板脚本（含覆盖保护）
-- **小功能窗口**：场景切换 / 屏幕日志 / FPS / UI 波纹（全部支持 Undo）
-- **ImageEx**：SDF 形状图片 + 渐变/模糊/描边/过渡特效
-- **ImageEx Editor**：形状/特效参数可视化编辑，含相机画面（Camera Feed）接入
-- **Shader 变体剥离器**：WebGL 构建体积优化
-- **Addressables 流水线**：一键迁移（UI/音频/图片/配置/预制体/场景/字体）→ 构建 Content → 上传 OSS（菜单：ReunionMovement → Addressables）
-- **打包工具**：一键导出 `ReunionMovement.unitypackage`（菜单：ReunionMovement → 打包）
-- **轮播选择控制器**：`CarouselSelectionController` 线性 / 矩阵模式选择（角色 / 车辆等界面，键盘 / 手柄导航）
+零分配日志、响应式事件总线、统一生命周期引擎、四传输网络层、断点续传、热更完整性保护、SDF 形状 UI、循环滚动列表、UI Toolkit 面板、WebGL 体积优化、崩溃上报、通用存档、性能监控、对象池、暂停系统、轮播选择……
 
-> **框架保留工具**（暂无调用点，作为框架能力保留，请勿删除）：`VibrationUtil`、`ScreenCaptureUtil`、`AssemblyUtil`、`ColorUtil`、`EncryptUtil`、`TimeUtil`、`GachaSystem`、`Billboard`、`DeadlineMgr`。
+完整清单见 [Docs/features.md](Docs/features.md)。
 
-## 功能（系统）：<a name="Function"></a>
-| 系统 | 说明 |
-|---|---|
-| `GameEngine` / `Bootstrap` | 纯 C# 引擎生命周期，自动启动，测试场景自动跳过场景跳转 |
-| `EventMessageSystem` | 响应式事件总线（R3 Subject + 泛型零装箱） |
-| `LanguagesSystem` | 多语言本地化（TextMeshPro 自动翻译） |
-| `ResourcesSystem` | Resources 加载 + 引用计数缓存 + 图集 |
-| `AddressableSystem` | Addressables 统一封装（加载 / 实例化 / 场景 / 释放 / 双轨降级 / 远程更新） |
-| `SingleFlightLoader` | 并发去重加载（同 key 请求合并为一次） |
-| `PauseSystem` | 统一暂停 / 恢复（多原因互斥 + R3 可观测 + 全局音频协调） |
-| `SceneSystem` | 场景加载（进度 / 过渡场景 / 并发锁 / 状态恢复 / 取消令牌） |
-| `SoundSystem` | 音乐/音效（LRU 缓存 / 淡入淡出 / 对象池 / 并发去重加载 / 双轨加载） |
-| `UISystem` | uGUI 窗口管理（加载 / 打开 / 关闭 / 层级 / 静态 UI / 超时） |
-| `UIToolkitSystem` | UI Toolkit 面板管理（异步加载 / 面板栈） |
-| `UIInputSystem` | 输入模式切换（Gameplay ↔ UIControl）、键盘/手柄 UI 导航、焦点栈 |
-| `TerminalSystem` | 运行时控制台（`[RegisterCommand]` 源码生成器注册） |
-| `NetworkMgr` | 多通道网络管理（TCP / KCP / WebSocket / RawTcp，跨场景持久） |
-| `DownloadMgr` | 多文件断点下载 / 图片下载（暂停 / 恢复） |
-| `HttpMgr` | HTTP 请求封装（GET / POST / 进度 / 取消） |
-| `TimerMgr` | 计时器 / 倒计时 |
-| `StateMachine` | 泛型状态机（并行状态 / 超时 / 历史回退 / 序列化快照） |
-| `GachaSystem` | 加密随机抽卡系统（无可预测性 / 保底持久化 + 完整性校验） |
-| `GameObjectPool` | 通用对象池（IPoolable 生命周期 / 注册表） |
-| `ResolutionMgr` | 屏幕分辨率 / 全屏 / 帧率（仅桌面平台；移动端分辨率由系统控制，不会调用 `Screen.SetResolution`） |
-| `SafeArea` | 刘海屏安全区适配 |
-| `ScreenLogger` | 屏幕日志显示 |
-| `DeadlineMgr` | 截止日期检测 |
-| `ErrorReporter` | 全局错误捕获 / 日志落盘（轮转 + 聚合）/ 可选上报 |
-| `SaveSystem` | 通用 JSON 存档（原子写入 + AES+HMAC 加密完整性 + 版本迁移） |
-| `PerformanceMonitor` | FPS / 内存采样与防抖告警 |
-| `NetworkMessage` | 消息 ID 编解码 + 分发器（协议层） |
-| `AddressableUpdateFlow` | Addressables 热更状态机（检查→下载→应用） |
+## 感谢
 
-## 示例：<a name="Example"></a>
-项目的例子在 Assets -> ReunionMovement -> Scenes -> Example 中<br>
-<img src="Images/示例路径.png" alt="示例" width="280"/>
+感谢 [Shadertoy](https://www.shadertoy.com/) 上的作者所做的贡献，以及以下开源项目：
 
-Arrow Example：<br>
-展示箭头 <br>
-<img src="Images/arrow-example-loop-min.gif" alt="arrow-example-min" width="520"/>
+- [mob-sakai/UIEffect](https://github.com/mob-sakai/UIEffect)
+- [scanfing/HttpFileServer](https://github.com/scanfing/HttpFileServer)
+- [Cysharp/UniTask](https://github.com/Cysharp/UniTask)
+- [Cysharp/R3](https://github.com/Cysharp/R3)
 
-Button Example：<br>
-展示Button <br>
-<img src="Images/button-example-loop-min.gif" alt="button-example-min" width="520"/>
+## 许可
 
-Camera Billboard Example：<br>
-展示摄像机（Billboard 跟随 + Camera Feed 相机画面）<br>
-<img src="Images/camera-example-loop-min.gif" alt="camera-example-min" width="520"/>
-
-ColliderGizmo Example：<br>
-展示编辑模式显示碰撞器工具<br>
-<img src="Images/colliderGizmo-example-loop-min.gif" alt="colliderGizmo-example-min" width="520"/>
-
-Command Example：<br>
-展示Command工具，该场景演示了如何实 Undo / Redo <br>
-<img src="Images/command-example-loop-min.gif" alt="command-example-min" width="520"/>
-
-Deadline Example：<br>
-展示Deadline工具，该工具用于截止日期检测 <br>
-<img src="Images/deadline-example-loop-min.gif" alt="deadline-example-min" width="520"/>
-<img src="Images/deadline-example2-loop-min.gif" alt="deadline-example2-min" width="520"/>
-
-Download Example：<br>
-展示下载<br>
-<img src="Images/download-example-loop-min.gif" alt="download-example-min" width="520"/>
-
-LoopScrollRect Example：<br>
-展示循环列表<br>
-<img src="Images/循环列表.png" alt="循环列表" width="520"/>
-
-Music Example：<br>
-展示音乐播放<br>
-<img src="Images/音乐示例.png" alt="音乐示例" width="520"/>
-
-Raycast Example：<br>
-展示射线例子<br>
-<img src="Images/raycast-example-loop-min.gif" alt="raycast-example-min" width="520"/>
-
-ScreenResolution Example：<br>
-展示屏幕分辨率工具<br>
-<img src="Images/screenResolution-example-loop-min.gif" alt="screenResolution-example-min" width="520"/>
-
-StateMachine Example：<br>
-展示状态机的使用<br>
-<img src="Images/状态机1.png" alt="状态机1" width="520"/>
-<img src="Images/状态机2.png" alt="状态机2" width="520"/>
-
-Timer Example：<br>
-展示计时和倒计时的使用<br>
-<img src="Images/timer-example-loop-min.gif" alt="timer-example-loop-min" width="520"/>
-
-TreeView Example：<br>
-展示树状图<br>
-<img src="Images/treeView-example-loop-min.gif" alt="treeView-example-loop-min" width="520"/>
-
-Network Example：<br>
-展示网络连接与数据传输（TCP / KCP / WebSocket / RawTcp）<br>
-
-ObjectPool Example：<br>
-展示通用对象池的使用<br>
-
-CSG Example：<br>
-展示 CSG 布尔运算工具<br>
-
-Shader Graph Example：<br>
-展示 Shader Graph 与 URP 结合<br>
-
-UI Example：<br>
-展示 UISystem 窗口管理、ImageEx 特效与按钮动画<br>
-
-> 另含网络示例：MultiNetworkChannel（四传输对比）、SimpleWebTransport（Web 服务端）
-
-## 目录：<a name="Catalogue"></a>
-- Assets
-  - ReunionMovement
-    - 3rd — 第三方插件（Joystick Pack 等）
-    - Common — 通用基础（Config / Enum / Log / Singleton）
-    - Core — 引擎核心
-      - Base — 系统接口（ICustomSystem / IGameEntry 等）
-      - System — 各功能系统
-        - AddressableSystem / EventMessageSystem / LanguagesSystem / PauseSystem
-        - ResourcesSystem / SceneSystem / SoundSystem / TerminalSystem
-        - UISystem / UIToolkitSystem / UIInputSystem
-    - Editor — 编辑器工具（Addressables 流水线 / 表格 Excel / 打包导出 / 小功能 / ImageEx 变体剥离）
-    - Fonts — 字体
-    - GenerateScript — 代码生成产物（UI 面板 / 配置数据）
-    - Plugins — UniTask / R3 / DOTween / ZString / kcp2k / Telepathy / SimpleWebTransport
-    - Resources — 运行时资源
-    - Scenes
-      - Example — 示例场景
-    - UI — 通用 UI 组件（Select：CarouselSelectionController 等）
-    - Utils — 工具库
-      - UI（ImageEx / LoopScrollRect / TreeView / Ripple / ButtonExtensions）
-      - Network / Download / Http / Timer / StateMachine / GachaSystem / ObjectPool
-      - CSG / Arrow / Billboard / Camera / Command / Deadline / Fps / Raycast
-      - SafeArea / ScreenLogger / ScreenResolution / Other（ErrorReporter）等
-  - AddressableAssets — Addressables 资源根（BuiltIn / Remote 分组，迁移工具生成）
-
-## 感谢：<a name="Thanks"></a>
-感谢Shadertoy上的作者所做的贡献<br>
-https://www.shadertoy.com/<br>
-
-感谢以下的开源项目<br>
-https://github.com/mob-sakai/UIEffect<br>
-https://github.com/scanfing/HttpFileServer<br>
-https://github.com/Cysharp/UniTask<br>
-https://github.com/Cysharp/R3<br>
+见 [LICENSE](LICENSE)。

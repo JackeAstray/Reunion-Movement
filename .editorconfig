@@ -1,0 +1,67 @@
+# EditorConfig —— https://editorconfig.org
+# 约定：C# 4 空格 + UTF-8 BOM + CRLF；Markdown 无 BOM。
+# 说明：本文件只约束编辑器/IDE 行为，不会触发批量格式化。
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{md,markdown}]
+# 行尾两个空格是 Markdown 的硬换行，不能被裁掉
+trim_trailing_whitespace = false
+indent_size = 2
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[*.{json,asmdef,asmref}]
+indent_size = 4
+
+[*.{shader,cginc,hlsl}]
+indent_size = 4
+
+[*.cs]
+charset = utf-8-bom
+
+# --- 格式 ---
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+dotnet_sort_system_directives_first = false
+dotnet_separate_import_directive_groups = false
+csharp_style_namespace_declarations = block_scoped:suggestion
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = false:suggestion
+csharp_prefer_braces = true:suggestion
+
+# --- 命名（与现有代码保持一致，仅提示不报错）---
+dotnet_naming_rule.interfaces_must_begin_with_i.severity = suggestion
+dotnet_naming_rule.interfaces_must_begin_with_i.symbols = interfaces
+dotnet_naming_rule.interfaces_must_begin_with_i.style = begins_with_i
+
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_style.begins_with_i.required_prefix = I
+dotnet_naming_style.begins_with_i.capitalization = pascal_case
+
+dotnet_naming_rule.private_fields_camel_case.severity = suggestion
+dotnet_naming_rule.private_fields_camel_case.symbols = private_fields
+dotnet_naming_rule.private_fields_camel_case.style = camel_case
+
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_style.camel_case.capitalization = camel_case
+
+dotnet_naming_rule.constants_pascal_case.severity = suggestion
+dotnet_naming_rule.constants_pascal_case.symbols = constants
+dotnet_naming_rule.constants_pascal_case.style = pascal_case_style
+
+dotnet_naming_symbols.constants.applicable_kinds = field
+dotnet_naming_symbols.constants.required_modifiers = const
+dotnet_naming_style.pascal_case_style.capitalization = pascal_case
