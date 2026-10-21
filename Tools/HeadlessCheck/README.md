@@ -74,6 +74,49 @@ dotnet run --project Tools/HeadlessCheck
 它要遍历程序集上的 `ReunionGameEntryAttribute`，一旦 `typeof(StartGame)` 被实体化，
 `StartGame` 的静态构造会去读 `Config`（`Resources.Load`）→ 同样撞上 Unity 原生调用。
 
+## 顺带把 Unity 的用例也跑一遍
+
+`ReunionMovement.Tests.dll` 里的用例大多不依赖 Unity。工具会加载它、按 NUnit 规则
+（`[Test]` / `[TestCase]` / `[SetUp]` / `[TearDown]`）逐条执行，**需要 Unity 的自动算 SKIP**：
+
+```
+--- Unity Test Runner 的用例（本机可跑的部分） ---
+  BootstrapTests                     通过 16 / 失败  0 / 跳过  0
+  ModuleCatalogTests                 通过  9 / 失败  0 / 跳过  0
+  ModulesAccessorTests               通过  5 / 失败  0 / 跳过  0
+  NetworkCodecTests                  通过 12 / 失败  0 / 跳过  2
+  ...
+  PauseSystemTests                   通过  0 / 失败  0 / 跳过  8
+  SaveSystemTests                    通过  0 / 失败  0 / 跳过  6
+
+    小计: 通过 60 / 失败 0 / 跳过 54
+```
+
+判断依据不是"哪条看着像需要 Unity"，而是异常本身：
+
+| 异常 | 处理 |
+|---|---|
+| `SecurityException` | SKIP（Unity 的 ECall 在纯 .NET 里必失败） |
+| 栈里出现 `UnityEngine.` | SKIP，并把**那一帧**记下来当证据 |
+| NUnit 断言失败 | FAIL |
+| 其它 | FAIL |
+
+想看每条被跳过的用例及其证据：
+
+```bash
+HEADLESS_VERBOSE=1 dotnet run --project Tools/HeadlessCheck
+```
+
+```
+[SKIP] CommandArgTests.Bool_Parses_CaseInsensitive
+       [UnityEngine.TestTools.Logging.LogScope.get_Current() in .../LogScope.cs:line 31]
+```
+
+上面这条说明该用例用了 `LogAssert`，确实只能在 Unity 里跑——不是"猜的"。
+
+**这不是 Unity Test Runner 的替代品**：`Time`、`AudioListener`、`AssetDatabase`、R3 的
+`ObservableSystem` 都得在 Unity 里初始化，那 54 条只能在编辑器里跑。它只是保证
+**能在本机跑的那 60 条每次改完都真跑过**。
 ## 加一个新的检查
 
 在 `Program.cs` 的 `Main` 里加一行：

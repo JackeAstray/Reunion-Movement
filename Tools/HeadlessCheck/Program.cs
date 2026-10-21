@@ -74,6 +74,12 @@ namespace ReunionMovement.HeadlessCheck
             Run("Bootstrap 配置（测试场景判定）", () => CheckBootstrapOptions(core));
 
             Console.WriteLine();
+
+            if (!args.Any(a => a == "--no-tests"))
+            {
+                RunUnityTests(repoRoot);
+            }
+
             Console.WriteLine($"=== 结果: 通过 {passed} / 跳过 {skipped} / 失败 {failed} ===");
             return failed == 0 ? 0 : 1;
         }
@@ -211,6 +217,50 @@ namespace ReunionMovement.HeadlessCheck
             Assert(!(bool)isTestScene.Invoke(options, new object[] { "" }), "空串不应判为测试场景");
         }
 
+        /// <summary>跑 ReunionMovement.Tests 里的用例；需要 Unity 的会自动算 SKIP。</summary>
+        private static void RunUnityTests(string repoRoot)
+        {
+            string path = Path.Combine(repoRoot, "Unity/ReunionMovement/Temp/bin/Debug/ReunionMovement.Tests.dll");
+            if (!File.Exists(path))
+            {
+                Console.WriteLine("[SKIP] Unity 测试程序集不存在（先 dotnet build ReunionMovement.Tests.csproj）");
+                return;
+            }
+
+            Console.WriteLine("--- Unity Test Runner 的用例（本机可跑的部分） ---");
+
+            Assembly tests;
+            try
+            {
+                tests = Assembly.LoadFrom(path);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[SKIP] 加载测试程序集失败: " + ex.Message);
+                return;
+            }
+
+            UnityTestRunner.Result result = UnityTestRunner.Run(tests, null, Console.WriteLine);
+
+            passed += result.Passed;
+            failed += result.Failed;
+            skipped += result.Skipped;
+
+            foreach (string failure in result.Failures)
+            {
+                Console.WriteLine("       [FAIL] " + failure);
+            }
+
+            if (result.Skips.Count > 0 && Environment.GetEnvironmentVariable("HEADLESS_VERBOSE") == "1")
+            {
+                Console.WriteLine("       --- 跳过的用例（需要 Unity） ---");
+                foreach (string skip in result.Skips) Console.WriteLine("       [SKIP] " + skip);
+            }
+
+            Console.WriteLine();
+            Console.WriteLine($"    小计: 通过 {result.Passed} / 失败 {result.Failed} / 跳过 {result.Skipped}");
+            Console.WriteLine();
+        }
         // ---------------------------------------------------------------- 工具
 
         private static FakeModuleFactory CreateFactory(Assembly core)
@@ -355,13 +405,17 @@ namespace ReunionMovement.HeadlessCheck
             }
 
             // 从 Unity 生成的 csproj 里收集 UnityEngine 等 DLL 的绝对路径
-            string csproj = Path.Combine(project, "ReunionMovement.Core.csproj");
-            if (File.Exists(csproj))
+            // 所有 Unity 生成的 csproj 都扫一遍：nunit 只在 Tests.csproj 的 HintPath 里
+            foreach (string csproj in Directory.GetFiles(project, "ReunionMovement*.csproj"))
             {
                 foreach (Match m in Regex.Matches(File.ReadAllText(csproj), @"<HintPath>([^<]+)</HintPath>"))
                 {
                     string hint = m.Groups[1].Value.Trim();
-                    if (hint.Length > 0 && File.Exists(hint)) AddSearchPath(Path.GetDirectoryName(hint));
+                    if (hint.Length == 0) continue;
+
+                    // HintPath 可能是相对路径（Library\PackageCache\...），要相对工程根解析
+                    string full = Path.IsPathRooted(hint) ? hint : Path.GetFullPath(Path.Combine(project, hint));
+                    if (File.Exists(full)) AddSearchPath(Path.GetDirectoryName(full));
                 }
             }
         }
