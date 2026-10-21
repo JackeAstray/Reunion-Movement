@@ -1,0 +1,19 @@
+# .Instance 使用点基线（架构守卫使用）
+# 两套获取方式（XxxSystem.Instance 与 Modules.Get<T>()）并存是已知的上手成本。
+# 这里冻结现有调用数：新增一处就失败；减少后守卫会在 Console 提示可以下调。
+# 格式：<类型名> <出现次数>（按出现次数计，不是行数）
+
+AddressableSystem 12
+EventMessageSystem 5
+HttpMgr 5
+LanguagesSystem 14
+NetworkMgr 5
+PauseSystem 2
+ResourcesSystem 28
+SceneSystem 9
+SoundSystem 23
+TerminalSystem 2
+TimerMgr 3
+UIInputSystem 38
+UISystem 27
+UIToolkitSystem 2
