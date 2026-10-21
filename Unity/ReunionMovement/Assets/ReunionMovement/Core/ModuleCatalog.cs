@@ -1,4 +1,4 @@
-using ReunionMovement.Core.Base;
+﻿using ReunionMovement.Core.Base;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -15,6 +15,9 @@ namespace ReunionMovement.Core
     ///    未声明的按注册顺序参与排序（视为 Order = 0）。
     /// 2. <c>DependsOn</c> 声明的模块必须也在本次注册列表中，且排在被依赖方之后。
     /// 3. 排序是<b>稳定</b>的：Order 相同的模块保持注册顺序，因此给既有工程补声明不会打乱顺序。
+    /// 4. 依赖匹配用 <c>Type.IsInstanceOfType</c>：因此 <c>DependsOn</c> 可以写接口或基类；
+    ///    若多个已注册模块都满足同一个接口，取<b>注册顺序里的第一个</b>。
+    /// 5. 重复注册按两种方式判：同一实例、以及同一类型的两个不同实例（后者会导致重复 Init/Update）。
     /// </para>
     ///
     /// <para>
@@ -56,6 +59,18 @@ namespace ReunionMovement.Core
                     if (ReferenceEquals(nodes[j].Module, module))
                     {
                         problems.Add($"{module.GetType().Name} 被重复注册（第 {i} 项与第 {nodes[j].Index} 项是同一实例）");
+                        break;
+                    }
+                }
+
+                // 同一类型的两个不同实例：单例写法下不该出现，但构造函数是 public 的模块
+                // （如 TimerMgr）可以 new 出来。只按实例判重会漏掉这种情况，
+                // 结果是同一个类型被 Init/Update 两次。
+                for (int j = 0; j < nodes.Count; j++)
+                {
+                    if (!ReferenceEquals(nodes[j].Module, module) && nodes[j].Module.GetType() == module.GetType())
+                    {
+                        problems.Add($"{module.GetType().Name} 被注册了两次（第 {i} 项与第 {nodes[j].Index} 项是同一类型的两个实例），会重复 Init/Update");
                         break;
                     }
                 }

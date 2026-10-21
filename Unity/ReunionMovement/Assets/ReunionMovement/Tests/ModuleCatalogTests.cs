@@ -1,4 +1,4 @@
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using NUnit.Framework;
 using ReunionMovement.Core;
 using ReunionMovement.Core.Base;
@@ -72,6 +72,16 @@ namespace ReunionMovement.Tests
 
             Assert.IsFalse(ModuleCatalog.TryBuild(declared, out _, out var errors));
             StringAssert.Contains("重复注册", errors);
+        }
+
+        [Test]
+        public void Two_Instances_Of_Same_Type_Are_Reported()
+        {
+            // 同一类型的两个不同实例：只按实例判重会漏掉，导致重复 Init/Update
+            var declared = new List<ICustomSystem> { new FakeFirst(), new FakeFirst() };
+
+            Assert.IsFalse(ModuleCatalog.TryBuild(declared, out _, out var errors));
+            StringAssert.Contains("两次", errors);
         }
 
         [Test]

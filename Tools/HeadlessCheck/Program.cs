@@ -69,6 +69,7 @@ namespace ReunionMovement.HeadlessCheck
             Run("模块排序（依赖优先于序号）", () => CheckCatalogDependencyWinsOverOrder(core));
             Run("模块校验（重复注册）", () => CheckCatalogDuplicate(core));
             Run("模块校验（缺少依赖）", () => CheckCatalogMissingDependency(core));
+            Run("模块校验（同类型两个实例）", () => CheckCatalogSameTypeTwice(core));
             Run("Modules 访问器（引擎未启动）", () => CheckModulesAccessor(core));
             Run("游戏入口解析（默认取框架声明）", () => CheckEntryResolver(core));
             Run("Bootstrap 配置（测试场景判定）", () => CheckBootstrapOptions(core));
@@ -146,6 +147,19 @@ namespace ReunionMovement.HeadlessCheck
             Assert(errors != null && errors.Contains("重复"), "错误信息应提到重复注册，实际: " + errors);
         }
 
+        /// <summary>同一类型注册两个不同实例：只按实例判重会漏，导致重复 Init/Update。</summary>
+        private static void CheckCatalogSameTypeTwice(Assembly core)
+        {
+            FakeModuleFactory fakes = CreateFactory(core);
+            Type type = fakes.Create(10);
+            object first = fakes.Instantiate(type);
+            object second = fakes.Instantiate(type);
+
+            var (ok, ordered, errors) = TryBuild(core, first, second);
+
+            Assert(!ok, "同一类型的两个实例应返回 false");
+            Assert(errors != null && errors.Contains("两次"), "错误信息应指出同类型注册两次，实际: " + errors);
+        }
         private static void CheckCatalogMissingDependency(Assembly core)
         {
             FakeModuleFactory fakes = CreateFactory(core);
