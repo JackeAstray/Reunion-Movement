@@ -264,7 +264,14 @@ namespace ReunionMovement.EditorTools.Package
     ""com.unity.nuget.newtonsoft-json"": ""3.2.2"",
     ""com.unity.ugui"": ""2.0.0"",
     ""com.unity.render-pipelines.universal"": ""17.3.0""
-  }
+  },
+  ""samples"": [
+    {
+      ""displayName"": ""Hello World"",
+      ""description"": ""最小入口：运行时创建一个 uGUI 文本，不依赖场景/预制体。"",
+      ""path"": ""Samples~/HelloWorld""
+    }
+  ]
 }
 ".Replace("__NAME__", PackageName).Replace("__VERSION__", PackageVersion);
         }

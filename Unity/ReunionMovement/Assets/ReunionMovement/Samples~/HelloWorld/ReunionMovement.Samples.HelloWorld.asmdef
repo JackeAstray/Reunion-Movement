@@ -1,0 +1,21 @@
+{
+    "name": "ReunionMovement.Samples.HelloWorld",
+    "rootNamespace": "ReunionMovement.Samples.HelloWorld",
+    "references": [
+        "ReunionMovement.Base",
+        "ReunionMovement.Common",
+        "ReunionMovement.Core",
+        "ReunionMovement.Utils",
+        "UniTask",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
