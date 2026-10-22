@@ -3,6 +3,7 @@
 Unity 游戏框架 —— 纯 C# 生命周期、模块化系统、四传输网络层、Addressables 热更、SDF 形状 UI。
 
 **Unity**：6000.3.10f1（Unity 6 / URP 17.3）<br>
+**English**：[README.en.md](README.en.md)<br>
 **定位**：重构版 LLAFramework。去掉历史包袱后从零搭建，保留经过验证的能力。
 
 ---
@@ -66,7 +67,17 @@ Assets/ReunionMovement/
 
 **必开**：TextMesh Pro、New Input System（Project Settings → Player → Active Input Handling 需包含 Input System Package）。
 
-**低版本兼容**：低于 2022.3 的版本在示例中 TextMesh Pro 可能报错，需重新生成 Font Asset（不影响框架逻辑）；更低版本（如 2019）可能需要手动解决少量语法差异。
+## 平台支持
+
+| 平台 | 状态 | 说明 |
+|---|---|---|
+| Windows (x64) | ✅ 已验证 | 本机构建 170.8 MB / 0 错误 |
+| WebGL | 🟡 已配置 | CI + WebGL 适配；浏览器真机验证待做 |
+| Android | 🟡 编译通过 | Android 目标编译通过；APK / 真机待验证 |
+| iOS | 🟡 代码就绪 | 触觉 `.mm` 已补；Xcode 链接需 macOS |
+| macOS / Linux | 🟡 脚本就绪 | 构建菜单 / 命令行已提供；未实跑 |
+
+**Unity 版本**：仓库使用 `6000.3.10f1`。低于 2022.3 需要自行降级 URP 并处理 `FindObjectsByType` 等 API（未验证）。
 
 ## 特性
 
