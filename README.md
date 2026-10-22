@@ -47,6 +47,7 @@ Assets/ReunionMovement/
 | [Docs/便捷性与可移植性评估.md](Docs/便捷性与可移植性评估.md) | 调用 / 跨平台 / 插件便携性的现状与改造路线 |
 | [Docs/Packaging/UPM打包指南.md](Docs/Packaging/UPM打包指南.md) | 导出 / 安装 UPM 包（运行时 / 完整） |
 | [Docs/跨平台构建指南.md](Docs/跨平台构建指南.md) | 多平台构建、link.xml 与平台备注 |
+| [Docs/第三方依赖.md](Docs/第三方依赖.md) | 第三方版本、冲突检测与二选一 |
 | [Docs/features.md](Docs/features.md) | 完整特性清单与示例 GIF |
 
 ## 依赖

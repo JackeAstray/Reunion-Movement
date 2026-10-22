@@ -261,6 +261,7 @@ namespace ReunionMovement.EditorTools.Package
   ""dependencies"": {
     ""com.unity.addressables"": ""2.9.1"",
     ""com.unity.inputsystem"": ""1.18.0"",
+    ""com.unity.nuget.newtonsoft-json"": ""3.2.2"",
     ""com.unity.ugui"": ""2.0.0"",
     ""com.unity.render-pipelines.universal"": ""17.3.0""
   }

@@ -26,7 +26,7 @@ Unity -batchmode -quit -projectPath Unity/ReunionMovement `
 
 | 内容 | Runtime | Full |
 |---|---|---|
-| 体积（当前源码） | 约 44 MB | 约 190 MB |
+| 体积（当前源码） | 约 43 MB | 约 190 MB |
 | 字体 `Fonts/` | 不含 | 含（129 MB） |
 | 示例场景 `Scenes/` | 不含 | 含 |
 | 示例 UI `UI/Select`、`Resources/Prefabs/UIs` | 不含 | 含 |
@@ -96,6 +96,8 @@ com.reunion.movement/
 4. Runtime 包里的 `StartGame` 示例流程不可用（缺 `Temp` 场景和启动 UI prefab）；请使用自己的 GameEntry。
 5. 包尚未发布到公开仓库；当前输出在 `Build/`，不会被提交。
 6. `.unitypackage` 导出仍保留（已排除 `Game/`）；两者不要同时导入同一个工程。
+7. 包内仍带 vendored 的 UniTask / R3 / ZString / DOTween。宿主已装官方同名包时，
+   用 `ReunionMovement → 开发 → 检查第三方依赖冲突` 检查；二者只能留一套。详见 [第三方依赖](../第三方依赖.md)。
 
 ## 7. 验收
 
@@ -116,10 +118,10 @@ Unity -batchmode -quit -projectPath Unity/ReunionMovement `
 
 本次实测（2026-10-22）：
 
-- `ExportRuntimeBatch` 产出 **43.5 MB / 1,851 文件**；
+- `ExportRuntimeBatch` 产出 **42.6 MB / 1,850 文件**；
 - 新建 Unity 6000.3 工程，`Packages/manifest.json` 加 `file:` 包 → 打开后 **0 编译错误**；
 - 产出 `ReunionMovement.Core` / `Utils` / `GenerateScript.UI` / `DOTween.Modules` 等 30+ 程序集；
-- Addressables 2.9.1 / Input System 1.18.0 / uGUI 2.0.0 / URP 17.3.0 由 `package.json` 依赖自动解析；
+- Addressables 2.9.1 / Input System 1.18.0 / Newtonsoft.Json 3.2.2 / uGUI 2.0.0 / URP 17.3.0 由 `package.json` 依赖自动解析；
 - 空工程探针 `GameEntryResolver.FindEntryType()` 返回 `null`（日志 `[Probe] entry=null`），
   确认包安装后不会接管宿主启动。
 
