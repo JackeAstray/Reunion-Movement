@@ -1,4 +1,4 @@
-﻿using ReunionMovement.Core.UIInput;
+using ReunionMovement.Core.UIInput;
 using ReunionMovement.UI.Select;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -19,8 +19,8 @@ namespace ReunionMovement.EditorTools
     /// </summary>
     public static class CreateLocalMultiplayerSelectionExample
     {
-        private const string ScenePath =
-            "Assets/ReunionMovement/Editor/UIScenes/StartMenuExampleScene.unity";
+        private static readonly string ScenePath =
+            ReunionMovement.Editor.Shared.ReunionPaths.InWritable("Editor/UIScenes/StartMenuExampleScene.unity");
 
         private static Font cachedFont;
 

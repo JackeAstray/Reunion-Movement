@@ -4,13 +4,13 @@ using ReunionMovement.Core.Base;
 using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 
-// 本项目的默认入口。换成你自己的游戏时：
-//   1. 删掉或改掉这一行；
-//   2. 在你自己的程序集里声明 [assembly: ReunionGameEntry(typeof(MyGameEntry))]。
-// Bootstrap 会优先采用非框架程序集的声明（详见 GameEntryResolver）。
-[assembly: ReunionGameEntry(typeof(ReunionMovement.Core.StartGame))]
+// 本仓库的示例入口声明在 Assets/ReunionMovement/Game/StartGameEntry.cs（Assembly-CSharp）。
+// 框架程序集本身不再声明入口：作为 UPM 包导入宿主工程时，不会自动接管启动。
+// 接入自己的游戏：在你自己的程序集里声明 [assembly: ReunionGameEntry(typeof(MyGameEntry))]。
+[assembly: InternalsVisibleTo("ReunionMovement.Tests")]
 
 namespace ReunionMovement.Core
 {
@@ -19,9 +19,10 @@ namespace ReunionMovement.Core
     /// 替代原有的场景 GameObject + GameEntry.Awake() 模式。
     ///
     /// 三种使用方式：
-    /// 1. <b>自动（默认）</b>：什么都不用做。入口取 [assembly: ReunionGameEntry] 的声明，
-    ///    没有声明时回退到内置 StartGame。
-    /// 2. <b>自动 + 改配置</b>：在 BeforeSceneLoad 之前的钩子里改 <see cref="Options"/>。
+    /// 1. <b>自动（默认）</b>：入口取 <c>[assembly: ReunionGameEntry]</c> 的声明；没有声明时
+    ///    直接报错并跳过启动，<b>不再</b>隐式回退到内置 StartGame（避免接管宿主工程）。
+    /// 2. <b>自动 + 改配置</b>：在 BeforeSceneLoad 之前的钩子里改 <see cref="Options"/>，
+    ///    包括用 <c>Options.Entry</c> 显式指定入口。
     /// 3. <b>手动</b>：<c>Bootstrap.Disable()</c> 后自己调 <see cref="StartAsync"/>。
     ///
     /// 测试场景（引擎照常启动，但跳过自动场景跳转）的判定规则见 <see cref="BootstrapOptions"/>。
@@ -217,14 +218,34 @@ namespace ReunionMovement.Core
             return go.AddComponent<GameEngineDriver>();
         }
 
-        /// <summary>默认入口：优先用声明，没有声明时回退到内置 StartGame。</summary>
+        /// <summary>
+        /// 默认入口：<c>Options.Entry</c> → <c>[assembly: ReunionGameEntry]</c> →（可选）内置 StartGame。
+        /// 没有任何入口时返回 null 并报错，<b>不再</b>默默接管宿主工程的启动流程。
+        /// </summary>
         private static GameEntry ResolveEntry()
         {
-            var declared = GameEntryResolver.CreateEntry();
+            var entry = ResolveEntry(Options.Entry, GameEntryResolver.CreateEntry, Options.AllowBuiltInEntryFallback);
+            if (entry == null)
+            {
+                Log.Error("[Bootstrap] 未声明游戏入口。请加 [assembly: ReunionGameEntry(typeof(MyGameEntry))]，" +
+                          "或设置 Bootstrap.Options.Entry；内置 StartGame 只在示例工程中使用" +
+                          "（确需回退时显式设置 Bootstrap.Options.AllowBuiltInEntryFallback = true）。");
+            }
+            return entry;
+        }
+
+        /// <summary>
+        /// 可测试的入口选择逻辑：配置优先，其次声明，最后按开关决定是否回退内置 StartGame。
+        /// </summary>
+        internal static GameEntry ResolveEntry(GameEntry configured, Func<GameEntry> declaredFactory,
+            bool allowBuiltInFallback)
+        {
+            if (configured != null) return configured;
+
+            var declared = declaredFactory?.Invoke();
             if (declared != null) return declared;
 
-            Log.Debug("[Bootstrap] 未声明 ReunionGameEntry，使用内置 StartGame");
-            return new StartGame();
+            return allowBuiltInFallback ? new StartGame() : null;
         }
 
         /// <summary>
@@ -242,7 +263,15 @@ namespace ReunionMovement.Core
                 driverGo = null;
             }
 
-            await StartAsync(ResolveEntry());
+            var entry = ResolveEntry();
+            if (entry == null)
+            {
+                // 已在 ResolveEntry 内报错；不创建 Driver，也不把启动失败伪装成引擎异常。
+                // 调用方仍可在之后手动 Bootstrap.StartAsync(entry) 启动。
+                return;
+            }
+
+            await StartAsync(entry);
         }
 
         /// <summary>

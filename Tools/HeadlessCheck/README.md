@@ -34,7 +34,7 @@ dotnet run --project Tools/HeadlessCheck
 | `Modules` 访问器（引擎未启动） | ✅ | `All` 为空、`TryGet` 返回 false、`Get` 抛 `InvalidOperationException` 且信息里带类型名 |
 | `BootstrapOptions.IsTestScene` | ✅ | 前缀命中、关键字命中、正常场景不误判、空串不误判 |
 | `ModuleCatalog` 排序与校验（5 条） | ✅ | 用 Reflection.Emit 造假模块，见下 |
-| `GameEntryResolver` 入口解析 | ⏭ | 见下 |
+| `GameEntryResolver` 入口解析 | ✅ | 框架程序集不再声明入口，纯框架加载时 `FindEntryType()` 返回 null；示例入口在 `Assembly-CSharp`，见下 |
 
 ### 为什么模块排序验不了
 
@@ -83,10 +83,12 @@ dotnet run --project Tools/HeadlessCheck
 > `Repeated_Dependency_Is_Not_A_Cycle` 这条一开始写成假模块，报的是缺依赖；
 > 换成真实嵌套类之后立刻通过——**产品是对的，是工具错了**。
 
-### `GameEntryResolver` 为什么跳过
+### `GameEntryResolver` 检查什么
 
-它要遍历程序集上的 `ReunionGameEntryAttribute`，一旦 `typeof(StartGame)` 被实体化，
-`StartGame` 的静态构造会去读 `Config`（`Resources.Load`）→ 同样撞上 Unity 原生调用。
+框架程序集**不再**声明入口（示例入口在 `Game/StartGameEntry.cs`，编译进 `Assembly-CSharp`）。
+HeadlessCheck 只加载框架程序集，所以 `FindEntryType()` 应为 `null` —— 这正是"包安装不会接管宿主启动"的保证。
+Unity 侧另有两个用例：在 `Assembly-CSharp` 已加载时断言返回 `StartGame`，在 HeadlessCheck 里
+通过 `Assert.Ignore` 自动跳过（工具会把 `IgnoreException` 记为 SKIP）。
 
 ## 顺带把 Unity 的用例也跑一遍
 

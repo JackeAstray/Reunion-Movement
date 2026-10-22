@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using System.Runtime.InteropServices;
 #if UNITY_IOS
@@ -189,6 +189,27 @@ namespace ReunionMovement.Common.Util
         private static AndroidJavaClass VibrationEffectClass;
         private static AndroidJavaObject VibrationEffect;
         private static int DefaultAmplitude;
+        private static bool androidCallFailed;
+
+        /// <summary>Android 振动失败只告警一次（常见原因：未声明 VIBRATE 权限）。</summary>
+        private static void WarnAndroid(Exception ex)
+        {
+            if (androidCallFailed) return;
+            androidCallFailed = true;
+            Log.Warning("[VibrationUtil] Android 振动不可用（通常是缺少 android.permission.VIBRATE）: {0}", ex.Message);
+        }
+
+        private static void SafeCall(Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception ex)
+            {
+                WarnAndroid(ex);
+            }
+        }
 
         /// <summary>
         /// 请求 Android 上的默认振动持续指定的持续时间（以毫秒为单位）
@@ -196,7 +217,7 @@ namespace ReunionMovement.Common.Util
         /// <param name="milliseconds"></param>
         private static void AndroidVibrate(long milliseconds)
         {
-            AndroidVibrator.Call("vibrate", milliseconds);
+            SafeCall(() => AndroidVibrator.Call("vibrate", milliseconds));
         }
 
         /// <summary>
@@ -213,9 +234,12 @@ namespace ReunionMovement.Common.Util
             }
             else
             {
-                VibrationEffectClassInitialization();
-                VibrationEffect = VibrationEffectClass.CallStatic<AndroidJavaObject>("createOneShot", new object[] { milliseconds, amplitude });
-                AndroidVibrator.Call("vibrate", VibrationEffect);
+                SafeCall(() =>
+                {
+                    VibrationEffectClassInitialization();
+                    VibrationEffect = VibrationEffectClass.CallStatic<AndroidJavaObject>("createOneShot", new object[] { milliseconds, amplitude });
+                    AndroidVibrator.Call("vibrate", VibrationEffect);
+                });
             }
         }
 
@@ -228,13 +252,16 @@ namespace ReunionMovement.Common.Util
         {
             if ((AndroidSDKVersion() < 26))
             {
-                AndroidVibrator.Call("vibrate", pattern, repeat);
+                SafeCall(() => AndroidVibrator.Call("vibrate", pattern, repeat));
             }
             else
             {
-                VibrationEffectClassInitialization();
-                VibrationEffect = VibrationEffectClass.CallStatic<AndroidJavaObject>("createWaveform", new object[] { pattern, repeat });
-                AndroidVibrator.Call("vibrate", VibrationEffect);
+                SafeCall(() =>
+                {
+                    VibrationEffectClassInitialization();
+                    VibrationEffect = VibrationEffectClass.CallStatic<AndroidJavaObject>("createWaveform", new object[] { pattern, repeat });
+                    AndroidVibrator.Call("vibrate", VibrationEffect);
+                });
             }
         }
 
@@ -248,13 +275,16 @@ namespace ReunionMovement.Common.Util
         {
             if ((AndroidSDKVersion() < 26))
             {
-                AndroidVibrator.Call("vibrate", pattern, repeat);
+                SafeCall(() => AndroidVibrator.Call("vibrate", pattern, repeat));
             }
             else
             {
-                VibrationEffectClassInitialization();
-                VibrationEffect = VibrationEffectClass.CallStatic<AndroidJavaObject>("createWaveform", new object[] { pattern, amplitudes, repeat });
-                AndroidVibrator.Call("vibrate", VibrationEffect);
+                SafeCall(() =>
+                {
+                    VibrationEffectClassInitialization();
+                    VibrationEffect = VibrationEffectClass.CallStatic<AndroidJavaObject>("createWaveform", new object[] { pattern, amplitudes, repeat });
+                    AndroidVibrator.Call("vibrate", VibrationEffect);
+                });
             }
         }
 
@@ -263,7 +293,7 @@ namespace ReunionMovement.Common.Util
         /// </summary>
         private static void AndroidCancelVibrations()
         {
-            AndroidVibrator.Call("cancel");
+            SafeCall(() => AndroidVibrator.Call("cancel"));
         }
 
         /// <summary>
@@ -273,7 +303,7 @@ namespace ReunionMovement.Common.Util
         {
             if (VibrationEffectClass == null)
             {
-                VibrationEffectClass = new AndroidJavaClass("android.os.VibrationEffect");
+                SafeCall(() => VibrationEffectClass = new AndroidJavaClass("android.os.VibrationEffect"));
             }
         }
 

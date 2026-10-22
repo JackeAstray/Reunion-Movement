@@ -1,4 +1,5 @@
 using ReunionMovement.Core.Languages;
+using ReunionMovement.Editor.Shared;
 using System;
 using System.IO;
 using System.Linq;
@@ -169,7 +170,7 @@ namespace ReunionMovement.EditorTools.ImageExtensions
         /// <returns></returns>
         internal static string FindImageExtensionsRootDirectory()
         {
-            string path = "Assets/ReunionMovement/Resources/UI";
+            string path = ReunionPaths.InFramework("Resources/UI");
 
             if (string.IsNullOrEmpty(path))
             {

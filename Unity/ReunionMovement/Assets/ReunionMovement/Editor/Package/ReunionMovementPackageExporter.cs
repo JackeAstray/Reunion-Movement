@@ -1,4 +1,6 @@
-﻿using System.IO;
+using System.Collections.Generic;
+using System.IO;
+using ReunionMovement.Editor.Shared;
 using UnityEditor;
 using UnityEngine;
 
@@ -20,7 +22,7 @@ namespace ReunionMovement.EditorTools.Package
     public static class ReunionMovementPackageExporter
     {
         /// <summary>导出根（覆盖 ReunionMovement 全部功能）</summary>
-        private const string ExportRoot = "Assets/ReunionMovement";
+        private static readonly string ExportRoot = ReunionPaths.Root;
 
         /// <summary>默认输出（相对项目根）</summary>
         private const string DefaultOutput = "Build/Packages/ReunionMovement.unitypackage";
@@ -54,16 +56,40 @@ namespace ReunionMovement.EditorTools.Package
                     "不迁移也能用（运行时自动降级 Resources）。");
             }
 
-            // 3. 导出
+            // 3. 导出（排除 Game/ 示例入口：它只用于源码仓库，进包会接管宿主启动）
             string output = DefaultOutput;
             var dir = Path.GetDirectoryName(output);
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
-            AssetDatabase.ExportPackage(ExportRoot, output, ExportPackageOptions.Recurse | ExportPackageOptions.Default);
+            string[] exportPaths = CollectExportPaths();
+            if (exportPaths.Length == 0)
+            {
+                Debug.LogError($"[ReunionMovementPackage] {ExportRoot} 下没有可导出的资源");
+                return;
+            }
+
+            AssetDatabase.ExportPackage(exportPaths, output, ExportPackageOptions.Default);
 
             string fullPath = Path.GetFullPath(output);
             Debug.Log($"[ReunionMovementPackage] 导出完成: {fullPath}");
             EditorUtility.RevealInFinder(fullPath);
+        }
+
+        /// <summary>
+        /// 收集导出资源，排除 Game/（示例入口）。它被编译进 Assembly-CSharp，
+        /// 如果随包分发，宿主工程的 GameEntryResolver 会把它当成用户入口并自动启动。
+        /// </summary>
+        private static string[] CollectExportPaths()
+        {
+            var paths = new List<string>();
+            foreach (string guid in AssetDatabase.FindAssets("", new[] { ExportRoot }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (string.IsNullOrEmpty(path)) continue;
+                if (path.StartsWith(ExportRoot + "/Game/", System.StringComparison.Ordinal)) continue;
+                paths.Add(path);
+            }
+            return paths.ToArray();
         }
 
         /// <summary>检测 Addressables 包是否已安装</summary>

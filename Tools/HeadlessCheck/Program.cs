@@ -71,7 +71,7 @@ namespace ReunionMovement.HeadlessCheck
             Run("模块校验（缺少依赖）", () => CheckCatalogMissingDependency(core));
             Run("模块校验（同类型两个实例）", () => CheckCatalogSameTypeTwice(core));
             Run("Modules 访问器（引擎未启动）", () => CheckModulesAccessor(core));
-            Run("游戏入口解析（默认取框架声明）", () => CheckEntryResolver(core));
+            Run("游戏入口解析（框架不再声明入口）", () => CheckEntryResolver(core));
             Run("Bootstrap 配置（测试场景判定）", () => CheckBootstrapOptions(core));
 
             Console.WriteLine();
@@ -212,9 +212,10 @@ namespace ReunionMovement.HeadlessCheck
             Type resolver = GetType(core, "ReunionMovement.Core.GameEntryResolver");
             Type entryType = (Type)resolver.GetMethod("FindEntryType", BindingFlags.Public | BindingFlags.Static).Invoke(null, null);
 
-            Assert(entryType != null, "应解析到入口类型");
-            Assert(entryType.FullName == "ReunionMovement.Core.StartGame",
-                "默认入口应是 Core 里的 StartGame，实际: " + entryType?.FullName);
+            // 框架程序集不再声明入口：示例入口在 Assembly-CSharp（Game/StartGameEntry.cs）。
+            // HeadlessCheck 不加载 Assembly-CSharp，所以这里应为 null——这正是“不接管宿主”的保证。
+            Assert(entryType == null,
+                "框架程序集不应再声明入口（示例入口应在 Assembly-CSharp），实际: " + entryType?.FullName);
         }
 
         private static void CheckBootstrapOptions(Assembly core)

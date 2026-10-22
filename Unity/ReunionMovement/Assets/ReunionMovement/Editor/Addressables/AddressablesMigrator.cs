@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using ReunionMovement.Common;
+using ReunionMovement.Editor.Shared;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
@@ -19,13 +20,13 @@ namespace ReunionMovement.EditorTools.Addressables
     public static class AddressablesMigrator
     {
         /// <summary>源 Resources 根（仅处理该目录内的资源；Resources 内依赖会被一起复制）</summary>
-        private const string SrcResourcesRoot = "Assets/ReunionMovement/Resources";
+        private static readonly string SrcResourcesRoot = ReunionPaths.InFramework("Resources");
 
         /// <summary>目标 AddressableAssets 根（镜像 Resources 相对结构）</summary>
         private const string DstAddressableRoot = "Assets/AddressableAssets/BuiltIn/UI";
 
         /// <summary>UI Prefab 所在源目录</summary>
-        private const string SrcUIPrefabFolder = "Assets/ReunionMovement/Resources/Prefabs/UIs";
+        private static readonly string SrcUIPrefabFolder = ReunionPaths.InFramework("Resources/Prefabs/UIs");
 
         /// <summary>UI 归入的分组</summary>
         private const string GroupName = "BuiltIn_UI";
@@ -268,7 +269,7 @@ namespace ReunionMovement.EditorTools.Addressables
         public static void MigrateSounds()
         {
             MigrateLeafAssets(
-                srcRoot: "Assets/ReunionMovement/Resources/Sounds",
+                srcRoot: ReunionPaths.InFramework("Resources/Sounds"),
                 dstRoot: "Assets/AddressableAssets/Remote/Sounds",
                 groupName: "Remote_Sounds",
                 label: "sound",
@@ -280,7 +281,7 @@ namespace ReunionMovement.EditorTools.Addressables
         public static void MigrateTextures()
         {
             MigrateLeafAssets(
-                srcRoot: "Assets/ReunionMovement/Resources/UI/Sprites",
+                srcRoot: ReunionPaths.InFramework("Resources/UI/Sprites"),
                 dstRoot: "Assets/AddressableAssets/Remote/Textures",
                 groupName: "Remote_Textures",
                 label: "texture",
@@ -381,7 +382,7 @@ namespace ReunionMovement.EditorTools.Addressables
             // 配置资产（GameConfig / LanguagesContainer / SoundConfigContainer）只引用共享脚本，
             // 无 Resources 内资产依赖，走叶子迁移即可（无需 GUID 重映射）。
             MigrateLeafAssets(
-                srcRoot: "Assets/ReunionMovement/Resources/ScriptableObjects",
+                srcRoot: ReunionPaths.InFramework("Resources/ScriptableObjects"),
                 dstRoot: "Assets/AddressableAssets/BuiltIn/Config",
                 groupName: "BuiltIn_Config",
                 label: "data",
@@ -393,8 +394,8 @@ namespace ReunionMovement.EditorTools.Addressables
         [MenuItem("ReunionMovement/Addressables/迁移/预制体（非 UI → BuiltIn_Prefabs）", priority = 35)]
         public static void MigratePrefabs()
         {
-            const string srcRoot = "Assets/ReunionMovement/Resources/Prefabs";
-            const string srcUIs = "Assets/ReunionMovement/Resources/Prefabs/UIs";
+            string srcRoot = ReunionPaths.InFramework("Resources/Prefabs");
+            string srcUIs = ReunionPaths.InFramework("Resources/Prefabs/UIs");
             const string dstRoot = "Assets/AddressableAssets/BuiltIn/Prefabs";
             const string groupName = "BuiltIn_Prefabs";
             const string addressPrefix = "BuiltIn/Prefabs/";
@@ -492,8 +493,8 @@ namespace ReunionMovement.EditorTools.Addressables
         [MenuItem("ReunionMovement/Addressables/迁移/场景（非示例 → Remote_Scenes）", priority = 36)]
         public static void MigrateScenes()
         {
-            const string srcRoot = "Assets/ReunionMovement/Scenes";
-            const string exampleRoot = "Assets/ReunionMovement/Scenes/Example";
+            string srcRoot = ReunionPaths.InFramework("Scenes");
+            string exampleRoot = ReunionPaths.InFramework("Scenes/Example");
 
             var scenes = new List<string>();
             foreach (var sg in AssetDatabase.FindAssets("t:Scene", new[] { srcRoot }))
@@ -511,7 +512,7 @@ namespace ReunionMovement.EditorTools.Addressables
         [MenuItem("ReunionMovement/Addressables/迁移/字体（TMP → BuiltIn_Fonts）", priority = 37)]
         public static void MigrateFonts()
         {
-            const string srcRoot = "Assets/ReunionMovement/Fonts";
+            string srcRoot = ReunionPaths.InFramework("Fonts");
 
             var fonts = new List<string>();
             foreach (var fg in AssetDatabase.FindAssets("t:Object", new[] { srcRoot }))

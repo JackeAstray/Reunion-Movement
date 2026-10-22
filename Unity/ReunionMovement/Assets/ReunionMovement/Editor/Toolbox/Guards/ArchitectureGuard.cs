@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
+using ReunionMovement.Editor.Shared;
 using UnityEditor;
 using UnityEngine;
 
@@ -23,13 +24,15 @@ namespace ReunionMovement.Editor.Guards
         /// <summary>单文件行数上限。超过即视为需要拆分。</summary>
         public const int MaxLines = 600;
 
-        private const string Root = "Assets/ReunionMovement";
+        private static readonly string Root = ReunionPaths.Root;
 
         /// <summary>行数基线文件：记录历史遗留的超大文件，只允许变小。</summary>
-        private const string BaselinePath = "Assets/ReunionMovement/Editor/Toolbox/Guards/file-size-baseline.txt";
+        private static readonly string BaselinePath =
+            ReunionPaths.InFramework("Editor/Toolbox/Guards/file-size-baseline.txt");
 
         /// <summary>.Instance 使用点基线：记录每个系统的现有调用数，只允许变少。</summary>
-        private const string InstanceBaselinePath = "Assets/ReunionMovement/Editor/Toolbox/Guards/instance-usage-baseline.txt";
+        private static readonly string InstanceBaselinePath =
+            ReunionPaths.InFramework("Editor/Toolbox/Guards/instance-usage-baseline.txt");
 
         /// <summary>第三方、生成代码与示例不参与行数检查。</summary>
         private static readonly string[] ExcludedSegments =

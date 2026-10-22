@@ -1,7 +1,9 @@
 {
     "name": "ReunionMovement.Toolbox.Editor",
     "rootNamespace": "ReunionMovement.EditorTools.Toolbox",
-    "references": [],
+    "references": [
+        "ReunionMovement.Editor.Shared"
+    ],
     "includePlatforms": [
         "Editor"
     ],

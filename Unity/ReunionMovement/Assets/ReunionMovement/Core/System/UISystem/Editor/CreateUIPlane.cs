@@ -1,7 +1,8 @@
-﻿using ReunionMovement.Common;
+using ReunionMovement.Common;
 using ReunionMovement.Common.Util;
 using ReunionMovement.Core;
 using ReunionMovement.Core.UI;
+using ReunionMovement.Editor.Shared;
 using Cysharp.Threading.Tasks;
 using System;
 using System.IO;
@@ -17,12 +18,12 @@ namespace ReunionMovement.EditorTools
 {
     public class CreateUIPlane : EditorWindow
     {
-        // 脚本输出路径
-        static string scriptOutPutPath = "Assets/ReunionMovement/GenerateScript/UI/UIPlane/";
-        // 预制体导出路径
-        static string prefabsOutPutPath = "Assets/ReunionMovement/Resources/Prefabs/UIs/";
+        // 脚本输出路径：源码安装 = 框架内；包安装 = Assets/ReunionMovementGenerated
+        static string scriptOutPutPath = ReunionPaths.InWritable("GenerateScript/UI/UIPlane/");
+        // 预制体导出路径：Resources 下的相对路径不变，保证 Resources.Load("Prefabs/UIs/...") 仍可用
+        static string prefabsOutPutPath = ReunionPaths.InWritable("Resources/Prefabs/UIs/");
         // 场景导出路径
-        static string sceneOutPutPath = "Assets/ReunionMovement/Editor/UIScenes/";
+        static string sceneOutPutPath = ReunionPaths.InWritable("Editor/UIScenes/");
 
         // 类名
         string className = "Class Name";
@@ -234,7 +235,7 @@ namespace ReunionMovement.EditorTools
         public void BindingSpriptRoot()
         {
             scriptName = className + "UIPlane";
-            var type = Type.GetType("ReunionMovement.Core.UI." + scriptName + ", Assembly-CSharp");
+            var type = FindUIType(scriptName);
             SetUIObj();
             BindScript(uiObj, type);
         }
@@ -250,7 +251,7 @@ namespace ReunionMovement.EditorTools
                 return;
             }
             scriptName = className + "UIPlane";
-            var type = Type.GetType("ReunionMovement.Core.UI." + scriptName + ", Assembly-CSharp");
+            var type = FindUIType(scriptName);
             SetUIObj();
             if (uiObj == null)
             {
@@ -267,12 +268,31 @@ namespace ReunionMovement.EditorTools
         }
 
         /// <summary>
+        /// 在所有已加载程序集里找生成的 UI 类型。
+        /// 生成脚本可能位于 Assembly-CSharp（用户可写目录）或 ReunionMovement.GenerateScript.UI（包内），
+        /// 不能像旧代码那样写死 Assembly-CSharp。
+        /// </summary>
+        private static Type FindUIType(string typeName)
+        {
+            const string ns = "ReunionMovement.Core.UI.";
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var type = assembly.GetType(ns + typeName, false);
+                if (type != null) return type;
+            }
+
+            Log.Error($"[CreateUIPlane] 未找到 UI 类型 {ns}{typeName}；请先执行「第二步 创建脚本」并等待编译完成。");
+            return null;
+        }
+
+        /// <summary>
         /// 绑定脚本到UI对象
         /// </summary>
         /// <param name="obj"></param>
         /// <param name="type"></param>
         private void BindScript(GameObject obj, Type type)
         {
+            if (obj == null || type == null) return;
             if (!obj.TryGetComponent(type, out Component component))
             {
                 obj.AddComponent(type);
@@ -410,6 +430,17 @@ namespace ReunionMovement.Core.UI
             str = str.Replace("{_0_}", name);
 
             var dataName = scriptOutPutPath + name + ".cs";
+
+            // 包安装模式：包内已有同名脚本时不能重生成 —— 包只读，且会在 Assembly-CSharp 里
+            // 产生与包内类型同名的类型，业务代码 using 时歧义。新类名不受影响。
+            if (ReunionPaths.IsInstalledAsPackage &&
+                File.Exists(ReunionPaths.InFramework("GenerateScript/UI/UIPlane/" + name + ".cs")) &&
+                !File.Exists(dataName))
+            {
+                Log.Error($"[CreateUIPlane] 包安装模式下不能重新生成包内已有的 UI 类型 {name}；" +
+                          "请换一个类名，或把框架以源码/嵌入式包方式安装。");
+                return;
+            }
 
             // 防覆盖保护：生成目录可能已被手写逻辑"寄生"（如 PopupUIPlane/TerminalUIPlane 含手写业务逻辑），
             // 无条件覆盖会静默清空手写代码且无法撤销。文件已存在时要求确认。

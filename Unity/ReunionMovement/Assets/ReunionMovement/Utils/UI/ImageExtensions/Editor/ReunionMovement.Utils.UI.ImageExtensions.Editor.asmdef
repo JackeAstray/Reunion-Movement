@@ -6,7 +6,8 @@
         "ReunionMovement.Common",
         "ReunionMovement.Core",
         "UnityEngine.UI",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "ReunionMovement.Editor.Shared"
     ],
     "includePlatforms": [
         "Editor"
