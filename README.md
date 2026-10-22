@@ -73,7 +73,7 @@ Assets/ReunionMovement/
 |---|---|---|
 | Windows (x64) | ✅ 已验证 | 本机构建 170.8 MB / 0 错误 |
 | WebGL | 🟡 已配置 | CI + WebGL 适配；浏览器真机验证待做 |
-| Android | 🟡 编译通过 | Android 目标编译通过；APK / 真机待验证 |
+| Android | ✅ 构建通过 | APK 75 MB / 0 错误；`VIBRATE` 注入已确认；真机启动待验证 |
 | iOS | 🟡 代码就绪 | 触觉 `.mm` 已补；Xcode 链接需 macOS |
 | macOS / Linux | 🟡 脚本就绪 | 构建菜单 / 命令行已提供；未实跑 |
 
