@@ -5,7 +5,8 @@ name: Unity CI
 #     获取方式见 https://game.ci/docs/github/activation
 #   - EditMode 测试里已经包含「架构守卫」三个用例（超大文件 / 缺失 meta / asmdef 依赖方向），
 #     所以测试绿灯 = 守卫绿灯，不需要单独一步。
-#   - WebGL 构建默认只在手动触发和 main 分支上跑，避免每个 PR 都烧构建时长。
+#   - WebGL / Windows 构建默认只在手动触发和 main 分支上跑；Android 只在手动触发，
+#     避免每个 PR 都烧构建时长。
 
 on:
   push:
@@ -97,6 +98,83 @@ jobs:
         with:
           name: webgl-build
           path: build/WebGL
+          if-no-files-found: warn
+
+  windows-build:
+    name: Windows 构建
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 1
+
+      - name: 缓存 Library
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.UNITY_PROJECT_PATH }}/Library
+          key: Library-Windows-${{ runner.os }}-${{ hashFiles('Unity/ReunionMovement/Packages/packages-lock.json') }}
+          restore-keys: |
+            Library-Windows-${{ runner.os }}-
+            Library-${{ runner.os }}-
+
+      - name: 构建 Windows
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          projectPath: ${{ env.UNITY_PROJECT_PATH }}
+          targetPlatform: StandaloneWindows64
+          allowDirtyBuild: true
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-build
+          path: build/StandaloneWindows64
+          if-no-files-found: warn
+
+  android-build:
+    name: Android 构建（手动）
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 1
+
+      - name: 缓存 Library
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.UNITY_PROJECT_PATH }}/Library
+          key: Library-Android-${{ runner.os }}-${{ hashFiles('Unity/ReunionMovement/Packages/packages-lock.json') }}
+          restore-keys: |
+            Library-Android-${{ runner.os }}-
+            Library-${{ runner.os }}-
+
+      - name: 构建 Android（debug APK）
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          projectPath: ${{ env.UNITY_PROJECT_PATH }}
+          targetPlatform: Android
+          androidExportType: androidPackage
+          allowDirtyBuild: true
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-build
+          path: build/Android
           if-no-files-found: warn
 
   guard-only:

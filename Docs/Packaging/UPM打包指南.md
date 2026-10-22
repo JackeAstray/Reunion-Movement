@@ -52,6 +52,7 @@ com.reunion.movement/
 │   ├── Shared/ReunionPaths.cs       # 框架根解析
 │   ├── Toolbox/
 │   └── ...
+├── Samples~/HelloWorld/             # Package Manager → Import Sample
 └── Documentation~/
     ├── ReunionMovement 使用指南.md
     ├── CustomSystem.cs.txt
@@ -67,6 +68,8 @@ com.reunion.movement/
 ```
 
 或 Package Manager → `+` → `Add package from disk...` → 选择 `package.json`。
+
+导入后在 Package Manager 的 **Samples** 页签导入 **Hello World**；它不依赖场景，Play 即可看到文本。
 
 发布到可访问仓库后可用 git URL：
 
@@ -118,7 +121,7 @@ Unity -batchmode -quit -projectPath Unity/ReunionMovement `
 
 本次实测（2026-10-22）：
 
-- `ExportRuntimeBatch` 产出 **42.6 MB / 1,850 文件**；
+- `ExportRuntimeBatch` 产出 **42.6 MB / 1,855 文件**；
 - 新建 Unity 6000.3 工程，`Packages/manifest.json` 加 `file:` 包 → 打开后 **0 编译错误**；
 - 产出 `ReunionMovement.Core` / `Utils` / `GenerateScript.UI` / `DOTween.Modules` 等 30+ 程序集；
 - Addressables 2.9.1 / Input System 1.18.0 / Newtonsoft.Json 3.2.2 / uGUI 2.0.0 / URP 17.3.0 由 `package.json` 依赖自动解析；
