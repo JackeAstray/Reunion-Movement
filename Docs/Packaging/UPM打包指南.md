@@ -6,7 +6,7 @@
 
 ## 1. 导出
 
-菜单：`ReunionMovement → 打包 → 导出 UPM 包（运行时 / 完整）`。
+菜单：`ReunionMovement → 打包 → 导出 UPM 包（运行时 / 完整 / OpenUPM 依赖）`。
 选择输出目录后生成 `<dir>/com.reunion.movement`。
 
 命令行（不弹窗，输出到 `Unity/ReunionMovement/Build/Packages/`）：
@@ -18,26 +18,53 @@ Unity -batchmode -quit -projectPath Unity/ReunionMovement `
 # 完整包
 Unity -batchmode -quit -projectPath Unity/ReunionMovement `
   -executeMethod ReunionMovement.EditorTools.Package.ReunionUpmExporter.ExportFullBatch
+
+# OpenUPM 依赖包（不内置 UniTask/R3/ZString）
+Unity -batchmode -quit -projectPath Unity/ReunionMovement `
+  -executeMethod ReunionMovement.EditorTools.Package.ReunionUpmExporter.ExportOpenUpmBatch
 ```
 
 实现：`Editor/Package/ReunionUpmExporter.cs`。
 
-## 2. 两种 profile
+## 2. 三种 profile
 
-| 内容 | Runtime | Full |
-|---|---|---|
-| 体积（当前源码） | 约 43 MB | 约 190 MB |
-| 字体 `Fonts/` | 不含 | 含（129 MB） |
-| 示例场景 `Scenes/` | 不含 | 含 |
-| 示例 UI `UI/Select`、`Resources/Prefabs/UIs` | 不含 | 含 |
-| `3rd` 演示资源 | 不含（保留 `3rd/WebGLSupport`） | 含 |
-| `Editor/UIExamples` | 不含 | 含 |
-| 适用 | 接入自己的游戏 | 跑示例 / 完整验收 |
+| 内容 | Runtime | Full | OpenUPM 依赖 |
+|---|---|---|---|
+| 体积（当前源码） | 约 43 MB | 约 190 MB | 约 40 MB（不含 UniTask） |
+| UniTask / R3 / ZString | 内置 | 内置 | UniTask 走 OpenUPM；R3 / ZString 内置 |
+| 字体 `Fonts/` | 不含 | 含（129 MB） | 不含 |
+| 示例场景 `Scenes/` | 不含 | 含 | 不含 |
+| 示例 UI `UI/Select`、`Resources/Prefabs/UIs` | 不含 | 含 | 不含 |
+| `3rd` 演示资源 | 不含（保留 `3rd/WebGLSupport`） | 含 | 不含（保留 `3rd/WebGLSupport`） |
+| `Editor/UIExamples` | 不含 | 含 | 不含 |
+| 适用 | 接入自己的游戏 | 跑示例 / 完整验收 | 接入方已在用 OpenUPM |
 
-两个 profile 都包含：运行时程序集、`Plugins`（UniTask / R3 / DOTween / ZString / kcp2k / Telepathy /
-SimpleWebTransport）、`Resources` 其余资源、`Editor` 工具、`GenerateScript/UI`、`Documentation~`。
+Runtime / Full 包含 `Plugins` 里的 UniTask / R3 / DOTween / ZString / kcp2k / Telepathy / SimpleWebTransport；
+OpenUPM 模式不含 UniTask / R3 / ZString，其余相同。
+两种运行时包都包含 `Resources` 其余资源、`Editor` 工具、`GenerateScript/UI`、`Documentation~`。
 iOS 触觉原生实现 `Plugins/iOS/ReunionHaptics.mm` 会随包分发；Android 的 `VIBRATE` 权限由
 `Editor/Build/AndroidVibratePermission.cs` 在构建时注入。
+
+### OpenUPM 依赖模式
+
+这个包**只不内置 UniTask**（R3 / ZString 仍内置）。宿主需要先加 scoped registry
+（UniTask 在 OpenUPM，不在 Unity 官方 registry）：
+
+```json
+"scopedRegistries": [
+  {
+    "name": "OpenUPM",
+    "url": "https://package.openupm.com",
+    "scopes": [ "com.cysharp" ]
+  }
+]
+```
+
+然后再把 `com.reunion.movement` 加进 `Packages/manifest.json`。版本由包的 `package.json` 声明：
+UniTask 2.5.11。DOTween / R3 / ZString 仍内置。
+
+> R3 的 OpenUPM 包只带 `R3.Unity`、不带核心 `R3.dll`；ZString 官方包要求每个 asmdef 显式引用，
+> 因此这两个没有跟着切。详见 [第三方依赖](../第三方依赖.md)。
 
 ## 3. 包结构
 
@@ -126,6 +153,8 @@ Unity -batchmode -quit -projectPath Unity/ReunionMovement `
 - 产出 `ReunionMovement.Core` / `Utils` / `GenerateScript.UI` / `DOTween.Modules` 等 30+ 程序集；
 - Addressables 2.9.1 / Input System 1.18.0 / Newtonsoft.Json 3.2.2 / uGUI 2.0.0 / URP 17.3.0 由 `package.json` 依赖自动解析；
 - 空工程探针 `GameEntryResolver.FindEntryType()` 返回 `null`（日志 `[Probe] entry=null`），
-  确认包安装后不会接管宿主启动。
+  确认包安装后不会接管宿主启动；
+- OpenUPM profile：新建工程 + `scopedRegistries` 安装 → **0 编译错误**，官方 UniTask 2.5.11 解析成功；
+  R3 / ZString 继续使用内置副本。
 
 实测记录见 [便捷性与可移植性评估](../便捷性与可移植性评估.md) 的「落地记录」。

@@ -35,6 +35,8 @@ namespace ReunionMovement.EditorTools.Package
         {
             Runtime,
             Full,
+            /// <summary>运行时包，但不内置 UniTask / R3 / ZString，改为 OpenUPM 依赖。</summary>
+            RuntimeOpenUpm,
         }
 
         private const string PackageName = "com.reunion.movement";
@@ -51,11 +53,17 @@ namespace ReunionMovement.EditorTools.Package
         [MenuItem("ReunionMovement/打包/导出 UPM 包（完整）", false, 132)]
         public static void ExportFullFromMenu() => ExportWithDialog(PackageProfile.Full);
 
+        [MenuItem("ReunionMovement/打包/导出 UPM 包（OpenUPM 依赖）", false, 133)]
+        public static void ExportOpenUpmFromMenu() => ExportWithDialog(PackageProfile.RuntimeOpenUpm);
+
         /// <summary>命令行入口：运行时 profile，输出到默认目录。</summary>
         public static void ExportRuntimeBatch() => Batch(PackageProfile.Runtime);
 
         /// <summary>命令行入口：完整 profile，输出到默认目录。</summary>
         public static void ExportFullBatch() => Batch(PackageProfile.Full);
+
+        /// <summary>命令行入口：OpenUPM 依赖 profile，输出到默认目录。</summary>
+        public static void ExportOpenUpmBatch() => Batch(PackageProfile.RuntimeOpenUpm);
 
         private static void Batch(PackageProfile profile)
         {
@@ -151,7 +159,7 @@ namespace ReunionMovement.EditorTools.Package
             }
 
             // 4. 包元数据
-            WriteText(Path.Combine(packageDir, "package.json"), BuildPackageJson());
+            WriteText(Path.Combine(packageDir, "package.json"), BuildPackageJson(profile));
             WriteText(Path.Combine(packageDir, "README.md"), BuildReadme(profile));
             WriteText(Path.Combine(packageDir, "CHANGELOG.md"), BuildChangelog());
 
@@ -197,6 +205,14 @@ namespace ReunionMovement.EditorTools.Package
                 return true;
             }
 
+            // OpenUPM profile：UniTask 不内置，由 package.json 依赖提供。
+            // R3 的 OpenUPM 包只有 R3.Unity，核心 R3.dll 仍需另装；ZString 需要每个 asmdef 显式引用。
+            // 因此这两个继续内置，避免“看起来能切、实际编译不过”。
+            if (profile == PackageProfile.RuntimeOpenUpm && IsVendoredUniTask(rel))
+            {
+                return true;
+            }
+
             if (profile == PackageProfile.Full)
             {
                 return false;
@@ -214,6 +230,12 @@ namespace ReunionMovement.EditorTools.Package
                    rel.Contains("/Examples/", StringComparison.Ordinal) ||
                    rel.EndsWith("/Example.meta", StringComparison.Ordinal) ||
                    rel.EndsWith("/Examples.meta", StringComparison.Ordinal);
+        }
+
+        private static bool IsVendoredUniTask(string rel)
+        {
+            return rel.StartsWith("Plugins/UniTask/", StringComparison.Ordinal) ||
+                   rel == "Plugins/UniTask.meta";
         }
 
         private static bool IsExcludedRuntimeFolder(string rel)
@@ -247,8 +269,13 @@ namespace ReunionMovement.EditorTools.Package
 
         // ---------------------------------------------------------------- 元数据
 
-        private static string BuildPackageJson()
+        private static string BuildPackageJson(PackageProfile profile)
         {
+            string cysharpDeps = profile == PackageProfile.RuntimeOpenUpm
+                ? @",
+    ""com.cysharp.unitask"": ""2.5.11"""
+                : string.Empty;
+
             return @"{
   ""name"": ""__NAME__"",
   ""displayName"": ""Reunion Movement"",
@@ -261,7 +288,7 @@ namespace ReunionMovement.EditorTools.Package
   ""dependencies"": {
     ""com.unity.addressables"": ""2.9.1"",
     ""com.unity.inputsystem"": ""1.18.0"",
-    ""com.unity.nuget.newtonsoft-json"": ""3.2.2"",
+    ""com.unity.nuget.newtonsoft-json"": ""3.2.2""__CYSHARP__,
     ""com.unity.ugui"": ""2.0.0"",
     ""com.unity.render-pipelines.universal"": ""17.3.0""
   },
@@ -273,11 +300,37 @@ namespace ReunionMovement.EditorTools.Package
     }
   ]
 }
-".Replace("__NAME__", PackageName).Replace("__VERSION__", PackageVersion);
+".Replace("__NAME__", PackageName)
+ .Replace("__VERSION__", PackageVersion)
+ .Replace("__CYSHARP__", cysharpDeps);
         }
 
         private static string BuildReadme(PackageProfile profile)
         {
+            string openUpm = profile == PackageProfile.RuntimeOpenUpm
+                ? @"
+## OpenUPM 依赖
+
+本包**不内置** UniTask（改用 OpenUPM）；R3 / ZString 仍内置。安装前在目标工程的 `Packages/manifest.json` 加入：
+
+```json
+""scopedRegistries"": [
+  {
+    ""name"": ""OpenUPM"",
+    ""url"": ""https://package.openupm.com"",
+    ""scopes"": [ ""com.cysharp"" ]
+  }
+]
+```
+
+UniTask 版本由 `package.json` 声明：2.5.11。
+"
+                : "";
+
+            string runtimeNote = profile == PackageProfile.Full
+                ? "完整包含示例场景、字体与第三方演示资源；导入后按需加入 Build Settings。"
+                : "运行时包不含示例场景、示例 UI、字体与第三方演示资源；请自备字体/界面。";
+
             return $@"# Reunion Movement
 
 Unity 6000.3 游戏框架（{profile} 包）。
@@ -296,15 +349,14 @@ Unity 6000.3 游戏框架（{profile} 包）。
 
 - Addressables 2.9.1
 - Input System 1.18.0
+- Newtonsoft.Json 3.2.2
 - uGUI 2.0.0
 - URP 17.3.0
-
+{openUpm}
 ## 注意
 
 - 包安装时，编辑器生成物写到 `Assets/ReunionMovementGenerated/`（包目录只读）。
-- {(profile == PackageProfile.Runtime
-                ? "运行时包不含示例场景、示例 UI、字体与第三方演示资源；请自备字体/界面。"
-                : "完整包含示例场景、字体与第三方演示资源；导入后按需加入 Build Settings。")}
+- {runtimeNote}
 - 入口：`[assembly: ReunionGameEntry(typeof(MyGameEntry))]`，或 `Bootstrap.Options.Entry`。
   没有入口时 Bootstrap 会报错并跳过启动，不会接管宿主工程。
 
@@ -320,7 +372,7 @@ Unity 6000.3 游戏框架（{profile} 包）。
 
 ### Added
 - 标准 UPM 包结构（package.json / README / CHANGELOG / LICENSE / Documentation~）。
-- 运行时 / 完整两种导出 profile。
+- 运行时 / 完整 / OpenUPM 依赖三种导出 profile。
 
 ### Changed
 - 编辑器工具通过 `ReunionPaths` 解析框架根，不再硬编码 `Assets/ReunionMovement`。
