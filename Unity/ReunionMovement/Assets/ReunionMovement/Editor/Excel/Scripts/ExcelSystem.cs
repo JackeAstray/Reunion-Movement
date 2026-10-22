@@ -1,4 +1,4 @@
-﻿using ReunionMovement.Common;
+using ReunionMovement.Common;
 using ReunionMovement.Common.Util;
 using Cysharp.Threading.Tasks;
 using System;
@@ -16,13 +16,8 @@ using UnityEngine;
 
 namespace ReunionMovement.EditorTools
 {
-    public class ExcelSystem
+    public partial class ExcelSystem
     {
-        static readonly string toDirSO = "Assets/ReunionMovement/Editor/Excel/Resources";                                           // 源文件路径
-        static readonly string scriptOutPutPath = "Assets/ReunionMovement/GenerateScript/AutoScripts/";                             // 脚本输出路径
-        static readonly string scriptableOutPutPath = "Assets/ReunionMovement/Resources/ScriptableObjects/";                        // 脚本对象输出路径
-        static readonly string jsonOutPutPath = "Assets/ReunionMovement/Resources/AutoDatabase/";                                   // Json输出路径
-
         static int tableRows_Max = 3;                                           // 最大行数
         static int tableRows_1 = 0;                                             // 第一行中文名称
         static int tableRows_2 = 1;                                             // 第二行数据类型
@@ -228,6 +223,8 @@ namespace ReunionMovement.EditorTools
 
             for (int i = 0; i < sheets.Count; i++)
             {
+                if (SkipPackageGenerated(sheets[i].itemClassName)) continue;
+
                 _ = GenerateScript(sheets[i]);
                 _ = GenerateScriptList(sheets[i], i);
             }

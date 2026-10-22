@@ -181,6 +181,7 @@ namespace ReunionMovement.HeadlessCheck
         /// <summary>判断这次失败是不是"因为不在 Unity 里"；是的话返回证据（哪个 Unity 调用），否则返回 null。</summary>
         private static string UnityBlockReason(Exception ex)
         {
+            if (ex.GetType().Name == "IgnoreException") return "Assert.Ignore";
             if (ex is System.Security.SecurityException) return "SecurityException（Unity 原生调用）";
             if (ex is TypeInitializationException && ex.InnerException != null) return UnityBlockReason(ex.InnerException);
 

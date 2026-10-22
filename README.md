@@ -31,6 +31,7 @@ Assets/ReunionMovement/
 ├── 3rd/         外部素材与插件：Joystick Pack、WebGLSupport、Animated Loading Icons
 ├── Scenes/      启动 / 加载 / 业务场景 + Example 示例场景
 ├── Resources/   运行时资源（材质、预制体、音频、着色器、UI）
+├── Game/        示例入口声明（Assembly-CSharp，不进 UPM / .unitypackage）
 └── GenerateScript/  代码生成产物（UI 面板、配置数据）
 ```
 
@@ -43,6 +44,9 @@ Assets/ReunionMovement/
 | [Docs/00-快速开始.md](Docs/00-快速开始.md) | 10 分钟跑起来，第一个改动 |
 | [Docs/01-架构总览.md](Docs/01-架构总览.md) | 分层、启动时序、模块表 |
 | [Docs/重构方案.md](Docs/重构方案.md) | 现状体检、问题清单、六阶段改造计划 |
+| [Docs/便捷性与可移植性评估.md](Docs/便捷性与可移植性评估.md) | 调用 / 跨平台 / 插件便携性的现状与改造路线 |
+| [Docs/Packaging/UPM打包指南.md](Docs/Packaging/UPM打包指南.md) | 导出 / 安装 UPM 包（运行时 / 完整） |
+| [Docs/跨平台构建指南.md](Docs/跨平台构建指南.md) | 多平台构建、link.xml 与平台备注 |
 | [Docs/features.md](Docs/features.md) | 完整特性清单与示例 GIF |
 
 ## 依赖

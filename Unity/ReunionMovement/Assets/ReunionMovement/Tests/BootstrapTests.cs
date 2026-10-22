@@ -2,6 +2,7 @@ using NUnit.Framework;
 using ReunionMovement.Core;
 using ReunionMovement.Core.Base;
 using System;
+using System.Linq;
 
 namespace ReunionMovement.Tests
 {
@@ -11,7 +12,8 @@ namespace ReunionMovement.Tests
     /// 回归保护：
     /// 1. 测试场景判定改成可配置后，默认值必须与旧版硬编码规则完全一致，
     ///    否则示例场景会开始自动跳转（或业务场景被误判为测试场景）。
-    /// 2. 入口解析必须能在没有用户声明时回退到框架内置的 StartGame。
+    /// 2. 入口选择：配置优先于程序集声明；没有入口时默认<b>不</b>回退内置 StartGame，
+    ///    避免框架被导入已有工程后自动接管宿主启动流程。
     /// </summary>
     public class BootstrapTests
     {
@@ -55,25 +57,87 @@ namespace ReunionMovement.Tests
         }
 
         [Test]
-        public void Resolver_Finds_Framework_Declared_Entry()
+        public void Resolver_Finds_Demo_Entry()
         {
-            // Core 程序集声明了 [assembly: ReunionGameEntry(typeof(StartGame))]
+            if (!IsDemoAssemblyLoaded())
+            {
+                Assert.Ignore("示例入口在 Assembly-CSharp，HeadlessCheck 不加载该程序集");
+            }
+
+            // Game/StartGameEntry.cs（Assembly-CSharp）声明了示例入口；
+            // 框架程序集本身不声明入口，避免包安装时接管宿主启动。
             Assert.AreEqual(typeof(StartGame), GameEntryResolver.FindEntryType(),
-                "未找到框架声明的入口，检查 Core/Bootstrap.cs 顶部的 assembly 特性");
+                "未找到示例入口，检查 Assets/ReunionMovement/Game/StartGameEntry.cs");
         }
 
         [Test]
         public void Resolver_Creates_Entry_Instance()
         {
+            if (!IsDemoAssemblyLoaded())
+            {
+                Assert.Ignore("示例入口在 Assembly-CSharp，HeadlessCheck 不加载该程序集");
+            }
+
             var entry = GameEntryResolver.CreateEntry();
             Assert.IsNotNull(entry);
             Assert.IsInstanceOf<StartGame>(entry);
+        }
+
+        private static bool IsDemoAssemblyLoaded()
+        {
+            return AppDomain.CurrentDomain.GetAssemblies()
+                .Any(a => a.GetName().Name == "Assembly-CSharp");
         }
 
         [Test]
         public void Attribute_Rejects_Null_Type()
         {
             Assert.Throws<ArgumentNullException>(() => new ReunionGameEntryAttribute(null));
+        }
+
+        // ---------------------------------------------------------------- 入口选择
+
+        [Test]
+        public void Options_Default_Does_Not_Fall_Back_To_BuiltIn_Entry()
+        {
+            var options = new BootstrapOptions();
+
+            Assert.IsNull(options.Entry);
+            Assert.IsFalse(options.AllowBuiltInEntryFallback,
+                "默认不允许回退，否则把框架导入已有工程会自动接管启动流程");
+        }
+
+        [Test]
+        public void ResolveEntry_Prefers_Configured_Entry()
+        {
+            var configured = new StartGame();
+            var declared = new StartGame();
+
+            Assert.AreSame(configured, Bootstrap.ResolveEntry(configured, () => declared, true),
+                "Options.Entry 应优先于程序集声明");
+        }
+
+        [Test]
+        public void ResolveEntry_Prefers_Declared_Entry_When_No_Configured()
+        {
+            var declared = new StartGame();
+
+            Assert.AreSame(declared, Bootstrap.ResolveEntry(null, () => declared, true));
+        }
+
+        [Test]
+        public void ResolveEntry_Returns_Null_When_Nothing_Declared_And_Fallback_Disabled()
+        {
+            Assert.IsNull(Bootstrap.ResolveEntry(null, () => null, false),
+                "没有入口且未显式打开回退时，必须返回 null，不能替用户选 StartGame");
+        }
+
+        [Test]
+        public void ResolveEntry_Falls_Back_Only_When_Explicitly_Enabled()
+        {
+            var entry = Bootstrap.ResolveEntry(null, () => null, true);
+
+            Assert.IsInstanceOf<StartGame>(entry);
         }
     }
 }

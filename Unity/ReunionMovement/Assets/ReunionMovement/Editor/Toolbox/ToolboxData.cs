@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using ReunionMovement.Editor.Shared;
 using UnityEditor;
 using UnityEngine;
 
@@ -11,9 +12,11 @@ namespace ReunionMovement.EditorTools.Toolbox
     /// <summary>工具箱的数据采集部分：只读，不改工程。</summary>
     public sealed partial class ReunionMovementToolboxWindow
     {
-        private const string AssetRoot = "Assets/ReunionMovement";
-        private const string GameConfigPath = AssetRoot + "/Resources/ScriptableObjects/GameConfig.asset";
-        private const string BundledGuidePath = AssetRoot + "/Documentation/ReunionMovement 使用指南.md";
+        private static readonly string AssetRoot = ReunionPaths.Root;
+        private static readonly string GameConfigPath =
+            ReunionPaths.InFramework("Resources/ScriptableObjects/GameConfig.asset");
+        private static readonly string BundledGuidePath =
+            ReunionPaths.InFramework("Documentation/ReunionMovement 使用指南.md");
 
         private static readonly string[] AddressablesGroups =
         {

@@ -9,7 +9,8 @@
         "UniTask",
         "UnityEngine.UI",
         "Unity.InputSystem",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "ReunionMovement.Editor.Shared"
     ],
     "includePlatforms": [
         "Editor"
