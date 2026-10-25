@@ -18,8 +18,7 @@ namespace ReunionMovement.Core.UI
         /// <summary>
         /// 打开窗口（字符串键）—— 保持现有 API 兼容
         /// </summary>
-        [Obsolete("改用 OpenWindowAsync<TWindow, TArgs>(args) 或 UIRouter.PushAsync<TWindow, TArgs>(args)", false)]
-        public UILoadState OpenWindow(string uiName, params object[] args)
+        internal UILoadState OpenWindow(string uiName, params object[] args)
         {
             //TODO: 需要先创建脚本对象，再根据脚本中的值进行加载资源
             UILoadState uiState;
@@ -52,7 +51,7 @@ namespace ReunionMovement.Core.UI
         /// <summary>
         /// [推荐] 异步打开窗口 —— 走 LoadWindowAsync（Addressables 双轨加载，失败自动降级 Resources）。
         /// </summary>
-        public async UniTask<UILoadState> OpenWindowAsync(string uiName, params object[] args)
+        internal async UniTask<UILoadState> OpenWindowAsync(string uiName, params object[] args)
         {
             UILoadState uiState;
 
@@ -95,7 +94,7 @@ namespace ReunionMovement.Core.UI
         /// <param name="uiName"></param>
         /// <param name="args"></param>
         /// <returns></returns>
-        public UILoadState SetWindow(string uiName, params object[] args)
+        internal UILoadState SetWindow(string uiName, params object[] args)
         {
             UILoadState uiState;
             if (!uiStateCache.TryGetValue(uiName, out uiState))

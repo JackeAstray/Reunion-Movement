@@ -32,7 +32,6 @@ namespace ReunionMovement.Core.UI
         /// </summary>
         /// <param name="name"></param>
         /// <returns></returns>
-        [Obsolete("改用 IsOpen<TWindow>()", false)]
         public bool IsOpen(string name)
         {
             UIController uiBase = GetUIBase(name);
