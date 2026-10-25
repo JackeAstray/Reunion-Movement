@@ -17,11 +17,19 @@ namespace ReunionMovement.Core.UI
     {
         public readonly string Title;
         public readonly string Message;
+    public readonly string ConfirmText;
+    public readonly string CancelText;
+    public readonly Action ConfirmAction;
+    public readonly Action CancelAction;
 
-        public PopupArgs(string title, string message)
+    public PopupArgs(string title, string message, string confirmText = null, string cancelText = null, Action confirmAction = null, Action cancelAction = null)
         {
             Title = title;
             Message = message;
+        ConfirmText = confirmText;
+        CancelText = cancelText;
+        ConfirmAction = confirmAction;
+        CancelAction = cancelAction;
         }
 
         public override string ToString() => Title + " | " + Message;
@@ -32,14 +40,6 @@ namespace ReunionMovement.Core.UI
     {
         /// <summary>打开时收到的参数（无参打开时为 default）。</summary>
         public PopupArgs Args { get; private set; }
-
-        /// <summary>强类型参数入口：由 UISystem.OpenWindowAsync&lt;TWindow, TArgs&gt; 自动调用。</summary>
-        public void OnWindowArgs(PopupArgs args)
-        {
-            Args = args;
-            Debug.Log("[PopupUIPlane] 收到参数: " + args);
-        }
-
         string openWindow = nameof(PopupUIPlane);
         string closeWindow = nameof(PopupUIPlane);
 
@@ -72,68 +72,33 @@ namespace ReunionMovement.Core.UI
         public override void OnOpen(params object[] args)
         {
             base.OnOpen(args);
-
-            // 清理上一次打开残留的回调引用：若窗口在未经过 OnClose 的情况下被连续 OnOpen（重入），
-            // 旧 Action 会残留并在本次点击时触发
-            cancelAction = null;
+            // 参数不再从 object[] 里按位置取：由 OnWindowArgs(PopupArgs) 强类型注入。
+            // 这里只做"上一次打开残留"的清理与按钮接线。
             confirmAction = null;
+            cancelAction = null;
+            WireButtons();
+        }
 
-            if (confirmBtn != null) confirmBtn.gameObject.SetActive(false);
-            if (cancelBtn != null) cancelBtn.gameObject.SetActive(false);
+        /// <summary>强类型参数入口（由 UIRouter / OpenWindowAsync&lt;TWindow, TArgs&gt; 调用）。</summary>
+        public void OnWindowArgs(PopupArgs args)
+        {
+            Args = args;
+            if (!string.IsNullOrEmpty(args.Title) && titleStr != null) titleStr.text = args.Title;
+            if (!string.IsNullOrEmpty(args.Message) && containerStr != null) containerStr.text = args.Message;
+            if (!string.IsNullOrEmpty(args.ConfirmText) && confirmStr != null) confirmStr.text = args.ConfirmText;
+            if (!string.IsNullOrEmpty(args.CancelText) && cancelStr != null) cancelStr.text = args.CancelText;
 
-            // args 可能为 null（OpenWindow 无参调用），与 TerminalUIPlane.OnSet 的判空保护保持一致
-            if (args == null) args = Array.Empty<object>();
+            confirmAction = args.ConfirmAction;
+            cancelAction = args.CancelAction;
+            if (args.ConfirmAction != null && confirmBtn != null) confirmBtn.gameObject.SetActive(true);
+            if (args.CancelAction != null && cancelBtn != null) cancelBtn.gameObject.SetActive(true);
 
-            switch (args.Length)
-            {
-                case 0:
-                    Log.Error("PopupUIPlane: 未传入任何参数，窗口内容为空。");
-                    break;
-                case 1:
-                    if (containerStr != null) containerStr.text = args[0]?.ToString();
-                    break;
-                case 2:
-                    if (titleStr != null) titleStr.text = args[0]?.ToString();
-                    if (containerStr != null) containerStr.text = args[1]?.ToString();
-                    break;
-                case 3:
-                    if (titleStr != null) titleStr.text = args[0]?.ToString();
-                    if (containerStr != null) containerStr.text = args[1]?.ToString();
-                    if (confirmStr != null) confirmStr.text = args[2]?.ToString();
-                    if (confirmBtn != null) confirmBtn.gameObject.SetActive(true);
-                    break;
-                case 4:
-                    if (titleStr != null) titleStr.text = args[0]?.ToString();
-                    if (containerStr != null) containerStr.text = args[1]?.ToString();
-                    if (confirmStr != null) confirmStr.text = args[2]?.ToString();
-                    if (cancelStr != null) cancelStr.text = args[3]?.ToString();
-                    if (confirmBtn != null) confirmBtn.gameObject.SetActive(true);
-                    if (cancelBtn != null) cancelBtn.gameObject.SetActive(true);
-                    break;
-                case 5:
-                    if (titleStr != null) titleStr.text = args[0]?.ToString();
-                    if (containerStr != null) containerStr.text = args[1]?.ToString();
-                    if (confirmStr != null) confirmStr.text = args[2]?.ToString();
-                    if (cancelStr != null) cancelStr.text = args[3]?.ToString();
-                    confirmAction = args[4] as Action;
-                    if (confirmBtn != null) confirmBtn.gameObject.SetActive(true);
-                    if (cancelBtn != null) cancelBtn.gameObject.SetActive(true);
-                    break;
-                case 6:
-                    if (titleStr != null) titleStr.text = args[0]?.ToString();
-                    if (containerStr != null) containerStr.text = args[1]?.ToString();
-                    if (confirmStr != null) confirmStr.text = args[2]?.ToString();
-                    if (cancelStr != null) cancelStr.text = args[3]?.ToString();
-                    confirmAction = args[4] as Action;
-                    cancelAction = args[5] as Action;
-                    if (confirmBtn != null) confirmBtn.gameObject.SetActive(true);
-                    if (cancelBtn != null) cancelBtn.gameObject.SetActive(true);
-                    break;
-                default:
-                    Log.Error("参数错误");
-                    break;
-            }
+            Debug.Log("[PopupUIPlane] 收到参数: " + args);
+        }
 
+        /// <summary>按钮接线（幂等：每次打开先 RemoveAllListeners 再挂）。</summary>
+        private void WireButtons()
+        {
             if (cancelBtn != null)
             {
                 cancelBtn.onClick.RemoveAllListeners();
@@ -162,11 +127,6 @@ namespace ReunionMovement.Core.UI
                     CloseWindow();
                 });
             }
-        }
-
-        public override void OnSet(params object[] args)
-        {
-            base.OnSet(args);
         }
 
         public override void OnClose()
