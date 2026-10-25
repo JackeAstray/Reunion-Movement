@@ -1,0 +1,421 @@
+﻿using ReunionMovement.Common.Util.HttpService;
+using Cysharp.Threading.Tasks;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using UnityEngine;
+
+namespace ReunionMovement.Common.Util.Download
+{
+    /// <summary>
+    /// 下载管理器
+    /// </summary>
+    public class DownloadMgr : SingletonMgr<DownloadMgr>
+    {
+        /// <summary>下载任务跨场景进行（含图片缓存 LRU），保持跨场景存活</summary>
+        protected override bool IsPersistentAcrossScenes => true;
+
+        private readonly Dictionary<string, Texture2D> imageCache = new Dictionary<string, Texture2D>();
+        private readonly LinkedList<string> imageCacheOrder = new LinkedList<string>(); // LRU 访问顺序
+        private readonly object imageCacheLock = new object();
+
+        /// <summary>平台自适应图片缓存上限（WebGL 内存最受限，移动端次之，PC 最宽裕）</summary>
+        private static int MaxImageCacheSize
+        {
+            get
+            {
+#if UNITY_WEBGL
+                return 10;
+#elif UNITY_IOS || UNITY_ANDROID
+                return 20;
+#else
+                return 50;
+#endif
+            }
+        }
+        private readonly Dictionary<string, string> mimeTypeToExtension = new Dictionary<string, string>
+        {
+            {"text/html",".html"},
+            {"text/plain",".txt"},
+            {"text/xml",".xml"},
+
+            {"image/gif", ".gif"},
+            {"image/jpeg", ".jpg"},
+            {"image/png", ".png"},
+            {"image/webp", ".webp"},
+
+            {"audio/mp3",".mp3"},
+            {"audio/wav",".wav"},
+            {"audio/ogg",".ogg"},
+            {"audio/mid",".mid"},
+
+            {"video/mpeg4",".mp4"},
+            {"video/avi",".avi"},
+
+            {"application/pdf",".pdf"},
+            {"application/msword",".doc"},
+            {"application/json",".json"},
+            {"application/javascript",".js"},
+            {"application/xml",".xml"},
+            {"application/zip",".zip"},
+            {"application/7z",".7z"},
+        };
+
+        /// <summary>
+        /// 清除下载管理器数据
+        /// </summary>
+        public void ClearData()
+        {
+            lock (imageCacheLock)
+            {
+                foreach (var tex in imageCache.Values)
+                {
+                    if (tex != null)
+                    {
+                        UnityEngine.Object.Destroy(tex);
+                    }
+                }
+                imageCache.Clear();
+                imageCacheOrder.Clear();
+            }
+
+            // 移动端/WebGL 建议在清除纹理缓存后主动触发一次卸载，
+            // 确保 GPU 内存及时回收（PC 上可选择性跳过以减少卡顿）
+#if UNITY_IOS || UNITY_ANDROID || UNITY_WEBGL
+            Resources.UnloadUnusedAssets();
+#endif
+            Log.Debug("DownloadManagerModule 清除数据");
+        }
+
+        protected override void OnDestroy()
+        {
+            // 使用反射方式检查是否为当前活跃单例，避免访问 Instance 属性触发意外 CreateInstance
+            // SingletonMgr<T>.IsInitialized 为静态属性，不会触发懒加载
+            if (!SingletonMgr<DownloadMgr>.IsInitialized) return;
+
+            // 安全获取实例：仅在已初始化且实例存活时进行引用比较
+            var current = SingletonMgr<DownloadMgr>.Instance;
+            if (current == null || current != this)
+            {
+                return;
+            }
+
+            ClearData();
+
+            // 清除 MIME 类型映射
+            mimeTypeToExtension.Clear();
+
+            base.OnDestroy();
+        }
+
+        /// <summary>
+        /// 下载图片（HTTP方式）
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="onProgress"></param>
+        /// <param name="onComplete"></param>
+        /// <param name="suffix"></param>
+        public void DownloadImage_Http(string url, Action<float> onProgress, Action<Texture2D> onComplete)
+        {
+            // 1. 内存查找（命中时提升 LRU 顺序）—— 加锁防止竞态条件
+            Texture2D cachedTexture = null;
+            lock (imageCacheLock)
+            {
+                if (imageCache.TryGetValue(url, out cachedTexture) && cachedTexture != null)
+                {
+                    TouchCacheEntry(url);
+                }
+                else
+                {
+                    cachedTexture = null;
+                }
+            }
+            if (cachedTexture != null)
+            {
+                onComplete?.Invoke(cachedTexture);
+                return;
+            }
+
+            // 2. 本地查找
+            string localPath = PathUtil.GetLocalFilePath(url);
+            if (TryLoadFromLocal(localPath, out Texture2D localTexture) && localTexture != null)
+            {
+                // 加入内存缓存
+                AddToImageCache(url, localTexture);
+                onComplete?.Invoke(localTexture);
+                return;
+            }
+
+            // 3. 网络下载
+            HttpMgr.GetTexture(url)
+                .OnDownloadProgress(onProgress)
+                .OnSuccess(response =>
+                {
+                    if (response.texture != null)
+                    {
+                        // 竞态：下载期间另一请求已缓存同 URL，丢弃本响应纹理并复用缓存
+                        Texture2D cachedHit = null;
+                        lock (imageCacheLock)
+                        {
+                            if (imageCache.TryGetValue(url, out Texture2D oldTex) && oldTex != null)
+                            {
+                                UnityEngine.Object.Destroy(response.texture);
+                                cachedHit = oldTex;
+                            }
+                        }
+                        // 锁外触发用户回调，避免锁内执行用户代码（防死锁/重入）
+                        if (cachedHit != null)
+                        {
+                            onComplete?.Invoke(cachedHit);
+                            return;
+                        }
+                        AddToImageCache(url, response.texture);
+
+                        // 保存到本地（确保目录存在于SaveToLocal中）
+                        SaveToLocal(response.texture, localPath);
+                        onComplete?.Invoke(response.texture);
+                    }
+                    else
+                    {
+                        // HTTP 成功但纹理解码失败（如服务器返回 200 + 非图片内容）：
+                        // 必须兜底回调 null，否则调用方永久挂起
+                        Log.Error("下载图片失败: 响应成功但纹理解码失败 {0}", url);
+                        onComplete?.Invoke(null);
+                    }
+                })
+                .OnError(error => 
+                {
+                    Log.Error("下载图片失败: {0}", error);
+                    onComplete?.Invoke(null);
+                })
+                .OnNetworkError(response =>
+                {
+                    // 断网时 onNetworkError 是唯一回调，必须兜底完成，否则调用方永久挂起
+                    Log.Error("下载图片网络错误: {0}", response?.error ?? "未知网络错误");
+                    onComplete?.Invoke(null);
+                })
+                .Send();
+        }
+
+        /// <summary>
+        /// 文件下载（多文件）
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="savePath"></param>
+        /// <param name="uiPlane"></param>
+        /// <param name="set"></param>
+        /// <param name="action"></param>
+        public async UniTask DownloadFiles(List<string> url,
+            string savePath,
+            Action<float> progress = null,
+            Action action = null,
+            Action<string> error = null,
+            bool skipIfExists = true, // 存在则跳过
+            bool deleteIfExists = false, // 存在则删除
+            bool useMd5Name = true // 是否使用 MD5 命名（默认 true），对 bundle 下载可设为 false
+        )
+        {
+            // 检查本地文件是否存在
+            List<string> urlsToDownload = new List<string>();
+            foreach (var fileUrl in url)
+            {
+                // 存在性检查必须与实际写入文件名一致：
+                // useMd5Name=true 时 FileDownloader 写入 MD5 哈希名（PathUtil.GetFileNameByUrl），
+                // 用 URL 最后一段文件名检查会永远识别不到已下载文件，导致重复下载。
+                string fileName = useMd5Name
+                    ? PathUtil.GetFileNameByUrl(fileUrl)
+                    : FileOperationUtil.GetFileName(fileUrl);
+                string localFilePath = Path.Combine(savePath, fileName);
+
+                if (File.Exists(localFilePath))
+                {
+                    if (skipIfExists)
+                    {
+                        Log.Debug("文件已存在，跳过下载: {0}", localFilePath);
+                        continue;
+                    }
+                    else if (deleteIfExists)
+                    {
+                        try
+                        {
+                            File.Delete(localFilePath);
+                            Log.Debug("已删除旧文件: {0}", localFilePath);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Error("删除文件失败: {0}, {1}", localFilePath, ex.Message);
+                            error?.Invoke($"删除文件失败: {localFilePath}, {ex.Message}");
+                            continue;
+                        }
+                    }
+                }
+                urlsToDownload.Add(fileUrl);
+            }
+
+            if (urlsToDownload.Count == 0)
+            {
+                Log.Debug("所有文件均已存在，无需下载。");
+                action?.Invoke();
+                return;
+            }
+
+            // 将 useMd5Name 传递给 FileDownloader，以便控制命名策略
+            FileDownloader ufd = new FileDownloader(savePath, useMd5Name, true, 3, true, false, true, urlsToDownload);
+
+            ufd.OnDownloadSuccess += (string uri) =>
+            {
+                Log.Debug("OnDownloadSuccess = " + ufd.Progress);
+                progress?.Invoke(ufd.Progress);
+            };
+
+            ufd.OnDownloadChunkedSucces += (string uri) =>
+            {
+                Log.Debug("进度 for " + uri + " is " + ufd.GetProgress(uri));
+            };
+
+            ufd.OnDownloadsSuccess += () =>
+            {
+                Log.Debug("已下载所有文件。");
+                action?.Invoke();
+            };
+
+            ufd.OnDownloadError += (string uri, int errorCode, string errorMsg) =>
+            {
+                Log.Error("错误代码={0}, EM={1}, URU={2}", errorCode, errorMsg, uri);
+                error?.Invoke(errorMsg);
+            };
+
+            try
+            {
+                await ufd.Download();
+            }
+            catch (Exception ex)
+            {
+                Log.Error("下载过程中发生异常: {0}", ex.Message);
+                error?.Invoke(ex.Message);
+            }
+        }
+
+
+        /// <summary>
+        /// 尝试从本地加载图片
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="texture"></param>
+        /// <returns></returns>
+        public bool TryLoadFromLocal(string filePath, out Texture2D texture)
+        {
+            texture = null;
+            if (!File.Exists(filePath))
+            {
+                return false;
+            }
+
+            try
+            {
+                byte[] imageBytes = File.ReadAllBytes(filePath);
+                texture = new Texture2D(2, 2);
+                // 必须检查 LoadImage 结果：损坏文件会返回 false（texture 保持 2×2 默认），
+                // 不检查会把坏图当成功塞进缓存
+                if (!texture.LoadImage(imageBytes))
+                {
+                    UnityEngine.Object.Destroy(texture);
+                    texture = null;
+                    Log.Warning("图片解码失败（文件损坏或格式不支持）: {0}", filePath);
+                    return false;
+                }
+                // 设置一个名称以帮助调试和跟踪
+                try { texture.name = Path.GetFileName(filePath); } catch (System.Exception) { /* 设置名称失败不影响加载流程 */ }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error("从本地加载失败: {0}", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 保存图片到本地
+        /// </summary>
+        /// <param name="texture"></param>
+        /// <param name="filePath"></param>
+        public void SaveToLocal(Texture2D texture, string filePath)
+        {
+            try
+            {
+                // 文件已存在则跳过重新编码：EncodeToPNG 每次全图编码开销可观（大图数百 ms）
+                if (File.Exists(filePath))
+                {
+                    Log.Debug("文件已存在，跳过保存: {0}", filePath);
+                    return;
+                }
+
+                // 确保目录存在
+                var dir = Path.GetDirectoryName(filePath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                byte[] bytes = texture.EncodeToPNG();
+                File.WriteAllBytes(filePath, bytes);
+                Log.Debug("保存到本地成功: {0}", filePath);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("保存失败: {0}", ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// 加入图片缓存（含 LRU 淘汰）
+        /// </summary>
+        private void AddToImageCache(string url, Texture2D tex)
+        {
+            if (tex == null) return;
+
+            lock (imageCacheLock)
+            {
+                // 淘汰最旧的条目直到低于上限
+                while (imageCache.Count >= MaxImageCacheSize && imageCacheOrder.First != null)
+                {
+                    var oldest = imageCacheOrder.First.Value;
+                    imageCacheOrder.RemoveFirst();
+                    // 仅移出缓存，不 Destroy：纹理可能仍被 UI（Sprite/Image）引用，
+                    // 强行 Destroy 会触发 MissingReferenceException；无引用的纹理由
+                    // Resources.UnloadUnusedAssets / 场景卸载自然回收
+                    imageCache.Remove(oldest);
+                }
+
+                imageCache[url] = tex;
+                // 移到链表尾部（最新）
+                imageCacheOrder.Remove(url);
+                imageCacheOrder.AddLast(url);
+            }
+        }
+
+        /// <summary>
+        /// 更新缓存条目访问顺序（需在锁内调用）
+        /// </summary>
+        private void TouchCacheEntry(string url)
+        {
+            imageCacheOrder.Remove(url);
+            imageCacheOrder.AddLast(url);
+        }
+
+        /// <summary>
+        /// 通过MIME类型获取文件后缀
+        /// </summary>
+        /// <param name="mimeType"></param>
+        /// <returns></returns>
+        public string GetExtensionFromMimeType(string mimeType)
+        {
+            if (mimeTypeToExtension.TryGetValue(mimeType, out string extension))
+            {
+                return extension;
+            }
+            return ".asset";
+        }
+    }
+}

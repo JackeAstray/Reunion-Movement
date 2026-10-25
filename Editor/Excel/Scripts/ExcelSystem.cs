@@ -1,0 +1,929 @@
+using ReunionMovement.Common;
+using ReunionMovement.Common.Util;
+using Cysharp.Threading.Tasks;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Data;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+using Newtonsoft.Json;
+using UnityEditor;
+using UnityEngine;
+
+namespace ReunionMovement.EditorTools
+{
+    public partial class ExcelSystem
+    {
+        static int tableRows_Max = 3;                                           // 最大行数
+        static int tableRows_1 = 0;                                             // 第一行中文名称
+        static int tableRows_2 = 1;                                             // 第二行数据类型
+        static int tableRows_3 = 2;                                             // 第三行英文名称
+
+        #region 数据
+        private static readonly Dictionary<string, FieldTypes> typeMapping = new Dictionary<string, FieldTypes>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "bool", FieldTypes.Bool },
+            { "int", FieldTypes.Int },
+            { "int32", FieldTypes.Int },
+            { "ints", FieldTypes.Ints },
+            { "int[]", FieldTypes.Ints },
+            { "[int]", FieldTypes.Ints },
+            { "int32s", FieldTypes.Ints },
+            { "int32[]", FieldTypes.Ints },
+            { "[int32]", FieldTypes.Ints },
+            { "float", FieldTypes.Float },
+            { "floats", FieldTypes.Floats },
+            { "float[]", FieldTypes.Floats },
+            { "[float]", FieldTypes.Floats },
+            { "double", FieldTypes.Double },
+            { "doubles", FieldTypes.Doubles },
+            { "double[]", FieldTypes.Doubles },
+            { "[double]", FieldTypes.Doubles },
+            { "long", FieldTypes.Long },
+            { "int64", FieldTypes.Long },
+            { "longs", FieldTypes.Longs },
+            { "long[]", FieldTypes.Longs },
+            { "[long]", FieldTypes.Longs },
+            { "int64s", FieldTypes.Longs },
+            { "int64[]", FieldTypes.Longs },
+            { "[int64]", FieldTypes.Longs },
+            { "vector2", FieldTypes.Vector2 },
+            { "vector3", FieldTypes.Vector3 },
+            { "vector4", FieldTypes.Vector4 },
+            { "rect", FieldTypes.Rect },
+            { "rectangle", FieldTypes.Rect },
+            { "color", FieldTypes.Color },
+            { "colour", FieldTypes.Color },
+            { "string", FieldTypes.String },
+            { "strings", FieldTypes.Strings },
+            { "string[]", FieldTypes.Strings },
+            { "[string]", FieldTypes.Strings },
+            { "object", FieldTypes.Object }
+        };
+
+        private static readonly Dictionary<FieldTypes, string> fieldTypeStringMapping = new Dictionary<FieldTypes, string>
+        {
+            { FieldTypes.Bool, "bool" },
+            { FieldTypes.Int, "int" },
+            { FieldTypes.Ints, "List<int>" },
+            { FieldTypes.Float, "float" },
+            { FieldTypes.Floats, "List<float>" },
+            { FieldTypes.Double, "double" },
+            { FieldTypes.Doubles, "List<double>" },
+            { FieldTypes.Long, "long" },
+            { FieldTypes.Longs, "List<long>" },
+            { FieldTypes.Vector2, "Vector2" },
+            { FieldTypes.Vector3, "Vector3" },
+            { FieldTypes.Vector4, "Vector4" },
+            { FieldTypes.Rect, "Rect" },
+            { FieldTypes.Color, "Color" },
+            { FieldTypes.String, "string" },
+            { FieldTypes.Strings, "List<string>" },
+            { FieldTypes.Object, "object" }
+        };
+        #endregion
+
+        #region 表格 -> 脚本
+        [MenuItem("ReunionMovement/内容/表格 -> 脚本", false, 50)]
+        public static void ExcelToScripts()
+        {
+            List<string> xlsxFiles = GetAllConfigFiles(toDirSO);
+
+            if (xlsxFiles == null || xlsxFiles.Count == 0)
+            {
+                Log.Warning("没有找到可处理的表格文件。");
+                return;
+            }
+
+            foreach (var path in xlsxFiles)
+            {
+                ExcelToScripts(path);
+            }
+            Log.Debug("表格转为脚本完成！");
+        }
+
+        /// <summary>
+        /// 将Excel表格转换为脚本
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="createScriptableObjects"></param>
+        /// <returns></returns>
+        static List<SheetData> ExcelToScripts(string path)
+        {
+            //构造Excel工具类
+            ExcelUtility excel = new ExcelUtility(path);
+
+            if (excel.ResultSet == null)
+            {
+                string msg = string.Format("无法读取“{0}”。似乎这不是一个xlsx文件!", path);
+                EditorUtility.DisplayDialog("ExcelTools", msg, "OK");
+                return null;
+            }
+
+            List<SheetData> sheets = new List<SheetData>();
+            //处理表数据
+            foreach (DataTable table in excel.ResultSet.Tables)
+            {
+                string tableName = table.TableName.Trim();
+                //判断表名称前面是否有#  有则忽略
+                if (tableName.StartsWith("#"))
+                {
+                    continue;
+                }
+
+                SheetData sheet = new SheetData();
+                sheet.table = table;
+
+                if (table.Rows.Count < tableRows_Max)
+                {
+                    EditorUtility.ClearProgressBar();
+                    string msg = string.Format("无法分析“{0}”。1、检查行数：Excel文件应至少包含三行（第一行：中文名称，第二行：数据类型，第三行：英文名称）!\n2、检查Sheet是否存在多个！", path);
+                    EditorUtility.DisplayDialog("ExcelTools", msg, "OK");
+                    return null;
+                }
+                //设置类名
+                sheet.itemClassName = tableName;
+
+                if (!StringUtil.CheckClassName(sheet.itemClassName))
+                {
+                    EditorUtility.ClearProgressBar();
+                    string msg = string.Format("工作表名称“{0}”无效，因为该工作表的名称应为类名!", sheet.itemClassName);
+                    EditorUtility.DisplayDialog("ExcelTools", msg, "OK");
+                    return null;
+                }
+                //字段名称
+                object[] fieldNames;
+                fieldNames = table.Rows[tableRows_3].ItemArray;
+                //字段注释
+                object[] fieldNotes;
+                fieldNotes = table.Rows[tableRows_1].ItemArray;
+                //字段类型
+                object[] fieldTypes;
+                fieldTypes = table.Rows[tableRows_2].ItemArray;
+
+                for (int i = 0, imax = fieldNames.Length; i < imax; i++)
+                {
+                    string fieldNameStr = fieldNames[i].ToString().Trim();
+                    string fieldNoteStr = fieldNotes[i].ToString().Trim();
+                    string fieldTypeStr = fieldTypes[i].ToString().Trim();
+                    //检查字段名
+                    if (string.IsNullOrEmpty(fieldNameStr))
+                    {
+                        break;
+                    }
+                    if (!StringUtil.CheckFieldName(fieldNameStr))
+                    {
+                        EditorUtility.ClearProgressBar();
+                        string msg = string.Format("无法分析“{0}”，因为字段名“{1}”无效!", path, fieldNameStr);
+                        EditorUtility.DisplayDialog("ExcelTools", msg, "OK");
+                        return null;
+                    }
+
+                    //解析类型
+                    FieldTypes fieldType = GetFieldType(fieldTypeStr);
+
+                    FieldData field = new FieldData();
+                    field.fieldName = fieldNameStr;
+                    field.fieldNotes = fieldNoteStr;
+                    field.fieldIndex = i;
+                    field.fieldType = fieldType;
+                    field.fieldTypeName = fieldTypeStr;
+
+                    if (fieldType == FieldTypes.Unknown)
+                    {
+                        fieldType = FieldTypes.UnknownList;
+                        if (fieldTypeStr.StartsWith("[") && fieldTypeStr.EndsWith("]"))
+                        {
+                            fieldTypeStr = fieldTypeStr.Substring(1, fieldTypeStr.Length - 2).Trim();
+                        }
+                        else if (fieldTypeStr.EndsWith("[]"))
+                        {
+                            fieldTypeStr = fieldTypeStr.Substring(0, fieldTypeStr.Length - 2).Trim();
+                        }
+                        else
+                        {
+                            fieldType = FieldTypes.Unknown;
+                        }
+
+                        // 用本地变量 fieldType 判断（field.fieldType 此时恒为 Unknown, 判断会失效）
+                        field.fieldType = fieldType == FieldTypes.UnknownList ? FieldTypes.CustomTypeList : FieldTypes.CustomType;
+                        // 同步更新剥离括号后的类型名，否则 GetFieldTypeString(CustomTypeList, "[Item]") 会生成 List<[Item]> 非法 C#
+                        field.fieldTypeName = fieldTypeStr;
+                    }
+
+                    sheet.fields.Add(field);
+                }
+
+                sheets.Add(sheet);
+            }
+
+            for (int i = 0; i < sheets.Count; i++)
+            {
+                if (SkipPackageGenerated(sheets[i].itemClassName)) continue;
+
+                _ = GenerateScript(sheets[i]);
+                _ = GenerateScriptList(sheets[i], i);
+            }
+
+            // 所有 sheet 写盘完成后统一刷新一次资源（GenerateScript/GenerateScriptList 内部不再各自 Refresh），
+            // 避免每个 sheet 触发 2 次 AssetDatabase.Refresh 导致编辑器卡顿
+            AssetDatabase.Refresh();
+
+            return sheets;
+        }
+
+        /// <summary>
+        /// 生成脚本
+        /// </summary>
+        /// <param name="sheet"></param>
+        static UniTask GenerateScript(SheetData sheet)
+        {
+            string scriptTemplate = @"//此脚本为工具生成，请勿手动创建 {_CREATE_TIME_} <ExcelTo>
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Scripting;
+
+namespace ReunionMovement
+{
+    [Serializable]
+    public class {_0_}
+    {
+        {_1_}
+        public override string ToString()
+        {
+            return string.Format(
+                {_2_},
+                {_3_}
+            );
+        }
+
+        /// <summary>
+        /// 将实例转换为实体
+        /// </summary>
+        public {_0_} ToEntity()
+        {
+            return new {_0_}
+            {
+                {_4_}
+            };
+        }
+
+        /// <summary>
+        /// 解析实体为实例
+        /// </summary>
+        public static {_0_} FromEntity({_0_} entity)
+        {
+            return new {_0_}
+            {
+                {_5_}
+            };
+        }
+    }
+}
+";
+            var dataName = sheet.itemClassName;
+            var str = GenerateDataScript(scriptTemplate, dataName, sheet.fields);
+            // 使用同步写盘：fire-and-forget 异步写盘时，AssetDatabase.Refresh()
+            // 可能在文件未落盘时执行，导致资源未导入、需手动刷新
+            FileOperationUtil.SaveFileSync(scriptOutPutPath + dataName + ".cs", str);
+
+            // Refresh 由 ExcelToScripts 循环外统一执行，避免每个 sheet 多次全量刷新
+            return UniTask.CompletedTask;
+        }
+
+        /// <summary>
+        /// 生成ScriptableObject用脚本
+        /// </summary>
+        /// <param name="template"></param>
+        /// <param name="scriptName"></param>
+        /// <param name="fieldDatas"></param>
+        /// <returns></returns>
+        static string GenerateDataScript(string template, string scriptName, List<FieldData> fieldDatas)
+        {
+            StringBuilder privateType = new StringBuilder();
+            privateType.AppendLine();
+
+            StringBuilder toEntityAssignments = new StringBuilder();
+            StringBuilder fromEntityAssignments = new StringBuilder();
+
+            string toString_1 = "";
+            string toString_2 = "";
+
+            // 附加
+            string additional = ";";
+
+            // 计算字段名的最大长度，用于对齐
+            int maxFieldNameLength = fieldDatas.Max(f => f.fieldName.Length);
+
+            for (int i = 0; i < fieldDatas.Count; i++)
+            {
+                var typeName = GetFieldTypeString(fieldDatas[i].fieldType, fieldDatas[i].fieldTypeName);
+
+                // 属性
+                string attribute = string.Format("        public {0} {1}{2}    //{3}", typeName, fieldDatas[i].fieldName, additional, fieldDatas[i].fieldNotes);
+                privateType.AppendFormat(attribute);
+                privateType.AppendLine();
+
+                string space = "                ";
+                if (i == 0)
+                {
+                    space = "";
+                }
+
+                // 将实例转换为实体
+                toEntityAssignments.AppendLine($"{space}{fieldDatas[i].fieldName.PadRight(maxFieldNameLength)} = this.{fieldDatas[i].fieldName},");
+
+                // 解析实体为实例
+                fromEntityAssignments.AppendLine($"{space}{fieldDatas[i].fieldName.PadRight(maxFieldNameLength)} = entity.{fieldDatas[i].fieldName},");
+
+                int value = i;
+                toString_1 += fieldDatas[i].fieldName + "={" + value + "}";
+                if (i < fieldDatas.Count - 1)
+                {
+                    toString_1 += ",";
+                }
+
+                toString_2 += "this." + fieldDatas[i].fieldName;
+                if (i < fieldDatas.Count - 1)
+                {
+                    toString_2 += ",\r\n                ";
+                }
+            }
+
+            string str = template;
+            str = str.Replace("{_0_}", scriptName);
+            str = str.Replace("{_1_}", privateType.ToString());
+            str = str.Replace("{_2_}", "\"[" + toString_1 + "]\"");
+            str = str.Replace("{_3_}", toString_2);
+            str = str.Replace("{_4_}", toEntityAssignments.ToString().TrimEnd(','));
+            str = str.Replace("{_5_}", fromEntityAssignments.ToString().TrimEnd(','));
+            str = str.Replace("{_CREATE_TIME_}", DateTime.UtcNow.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return str;
+        }
+
+        /// <summary>
+        /// 生成ScriptableObjectList脚本
+        /// </summary>
+        /// <param name="sheet"></param>
+        /// <param name="order"></param>
+        static UniTask GenerateScriptList(SheetData sheet, int order)
+        {
+            string ScriptTemplate = @"//此脚本为工具生成，请勿手动创建 {_CREATE_TIME_} <ExcelTo>
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Scripting;
+
+namespace ReunionMovement
+{
+    [CreateAssetMenu(fileName = ""{_0_}Container"", menuName = ""ScriptableObjects/{_1_}Container"", order = {_2_})]
+    public class {_3_}Container : ScriptableObject
+    {
+        {_4_}
+    }
+}
+";
+            // 兼容旧命名：与下方 SO 生成路径保持一致 —— LanguagesConfig 表 → Languages 容器。
+            // 修复双轨断裂：此前脚本路径产出 LanguagesConfigContainer（死类），
+            // 而 SO 路径产出 LanguagesContainer，运行时 LanguagesSystem 加载的 ScriptableObjects/LanguagesContainer
+            // 与脚本类脱节，重新生成后语言系统会静默失效。
+            var dataName = sheet.itemClassName == "LanguagesConfig" ? "Languages" : sheet.itemClassName;
+            var str = GenerateDataScriptList(ScriptTemplate, dataName, sheet.fields, order);
+            // 使用同步写盘，避免 fire-and-forget 异步写盘与 Refresh 的竞态
+            FileOperationUtil.SaveFileSync(scriptOutPutPath + dataName + "Container.cs", str);
+
+            // Refresh 由 ExcelToScripts 循环外统一执行，避免每个 sheet 多次全量刷新
+            return UniTask.CompletedTask;
+        }
+
+        /// <summary>
+        /// 创建ScriptableObjectList脚本
+        /// </summary>
+        /// <param name="template"></param>
+        /// <param name="scriptName"></param>
+        /// <param name="fieldDatas"></param>
+        /// <returns></returns>
+        static string GenerateDataScriptList(string template, string scriptName, List<FieldData> fieldDatas, int order)
+        {
+            StringBuilder privateType = new StringBuilder();
+            privateType.AppendLine();
+
+            string additional = ";";
+
+            var typeName = scriptName;
+
+            string attribute = string.Format("        public List<{0}> {1}{2}", scriptName, "configs", additional);
+            privateType.AppendFormat(attribute);
+
+            string str = template;
+            str = str.Replace("{_0_}", scriptName);
+            str = str.Replace("{_1_}", scriptName);
+            str = str.Replace("{_2_}", order.ToString());
+            str = str.Replace("{_3_}", scriptName);
+            str = str.Replace("{_4_}", privateType.ToString());
+            str = str.Replace("{_CREATE_TIME_}", DateTime.UtcNow.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return str;
+        }
+        #endregion
+
+        #region 表格 -> ScriptableObject
+        [MenuItem("ReunionMovement/内容/表格 -> ScriptableObject", false, 51)]
+        public static void ExcelToScriptableObject()
+        {
+            List<string> xlsxFiles = GetAllConfigFiles(toDirSO);
+
+            // GetAllConfigFiles 在编译中/目录不存在时可能返回 null
+            if (xlsxFiles == null || xlsxFiles.Count == 0)
+            {
+                Log.Warning("没有找到可处理的表格文件。");
+                return;
+            }
+
+            foreach (var path in xlsxFiles)
+            {
+                ExcelToScriptableObject(path);
+            }
+
+            // 所有 SO 写盘后统一刷新一次资源，避免每个文件触发一次 Refresh
+            AssetDatabase.Refresh();
+
+            Log.Debug("表格转为ScriptableObject完成！");
+        }
+
+        /// <summary>
+        /// Excel 转 ScriptableObject
+        /// </summary>
+        /// <param name="path"></param>
+        public static void ExcelToScriptableObject(string path)
+        {
+            // 等待编译结束
+            if (EditorApplication.isCompiling)
+            {
+                EditorUtility.DisplayDialog("警告", "等待编译结束。", "OK");
+                return;
+            }
+
+            // 查看路径是否存在
+            if (Directory.Exists(scriptableOutPutPath) == false)
+            {
+                Directory.CreateDirectory(scriptableOutPutPath);
+            }
+
+            // 构造 Excel 工具类
+            ExcelUtility excel = new ExcelUtility(path);
+
+            if (excel.ResultSet == null)
+            {
+                string msg = string.Format("文件“{0}”不是表格！", path);
+                Log.Warning(msg);
+                return;
+            }
+
+            foreach (DataTable table in excel.ResultSet.Tables)
+            {
+                string tableName = table.TableName.Trim();
+                if (tableName.StartsWith("#"))
+                {
+                    continue; // 忽略以 # 开头的表
+                }
+
+                if (table.Rows.Count < tableRows_Max)
+                {
+                    EditorUtility.ClearProgressBar();
+                    string msg = string.Format("无法分析“{0}”。1、检查行数：Excel文件应至少包含三行（第一行：中文名称，第二行：数据类型，第三行：英文名称）!\n2、检查Sheet是否存在多个！", path);
+                    EditorUtility.DisplayDialog("ExcelTools", msg, "OK");
+                    return;
+                }
+
+                // 兼容旧命名：运行时 LanguagesSystem 加载的是 ScriptableObjects/LanguagesContainer。
+                // 统一映射：LanguagesConfig 表 → Languages 容器（与 GenerateScriptList 脚本路径的映射一致），
+                // 避免重新生成后语言系统静默失效，也避免脚本产出无人使用的 LanguagesConfigContainer 死类。
+                string containerName = tableName == "LanguagesConfig" ? "Languages" : tableName;
+
+                // 动态生成 ScriptableObject 文件路径
+                string assetPath = scriptableOutPutPath + containerName + "Container.asset";
+
+                // 动态获取容器类类型（兼容 asmdef 拆分：类型可能不在 Core 程序集中）
+                Type containerType = ResolveRuntimeType($"ReunionMovement.{containerName}Container");
+                if (containerType == null)
+                {
+                    Log.Error($"无法获取类型：ReunionMovement.{containerName}Container");
+                    continue;
+                }
+
+                // 动态创建容器实例
+                ScriptableObject asset = ScriptableObject.CreateInstance(containerType);
+
+                Type configType = ResolveRuntimeType($"ReunionMovement.{tableName}");
+                if (configType == null)
+                {
+                    Log.Error($"无法获取类型：ReunionMovement.{tableName}");
+                    continue;
+                }
+
+                // 创建列表
+                IList configs = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(configType));
+
+                // 遍历表数据并填充列表
+                for (int i = tableRows_Max; i < table.Rows.Count; i++)
+                {
+                    DataRow row = table.Rows[i];
+                    var config = Activator.CreateInstance(configType);
+                    if (config == null)
+                    {
+                        Log.Error($"无法创建实例：{tableName}");
+                        continue;
+                    }
+
+                    foreach (DataColumn column in table.Columns)
+                    {
+                        string fieldName = table.Rows[tableRows_3][column].ToString().Trim();
+                        string fieldTypeStr = table.Rows[tableRows_2][column].ToString().Trim();
+
+                        if (string.IsNullOrEmpty(fieldName) || string.IsNullOrEmpty(fieldTypeStr))
+                        {
+                            continue;
+                        }
+
+                        string fieldValue = row[column].ToString().Trim();
+
+                        // 解析类型
+                        FieldTypes fieldType = GetFieldType(fieldTypeStr);
+
+                        if (fieldType == FieldTypes.Unknown)
+                        {
+                            FieldTypes tempFieldType = FieldTypes.UnknownList;
+                            if (fieldTypeStr.StartsWith("[") && fieldTypeStr.EndsWith("]"))
+                            {
+                                fieldTypeStr = fieldTypeStr.Substring(1, fieldTypeStr.Length - 2).Trim();
+                            }
+                            else if (fieldTypeStr.EndsWith("[]"))
+                            {
+                                fieldTypeStr = fieldTypeStr.Substring(0, fieldTypeStr.Length - 2).Trim();
+                            }
+                            else
+                            {
+                                tempFieldType = FieldTypes.Unknown;
+                            }
+
+                            fieldType = tempFieldType == FieldTypes.UnknownList ? FieldTypes.CustomTypeList : FieldTypes.CustomType;
+                        }
+
+                        // 获取字段信息，利用 GetFieldTypeString 得到的类型也可以用于后续校验（如需要）
+                        string expectedTypeStr = GetFieldTypeString(fieldType, fieldTypeStr);
+
+                        FieldInfo field = config.GetType().GetField(fieldName, BindingFlags.Public | BindingFlags.Instance);
+                        if (field != null)
+                        {
+                            try
+                            {
+                                object value = ParseValue(fieldValue, field.FieldType, fieldType);
+                                field.SetValue(config, value);
+                            }
+                            catch (Exception ex)
+                            {
+                                Log.Error($"字段赋值失败：{fieldName}, 值：{fieldValue}, 错误：{ex.Message}");
+                            }
+                        }
+                        else
+                        {
+                            Log.Warning($"在类型 '{configType.Name}' 中未找到公共字段：{fieldName} (期望类型: {expectedTypeStr})");
+                        }
+                    }
+
+                    configs.Add(config);
+                }
+
+                // 将列表赋值给容器
+                FieldInfo configsField = containerType.GetField("configs", BindingFlags.Public | BindingFlags.Instance);
+                if (configsField == null)
+                {
+                    Log.Error($"字段 'configs' 未找到：{tableName}Container");
+                    continue;
+                }
+
+                // 保存 ScriptableObject：
+                // - 已存在时【复用实例】覆盖字段并 SetDirty（保持 GUID，场景/预制体引用不因删除重建而断裂）
+                // - 不存在时才创建新资产
+                ScriptableObject existing = AssetDatabase.LoadAssetAtPath<ScriptableObject>(assetPath);
+                if (existing != null)
+                {
+                    configsField.SetValue(existing, configs);
+                    EditorUtility.SetDirty(existing);
+                }
+                else
+                {
+                    configsField.SetValue(asset, configs);
+                    AssetDatabase.CreateAsset(asset, assetPath);
+                }
+            }
+
+            AssetDatabase.SaveAssets();
+            // Refresh 由 ExcelToScriptableObject() 入口统一执行
+        }
+        #endregion
+
+        #region 表格 -> Json
+        [MenuItem("ReunionMovement/内容/表格 -> JSON", false, 52)]
+        public static void ExcelToJson()
+        {
+            List<string> xlsxFiles = GetAllConfigFiles(toDirSO);
+
+            // GetAllConfigFiles 在编译中/目录不存在时可能返回 null
+            if (xlsxFiles == null || xlsxFiles.Count <= 0)
+            {
+                Log.Error("未找到任何表格！");
+                return;
+            }
+
+            foreach (var path in xlsxFiles)
+            {
+                ExcelToJson(path);
+            }
+
+            // 所有 JSON 写盘后统一刷新一次资源，避免每个文件触发一次 Refresh
+            AssetDatabase.Refresh();
+
+            Log.Debug("表格转为Json完成！");
+        }
+
+        /// <summary>
+        /// Excel 转 Json
+        /// </summary>
+        /// <param name="path"></param>
+        public static void ExcelToJson(string path)
+        {
+            //等待编译结束
+            if (EditorApplication.isCompiling)
+            {
+                EditorUtility.DisplayDialog("警告", "等待编译结束。", "OK");
+                return;
+            }
+
+            //查看路径是否存在
+            if (Directory.Exists(jsonOutPutPath) == false)
+            {
+                Directory.CreateDirectory(jsonOutPutPath);
+            }
+
+            //构造Excel工具类
+            ExcelUtility excel = new ExcelUtility(path);
+
+            if (excel.ResultSet == null)
+            {
+                string msg = string.Format("文件“{0}”不是表格！", path);
+                Log.Warning(msg);
+                return;
+            }
+
+            //获取Excel文件的绝对路径
+            string output = jsonOutPutPath + Path.GetFileName(path);
+            output = output.Replace(".xlsx", ".json");
+
+            // 同步写盘：fire-and-forget 异步写盘与立即 Refresh() 存在竞态
+            // （文件未落盘时 Refresh 会导致 JSON 资源未导入）
+            string json = excel.GetJson();
+            if (!string.IsNullOrEmpty(json))
+            {
+                FileOperationUtil.SaveFileSync(output, json);
+            }
+
+            // Refresh 由 ExcelToJson() 入口统一执行
+        }
+        #endregion
+
+        #region 工具
+
+        /// <summary>
+        /// 解析运行时类型：优先从相关程序集查找，再回退到所有已加载程序集。
+        /// </summary>
+        private static Type ResolveRuntimeType(string fullTypeName)
+        {
+            if (string.IsNullOrEmpty(fullTypeName))
+            {
+                return null;
+            }
+
+            // 优先检查最相关的程序集，减少遍历和重名歧义概率。
+            Assembly[] preferredAssemblies =
+            {
+                typeof(ReunionMovement.Core.Resources.ResourcesSystem).Assembly,
+                typeof(ReunionMovement.EditorTools.ExcelSystem).Assembly
+            };
+
+            foreach (var assembly in preferredAssemblies)
+            {
+                if (assembly == null || assembly.IsDynamic)
+                {
+                    continue;
+                }
+
+                Type type = assembly.GetType(fullTypeName, false);
+                if (type != null)
+                {
+                    return type;
+                }
+            }
+
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (assembly == null || assembly.IsDynamic)
+                {
+                    continue;
+                }
+
+                Type type = assembly.GetType(fullTypeName, false);
+                if (type != null)
+                {
+                    return type;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 解析单元格字符串到目标类型
+        /// </summary>
+        private static object ParseValue(string value, Type type, FieldTypes fieldType = FieldTypes.Unknown)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return type.IsValueType ? Activator.CreateInstance(type) : null;
+            }
+
+            // 列表类型
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>))
+            {
+                var list = (IList)Activator.CreateInstance(type);
+                var itemType = type.GetGenericArguments()[0];
+
+                string trimValue = value.Trim();
+                if (trimValue.StartsWith("[") && trimValue.EndsWith("]"))
+                {
+                    trimValue = trimValue.Substring(1, trimValue.Length - 2);
+                }
+
+                var items = trimValue.Split(new[] { ';', '；', ',', '，' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var item in items)
+                {
+                    list.Add(ParseValue(item.Trim(), itemType)); // 递归调用时未传fieldType，因为itemType已定
+                }
+                return list;
+            }
+
+            // Vector类型
+            if (type == typeof(Vector2) || type == typeof(Vector3) || type == typeof(Vector4) ||
+                fieldType == FieldTypes.Vector2 || fieldType == FieldTypes.Vector3 || fieldType == FieldTypes.Vector4)
+            {
+                string[] parts = value.Trim('(', ')').Split(',');
+                // 使用 InvariantCulture：避免小数点为逗号的系统区域设置下解析失败/变 0
+                if ((type == typeof(Vector2) || fieldType == FieldTypes.Vector2) && parts.Length == 2)
+                    return new Vector2(float.Parse(parts[0], CultureInfo.InvariantCulture), float.Parse(parts[1], CultureInfo.InvariantCulture));
+                if ((type == typeof(Vector3) || fieldType == FieldTypes.Vector3) && parts.Length == 3)
+                    return new Vector3(float.Parse(parts[0], CultureInfo.InvariantCulture), float.Parse(parts[1], CultureInfo.InvariantCulture), float.Parse(parts[2], CultureInfo.InvariantCulture));
+                if ((type == typeof(Vector4) || fieldType == FieldTypes.Vector4) && parts.Length == 4)
+                    return new Vector4(float.Parse(parts[0], CultureInfo.InvariantCulture), float.Parse(parts[1], CultureInfo.InvariantCulture), float.Parse(parts[2], CultureInfo.InvariantCulture), float.Parse(parts[3], CultureInfo.InvariantCulture));
+            }
+
+            // Rect类型
+            if (type == typeof(Rect) || fieldType == FieldTypes.Rect)
+            {
+                string[] parts = value.Trim('(', ')').Split(',');
+                if (parts.Length == 4)
+                    return new Rect(float.Parse(parts[0], CultureInfo.InvariantCulture), float.Parse(parts[1], CultureInfo.InvariantCulture), float.Parse(parts[2], CultureInfo.InvariantCulture), float.Parse(parts[3], CultureInfo.InvariantCulture));
+            }
+
+            // Color类型
+            if (type == typeof(Color) || fieldType == FieldTypes.Color)
+            {
+                if (ColorUtility.TryParseHtmlString(value, out Color color))
+                {
+                    return color;
+                }
+            }
+
+            // 枚举类型
+            if (type.IsEnum)
+            {
+                return Enum.Parse(type, value, true);
+            }
+
+            // 基础类型
+            return Convert.ChangeType(value, type, CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
+        /// 获取所有的xlsx文件路径
+        /// </summary>
+        /// <returns></returns>
+        public static List<string> GetAllConfigFiles(string toDir)
+        {
+            List<string> tableList = new List<string>();
+            //等待编译结束
+            if (EditorApplication.isCompiling)
+            {
+                EditorUtility.DisplayDialog("警告", "等待编译结束。", "OK");
+                return null;
+            }
+            //查看路径是否存在
+            if (Directory.Exists(toDir) == false)
+            {
+                Directory.CreateDirectory(toDir);
+                return null;
+            }
+            // 只按扩展名枚举，避免把 .meta 等非表格文件误报为"不是表格"
+            foreach (var pattern in new[] { "*.xlsx", "*.xls" })
+            {
+                tableList.AddRange(Directory.GetFiles(toDir, pattern, SearchOption.AllDirectories));
+            }
+
+            if (tableList.Count <= 0)
+            {
+                Log.Error("没有找到表格！");
+            }
+
+            return tableList;
+        }
+
+        /// <summary>
+        /// 获取字段类型
+        /// </summary>
+        /// <param name="typename"></param>
+        /// <returns></returns>
+        static FieldTypes GetFieldType(string typeName)
+        {
+            if (string.IsNullOrEmpty(typeName))
+            {
+                return FieldTypes.Unknown;
+            }
+
+            if (typeMapping.TryGetValue(typeName.Trim(), out FieldTypes type))
+            {
+                return type;
+            }
+
+            return FieldTypes.Unknown;
+        }
+
+        /// <summary>
+        /// 获取字段类型字符串
+        /// </summary>
+        /// <param name="fieldTypes"></param>
+        /// <param name="fieldTypeName"></param>
+        /// <returns></returns>
+        static string GetFieldTypeString(FieldTypes fieldTypes, string fieldTypeName)
+        {
+            // 优先处理需要动态构建名称的自定义类型，并修复返回字面量的BUG
+            switch (fieldTypes)
+            {
+                case FieldTypes.CustomType:
+                    return fieldTypeName;
+                case FieldTypes.CustomTypeList:
+                    return $"List<{fieldTypeName}>";
+            }
+
+            // 对于标准类型，使用字典查找以提高性能和可维护性
+            if (fieldTypeStringMapping.TryGetValue(fieldTypes, out string typeString))
+            {
+                return typeString;
+            }
+
+            return string.Empty;
+        }
+        #endregion
+
+        #region 数据结构
+        /// <summary>
+        /// 单张表数据
+        /// </summary>
+        public class SheetData
+        {
+            public DataTable table;
+            public string itemClassName;
+            public bool keyToMultiValues;
+            public bool internalData;
+            public List<FieldData> fields = new List<FieldData>();
+        }
+
+        /// <summary>
+        /// 字段数据
+        /// </summary>
+        public class FieldData
+        {
+            public string fieldName;        //字段名称
+            public string fieldNotes;       //字段注释
+            public int fieldIndex;          //字段索引
+            public FieldTypes fieldType;    //字段类型
+            public string fieldTypeName;    //字段类型名称
+        }
+        #endregion
+    }
+}

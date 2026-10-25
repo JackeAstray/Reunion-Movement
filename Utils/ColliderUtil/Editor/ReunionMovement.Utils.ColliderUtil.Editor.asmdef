@@ -1,0 +1,20 @@
+{
+    "name": "ReunionMovement.Utils.ColliderUtil.Editor",
+    "rootNamespace": "ReunionMovement.Common.Util.Editor",
+    "references": [
+        "ReunionMovement.Utils",
+        "ReunionMovement.Common",
+        "ReunionMovement.EditorTools"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

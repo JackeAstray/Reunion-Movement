@@ -1,0 +1,472 @@
+using ReunionMovement.Common;
+using ReunionMovement.Common.Util;
+using ReunionMovement.Core;
+using ReunionMovement.Core.UI;
+using ReunionMovement.Editor.Shared;
+using Cysharp.Threading.Tasks;
+using System;
+using System.IO;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+
+namespace ReunionMovement.EditorTools
+{
+    public class CreateUIPlane : EditorWindow
+    {
+        // 脚本输出路径：源码安装 = 框架内；包安装 = Assets/ReunionMovementGenerated
+        static string scriptOutPutPath = ReunionPaths.InWritable("GenerateScript/UI/UIPlane/");
+        // 预制体导出路径：Resources 下的相对路径不变，保证 Resources.Load("Prefabs/UIs/...") 仍可用
+        static string prefabsOutPutPath = ReunionPaths.InWritable("Resources/Prefabs/UIs/");
+        // 场景导出路径
+        static string sceneOutPutPath = ReunionPaths.InWritable("Editor/UIScenes/");
+
+        // 类名
+        string className = "Class Name";
+        // 分辨率
+        string uiResolution = "1920,1080";
+
+        string scriptName { get; set; }
+        string sceneName { get; set; }
+        string targetName { get; set; }
+        GameObject uiObj { get; set; }
+
+        [MenuItem("ReunionMovement/内容/生成 UI 窗口", false, 304)]
+        //创建UI
+        public static void ShowWindow()
+        {
+            //弹出编辑器
+            CreateUIPlane createUIPlane = GetWindow<CreateUIPlane>(true, "创建新UI&脚本", true);
+            // 窗口的尺寸
+            Vector2 windowSize = new Vector2(400, 600);
+            // 设置最小尺寸
+            createUIPlane.minSize = windowSize;
+        }
+
+        void OnGUI()
+        {
+            // 文本
+            GUILayout.Label("");
+            // 编辑类名和场景名
+            className = EditorGUILayout.TextField("输入类名：", className);
+            scriptOutPutPath = EditorGUILayout.TextField("脚本输出路径：", scriptOutPutPath);
+            GUILayout.Space(5);
+            if (GUILayout.Button("第一步 创建场景和在场景中的预制体"))
+            {
+                //按下按钮后执行的方法
+                CreateUI();
+            }
+
+            if (GUILayout.Button("第二步 创建脚本"))
+            {
+                //按下按钮后执行的方法
+                _ = CreateSpript();
+            }
+
+            if (GUILayout.Button("第三步 绑定脚本"))
+            {
+                //按下按钮后执行的方法
+                BindingSpriptRoot();
+            }
+
+            GUILayout.Space(20);
+
+            if (GUILayout.Button("将当前场景中的UI导出为Prefabs（只以WindowAsset为根节点）"))
+            {
+                //按下按钮后执行的方法
+                ExportingPrefabsFromAScene();
+            }
+        }
+
+        /// <summary>
+        /// 创建UI
+        /// </summary>
+        public void CreateUI()
+        {
+            var currentScene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects);
+            sceneName = className + "UIPlaneScene";
+            currentScene.name = sceneName;
+
+            GameObject mainCamera = GameObject.Find("Main Camera");
+
+            if (mainCamera != null)
+            {
+                DestroyImmediate(mainCamera);
+            }
+
+            scriptName = className + "UIPlane";
+
+            //创建UI对象
+            CreateUIObject();
+            //创建相机
+            CreateCamera();
+            //创建事件系统
+            CreateEventSystem();
+
+            var dir = sceneOutPutPath;
+            if (!Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            //保存场景
+            SaveScene(currentScene, Path.Combine(sceneOutPutPath, sceneName + ".unity"));
+
+            Selection.activeGameObject = uiObj;
+            AssetDatabase.Refresh();
+        }
+
+        /// <summary>
+        /// 创建UI对象
+        /// </summary>
+        private void CreateUIObject()
+        {
+            uiObj = new GameObject(scriptName);
+            uiObj.layer = (int)UnityLayerDef.UI;
+            uiObj.AddComponent<UIWindowAsset>().stringArgument = scriptName;
+            var uiPanel = new GameObject("SafeArea").AddComponent<Image>();
+            uiPanel.transform.parent = uiObj.transform;
+            //设置UI为全屏
+            uiPanel.rectTransform.anchoredPosition = new Vector2(0, 0);//设置 UI 元素的位置
+            uiPanel.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 0);
+            uiPanel.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 0);
+            uiPanel.rectTransform.SetInsetAndSizeFromParentEdge(RectTransform.Edge.Top, 0, 0);
+            uiPanel.rectTransform.SetInsetAndSizeFromParentEdge(RectTransform.Edge.Left, 0, 0);
+            uiPanel.rectTransform.SetInsetAndSizeFromParentEdge(RectTransform.Edge.Bottom, 0, 0);
+            uiPanel.rectTransform.SetInsetAndSizeFromParentEdge(RectTransform.Edge.Right, 0, 0);
+            uiPanel.rectTransform.anchorMin = new Vector2(0f, 0f);
+            uiPanel.rectTransform.anchorMax = new Vector2(1f, 1f);
+            //给UI加安全区
+            uiPanel.gameObject.AddComponent<SafeArea>();
+
+            ResetLocalTransform(uiPanel.transform);
+
+            var canvas = uiObj.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            CanvasScaler canvasScaler = uiObj.AddComponent<CanvasScaler>();
+            uiObj.AddComponent<GraphicRaycaster>();
+
+            var uiSize = new Vector2(1280, 720);
+
+            if (!string.IsNullOrEmpty(uiResolution))
+            {
+                var sizeArr = uiResolution.Split(',');
+                if (sizeArr.Length >= 2) { uiSize = new Vector2(sizeArr[0].ToInt32(), sizeArr[1].ToInt32()); }
+            }
+
+            canvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            canvasScaler.referenceResolution = uiSize;
+            canvasScaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            canvasScaler.matchWidthOrHeight = 0.5f;
+        }
+
+        /// <summary>
+        /// 创建相机
+        /// </summary>
+        private void CreateCamera()
+        {
+            if (GameObject.Find("Camera") == null)
+            {
+                GameObject cameraObj = new GameObject("Camera");
+                cameraObj.layer = (int)UnityLayerDef.UI;
+
+                Camera camera = cameraObj.AddComponent<Camera>();
+                camera.clearFlags = CameraClearFlags.Skybox;
+                camera.depth = 0;
+                camera.backgroundColor = new Color(0.5f, 0.5f, 0.5f, 0f);
+                camera.cullingMask = 1 << (int)UnityLayerDef.UI;
+                camera.orthographicSize = 1f;
+                camera.orthographic = false;
+                camera.nearClipPlane = -2f;
+                camera.farClipPlane = 2f;
+
+                camera.gameObject.AddComponent<AudioListener>();
+            }
+        }
+
+        /// <summary>
+        /// 创建事件系统
+        /// </summary>
+        private void CreateEventSystem()
+        {
+            if (GameObject.Find("EventSystem") == null)
+            {
+                var evtSystemObj = new GameObject("EventSystem");
+                evtSystemObj.AddComponent<EventSystem>();
+                var inputModule = evtSystemObj.AddComponent<InputSystemUIInputModule>();
+
+                // 加载 InputSystem 的 Action 资产，否则 InputSystemUIInputModule 会处于未激活状态
+                var inputActions = Resources.Load<UnityEngine.InputSystem.InputActionAsset>("InputSystem_Actions");
+                if (inputActions != null)
+                {
+                    // Instantiate 一份独立副本，避免与运行时的 InputAction 状态互相污染
+                    inputModule.actionsAsset = UnityEngine.Object.Instantiate(inputActions);
+                    inputModule.enabled = true;
+                }
+                else
+                {
+                    Log.Warning("[CreateUIPlane] 未找到 InputSystem_Actions.inputactions，请手动为 EventSystem 的 InputSystemUIInputModule 赋值 actionsAsset");
+                }
+            }
+        }
+
+        private void SaveScene(Scene scene, string path)
+        {
+            EditorSceneManager.SaveScene(scene, path);
+        }
+
+        /// <summary>
+        /// 创建脚本
+        /// </summary>
+        public async UniTask CreateSpript()
+        {
+            scriptName = className + "UIPlane";
+            await GenerateScript(scriptName);
+            AssetDatabase.Refresh();
+        }
+
+        /// <summary>
+        /// 绑定脚本到根节点
+        /// </summary>
+        public void BindingSpriptRoot()
+        {
+            scriptName = className + "UIPlane";
+            var type = FindUIType(scriptName);
+            SetUIObj();
+            BindScript(uiObj, type);
+        }
+
+        /// <summary>
+        /// 绑定脚本到目标（targetName 需在 Inspector 中设置）
+        /// </summary>
+        public void BindingSpriptToTarget()
+        {
+            if (string.IsNullOrEmpty(targetName))
+            {
+                Log.Error("targetName 为空，请在 Inspector 中设置要绑定的目标名称。");
+                return;
+            }
+            scriptName = className + "UIPlane";
+            var type = FindUIType(scriptName);
+            SetUIObj();
+            if (uiObj == null)
+            {
+                Log.Error("uiObj 为空，无法绑定脚本到目标。");
+                return;
+            }
+            Transform targetTransform = uiObj.transform.Find(targetName);
+            if (targetTransform == null)
+            {
+                Log.Error($"未找到目标 Transform: {targetName}");
+                return;
+            }
+            BindScript(targetTransform.gameObject, type);
+        }
+
+        /// <summary>
+        /// 在所有已加载程序集里找生成的 UI 类型。
+        /// 生成脚本可能位于 Assembly-CSharp（用户可写目录）或 ReunionMovement.GenerateScript.UI（包内），
+        /// 不能像旧代码那样写死 Assembly-CSharp。
+        /// </summary>
+        private static Type FindUIType(string typeName)
+        {
+            const string ns = "ReunionMovement.Core.UI.";
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var type = assembly.GetType(ns + typeName, false);
+                if (type != null) return type;
+            }
+
+            Log.Error($"[CreateUIPlane] 未找到 UI 类型 {ns}{typeName}；请先执行「第二步 创建脚本」并等待编译完成。");
+            return null;
+        }
+
+        /// <summary>
+        /// 绑定脚本到UI对象
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <param name="type"></param>
+        private void BindScript(GameObject obj, Type type)
+        {
+            if (obj == null || type == null) return;
+            if (!obj.TryGetComponent(type, out Component component))
+            {
+                obj.AddComponent(type);
+                obj.GetComponent<UIController>().uiName = scriptName;
+                AssetDatabase.Refresh();
+            }
+        }
+
+        /// <summary>
+        /// 设置UI对象 防止为空
+        /// </summary>
+        void SetUIObj()
+        {
+            string objName = "";
+            if (uiObj == null)
+            {
+                objName = className + "UIPlane";
+                uiObj = GameObject.Find(objName);
+
+                if (uiObj == null)
+                {
+                    Log.Error("请检查类名！");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 导出预制体
+        /// </summary>
+        void ExportingPrefabsFromAScene()
+        {
+            var windowAsset = GetUIWindowAssetsFromCurrentScene();
+            if (windowAsset == null) return;
+            var uiPrefabDir = prefabsOutPutPath;
+            if (!Directory.Exists(uiPrefabDir))
+            {
+                Directory.CreateDirectory(uiPrefabDir);
+            }
+
+            ExportPrefab(windowAsset, uiPrefabDir);
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+        }
+
+        /// <summary>
+        /// 导出预制体
+        /// </summary>
+        /// <param name="windowAsset"></param>
+        /// <param name="dir"></param>
+        private void ExportPrefab(UIWindowAsset windowAsset, string dir)
+        {
+            var uiPrefabPath = Path.Combine(dir, windowAsset.name + ".prefab");
+            var prefab = PrefabUtility.SaveAsPrefabAsset(windowAsset.gameObject, uiPrefabPath);
+            EditorUtility.SetDirty(prefab);
+
+            AssetDatabase.ImportAsset(uiPrefabPath, ImportAssetOptions.ForceSynchronousImport);
+            Log.Debug("Create UIWindowAsset to prfab: " + uiPrefabPath);
+        }
+
+        /// <summary>
+        /// 获取当前场景中的UIWindowAsset
+        /// </summary>
+        /// <returns></returns>
+        static UIWindowAsset GetUIWindowAssetsFromCurrentScene()
+        {
+            var windowAssets = FindFirstObjectByType<UIWindowAsset>();
+
+            if (windowAssets == null)
+            {
+                Log.Error("当前场景中没有UIWindowAsset，请先创建UIWindowAsset对象。");
+                return null;
+            }
+
+            return windowAssets;
+        }
+
+        /// <summary>
+        /// 生成脚本
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        static async UniTask GenerateScript(string name)
+        {
+            string ScriptTemplate = @"//此脚本是由工具自动生成，请勿手动创建
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace ReunionMovement.Core.UI
+{
+    [UIWindow(""{_0_}"")]
+    public class {_0_} : UIController
+    {
+        string openWindow = ""{_0_}"";
+        string closeWindow = ""{_0_}"";
+
+        public override void OnInit()
+        {
+            base.OnInit();
+        }
+
+        public override void OnOpen()
+        {
+            base.OnOpen();
+        }
+
+        public override void OnClose()
+        {
+            base.OnClose();
+        }
+
+        //打开窗口
+        public void OpenWindow()
+        {
+            UIRouter.PushAsync(openWindow).Forget();
+        }
+
+        //关闭窗口
+        public void CloseWindow()
+        {
+            UISystem.Instance.CloseWindow(closeWindow);
+        }
+    }
+}
+";
+
+            string str = ScriptTemplate;
+            str = str.Replace("{_0_}", name);
+
+            var dataName = scriptOutPutPath + name + ".cs";
+
+            // 包安装模式：包内已有同名脚本时不能重生成 —— 包只读，且会在 Assembly-CSharp 里
+            // 产生与包内类型同名的类型，业务代码 using 时歧义。新类名不受影响。
+            if (ReunionPaths.IsInstalledAsPackage &&
+                File.Exists(ReunionPaths.InFramework("GenerateScript/UI/UIPlane/" + name + ".cs")) &&
+                !File.Exists(dataName))
+            {
+                Log.Error($"[CreateUIPlane] 包安装模式下不能重新生成包内已有的 UI 类型 {name}；" +
+                          "请换一个类名，或把框架以源码/嵌入式包方式安装。");
+                return;
+            }
+
+            // 防覆盖保护：生成目录可能已被手写逻辑"寄生"（如 PopupUIPlane/TerminalUIPlane 含手写业务逻辑），
+            // 无条件覆盖会静默清空手写代码且无法撤销。文件已存在时要求确认。
+            if (System.IO.File.Exists(dataName))
+            {
+                if (!EditorUtility.DisplayDialog(
+                    "CreateUIPlane",
+                    $"脚本 {name}.cs 已存在。\n\n若该文件包含手写业务逻辑（如参数分发、动画），覆盖将永久丢失且无法撤销。\n是否仍要覆盖？",
+                    "覆盖",
+                    "取消"))
+                {
+                    Log.Warning("[CreateUIPlane] 已取消覆盖 {0}", name);
+                    return;
+                }
+            }
+
+            await FileOperationUtil.SaveFile(dataName, str);
+
+            AssetDatabase.Refresh();
+        }
+
+        /// <summary>
+        /// 重置本地坐标
+        /// </summary>
+        /// <param name="t"></param>
+        public static void ResetLocalTransform(Transform t)
+        {
+            t.localPosition = Vector3.zero;
+            t.localRotation = Quaternion.identity;
+            t.localScale = Vector3.one;
+        }
+    }
+}

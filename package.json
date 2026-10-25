@@ -1,0 +1,24 @@
+{
+  "name": "com.reunion.movement",
+  "displayName": "Reunion Movement",
+  "version": "1.3.0",
+  "unity": "6000.3",
+  "description": "Unity game framework: pure C# lifecycle, modular systems, four-transport networking, Addressables hot update, SDF shape UI.",
+  "author": { "name": "Reunion Movement" },
+  "license": "Apache-2.0",
+  "keywords": [ "unity", "framework", "ugui", "addressables", "unitask" ],
+  "dependencies": {
+    "com.unity.addressables": "2.9.1",
+    "com.unity.inputsystem": "1.18.0",
+    "com.unity.nuget.newtonsoft-json": "3.2.2",
+    "com.unity.ugui": "2.0.0",
+    "com.unity.render-pipelines.universal": "17.3.0"
+  },
+  "samples": [
+    {
+      "displayName": "Hello World",
+      "description": "最小入口：运行时创建一个 uGUI 文本，不依赖场景/预制体。",
+      "path": "Samples~/HelloWorld"
+    }
+  ]
+}

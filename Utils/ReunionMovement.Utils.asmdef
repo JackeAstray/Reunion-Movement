@@ -1,0 +1,24 @@
+{
+    "name": "ReunionMovement.Utils",
+    "rootNamespace": "ReunionMovement.Common.Util",
+    "references": [
+        "ReunionMovement.Base",
+        "ReunionMovement.Common",
+        "UniTask",
+        "ReunionMovement.Telepathy",
+        "ReunionMovement.Kcp2k",
+        "ReunionMovement.SimpleWeb",
+        "UnityEngine.UI",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,1079 @@
+using System;
+using UnityEditor;
+using UnityEditor.UI;
+using UnityEngine;
+using UnityEngine.UI;
+using Object = UnityEngine.Object;
+using ReunionMovement.UI.ImageExtensions;
+using ReunionMovement.Common;
+
+namespace ReunionMovement.EditorTools.ImageExtensions
+{
+    [CustomEditor(typeof(ImageEx), true)]
+    [CanEditMultipleObjects]
+    public class ImageExEditor : ImageEditor
+    {
+        private SerializedProperty spSprite;
+        private SerializedProperty spCameraTexture;
+        private SerializedProperty spAppendShadow;
+        private SerializedProperty spShadowOffsetLocal;
+        private SerializedProperty spCircle, spTriangle, spRectangle, spPentagon, spHexagon, spChamferBox, spQuadrilateral, spNStarPolygon, spHeart, spBlobbyCross, spSquircle, spNTriangleRounded;
+        private SerializedProperty spPreserveAspect;
+        private SerializedProperty spFillMethod, spFillOrigin, spFillAmount, spFillClockwise;
+        private SerializedProperty spAlphaThreshold;
+        private SerializedProperty spConstrainRotation, spShapeRotation, spFlipHorizontal, spFlipVertical;
+        private SerializedProperty spShape;
+        private SerializedProperty spStrokeWidth, spOutlineWidth, spOutlineColor, spFalloffDistance, spEnableDashedOutline, spCustomTime;
+        private SerializedProperty spShadowMirrorDirection;
+        private SerializedProperty spShadowScale;
+        private SerializedProperty spShadowMirrorScale, spShadowMirrorOffset;
+        private SerializedProperty spShadowMirrorShowSource;
+        private SerializedProperty spShadowMirrorTintMix;
+
+        // 非法 DrawShape 值限频告警标记（Inspector 绘制路径不抛异常）
+        private bool m_invalidShapeLogged;
+        private SerializedProperty spShadowColorFilter, spShadowColorGlow;
+
+        private SerializedProperty spMaterialSettings, spMaterial, spImageType;
+
+        private SerializedProperty spGradient;
+        private SerializedProperty spBlurType, spBlurIntensity;
+        private SerializedProperty spShadowMode;
+        private SerializedProperty spTransitionMode, spTransitionTex, spTransitionRate, spTransitionColor, spTransitionWidth, spTransitionSoftness, spTransitionReverse;
+        private SerializedProperty spTransitionTexScale, spTransitionTexOffset, spTransitionTexRotation, spTransitionKeepAspectRatio;
+        private SerializedProperty spTransitionSpeed, spTransitionPatternReverse, spTransitionAutoPlaySpeed, spTransitionColorFilter, spTransitionColorGlow, spTransitionGradientValue, spTransitionRange;
+        // 过渡高级参数（此前遗漏的序列化字段，补充 Inspector 入口）
+        private SerializedProperty spTransitionClamp, spTransitionTexClampPadding, spTransitionUseUv0;
+
+        // Phase 1: 色调滤镜
+        private SerializedProperty spToneFilter, spToneIntensity;
+        // Phase 1: 独立颜色滤镜
+        private SerializedProperty spColorFilterMode, spColorValue, spColorIntensity, spColorGlow;
+        // Phase 1: 边缘效果
+        private SerializedProperty spEdgeMode, spEdgeWidth, spEdgeColorFilterMode, spEdgeColor, spEdgeColorGlow;
+        private SerializedProperty spEdgeShinyRate, spEdgeShinyWidth, spEdgeShinyAutoPlaySpeed;
+
+        // Phase 2: 采样增强
+        private SerializedProperty spSamplingMode, spSamplingIntensity;
+        // Phase 2: 目标模式
+        private SerializedProperty spTargetMode, spTargetColor, spTargetRange, spTargetSoftness;
+        // Phase 2: 图案区域
+        private SerializedProperty spPatternArea;
+
+        // Phase 3: 细节纹理
+        private SerializedProperty spDetailMode, spDetailTex, spDetailTexScale, spDetailTexOffset, spDetailTexSpeed;
+        private SerializedProperty spDetailIntensity, spDetailThreshold, spDetailColor;
+        // Phase 3: 渐变纹理
+        private SerializedProperty spEnableGradientTex, spGradientTex, spGradientOffset, spGradientScale;
+        // Phase 3: 混合模式
+        private SerializedProperty spBlendType;
+
+        private bool shaderChannelsNeedUpdate;
+
+        protected override void OnEnable()
+        {
+            foreach (Object obj in serializedObject.targetObjects)
+            {
+                ((ImageEx)obj).UpdateSerializedValuesFromSharedMaterial();
+            }
+
+            base.OnEnable();
+
+            // 检查父 Canvas 是否缺少 ImageEx 着色器所需的附加通道（TexCoord1/TexCoord2/Tangent），
+            // 缺失时 FixShaderChannelGUI 显示修复提示（运行时 OnValidate 会自动补，这里作可见安全网）
+            DetectMissingShaderChannels();
+
+            spAppendShadow = serializedObject.FindProperty("appendShadow");
+            spShadowOffsetLocal = serializedObject.FindProperty("shadowOffsetLocal");
+
+            spSprite = serializedObject.FindProperty("m_Sprite");
+            spCameraTexture = serializedObject.FindProperty("cameraTexture");
+
+            spShape = serializedObject.FindProperty("drawShape");
+
+            spStrokeWidth = serializedObject.FindProperty("strokeWidth");
+            spOutlineWidth = serializedObject.FindProperty("outlineWidth");
+            spOutlineColor = serializedObject.FindProperty("outlineColor");
+            spFalloffDistance = serializedObject.FindProperty("falloffDistance");
+            spEnableDashedOutline = serializedObject.FindProperty("enableDashedOutline");
+            spCustomTime = serializedObject.FindProperty("customTime");
+            spShadowMirrorDirection = serializedObject.FindProperty("shadowMirrorDirection");
+            spShadowScale = serializedObject.FindProperty("shadowScale");
+            spShadowMirrorScale = serializedObject.FindProperty("shadowMirrorScale");
+            spShadowMirrorOffset = serializedObject.FindProperty("shadowMirrorOffset");
+            spShadowMirrorShowSource = serializedObject.FindProperty("shadowMirrorShowSource");
+            spShadowMirrorTintMix = serializedObject.FindProperty("shadowMirrorTintMix");
+            spShadowColorFilter = serializedObject.FindProperty("shadowColorFilter");
+            spShadowColorGlow = serializedObject.FindProperty("shadowColorGlow");
+
+            spMaterialSettings = serializedObject.FindProperty("materialMode");
+            spMaterial = serializedObject.FindProperty("m_Material");
+            spImageType = serializedObject.FindProperty("imageType");
+
+            spFillMethod = serializedObject.FindProperty("m_FillMethod");
+            spFillOrigin = serializedObject.FindProperty("m_FillOrigin");
+            spFillAmount = serializedObject.FindProperty("m_FillAmount");
+            spFillClockwise = serializedObject.FindProperty("m_FillClockwise");
+
+            spConstrainRotation = serializedObject.FindProperty("constrainRotation");
+            spShapeRotation = serializedObject.FindProperty("shapeRotation");
+            spFlipHorizontal = serializedObject.FindProperty("flipHorizontal");
+            spFlipVertical = serializedObject.FindProperty("flipVertical");
+
+            spAlphaThreshold = serializedObject.FindProperty("alphaThreshold");
+
+            spCircle = serializedObject.FindProperty("circle");
+            spRectangle = serializedObject.FindProperty("rectangle");
+            spTriangle = serializedObject.FindProperty("triangle");
+            spPentagon = serializedObject.FindProperty("pentagon");
+            spHexagon = serializedObject.FindProperty("hexagon");
+            spChamferBox = serializedObject.FindProperty("chamferBox");
+            spQuadrilateral = serializedObject.FindProperty("quadrilateral");
+            spNStarPolygon = serializedObject.FindProperty("nStarPolygon");
+            spHeart = serializedObject.FindProperty("heart");
+            spBlobbyCross = serializedObject.FindProperty("blobbyCross");
+            spSquircle = serializedObject.FindProperty("squircle");
+            spNTriangleRounded = serializedObject.FindProperty("nTriangleRounded");
+
+            spPreserveAspect = serializedObject.FindProperty("m_PreserveAspect");
+
+            spGradient = serializedObject.FindProperty("gradientEffect");
+            spBlurType = serializedObject.FindProperty("blurType");
+            spBlurIntensity = serializedObject.FindProperty("blurIntensity");
+            spShadowMode = serializedObject.FindProperty("shadowMode");
+
+            spTransitionMode = serializedObject.FindProperty("transitionMode");
+            spTransitionTex = serializedObject.FindProperty("transitionTexture");
+            spTransitionTexScale = serializedObject.FindProperty("transitionTexScale");
+            spTransitionTexOffset = serializedObject.FindProperty("transitionTexOffset");
+            spTransitionTexRotation = serializedObject.FindProperty("transitionTexRotation");
+            spTransitionKeepAspectRatio = serializedObject.FindProperty("transitionKeepAspectRatio");
+            spTransitionRate = serializedObject.FindProperty("transitionRate");
+            spTransitionColor = serializedObject.FindProperty("transitionColor");
+            spTransitionWidth = serializedObject.FindProperty("transitionWidth");
+            spTransitionSoftness = serializedObject.FindProperty("transitionSoftness");
+            spTransitionReverse = serializedObject.FindProperty("transitionReverse");
+            spTransitionSpeed = serializedObject.FindProperty("transitionSpeed");
+            spTransitionPatternReverse = serializedObject.FindProperty("transitionPatternReverse");
+            spTransitionAutoPlaySpeed = serializedObject.FindProperty("transitionAutoPlaySpeed");
+            spTransitionColorFilter = serializedObject.FindProperty("transitionColorFilter");
+            spTransitionColorGlow = serializedObject.FindProperty("transitionColorGlow");
+            // 注意：transitionGradient 为运行时从 transitionGradientValue 生成，不在 Inspector 直接编辑
+            spTransitionGradientValue = serializedObject.FindProperty("transitionGradientValue");
+            spTransitionRange = serializedObject.FindProperty("transitionRange");
+
+            // 过渡高级参数（手动绘制编辑器必须显式声明+FindProperty，否则 Inspector 不显示）
+            spTransitionClamp = serializedObject.FindProperty("transitionClamp");
+            spTransitionTexClampPadding = serializedObject.FindProperty("transitionTexClampPadding");
+            spTransitionUseUv0 = serializedObject.FindProperty("transitionUseUv0");
+
+            // Phase 1: 色调滤镜
+            spToneFilter = serializedObject.FindProperty("m_ToneFilter");
+            spToneIntensity = serializedObject.FindProperty("m_ToneIntensity");
+            // Phase 1: 独立颜色滤镜
+            spColorFilterMode = serializedObject.FindProperty("m_ColorFilterMode");
+            spColorValue = serializedObject.FindProperty("m_ColorValue");
+            spColorIntensity = serializedObject.FindProperty("m_ColorIntensity");
+            spColorGlow = serializedObject.FindProperty("m_ColorGlow");
+            // Phase 1: 边缘效果
+            spEdgeMode = serializedObject.FindProperty("m_EdgeMode");
+            spEdgeWidth = serializedObject.FindProperty("m_EdgeWidth");
+            spEdgeColorFilterMode = serializedObject.FindProperty("m_EdgeColorFilterMode");
+            spEdgeColor = serializedObject.FindProperty("m_EdgeColor");
+            spEdgeColorGlow = serializedObject.FindProperty("m_EdgeColorGlow");
+            spEdgeShinyRate = serializedObject.FindProperty("m_EdgeShinyRate");
+            spEdgeShinyWidth = serializedObject.FindProperty("m_EdgeShinyWidth");
+            spEdgeShinyAutoPlaySpeed = serializedObject.FindProperty("m_EdgeShinyAutoPlaySpeed");
+
+            // Phase 2: 采样增强
+            spSamplingMode = serializedObject.FindProperty("m_SamplingMode");
+            spSamplingIntensity = serializedObject.FindProperty("m_SamplingIntensity");
+            // Phase 2: 目标模式
+            spTargetMode = serializedObject.FindProperty("m_TargetMode");
+            spTargetColor = serializedObject.FindProperty("m_TargetColor");
+            spTargetRange = serializedObject.FindProperty("m_TargetRange");
+            spTargetSoftness = serializedObject.FindProperty("m_TargetSoftness");
+            // Phase 2: 图案区域
+            spPatternArea = serializedObject.FindProperty("m_PatternArea");
+
+            // Phase 3: 细节纹理
+            spDetailMode = serializedObject.FindProperty("m_DetailMode");
+            spDetailTex = serializedObject.FindProperty("m_DetailTex");
+            spDetailTexScale = serializedObject.FindProperty("m_DetailTexScale");
+            spDetailTexOffset = serializedObject.FindProperty("m_DetailTexOffset");
+            spDetailTexSpeed = serializedObject.FindProperty("m_DetailTexSpeed");
+            spDetailIntensity = serializedObject.FindProperty("m_DetailIntensity");
+            spDetailThreshold = serializedObject.FindProperty("m_DetailThreshold");
+            spDetailColor = serializedObject.FindProperty("m_DetailColor");
+            // Phase 3: 渐变纹理
+            spEnableGradientTex = serializedObject.FindProperty("m_EnableGradientTex");
+            spGradientTex = serializedObject.FindProperty("m_GradientTex");
+            spGradientOffset = serializedObject.FindProperty("m_GradientOffset");
+            spGradientScale = serializedObject.FindProperty("m_GradientScale");
+            // Phase 3: 混合模式
+            spBlendType = serializedObject.FindProperty("m_BlendType");
+        }
+
+        public override void OnInspectorGUI()
+        {
+            serializedObject.Update();
+
+            FixShaderChannelGUI();
+
+            RaycastControlsGUI();
+            EditorGUILayout.PropertyField(m_Color);
+            EditorGUILayout.Space();
+
+            CameraTextureGUI();
+
+            EditorGUILayout.Space();
+            EditorGUILayout.PropertyField(spShape, new GUIContent("绘制形状"));
+
+            if (spShape.enumValueIndex != (int)DrawShape.None)
+            {
+                EditorGUILayout.BeginVertical("Box");
+                if (!spShape.hasMultipleDifferentValues)
+                {
+                    switch ((DrawShape)spShape.enumValueIndex)
+                    {
+                        case DrawShape.Circle:
+                            EditorGUILayout.PropertyField(spCircle);
+                            break;
+                        case DrawShape.Rectangle:
+                            EditorGUILayout.PropertyField(spRectangle);
+                            break;
+                        case DrawShape.Pentagon:
+                            EditorGUILayout.PropertyField(spPentagon);
+                            break;
+                        case DrawShape.Triangle:
+                            EditorGUILayout.PropertyField(spTriangle);
+                            break;
+                        case DrawShape.Hexagon:
+                            EditorGUILayout.PropertyField(spHexagon);
+                            break;
+                        case DrawShape.ChamferBox:
+                            EditorGUILayout.PropertyField(spChamferBox);
+                            break;
+                        case DrawShape.Quadrilateral:
+                            EditorGUILayout.PropertyField(spQuadrilateral);
+                            break;
+                        case DrawShape.NStarPolygon:
+                            EditorGUILayout.PropertyField(spNStarPolygon);
+                            break;
+                        case DrawShape.Heart:
+                            EditorGUILayout.PropertyField(spHeart);
+                            break;
+                        case DrawShape.BlobbyCross:
+                            EditorGUILayout.PropertyField(spBlobbyCross);
+                            break;
+                        case DrawShape.Squircle:
+                            EditorGUILayout.PropertyField(spSquircle);
+                            break;
+                        case DrawShape.NTriangleRounded:
+                            EditorGUILayout.PropertyField(spNTriangleRounded);
+                            break;
+
+                        default:
+                            // 非法枚举值（旧序列化残留）：跳过绘制而非抛异常，避免 Inspector 中断；限频告警
+                            if (!m_invalidShapeLogged)
+                            {
+                                m_invalidShapeLogged = true;
+                                Log.Warning("ImageEx.DrawShape 存在非法值 {0}，已跳过形状参数绘制", spShape.enumValueIndex);
+                            }
+                            break;
+                    }
+                }
+
+                EditorGUILayout.EndVertical();
+            }
+
+            EditorGUILayout.Space();
+            AdditionalShapeDataGUI();
+            EditorGUILayout.Space();
+
+            ImageTypeGUI();
+
+            SpriteGUI();
+
+            if (!spSprite.hasMultipleDifferentValues && spSprite.objectReferenceValue != null)
+            {
+                EditorGUILayout.PropertyField(spPreserveAspect);
+            }
+
+            SetShowNativeSize(spSprite.objectReferenceValue != null, true);
+            NativeSizeButtonGUI();
+
+            EditorGUILayout.Space();
+            SharedMaterialGUI();
+
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spGradient);
+                // Phase 3: 渐变纹理子选项
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(spEnableGradientTex, new GUIContent("渐变纹理"));
+                if (spEnableGradientTex.boolValue)
+                {
+                    EditorGUILayout.PropertyField(spGradientTex, new GUIContent("纹理"));
+                }
+                EditorGUILayout.PropertyField(spGradientOffset, new GUIContent("偏移"));
+                EditorGUILayout.PropertyField(spGradientScale, new GUIContent("缩放"));
+                EditorGUI.indentLevel--;
+            }
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spBlurType, new GUIContent("模糊类型"));
+                if (spBlurType.enumValueIndex != (int)ImageEx.BlurType.None)
+                {
+                    EditorGUILayout.PropertyField(spBlurIntensity, new GUIContent("模糊强度"));
+                }
+            }
+            EditorGUILayout.EndVertical();
+
+            // ==================== 采样增强（SAMPLING） ====================
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spSamplingMode, new GUIContent("采样模式"));
+                if (spSamplingMode.enumValueIndex != (int)ImageEx.SamplingFilter.None)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(spSamplingIntensity, new GUIContent("采样强度"));
+                    EditorGUI.indentLevel--;
+                }
+            }
+            EditorGUILayout.EndVertical();
+
+            // ==================== 目标模式（TARGET MODE） ====================
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spTargetMode, new GUIContent("目标模式"));
+                if (spTargetMode.enumValueIndex != (int)ImageEx.TargetMode.None)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(spTargetColor, new GUIContent("目标颜色"));
+                    EditorGUILayout.PropertyField(spTargetRange, new GUIContent("目标范围"));
+                    EditorGUILayout.PropertyField(spTargetSoftness, new GUIContent("目标柔和度"));
+                    EditorGUI.indentLevel--;
+                }
+            }
+            EditorGUILayout.EndVertical();
+
+            // ==================== 细节纹理（DETAIL FILTER） ====================
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spDetailMode, new GUIContent("细节滤镜"));
+                if (spDetailMode.enumValueIndex != (int)ImageEx.DetailFilter.None)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(spDetailTex, new GUIContent("纹理"));
+                    EditorGUILayout.PropertyField(spDetailTexScale, new GUIContent("缩放"));
+                    EditorGUILayout.PropertyField(spDetailTexOffset, new GUIContent("偏移"));
+                    EditorGUILayout.PropertyField(spDetailTexSpeed, new GUIContent("速度"));
+                    EditorGUILayout.PropertyField(spDetailIntensity, new GUIContent("强度"));
+                    EditorGUILayout.PropertyField(spDetailThreshold, new GUIContent("阈值"));
+
+                    // 细节颜色（HDR）
+                    EditorGUI.BeginChangeCheck();
+                    EditorGUI.showMixedValue = spDetailColor.hasMultipleDifferentValues;
+                    Color newDetailColor = EditorGUILayout.ColorField(new GUIContent("颜色"), spDetailColor.colorValue, true, true, true);
+                    EditorGUI.showMixedValue = false;
+                    if (EditorGUI.EndChangeCheck()) spDetailColor.colorValue = newDetailColor;
+                    EditorGUI.indentLevel--;
+                }
+            }
+            EditorGUILayout.EndVertical();
+
+            // ==================== 混合模式（BLEND TYPE） ====================
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spBlendType, new GUIContent("混合模式"));
+            }
+            EditorGUILayout.EndVertical();
+
+            // ==================== 色调滤镜（TONE FILTER） ====================
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spToneFilter, new GUIContent("色调滤镜"));
+                if (spToneFilter.enumValueIndex != (int)ImageEx.ToneFilter.None)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(spToneIntensity, new GUIContent("滤镜强度"));
+                    EditorGUI.indentLevel--;
+                }
+            }
+            EditorGUILayout.EndVertical();
+
+            // ==================== 独立颜色滤镜（COLOR FILTER） ====================
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spColorFilterMode, new GUIContent("颜色滤镜"));
+                if (spColorFilterMode.enumValueIndex != (int)ImageEx.ColorMode.None)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(spColorValue, new GUIContent("滤镜值"));
+                    EditorGUILayout.PropertyField(spColorIntensity, new GUIContent("滤镜强度"));
+                    EditorGUILayout.PropertyField(spColorGlow, new GUIContent("发光"));
+                    EditorGUI.indentLevel--;
+                }
+            }
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spTransitionMode, new GUIContent("过渡模式"));
+                if (spTransitionMode.enumValueIndex != (int)ImageEx.TransitionMode.None)
+                {
+                    ImageEx.TransitionMode mode = (ImageEx.TransitionMode)spTransitionMode.enumValueIndex;
+
+                    EditorGUILayout.PropertyField(spTransitionRate, new GUIContent("过渡进度"));
+
+                    if (mode == ImageEx.TransitionMode.Cutoff || mode == ImageEx.TransitionMode.Dissolve ||
+                        mode == ImageEx.TransitionMode.Mask || mode == ImageEx.TransitionMode.Melt ||
+                        mode == ImageEx.TransitionMode.Burn || mode == ImageEx.TransitionMode.Pattern ||
+                        mode == ImageEx.TransitionMode.Fade || mode == ImageEx.TransitionMode.Shiny ||
+                        mode == ImageEx.TransitionMode.Blaze)
+                    {
+                        EditorGUILayout.LabelField("过渡纹理", EditorStyles.boldLabel);
+                        EditorGUI.indentLevel++;
+                        EditorGUILayout.PropertyField(spTransitionTex, new GUIContent("纹理"));
+                        EditorGUILayout.PropertyField(spTransitionTexScale, new GUIContent("缩放"));
+                        EditorGUILayout.PropertyField(spTransitionTexOffset, new GUIContent("偏移"));
+                        EditorGUILayout.PropertyField(spTransitionSpeed, new GUIContent("速度"));
+                        EditorGUILayout.PropertyField(spTransitionTexRotation, new GUIContent("旋转"));
+                        EditorGUILayout.PropertyField(spTransitionKeepAspectRatio, new GUIContent("保持纵横比"));
+                        EditorGUILayout.PropertyField(spTransitionReverse, new GUIContent("反向"));
+
+                        // 过渡高级参数
+                        EditorGUILayout.PropertyField(spTransitionClamp, new GUIContent("强制钳制", "对过渡 UV 做钳制，防止纹理采样越界"));
+                        EditorGUILayout.PropertyField(spTransitionTexClampPadding, new GUIContent("钳制边距", "纹理钳制的额外边距（0~4）"));
+                        EditorGUILayout.PropertyField(spTransitionUseUv0, new GUIContent("使用 UV0", "过渡采样使用 UV0 通道"));
+                        EditorGUI.indentLevel--;
+                    }
+
+                    if (mode == ImageEx.TransitionMode.Dissolve || mode == ImageEx.TransitionMode.Shiny ||
+                        mode == ImageEx.TransitionMode.Melt || mode == ImageEx.TransitionMode.Burn ||
+                        mode == ImageEx.TransitionMode.Blaze || mode == ImageEx.TransitionMode.Mask)
+                    {
+                        EditorGUILayout.PropertyField(spTransitionWidth, new GUIContent("过渡宽度"));
+                    }
+                    else if (mode == ImageEx.TransitionMode.Pattern)
+                    {
+                        EditorGUILayout.PropertyField(spTransitionWidth, new GUIContent("图案大小"));
+                    }
+
+                    if (mode == ImageEx.TransitionMode.Blaze)
+                    {
+                        EditorGUI.BeginChangeCheck();
+                        EditorGUILayout.PropertyField(spTransitionGradientValue, new GUIContent("过渡渐变"));
+                        if (EditorGUI.EndChangeCheck())
+                        {
+                            serializedObject.ApplyModifiedProperties();
+                            foreach (Object obj in targets)
+                            {
+                                ((ImageEx)obj).RefreshTransitionGradient();
+                            }
+                        }
+                    }
+
+                    if (mode == ImageEx.TransitionMode.Dissolve || mode == ImageEx.TransitionMode.Shiny ||
+                        mode == ImageEx.TransitionMode.Melt || mode == ImageEx.TransitionMode.Burn ||
+                        mode == ImageEx.TransitionMode.Mask)
+                    {
+                        EditorGUILayout.PropertyField(spTransitionSoftness, new GUIContent("过渡柔和度"));
+                    }
+
+                    if (mode == ImageEx.TransitionMode.Pattern)
+                    {
+                        Vector2 range = spTransitionRange.vector2Value;
+                        float min = range.x;
+                        float max = range.y;
+                        EditorGUILayout.MinMaxSlider(new GUIContent("图案范围"), ref min, ref max, 0f, 1f);
+                        spTransitionRange.vector2Value = new Vector2(min, max);
+                    }
+
+                    if (mode == ImageEx.TransitionMode.Pattern)
+                    {
+                        EditorGUILayout.PropertyField(spTransitionPatternReverse, new GUIContent("图案反向"));
+                        EditorGUILayout.PropertyField(spPatternArea, new GUIContent("图案区域"));
+                    }
+
+                    if (mode != ImageEx.TransitionMode.Fade && mode != ImageEx.TransitionMode.Cutoff && mode != ImageEx.TransitionMode.Blaze)
+                    {
+                        EditorGUILayout.PropertyField(spTransitionColorFilter, new GUIContent("颜色滤镜"));
+
+                        // 过渡颜色（HDR）
+                        EditorGUI.BeginChangeCheck();
+                        EditorGUI.showMixedValue = spTransitionColor.hasMultipleDifferentValues;
+                        Color newTransitionColor = EditorGUILayout.ColorField(new GUIContent("过渡颜色"), spTransitionColor.colorValue, true, true, true);
+                        EditorGUI.showMixedValue = false;
+                        if (EditorGUI.EndChangeCheck()) spTransitionColor.colorValue = newTransitionColor;
+
+                        EditorGUILayout.PropertyField(spTransitionColorGlow, new GUIContent("发光"));
+                    }
+
+                    EditorGUILayout.PropertyField(spTransitionAutoPlaySpeed, new GUIContent("自动播放速度"));
+                }
+            }
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space();
+
+            EditorGUILayout.BeginVertical("Box");
+            {
+                // Shadow mode styled similarly to Transition Mode: a single field then indented settings.
+                EditorGUILayout.PropertyField(spAppendShadow, new GUIContent("阴影模式"));
+                if (spAppendShadow.boolValue)
+                {
+                    EditorGUILayout.LabelField("阴影设置", EditorStyles.boldLabel);
+                    EditorGUI.indentLevel++;
+
+                    EditorGUILayout.PropertyField(spShadowOffsetLocal, new GUIContent("阴影偏移 (本地)"));
+
+                    // Shadow type dropdown
+                    EditorGUILayout.PropertyField(spShadowMode, new GUIContent("阴影类型"));
+
+                    // 阴影颜色（HDR）
+                    SerializedProperty spShadowColor = serializedObject.FindProperty("shadowColor");
+                    EditorGUI.BeginChangeCheck();
+                    EditorGUI.showMixedValue = spShadowColor.hasMultipleDifferentValues;
+                    Color newShadowColor = EditorGUILayout.ColorField(new GUIContent("阴影颜色"), spShadowColor.colorValue, true, true, true);
+                    EditorGUI.showMixedValue = false;
+                    if (EditorGUI.EndChangeCheck()) spShadowColor.colorValue = newShadowColor;
+
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("shadowBlurIntensity"), new GUIContent("阴影衰减距离"));
+                    if (spShadowScale != null)
+                        EditorGUILayout.PropertyField(spShadowScale, new GUIContent("阴影缩放"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingWidth"), new GUIContent("采样宽度"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("samplingScale"), new GUIContent("采样缩放"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("allowOutOfBoundsShadow"), new GUIContent("允许超出边界阴影"));
+
+                    // Show 'show source' only when ShadowMode is Mirror
+                    if (!spShadowMode.hasMultipleDifferentValues && spShadowMode.intValue == (int)ImageEx.ShadowMode.Mirror)
+                    {
+                        EditorGUILayout.PropertyField(spShadowMirrorDirection, new GUIContent("镜像方向"));
+                        EditorGUILayout.PropertyField(spShadowMirrorScale, new GUIContent("镜像缩放"));
+                        EditorGUILayout.PropertyField(spShadowMirrorOffset, new GUIContent("镜像偏移"));
+                        if (spShadowMirrorShowSource != null)
+                            EditorGUILayout.PropertyField(spShadowMirrorShowSource, new GUIContent("显示原图"));
+                        if (spShadowMirrorTintMix != null)
+                            EditorGUILayout.PropertyField(spShadowMirrorTintMix, new GUIContent("镜像混合"));
+                    }
+
+                    EditorGUILayout.PropertyField(spShadowColorFilter, new GUIContent("阴影颜色滤镜"));
+                    EditorGUILayout.PropertyField(spShadowColorGlow, new GUIContent("阴影发光"));
+
+                    EditorGUI.indentLevel--;
+                }
+            }
+            EditorGUILayout.EndVertical();
+            // ==================== 边缘效果（EDGE MODE） ====================
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spEdgeMode, new GUIContent("边缘效果"));
+                if (spEdgeMode.enumValueIndex != (int)ImageEx.EdgeMode.None)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(spEdgeWidth, new GUIContent("边缘宽度"));
+
+                    EditorGUILayout.PropertyField(spEdgeColorFilterMode, new GUIContent("颜色滤镜"));
+
+                    // 边缘颜色（HDR）
+                    EditorGUI.BeginChangeCheck();
+                    EditorGUI.showMixedValue = spEdgeColor.hasMultipleDifferentValues;
+                    Color newEdgeColor = EditorGUILayout.ColorField(new GUIContent("边缘颜色"), spEdgeColor.colorValue, true, true, true);
+                    EditorGUI.showMixedValue = false;
+                    if (EditorGUI.EndChangeCheck()) spEdgeColor.colorValue = newEdgeColor;
+
+                    EditorGUILayout.PropertyField(spEdgeColorGlow, new GUIContent("发光"));
+
+                    // Shiny 模式特有参数
+                    if (!spEdgeMode.hasMultipleDifferentValues && spEdgeMode.enumValueIndex == (int)ImageEx.EdgeMode.Shiny)
+                    {
+                        EditorGUILayout.LabelField("高光设置", EditorStyles.boldLabel);
+                        EditorGUI.indentLevel++;
+                        EditorGUILayout.PropertyField(spEdgeShinyRate, new GUIContent("高光位置"));
+                        EditorGUILayout.PropertyField(spEdgeShinyWidth, new GUIContent("高光宽度"));
+                        EditorGUILayout.PropertyField(spEdgeShinyAutoPlaySpeed, new GUIContent("自动速度"));
+                        EditorGUI.indentLevel--;
+                    }
+
+                    EditorGUI.indentLevel--;
+                }
+            }
+            EditorGUILayout.EndVertical();
+            if (spShape.enumValueIndex == (int)DrawShape.None)
+            {
+                // 翻转控件（放置在“阴影”设置下，仅在DrawShape==None时启用）
+                EditorGUILayout.Space();
+                EditorGUILayout.BeginVertical("Box");
+                {
+                    EditorGUILayout.LabelField("翻转", EditorStyles.boldLabel);
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(spFlipHorizontal, new GUIContent("水平翻转"));
+                    EditorGUILayout.PropertyField(spFlipVertical, new GUIContent("垂直翻转"));
+                    EditorGUI.indentLevel--;
+                }
+                EditorGUILayout.EndVertical();
+            }
+
+            //刷新
+            serializedObject.ApplyModifiedProperties();
+            serializedObject.Update();
+            Repaint();
+        }
+
+        private void CameraTextureGUI()
+        {
+            EditorGUILayout.BeginVertical("Box");
+            {
+                EditorGUILayout.PropertyField(spCameraTexture,
+                    new GUIContent("相机画面", "RenderTexture / WebCamTexture 等动态纹理，作为 _MainTex 显示，形状与特效仍然生效。"));
+
+                if (spCameraTexture.objectReferenceValue == null)
+                {
+                    EditorGUILayout.HelpBox(
+                        "留空则显示 Sprite 纹理。\n挂载 CameraToImageEx 可自动把相机画面赋给此字段。",
+                        MessageType.Info);
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox(
+                        "警告：此字段已设置，它会完全覆盖下方的 Sprite 纹理。\n" +
+                        "若该 RenderTexture 从未渲染/内容透明，ImageEx 会整体半透明不可见，且改颜色、赋精灵都无效。\n" +
+                        "如果不需要相机画面，请清空此字段。",
+                        MessageType.Warning);
+                }
+            }
+            EditorGUILayout.EndVertical();
+        }
+
+        private void AdditionalShapeDataGUI()
+        {
+            EditorGUILayout.Space();
+
+            float strokeWidth = spStrokeWidth.floatValue;
+            float outlineWidth = spOutlineWidth.floatValue;
+            float falloff = spFalloffDistance.floatValue;
+            Color outlineColor = spOutlineColor.colorValue;
+
+            float customTime = spCustomTime.floatValue;
+
+            float h = 2;
+
+            if (!spShape.hasMultipleDifferentValues && (spShape.enumValueIndex == (int)DrawShape.Circle || spShape.enumValueIndex == (int)DrawShape.Rectangle))
+            {
+                h = 3;
+            }
+
+            //EditorGUILayout.PropertyField(spStrokeWidth, new GUIContent("线条"));
+            //EditorGUILayout.PropertyField(spFalloffDistance, new GUIContent("衰减"));
+
+            // 合并为一个分组区域：多行、多列布局（第一列较宽）
+            Rect groupRect = EditorGUILayout.GetControlRect(true, EditorGUIUtility.singleLineHeight * h + EditorGUIUtility.standardVerticalSpacing);
+            float gap = 6f;
+            float lineHeight = EditorGUIUtility.singleLineHeight;
+            float vSpacing = EditorGUIUtility.standardVerticalSpacing;
+            // 左右列比例，左侧更宽
+            float leftWidth = (groupRect.width - gap) * 0.5f;
+            float rightWidth = groupRect.width - leftWidth - gap;
+
+            // 临时缩短标签宽度以让数值输入获得更多空间
+            float oldLabelWidth = EditorGUIUtility.labelWidth;
+            EditorGUIUtility.labelWidth = 100f;
+
+            // 第一行：线条 / 衰减
+            Rect left0 = new Rect(groupRect.x, groupRect.y, leftWidth, lineHeight);
+            Rect right0 = new Rect(groupRect.x + leftWidth + gap, groupRect.y, rightWidth, lineHeight);
+            EditorGUI.PropertyField(left0, spStrokeWidth, new GUIContent("线条"));
+            EditorGUI.PropertyField(right0, spFalloffDistance, new GUIContent("衰减"));
+
+            // 第二行：轮廓宽度 / 轮廓颜色
+            float row1Y = groupRect.y + lineHeight + vSpacing;
+            Rect left1 = new Rect(groupRect.x, row1Y, leftWidth, lineHeight);
+            Rect right1 = new Rect(groupRect.x + leftWidth + gap, row1Y, rightWidth, lineHeight);
+
+            // 轮廓宽度（使用 SerializedProperty）
+            EditorGUI.PropertyField(left1, spOutlineWidth, new GUIContent("轮廓宽度"));
+
+            // 轮廓颜色（使用 HDR ColorField）
+            EditorGUI.BeginChangeCheck();
+            EditorGUI.showMixedValue = spOutlineColor.hasMultipleDifferentValues;
+            Color newOutlineColor = EditorGUI.ColorField(right1, new GUIContent("轮廓颜色"), spOutlineColor.colorValue, true, true, true);
+            EditorGUI.showMixedValue = false;
+            if (EditorGUI.EndChangeCheck()) spOutlineColor.colorValue = newOutlineColor;
+
+            // 第三行（仅在 Circle/Rectangle 的情况下显示）：是否开启虚线 / 自定义时间
+            if (!spShape.hasMultipleDifferentValues && (spShape.enumValueIndex == (int)DrawShape.Circle || spShape.enumValueIndex == (int)DrawShape.Rectangle))
+            {
+                float row2Y = groupRect.y + 2 * (lineHeight + vSpacing);
+                Rect left2 = new Rect(groupRect.x, row2Y, leftWidth, lineHeight);
+                Rect right2 = new Rect(groupRect.x + leftWidth + gap, row2Y, rightWidth, lineHeight);
+
+                // 本地标签宽度，用于左列标签对齐
+                float localLabelW = Mathf.Min(80f, EditorGUIUtility.labelWidth);
+
+                // 是否开启虚线（使用 SerializedProperty）
+                EditorGUI.PropertyField(left2, spEnableDashedOutline, new GUIContent("是否开启虚线"));
+
+                // 自定义时间（右列，使用 SerializedProperty）
+                EditorGUI.PropertyField(right2, spCustomTime, new GUIContent("自定义时间"));
+            }
+
+            EditorGUIUtility.labelWidth = oldLabelWidth;
+
+            EditorGUILayout.Space();
+
+            RotationGUI();
+        }
+
+        private void RotationGUI()
+        {
+            Rect r = EditorGUILayout.GetControlRect(true, EditorGUIUtility.singleLineHeight + 24 + EditorGUIUtility.standardVerticalSpacing);
+            Rect line = r;
+            line.height = EditorGUIUtility.singleLineHeight;
+            float x = (line.width - 10f) / 2;
+
+            float fieldWidth = x / 2 - 10f;
+            float labelWidth = x - fieldWidth;
+
+            line.width = labelWidth;
+            EditorGUI.LabelField(line, "旋转");
+            line.x += labelWidth;
+            line.width = r.width - labelWidth - 78;
+
+            string[] options = spConstrainRotation.hasMultipleDifferentValues ? new[] { "---", "---" } : new[] { "自由", "限制" };
+            bool boolVal = spConstrainRotation.boolValue;
+            EditorGUI.BeginChangeCheck();
+            {
+                boolVal = GUI.Toolbar(line, boolVal ? 1 : 0, options) == 1;
+            }
+            if (EditorGUI.EndChangeCheck())
+            {
+                spConstrainRotation.boolValue = boolVal;
+                GUI.FocusControl(null);
+            }
+
+            line.x += line.width + 14;
+            line.width = 64;
+            EditorGUI.LabelField(line, "图像翻转");
+
+            line.y += EditorGUIUtility.standardVerticalSpacing + EditorGUIUtility.singleLineHeight;
+            line.x = r.x;
+            line.height = EditorGUIUtility.singleLineHeight;
+            line.width = labelWidth - 10;
+            EditorGUI.BeginDisabledGroup(spConstrainRotation.boolValue);
+            {
+                Rect dragZone = line;
+                EditorGUI.LabelField(line, "角度");
+                line.x = r.x + labelWidth;
+                line.width = r.width - labelWidth - 148;
+
+                float rotationValue = spShapeRotation.floatValue;
+                EditorGUI.BeginChangeCheck();
+                {
+                    EditorGUI.showMixedValue = spShapeRotation.hasMultipleDifferentValues;
+                    rotationValue = FloatFieldDraggable.DraggableFloatField(line, spShapeRotation.floatValue);
+                    EditorGUI.showMixedValue = false;
+                }
+                if (EditorGUI.EndChangeCheck())
+                {
+                    spShapeRotation.floatValue = rotationValue;
+                }
+            }
+            EditorGUI.EndDisabledGroup();
+
+            EditorGUI.BeginDisabledGroup(!spConstrainRotation.boolValue);
+            {
+                line.x += line.width + 4;
+                line.width = 30;
+                line.height = 24;
+                if (GUI.Button(line, EditorContents.RotateLeftNormal))
+                {
+                    float rotation = spShapeRotation.floatValue;
+                    float remainder = rotation % 90;
+                    if (Mathf.Abs(remainder) <= 0)
+                    {
+                        rotation += 90;
+                    }
+                    else
+                    {
+                        rotation = rotation - remainder + 90;
+                    }
+                    if (Math.Abs(rotation) >= 360) rotation = 0;
+                    spShapeRotation.floatValue = rotation;
+                }
+
+                line.x += 34;
+                if (GUI.Button(line, EditorContents.RotateRightNormal))
+                {
+                    float rotation = spShapeRotation.floatValue;
+                    float remainder = rotation % 90;
+                    if (Mathf.Abs(remainder) <= 0)
+                    {
+                        rotation -= 90;
+                    }
+                    else
+                    {
+                        rotation -= remainder;
+                    }
+
+                    if (Math.Abs(rotation) >= 360) rotation = 0;
+                    spShapeRotation.floatValue = rotation;
+                }
+            }
+            EditorGUI.EndDisabledGroup();
+
+            line.x += 46;
+            bool flipH = spFlipHorizontal.boolValue;
+            bool flipV = spFlipVertical.boolValue;
+            EditorGUI.BeginChangeCheck();
+            {
+                EditorGUI.BeginDisabledGroup(spFlipHorizontal.hasMultipleDifferentValues || spFlipVertical.hasMultipleDifferentValues);
+                flipH = GUI.Toggle(line, spFlipHorizontal.boolValue, spFlipHorizontal.boolValue ? EditorContents.FlipHorizontalActive : EditorContents.FlipHorizontalNormal, "button");
+                line.x += 34;
+                flipV = GUI.Toggle(line, spFlipVertical.boolValue, spFlipVertical.boolValue ? EditorContents.FlipVerticalActive : EditorContents.FlipVerticalNormal, "button");
+                EditorGUI.EndDisabledGroup();
+            }
+            if (EditorGUI.EndChangeCheck())
+            {
+                spFlipHorizontal.boolValue = flipH;
+                spFlipVertical.boolValue = flipV;
+            }
+
+        }
+
+        /// <summary>
+        /// 检测父 Canvas 是否缺少 ImageEx 着色器所需的附加着色器通道（TexCoord1/TexCoord2/Tangent）。
+        /// 与运行时 FixAdditionalShaderChannelsInCanvas 保持同一判定逻辑。
+        /// </summary>
+        private void DetectMissingShaderChannels()
+        {
+            shaderChannelsNeedUpdate = false;
+            foreach (Object obj in targets)
+            {
+                if (obj == null) continue;
+                var img = obj as ImageEx;
+                if (img == null) continue;
+                var canvas = img.canvas != null ? img.canvas : img.GetComponentInParent<Canvas>();
+                if (canvas == null) continue;
+
+                AdditionalCanvasShaderChannels channels = canvas.additionalShaderChannels;
+                AdditionalCanvasShaderChannels needed = channels
+                    | AdditionalCanvasShaderChannels.TexCoord1
+                    | AdditionalCanvasShaderChannels.TexCoord2
+                    | AdditionalCanvasShaderChannels.Tangent;
+                if (channels != needed)
+                {
+                    shaderChannelsNeedUpdate = true;
+                    break;
+                }
+            }
+        }
+
+        private void FixShaderChannelGUI()
+        {
+            if (!shaderChannelsNeedUpdate) return;
+            EditorGUILayout.HelpBox("父画布需要具有以下附加着色器通道：Texcoord1、Texcoord2、Tangent（缺失时主图可能透明/异常）", MessageType.Error);
+            EditorGUILayout.BeginHorizontal();
+            {
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("Fix", GUILayout.Width(100)))
+                {
+                    Canvas canvas = (target as ImageEx)?.GetComponentInParent<Canvas>();
+                    if (canvas != null)
+                    {
+                        EditorUtility.AddAdditionalShaderChannelsToCanvas(canvas);
+                        shaderChannelsNeedUpdate = false;
+                    }
+                }
+            }
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private new void SpriteGUI()
+        {
+            EditorGUI.BeginChangeCheck();
+            EditorGUILayout.PropertyField(spSprite, new GUIContent("精灵"));
+            if (EditorGUI.EndChangeCheck())
+            {
+                Sprite newSprite = spSprite.objectReferenceValue as Sprite;
+                if (newSprite)
+                {
+                    Image.Type oldType = (Image.Type)spImageType.enumValueIndex;
+                    if (newSprite.border.SqrMagnitude() > 0)
+                    {
+                        spImageType.enumValueIndex = (int)Image.Type.Sliced;
+                    }
+                    else if (oldType == Image.Type.Sliced)
+                    {
+                        spImageType.enumValueIndex = (int)Image.Type.Simple;
+                    }
+                }
+
+                (serializedObject.targetObject as Image)?.DisableSpriteOptimizations();
+            }
+
+            Rect rect = EditorGUILayout.GetControlRect();
+            EditorGUI.Slider(rect, spAlphaThreshold, 0f, 1f, "Alpha阈值");
+        }
+
+        private void ImageTypeGUI()
+        {
+            int selectedIndex = spImageType.enumValueIndex == (int)Image.Type.Simple ? 0 : 1;
+            Rect imageTypeRect = EditorGUILayout.GetControlRect();
+            EditorGUI.BeginChangeCheck();
+            {
+                EditorGUI.LabelField(
+                    new Rect(imageTypeRect.x, imageTypeRect.y, EditorGUIUtility.labelWidth, imageTypeRect.height),
+                    "类型");
+                imageTypeRect.x += EditorGUIUtility.labelWidth + 2;
+                imageTypeRect.width -= EditorGUIUtility.labelWidth + 2;
+                selectedIndex = EditorGUI.Popup(imageTypeRect, selectedIndex, new[] { "简单", "填充" });
+            }
+            if (EditorGUI.EndChangeCheck())
+            {
+                spImageType.enumValueIndex = (int)(selectedIndex == 0 ? Image.Type.Simple : Image.Type.Filled);
+            }
+
+            if (!spImageType.hasMultipleDifferentValues && spImageType.enumValueIndex == (int)Image.Type.Filled)
+            {
+                ++EditorGUI.indentLevel;
+                EditorGUI.BeginChangeCheck();
+                EditorGUILayout.PropertyField(spFillMethod);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    spFillOrigin.intValue = 0;
+                }
+
+                switch ((Image.FillMethod)spFillMethod.enumValueIndex)
+                {
+                    case Image.FillMethod.Horizontal:
+                        spFillOrigin.intValue = (int)(Image.OriginHorizontal)EditorGUILayout.EnumPopup("填充原点",
+                            (Image.OriginHorizontal)spFillOrigin.intValue);
+                        break;
+                    case Image.FillMethod.Vertical:
+                        spFillOrigin.intValue = (int)(Image.OriginVertical)EditorGUILayout.EnumPopup("填充原点",
+                            (Image.OriginVertical)spFillOrigin.intValue);
+                        break;
+                    case Image.FillMethod.Radial90:
+                        spFillOrigin.intValue =
+                            (int)(Image.Origin90)EditorGUILayout.EnumPopup("填充原点",
+                                (Image.Origin90)spFillOrigin.intValue);
+                        break;
+                    case Image.FillMethod.Radial180:
+                        spFillOrigin.intValue =
+                            (int)(Image.Origin180)EditorGUILayout.EnumPopup("填充原点",
+                                (Image.Origin180)spFillOrigin.intValue);
+                        break;
+                    case Image.FillMethod.Radial360:
+                        spFillOrigin.intValue =
+                            (int)(Image.Origin360)EditorGUILayout.EnumPopup("填充原点",
+                                (Image.Origin360)spFillOrigin.intValue);
+                        break;
+                }
+
+                EditorGUILayout.PropertyField(spFillAmount);
+                if ((Image.FillMethod)spFillMethod.enumValueIndex > Image.FillMethod.Vertical)
+                {
+                    EditorGUILayout.PropertyField(spFillClockwise, new GUIContent("顺时针"));
+                }
+
+                --EditorGUI.indentLevel;
+            }
+        }
+
+        private void SharedMaterialGUI()
+        {
+            Rect rect = EditorGUILayout.GetControlRect(true,
+                EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing);
+            int matSett = spMaterialSettings.enumValueIndex;
+            Rect labelRect = rect;
+            labelRect.width = EditorGUIUtility.labelWidth;
+            EditorGUI.LabelField(labelRect, "材质模式");
+            rect.x += labelRect.width;
+            rect.width -= labelRect.width;
+
+            EditorGUI.BeginChangeCheck();
+            EditorGUI.showMixedValue = spMaterialSettings.hasMultipleDifferentValues;
+            string[] options = new[] { "动态", "共享" };
+            if (EditorGUI.showMixedValue) options = new[] { "---", "---" };
+            matSett = GUI.Toolbar(rect, matSett, options);
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                spMaterialSettings.enumValueIndex = matSett;
+                foreach (Object obj in targets)
+                {
+                    // 与 DetectMissingShaderChannels 的守卫保持一致：targets 可能瞬时含 null（多选编辑中被销毁的对象），
+                    // 硬转换 (ImageEx)obj 会抛 NullReferenceException，SetDirty(null) 同样无效
+                    if (obj == null) continue;
+                    ((ImageEx)obj).MaterialMode = (MaterialMode)matSett;
+                    UnityEditor.EditorUtility.SetDirty(obj);
+                }
+            }
+
+            EditorGUI.showMixedValue = false;
+
+
+            EditorGUI.BeginDisabledGroup(spMaterialSettings.enumValueIndex == (int)MaterialMode.Dynamic);
+            {
+                rect = EditorGUILayout.GetControlRect(true,
+                    EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing);
+
+                Object matObj = spMaterial.objectReferenceValue;
+
+                EditorGUI.BeginChangeCheck();
+                {
+                    EditorGUI.showMixedValue = spMaterialSettings.hasMultipleDifferentValues;
+                    matObj = (Material)EditorGUI.ObjectField(
+                        new Rect(rect.x, rect.y, rect.width - 60, EditorGUIUtility.singleLineHeight),
+                        matObj, typeof(Material), false);
+                    EditorGUI.showMixedValue = false;
+                }
+                if (EditorGUI.EndChangeCheck())
+                {
+                    spMaterial.objectReferenceValue = matObj;
+                    foreach (Object obj in targets)
+                    {
+                        // 与 DetectMissingShaderChannels 及其上方的 MaterialMode 循环保持一致（targets 可能瞬时含 null）
+                        if (obj == null) continue;
+                        ((ImageEx)obj).material = (Material)matObj;
+                        UnityEditor.EditorUtility.SetDirty(obj);
+                    }
+                }
+
+                // 反转修正：本按钮的作用是"清空自定义材质、回落到精灵材质"，因此应在**已有材质**时可用、
+                // 材质已为空时禁用。原条件 `!= null` 恰好相反 ⇒ 有材质时按钮被置灰，永远点不到（功能完全不可用）。
+                EditorGUI.BeginDisabledGroup(spMaterial.objectReferenceValue == null);
+                {
+                    if (GUILayout.Button("使用精灵材质"))
+                    {
+                        spMaterial.objectReferenceValue = null;
+
+                        foreach (Object obj in targets)
+                        {
+                            // 与本方法前两处 targets 循环保持一致（targets 可能瞬时含 null）
+                            if (obj == null) continue;
+                            ((ImageEx)obj).material = null;
+                            UnityEditor.EditorUtility.SetDirty(obj);
+                        }
+                    }
+                }
+                EditorGUI.EndDisabledGroup();
+            }
+            EditorGUI.EndDisabledGroup();
+        }
+    }
+}
