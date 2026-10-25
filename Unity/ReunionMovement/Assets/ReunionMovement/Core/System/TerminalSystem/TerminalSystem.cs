@@ -145,7 +145,7 @@ namespace ReunionMovement.Core.Terminal
 
                 if (UISystem.Instance.IsOpen("TerminalUIPlane"))
                 {
-                    UISystem.Instance.SendWindowArgs("TerminalUIPlane", new TerminalWindowArgs("CreateItem", str));
+                    UISystem.Instance.SendWindowArgsAsync("TerminalUIPlane", new TerminalWindowArgs("CreateItem", str)).Forget();
                 }
             }
         }

@@ -110,6 +110,43 @@ namespace ReunionMovement.Core.UI
             }
         }
 
+        /// <summary>
+        /// 派发强类型参数；窗口未打开时先加载并打开（与旧 <c>SetWindow</c> 语义一致）。
+        /// 需要"窗口一定已打开"时用同步版 <see cref="SendWindowArgs"/>。
+        /// </summary>
+        public async UniTask SendWindowArgsAsync(string windowId, IWindowArgs args)
+        {
+            if (string.IsNullOrEmpty(windowId) || args == null) return;
+
+            UIController window = FindOpenWindow(windowId);
+            if (window == null)
+            {
+                // 旧 SetWindow 在窗口未加载时会先 LoadWindow(openWhenFinish: true)；
+                // 这里保持一致，但**不进导航栈**（终端这类命令通道不该被 ESC 关掉）。
+                UILoadState state = await LoadWindowAsync(windowId, true);
+                window = state?.uiWindow;
+            }
+
+            if (window == null)
+            {
+                Log.Warning("[UISystem] SendWindowArgsAsync({0})：窗口加载失败，参数丢弃", windowId);
+                return;
+            }
+
+            DispatchTypedArgs(window, args);
+        }
+
+        /// <summary>按窗口 Id 找已打开的窗口；找不到返回 null。</summary>
+        private UIController FindOpenWindow(string windowId)
+        {
+            var open = new List<UIController>(8);
+            GetAllOpenWindows(open);
+            for (int i = 0; i < open.Count; i++)
+            {
+                if (open[i] != null && open[i].gameObject.name == windowId) return open[i];
+            }
+            return null;
+        }
         /// <summary>给已打开的窗口派发强类型参数（不重新打开）。用于"命令通道"类场景。</summary>
         /// <param name="windowId">窗口 Id</param>
         /// <param name="args">参数</param>
@@ -117,13 +154,7 @@ namespace ReunionMovement.Core.UI
         {
             if (string.IsNullOrEmpty(windowId) || args == null) return;
 
-            UIController window = null;
-            var open = new List<UIController>(8);
-            GetAllOpenWindows(open);
-            for (int i = 0; i < open.Count; i++)
-            {
-                if (open[i] != null && open[i].gameObject.name == windowId) { window = open[i]; break; }
-            }
+            UIController window = FindOpenWindow(windowId);
 
             if (window == null)
             {
