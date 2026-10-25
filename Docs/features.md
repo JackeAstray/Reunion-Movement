@@ -103,6 +103,9 @@
 **Download Example** —— 展示下载
 <img src="../Images/download-example-loop-min.gif" alt="download-example-min" width="520"/>
 
+**ImageEx Example** —— SDF 形状 UI：12 种形状 + 渐变 / 模糊 / 描边 / 过渡（着色器 `ReunionMovement/UI/ImageEx`）
+<img src="../Images/imageEx-example-loop-min.gif" alt="imageEx-example-min" width="520"/>
+
 **LoopScrollRect Example** —— 展示循环列表
 <img src="../Images/循环列表.png" alt="循环列表" width="520"/>
 
