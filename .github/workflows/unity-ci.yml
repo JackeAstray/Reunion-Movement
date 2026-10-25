@@ -23,7 +23,29 @@ env:
   UNITY_PROJECT_PATH: Unity/ReunionMovement
 
 jobs:
+  license-check:
+    name: Unity License 配置检查
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - name: 检查 UNITY_LICENSE
+        id: check
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        shell: bash
+        run: |
+          if [ -z "${UNITY_LICENSE}" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::未配置 UNITY_LICENSE；Unity 测试/构建 jobs 将跳过。"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "UNITY_LICENSE 已配置。"
+          fi
+
   editmode-tests:
+    needs: license-check
+    if: needs.license-check.outputs.configured == 'true'
     name: EditMode 测试 + 架构守卫
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -63,10 +85,11 @@ jobs:
           if-no-files-found: warn
 
   webgl-build:
+    needs: license-check
     name: WebGL 构建
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    if: needs.license-check.outputs.configured == 'true' && (github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main')
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -101,10 +124,11 @@ jobs:
           if-no-files-found: warn
 
   windows-build:
+    needs: license-check
     name: Windows 构建
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    if: needs.license-check.outputs.configured == 'true' && (github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main')
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -139,10 +163,11 @@ jobs:
           if-no-files-found: warn
 
   android-build:
+    needs: license-check
     name: Android 构建（手动）
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    if: github.event_name == 'workflow_dispatch'
+    if: needs.license-check.outputs.configured == 'true' && github.event_name == 'workflow_dispatch'
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
