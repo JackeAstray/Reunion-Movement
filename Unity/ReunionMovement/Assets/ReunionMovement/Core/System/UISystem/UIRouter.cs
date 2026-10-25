@@ -75,6 +75,8 @@ namespace ReunionMovement.Core.UI
             if (state?.uiWindow != null)
             {
                 stack.Push(windowId);
+                // 声明了 [UIWindow(Modal = true)] 的窗口会阻断下层窗口交互
+                NotifyPushed(windowId, UIWindowCatalog.Get(windowId).Modal);
                 Log.Debug("[UIRouter] Push {0}（栈: {1}）", windowId, stack);
             }
             else
@@ -101,6 +103,8 @@ namespace ReunionMovement.Core.UI
             if (state?.uiWindow != null)
             {
                 stack.Push(windowId);
+                // 声明了 [UIWindow(Modal = true)] 的窗口会阻断下层窗口交互
+                NotifyPushed(windowId, UIWindowCatalog.Get(windowId).Modal);
                 Log.Debug("[UIRouter] Push {0}（栈: {1}）", windowId, stack);
             }
             return state;
@@ -160,6 +164,7 @@ if (Modules.TryGet(out UISystem ui) && ui != null && ui.isInited)
             closeSubscription = null;
             hooked = false;
             stack.Clear();
+            ResetModal();
         }
 
         /// <summary>
@@ -200,6 +205,8 @@ if (Modules.TryGet(out UISystem ui) && ui != null && ui.isInited)
                         stack.Remove(id);
                         // 有等待中的结果请求就按"取消"处理，避免调用方永远挂在 await 上
                         CancelPendingResult(id, "窗口被直接关闭");
+                        // 模态关掉后重算下层阻断
+                        NotifyClosed(id);
                     });
                 }
             }
