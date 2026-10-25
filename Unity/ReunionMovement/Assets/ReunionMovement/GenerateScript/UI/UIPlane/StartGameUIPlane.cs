@@ -112,10 +112,6 @@ namespace ReunionMovement.Core.UI
             RefreshFullscreenIcon();
         }
 
-        public override void OnSet(params object[] args)
-        {
-            base.OnSet(args);
-        }
 
         public override void OnClose()
         {
