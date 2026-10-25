@@ -89,37 +89,6 @@ namespace ReunionMovement.Core.UI
         }
 
         /// <summary>
-        /// 设置窗口（非复制）
-        /// </summary>
-        /// <param name="uiName"></param>
-        /// <param name="args"></param>
-        /// <returns></returns>
-        internal UILoadState SetWindow(string uiName, params object[] args)
-        {
-            UILoadState uiState;
-            if (!uiStateCache.TryGetValue(uiName, out uiState))
-            {
-                uiState = LoadWindow(uiName, true, args);
-                return uiState;
-            }
-
-            if (!uiState.isOnInit)
-            {
-                uiState.isOnInit = true;
-                if (uiState.uiWindow != null)
-                {
-                    if (!uiState.uiWindow.IsInitialized)
-                    {
-                        uiState.uiWindow.OnInit();
-                        uiState.uiWindow.MarkInitialized();
-                    }
-                }
-            }
-            OnSet(uiState, args);
-            return uiState;
-        }
-
-        /// <summary>
         /// [推荐] 类型安全的打开窗口重载 —— 通过 UIController 类型名自动推断 UI 名称。
         /// 使用方式：UISystem.Instance.OpenWindow&lt;PopupUIPlane&gt;(args);
         /// 优点：编译时检查、重构安全、无字符串拼写错误。

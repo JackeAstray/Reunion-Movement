@@ -197,7 +197,7 @@ namespace ReunionMovement.Core.UI
         /// </summary>
         /// <param name="name"></param>
         /// <param name="args"></param>
-        public void ToggleWindow(string name, params object[] args)
+        internal void ToggleWindow(string name, params object[] args)
         {
             if (IsOpen(name))
             {

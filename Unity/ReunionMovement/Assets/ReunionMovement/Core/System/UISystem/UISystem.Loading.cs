@@ -66,7 +66,7 @@ namespace ReunionMovement.Core.UI
         /// <param name="openWhenFinish"></param>
         /// <param name="args"></param>
         /// <returns></returns>
-        public UILoadState LoadWindow(string name, bool openWhenFinish, params object[] args)
+        internal UILoadState LoadWindow(string name, bool openWhenFinish, params object[] args)
         {
             if (uiStateCache.TryGetValue(name, out var existingState))
             {
@@ -104,7 +104,7 @@ namespace ReunionMovement.Core.UI
         /// 失败自动降级 Resources（Config.UIPath + name）。
         /// 实例化完成后立即释放源 Prefab 的 Addressables 引用，避免泄漏。
         /// </summary>
-        public async UniTask<UILoadState> LoadWindowAsync(string name, bool openWhenFinish, params object[] args)
+        internal async UniTask<UILoadState> LoadWindowAsync(string name, bool openWhenFinish, params object[] args)
         {
             return await LoadWindowAsyncCore(name, openWhenFinish, args);
         }
@@ -113,7 +113,7 @@ namespace ReunionMovement.Core.UI
         /// 带超时重载：timeoutSeconds > 0 时超时返回 null（调用方自行降级/重试），
         /// 防止 Catalog 失败或 CDN 卡死时调用方无限等待；<=0 表示不超时。
         /// </summary>
-        public async UniTask<UILoadState> LoadWindowAsync(string name, bool openWhenFinish, float timeoutSeconds, params object[] args)
+        internal async UniTask<UILoadState> LoadWindowAsync(string name, bool openWhenFinish, float timeoutSeconds, params object[] args)
         {
             var task = LoadWindowAsyncCore(name, openWhenFinish, args);
             if (timeoutSeconds <= 0f)
