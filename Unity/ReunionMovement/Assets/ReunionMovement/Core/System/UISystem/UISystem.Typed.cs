@@ -51,7 +51,7 @@ namespace ReunionMovement.Core.UI
             string windowId = UIWindowCatalog.GetId(typeof(TWindow));
             UILoadState state = await OpenWindowAsync(windowId, args);
 
-            DispatchTypedArgs(state, args);
+            DispatchTypedArgs(state?.uiWindow, args);
             return state;
         }
 
@@ -64,7 +64,7 @@ namespace ReunionMovement.Core.UI
             string windowId = UIWindowCatalog.GetId(typeof(TWindow));
             UILoadState state = await OpenWindowAsync(windowId, args);
 
-            DispatchTypedArgs(state, args);
+            DispatchTypedArgs(state?.uiWindow, args);
             return state;
         }
 
@@ -72,9 +72,9 @@ namespace ReunionMovement.Core.UI
         /// 把强类型参数派发给窗口：窗口实现了 <see cref="IWindowArgsReceiver{T}"/> 才调用，否则静默跳过
         /// （仍可用老方式从 <see cref="UIController.OnOpen"/> 的 object[] 里取）。
         /// </summary>
-        private static void DispatchTypedArgs(UILoadState state, IWindowArgs args)
+        private static void DispatchTypedArgs(UIController window, IWindowArgs args)
         {
-            UIController window = state?.uiWindow;
+
             if (window == null || args == null) return;
 
             Type argsType = args.GetType();
@@ -109,5 +109,44 @@ namespace ReunionMovement.Core.UI
                 Log.Error("[UISystem] 派发窗口参数失败（已隔离）: {0}", ex.Message);
             }
         }
+
+        /// <summary>给已打开的窗口派发强类型参数（不重新打开）。用于"命令通道"类场景。</summary>
+        /// <param name="windowId">窗口 Id</param>
+        /// <param name="args">参数</param>
+        public void SendWindowArgs(string windowId, IWindowArgs args)
+        {
+            if (string.IsNullOrEmpty(windowId) || args == null) return;
+
+            UIController window = null;
+            var open = new List<UIController>(8);
+            GetAllOpenWindows(open);
+            for (int i = 0; i < open.Count; i++)
+            {
+                if (open[i] != null && open[i].gameObject.name == windowId) { window = open[i]; break; }
+            }
+
+            if (window == null)
+            {
+                Log.Debug("[UISystem] SendWindowArgs({0})：窗口未打开，参数丢弃（{1}）", windowId, args.GetType().Name);
+                return;
+            }
+
+            DispatchTypedArgs(window, args);
+        }
+    }
+
+    /// <summary>终端窗口的命令参数 —— 替代原 OnSet(object[]) 里按位置取 args[0]/args[1]。</summary>
+    public readonly struct TerminalWindowArgs : IWindowArgs
+    {
+        public readonly string Command;
+        public readonly string Payload;
+
+        public TerminalWindowArgs(string command, string payload)
+        {
+            Command = command;
+            Payload = payload;
+        }
+
+        public override string ToString() => Command + "(" + Payload + ")";
     }
 }

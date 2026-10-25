@@ -14,7 +14,7 @@ using UnityEngine.UI;
 namespace ReunionMovement.Core.UI
 {
     [UIWindow("TerminalUIPlane", Layer = PanelType.NormalUI)]
-    public class TerminalUIPlane : UIController
+    public class TerminalUIPlane : UIController, IWindowArgsReceiver<TerminalWindowArgs>
     {
         string openWindow = nameof(TerminalUIPlane);
         string closeWindow = nameof(TerminalUIPlane);
@@ -81,32 +81,16 @@ namespace ReunionMovement.Core.UI
             input.onEndEdit.AddListener(OnEndEdit);
         }
 
-        public override void OnOpen(params object[] args)
+        /// <summary>强类型命令入口：替代原 OnSet(object[]) 的 args[0]/args[1]。</summary>
+        public void OnWindowArgs(TerminalWindowArgs args)
         {
-            base.OnOpen(args);
-        }
-
-        public override void OnSet(params object[] args)
-        {
-            base.OnSet(args);
-
-            if (args != null && args.Length > 0 && args[0] != null)
+            if (string.IsNullOrEmpty(args.Command)) return;
+            switch (args.Command)
             {
-                switch (args[0].ToString())
-                {
-                    case "CreateItem":
-                        if (args.Length >= 2 && args[1] != null)
-                        {
-                            CreateItem(args[1].ToString());
-                        }
-                        break;
-                }
+                case "CreateItem":
+                    if (!string.IsNullOrEmpty(args.Payload)) CreateItem(args.Payload);
+                    break;
             }
-        }
-
-        public override void OnClose()
-        {
-            base.OnClose();
         }
 
         /// <summary>输入框聚焦时支持 ↑/↓ 浏览命令历史</summary>

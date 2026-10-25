@@ -1,4 +1,4 @@
-﻿using ReunionMovement.Common;
+using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
 using ReunionMovement.Core.UI;
 using Cysharp.Threading.Tasks;
@@ -145,7 +145,7 @@ namespace ReunionMovement.Core.Terminal
 
                 if (UISystem.Instance.IsOpen("TerminalUIPlane"))
                 {
-                    UISystem.Instance.SetWindow("TerminalUIPlane", "CreateItem", str);
+                    UISystem.Instance.SendWindowArgs("TerminalUIPlane", new TerminalWindowArgs("CreateItem", str));
                 }
             }
         }
