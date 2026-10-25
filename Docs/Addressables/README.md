@@ -28,7 +28,7 @@
 | `AddressableSystem`（运行时封装） | ✅ 已实现 | 加载/实例化/场景/释放/降级/远程更新检查/缓存清理/调试统计 |
 | `AddressableKeys`（地址常量） | ✅ 已实现 | `BuiltIn/UI/...` 前缀 + Label 约定 |
 | `Config`/`GameConfig` 配置 | ✅ 已实现 | `enableHotUpdate`（唯一开关）/ 远程 URL；`AddressablesMode` 由开关派生（Remote/Off） |
-| `AddressablesSetup`（自动配置） | ✅ 已实现 | `[InitializeOnLoad]` 自动建分组/Label/Profile，校验并修正 Remote 分组路径变量，默认激活 `DevLocal`；远程 Catalog **默认关闭**（`ReunionMovement → Addressables → 配置/启用远程 Catalog（Phase 3 热更）` 手动开启） |
+| `AddressablesSetup`（按需配置） | ✅ 已实现 | 默认**不自动执行**、仓库不带 `AddressableAssetsData`；显式启用（工具箱 Addressables 页 / 菜单）时才检查安装并创建分组/Label/Profile，校验并修正 Remote 分组路径变量，默认激活 `DevLocal`；远程 Catalog **默认关闭**（`ReunionMovement → Addressables → 配置/启用远程 Catalog（Phase 3 热更）` 手动开启） |
 | `AddressablesMigrator`（资源迁移） | ✅ 已实现 | 复制+GUID 重映射+导入设置+Addressable 标记；`迁移/一键迁移全部（UI+音频+图片）` 统一入口（幂等，流水线也调用），亦可单项补迁 |
 | `AddressablesBuildWindow`（构建） | ✅ 已实现 | 当前平台构建 + 全平台子菜单切换 + version.json |
 | `AddressablesCdnUploader`（自动上传） | ✅ 已实现 | 阿里云 OSS HTTP PUT + 签名，增量上传 `.bundle`+远程 catalog（`catalog_*.bin`/`.hash`，独立菜单触发，需配置 AK/SK） |

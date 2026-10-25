@@ -64,7 +64,7 @@ iOS 触觉原生实现 `Plugins/iOS/ReunionHaptics.mm` 会随包分发；Android
 UniTask 2.5.11。DOTween / R3 / ZString 仍内置。
 
 > R3 的 OpenUPM 包只带 `R3.Unity`、不带核心 `R3.dll`；ZString 官方包要求每个 asmdef 显式引用，
-> 因此这两个没有跟着切。详见 [第三方依赖](../第三方依赖.md)。
+> 因此这两个没有跟着切。详见 [第三方依赖](../guides/第三方依赖.md)。
 
 ## 3. 包结构
 
@@ -88,24 +88,63 @@ com.reunion.movement/
 
 ## 4. 安装到目标工程
 
-`Packages/manifest.json`（路径相对目标工程的 `Packages/` 目录）：
+### 4.1 一条 git URL（推荐）
+
+包发布在仓库的 **`upm` 分支**上：该分支只有包内容（`package.json` 在分支根目录），不含仓库其余部分，
+所以 URL 不需要 `?path=`：
+
+```json
+"com.reunion.movement": "https://github.com/JackeAstray/Reunion-Movement.git#upm"
+```
+
+需要锁定到某次发布时，把 `upm` 换成那次提交的短哈希（`#4f85b79`）。
+
+维护者发布/更新包：
+
+```powershell
+# 让 Unity 重新导出 + 重建本地 upm 分支（不推远端，可 git branch -D upm 撤销）
+powershell -ExecutionPolicy Bypass -File Tools/upm-publish.ps1 -Export
+
+# 确认无误后推远端
+powershell -ExecutionPolicy Bypass -File Tools/upm-publish.ps1 -Push
+
+# 只检查"源码是否比包新"，不动 git
+powershell -ExecutionPolicy Bypass -File Tools/upm-publish.ps1 -CheckOnly
+```
+
+脚本做三件事：调导出器重新出包（`-Export`）、把包内容写进 `upm` 分支的单次提交、校验源码是否比包新
+（过期直接拒绝发布）。`upm` 分支是**发布产物**：每次发布重建为单个提交（force push），不要在上面手工提交。
+
+### 4.2 本地路径（离线开发）
 
 ```json
 "com.reunion.movement": "file:../../Reunion-Movement/Unity/ReunionMovement/Build/Packages/com.reunion.movement"
 ```
 
-或 Package Manager → `+` → `Add package from disk...` → 选择 `package.json`。
+`Build/` 是 Unity 的构建目录、被 `.gitignore` 忽略，所以**别人 clone 下来的仓库里没有这个目录**，
+先按第 1 节导出一次再用。
+
+### 4.3 Package Manager → Add package from disk
+
+`+` → `Add package from disk...` → 选择包目录里的 `package.json`。适合临时试用，不适合团队协作（路径写死在个人机器上）。
 
 导入后在 Package Manager 的 **Samples** 页签导入 **Hello World**；它不依赖场景，Play 即可看到文本。
 
-发布到可访问仓库后可用 git URL：
+### 4.4 接入自己的游戏（两行）
 
-```json
-"com.reunion.movement": "https://github.com/<you>/Reunion-Movement.git?path=/Build/Packages/com.reunion.movement#v1.1.0"
+```csharp
+// 1) 在任意程序集声明入口（框架不会自动接管宿主启动）
+[assembly: ReunionGameEntry(typeof(MyGameEntry))]
+
+// 2) 选模块清单：Full() 全量 14 个；Minimal() 只要资源/Addressables/场景/UI
+public class MyGameEntry : GameEntry
+{
+    public override IList<ICustomSystem> CreateModules() => ModulePresets.Minimal();
+}
 ```
 
-> `Build/` 默认被 `.gitignore` 忽略。要支持 git URL，需把包目录提交到 `Distribution/` 或独立包仓库，
-> 或者把 `Build/Packages/com.reunion.movement` 作为 CI 产物上传到 Release。
+删模块不用背依赖表：缺的提供者会在启动时按 `[ModuleOrder(..., DependsOn)]` 自动补回
+（`Bootstrap.Options.AutoExpandModuleDependencies`，默认开，启动日志会打印补入了谁）。
 
 ## 5. 包安装模式下的行为
 
@@ -124,10 +163,10 @@ com.reunion.movement/
    `[assembly: ReunionGameEntry]`，或设置 `Bootstrap.Options.Entry`；否则 Bootstrap 会报错并跳过启动，
    不会接管宿主工程。
 4. Runtime 包里的 `StartGame` 示例流程不可用（缺 `Temp` 场景和启动 UI prefab）；请使用自己的 GameEntry。
-5. 包尚未发布到公开仓库；当前输出在 `Build/`，不会被提交。
+5. 包通过 `upm` 分支发布（`Tools/upm-publish.ps1`）；本地导出目录 `Build/` 仍被忽略、不进 git。
 6. `.unitypackage` 导出仍保留（已排除 `Game/`）；两者不要同时导入同一个工程。
 7. 包内仍带 vendored 的 UniTask / R3 / ZString / DOTween。宿主已装官方同名包时，
-   用 `ReunionMovement → 开发 → 检查第三方依赖冲突` 检查；二者只能留一套。详见 [第三方依赖](../第三方依赖.md)。
+   用 `ReunionMovement → 开发 → 检查第三方依赖冲突` 检查；二者只能留一套。详见 [第三方依赖](../guides/第三方依赖.md)。
 
 ## 7. 验收
 
@@ -157,4 +196,4 @@ Unity -batchmode -quit -projectPath Unity/ReunionMovement `
 - OpenUPM profile：新建工程 + `scopedRegistries` 安装 → **0 编译错误**，官方 UniTask 2.5.11 解析成功；
   R3 / ZString 继续使用内置副本。
 
-实测记录见 [便捷性与可移植性评估](../便捷性与可移植性评估.md) 的「落地记录」。
+实测记录见 [便捷性与可移植性评估](../design/便捷性与可移植性评估.md) 的「落地记录」。

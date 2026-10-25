@@ -97,3 +97,6 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# UI Toolkit 生成的类型 schema（Unity 打开工程时重建，不入库）
+/UIElementsSchema/

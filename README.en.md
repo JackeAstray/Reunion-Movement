@@ -91,8 +91,8 @@ Documentation is currently Chinese-first:
 - [Docs/04-接入自己的游戏.md](Docs/04-接入自己的游戏.md) — integrate your game
 - [Docs/05-常见陷阱.md](Docs/05-常见陷阱.md) — pitfalls
 - [Docs/Packaging/UPM打包指南.md](Docs/Packaging/UPM打包指南.md) — UPM packaging
-- [Docs/跨平台构建指南.md](Docs/跨平台构建指南.md) — multi-platform builds and `link.xml`
-- [Docs/第三方依赖.md](Docs/第三方依赖.md) — third-party dependencies and conflicts
+- [Docs/guides/跨平台构建指南.md](Docs/guides/跨平台构建指南.md) — multi-platform builds and `link.xml`
+- [Docs/guides/第三方依赖.md](Docs/guides/第三方依赖.md) — third-party dependencies and conflicts
 
 ## Dependencies
 
