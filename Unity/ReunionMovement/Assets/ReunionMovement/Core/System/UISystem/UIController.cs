@@ -11,7 +11,7 @@ namespace ReunionMovement.Core.UI
     /// <summary>
     /// UIController是每个UI界面的基类，负责管理UI的生命周期和基本功能。
     /// </summary>
-    public class UIController : MonoBehaviour
+    public partial class UIController : MonoBehaviour
     {
         // 界面名称，必须唯一
         public string uiName = "";
@@ -70,6 +70,7 @@ namespace ReunionMovement.Core.UI
 
         public virtual void OnInit()
         {
+            EnterState(UIWindowState.Ready, nameof(OnInit));
 
         }
 
@@ -90,6 +91,7 @@ namespace ReunionMovement.Core.UI
         /// <param name="args"></param>
         public virtual void OnOpen(params object[] args)
         {
+            EnterState(UIWindowState.Open, nameof(OnOpen));
             IsVisiable = true;
             EnsureFocusScope(bringToFront: true);
         }
@@ -130,6 +132,7 @@ namespace ReunionMovement.Core.UI
         /// </summary>
         public virtual void OnClose()
         {
+            EnterState(UIWindowState.Closed, nameof(OnClose));
             controlCache.Clear(); // 关闭即失效控件缓存，防复用/重开后命中旧层级
             IsVisiable = false;
         }
@@ -140,6 +143,7 @@ namespace ReunionMovement.Core.UI
         /// </summary>
         public virtual void OnSpawned()
         {
+            EnterState(UIWindowState.Ready, nameof(OnSpawned));
             EnsureFocusScope(bringToFront: true);
         }
 
@@ -149,6 +153,7 @@ namespace ReunionMovement.Core.UI
         /// </summary>
         public virtual void OnDespawned()
         {
+            EnterState(UIWindowState.Closed, nameof(OnDespawned));
             controlCache.Clear(); // 入池即失效控件缓存，防复用后命中旧层级
         }
 
