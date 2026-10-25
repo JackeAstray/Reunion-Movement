@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 //此脚本是由工具自动生成，请勿手动创建
 
 using ReunionMovement.Common;
@@ -167,7 +168,7 @@ namespace ReunionMovement.Core.UI
         //打开窗口
         public void OpenWindow()
         {
-            UISystem.Instance.OpenWindow(openWindow);
+            UIRouter.PushAsync(openWindow).Forget();
         }
 
         //关闭窗口

@@ -66,7 +66,6 @@ namespace ReunionMovement.Core.UI
         /// <summary>是否启用窗口对象池（关闭时放池、打开时优先取池）</summary>
         public bool enableWindowPool = true;
         /// <summary>可池化窗口白名单（仅提示/飘字/确认框类轻量窗口；重窗口保持销毁语义）</summary>
-        public readonly List<string> poolableWindowNames = new List<string>();
         /// <summary>每个窗口名最多缓存的空闲对象数（防无限累积）</summary>
         public int maxPooledWindowsPerName = 3;
         private readonly Dictionary<string, Stack<GameObject>> windowPool = new Dictionary<string, Stack<GameObject>>();

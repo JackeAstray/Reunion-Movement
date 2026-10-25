@@ -286,7 +286,7 @@ namespace ReunionMovement.Core.UI
             // 同帧关闭再打开时从池取出同一对象，天然避免双实例
 // 池化：窗口声明了 [UIWindow(Pooled = true)] 或仍在老白名单里就复用。
             // 老白名单保留是为了不破坏现有工程的显式配置。
-            bool poolable = UIWindowCatalog.Get(uiName).Pooled || poolableWindowNames.Contains(uiName);
+            bool poolable = UIWindowCatalog.Get(uiName).Pooled;
             if (enableWindowPool && poolable)
             {
                 PoolWindow(uiName, uiState.uiWindow.gameObject);

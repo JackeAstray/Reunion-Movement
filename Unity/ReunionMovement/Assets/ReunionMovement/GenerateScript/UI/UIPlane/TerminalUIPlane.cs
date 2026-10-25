@@ -167,7 +167,7 @@ namespace ReunionMovement.Core.UI
         //打开窗口
         public void OpenWindow()
         {
-            UISystem.Instance.OpenWindow(openWindow);
+            UIRouter.PushAsync(openWindow).Forget();
         }
 
         //关闭窗口
