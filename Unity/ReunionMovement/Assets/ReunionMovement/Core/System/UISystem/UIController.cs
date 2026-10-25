@@ -89,7 +89,7 @@ namespace ReunionMovement.Core.UI
         /// UIController打开窗口时调用的方法，子类可以重写此方法来实现自定义逻辑。
         /// </summary>
         /// <param name="args"></param>
-        public virtual void OnOpen(params object[] args)
+        public virtual void OnOpen()
         {
             EnterState(UIWindowState.Open, nameof(OnOpen));
             IsVisiable = true;

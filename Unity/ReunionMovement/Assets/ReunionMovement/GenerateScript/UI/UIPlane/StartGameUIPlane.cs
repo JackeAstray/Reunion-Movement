@@ -104,9 +104,9 @@ namespace ReunionMovement.Core.UI
             });
         }
 
-        public override void OnOpen(params object[] args)
+        public override void OnOpen()
         {
-            base.OnOpen(args);
+            base.OnOpen();
 
             // 窗口重新打开时按最新状态刷新（覆盖窗口关闭期间浏览器侧被 Esc 退出等变化）
             RefreshFullscreenIcon();

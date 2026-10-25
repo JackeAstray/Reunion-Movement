@@ -386,6 +386,7 @@ using UnityEngine.UI;
 
 namespace ReunionMovement.Core.UI
 {
+    [UIWindow(""{_0_}"")]
     public class {_0_} : UIController
     {
         string openWindow = ""{_0_}"";
@@ -396,9 +397,9 @@ namespace ReunionMovement.Core.UI
             base.OnInit();
         }
 
-        public override void OnOpen(params object[] args)
+        public override void OnOpen()
         {
-            base.OnOpen(args);
+            base.OnOpen();
         }
 
         public override void OnClose()

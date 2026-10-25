@@ -69,9 +69,9 @@ namespace ReunionMovement.Core.UI
             if (confirmBtn == null) Log.Error("PopupUIPlane: confirmBtn 未赋值!");
         }
 
-        public override void OnOpen(params object[] args)
+        public override void OnOpen()
         {
-            base.OnOpen(args);
+            base.OnOpen();
             // 参数不再从 object[] 里按位置取：由 OnWindowArgs(PopupArgs) 强类型注入。
             // 这里只做"上一次打开残留"的清理与按钮接线。
             confirmAction = null;

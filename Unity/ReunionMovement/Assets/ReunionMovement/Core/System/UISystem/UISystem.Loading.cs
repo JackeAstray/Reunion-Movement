@@ -309,7 +309,7 @@ namespace ReunionMovement.Core.UI
                 {
                     LogElapsedTime(() =>
                     {
-                        uiBase.OnOpen(args);
+                        uiBase.OnOpen();
                     }, $"OnOpen UI {uiBase.gameObject.name}");
 
                     // 订阅者异常隔离：坏订阅者不应中断重复打开流程
@@ -333,7 +333,7 @@ namespace ReunionMovement.Core.UI
             {
                 LogElapsedTime(() =>
                 {
-                    uiBase.OnOpen(args);
+                    uiBase.OnOpen();
                 }, $"OnOpen UI {uiBase.gameObject.name}");
 
                 // 订阅者异常隔离：坏订阅者不应中断开窗流程
