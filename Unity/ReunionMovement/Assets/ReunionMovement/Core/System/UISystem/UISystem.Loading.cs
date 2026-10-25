@@ -281,32 +281,6 @@ namespace ReunionMovement.Core.UI
         }
 
         /// <summary>
-        /// 和UI通讯
-        /// 等待并获取UI实例，执行callback
-        /// 源起Loadindg UI， 在加载过程中，进度条设置方法会失效
-        /// 如果是DynamicWindow,，使用前务必先要Open!
-        /// </summary>
-        /// <param name="uiName"></param>
-        /// <param name="callback"></param>
-        /// <param name="args"></param>
-        public void CallUI(string uiName, Action<UIController, object[]> callback, params object[] args)
-        {
-            UILoadState uiState;
-
-            if (!uiStateCache.TryGetValue(uiName, out uiState))
-            {
-                // 只加载，不打开
-                uiState = LoadWindow(uiName, false);
-                if (uiState != null)
-                {
-                    uiStateCache[uiName] = uiState;
-                }
-            }
-
-            uiState?.DoCallback(callback, args);
-        }
-
-        /// <summary>
         /// 打开窗口
         /// </summary>
         /// <param name="uiState"></param>

@@ -176,15 +176,6 @@ namespace ReunionMovement.Core.UI
             UISystem.Instance.CloseWindow(target);
         }
 
-        /// <summary>
-        /// 推荐使用字符串UI名称进行UI通讯，灵活且不易出错
-        /// </summary>
-        [Obsolete("改用 await UIRouter.PushForResultAsync<TWindow, TArgs, TResult>() 拿返回值", false)]
-        public static void CallUI(string uiName, Action<UIController, object[]> callback, params object[] args)
-        {
-            UISystem.Instance.CallUI(uiName, callback, args);
-        }
-
         #region 功能
         /// <summary>
         /// 输入uri搜寻控件
@@ -274,19 +265,6 @@ namespace ReunionMovement.Core.UI
         public void DestroyGameObjectChildren(GameObject go)
         {
             go.ClearChild();
-        }
-
-        /// <summary>
-        /// 从数组获取参数，安全返回
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="openArgs"></param>
-        /// <param name="offset"></param>
-        /// <param name="isLog"></param>
-        /// <returns></returns>
-        protected T GetFromArgs<T>(object[] openArgs, int offset, bool isLog = true)
-        {
-            return openArgs.Get<T>(offset, isLog);
         }
 
         /// <summary>
