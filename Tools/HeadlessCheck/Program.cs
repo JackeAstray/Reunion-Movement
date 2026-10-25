@@ -79,6 +79,7 @@ namespace ReunionMovement.HeadlessCheck
             Run("UI 导航栈（压栈/栈顶/重复项去重）", () => CheckNavStackPushAndDedup(core));
             Run("UI 导航栈（弹栈与空栈）", () => CheckNavStackPop(core));
             Run("UI 导航栈（窗口被直接关闭时同步）", () => CheckNavStackRemove(core));
+            Run("UI 窗口结果（None 与取值）", () => CheckWindowResult(core));
             Run("Modules 访问器（引擎未启动）", () => CheckModulesAccessor(core));
             Run("游戏入口解析（框架不再声明入口）", () => CheckEntryResolver(core));
             Run("Bootstrap 配置（测试场景判定）", () => CheckBootstrapOptions(core));
@@ -305,6 +306,23 @@ namespace ReunionMovement.HeadlessCheck
         private static object NavCallRet(object stack, string method, params object[] args)
         {
             return stack.GetType().GetMethod(method).Invoke(stack, args);
+        }
+
+        /// <summary>WindowResult&lt;T&gt; 语义：默认是 None；有值时能取到；None 走兜底值。</summary>
+        private static void CheckWindowResult(Assembly core)
+        {
+            Type open = GetType(core, "ReunionMovement.Core.UI.WindowResult`1");
+            Type closed = open.MakeGenericType(typeof(int));
+
+            object none = Activator.CreateInstance(closed);
+            Assert(!(bool)closed.GetField("HasValue").GetValue(none), "默认构造应为 None");
+
+            object some = Activator.CreateInstance(closed, new object[] { 42 });
+            Assert((bool)closed.GetField("HasValue").GetValue(some), "构造后 HasValue 应为 true");
+            Assert((int)closed.GetField("Value").GetValue(some) == 42, "Value 应为 42");
+
+            object fallback = closed.GetMethod("GetValueOrDefault").Invoke(none, new object[] { 7 });
+            Assert((int)fallback == 7, "None.GetValueOrDefault(7) 应返回 7");
         }
         // ---------------------------------------------------------------- 其它用例
 
@@ -653,3 +671,4 @@ namespace ReunionMovement.HeadlessCheck
         }
     }
 }
+

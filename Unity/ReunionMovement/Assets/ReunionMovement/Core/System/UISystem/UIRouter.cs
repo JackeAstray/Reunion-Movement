@@ -26,7 +26,7 @@ namespace ReunionMovement.Core.UI
     /// if (UIRouter.CanGoBack) UIRouter.Back();      // 等价于按 ESC
     /// </code>
     /// </summary>
-    public static class UIRouter
+    public static partial class UIRouter
     {
         private static readonly UINavigationStack stack = new UINavigationStack();
 
@@ -198,6 +198,8 @@ if (Modules.TryGet(out UISystem ui) && ui != null && ui.isInited)
                             ? UIWindowCatalog.GetId(window.GetType())
                             : window.uiName;
                         stack.Remove(id);
+                        // 有等待中的结果请求就按"取消"处理，避免调用方永远挂在 await 上
+                        CancelPendingResult(id, "窗口被直接关闭");
                     });
                 }
             }
