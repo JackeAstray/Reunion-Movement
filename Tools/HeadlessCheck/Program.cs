@@ -29,6 +29,9 @@ namespace ReunionMovement.HeadlessCheck
         private static int failed;
         private static Assembly DynamicFakes;
 
+        /// <summary>程序集简单名 → 内存里的假模块程序集，供 AssemblyResolve 按名精确还回。</summary>
+        private static readonly Dictionary<string, Assembly> DynamicAssemblies = new Dictionary<string, Assembly>();
+
         public static int Main(string[] args)
         {
             Console.OutputEncoding = Encoding.UTF8;
@@ -70,6 +73,9 @@ namespace ReunionMovement.HeadlessCheck
             Run("模块校验（重复注册）", () => CheckCatalogDuplicate(core));
             Run("模块校验（缺少依赖）", () => CheckCatalogMissingDependency(core));
             Run("模块校验（同类型两个实例）", () => CheckCatalogSameTypeTwice(core));
+            Run("依赖自动补全（补入被依赖模块）", () => CheckExpandAddsMissingDependency(core));
+            Run("依赖自动补全（幂等，不重复补入）", () => CheckExpandIsIdempotent(core));
+            Run("依赖自动补全（无法创建时报 unresolved）", () => CheckExpandReportsUnresolved(core));
             Run("Modules 访问器（引擎未启动）", () => CheckModulesAccessor(core));
             Run("游戏入口解析（框架不再声明入口）", () => CheckEntryResolver(core));
             Run("Bootstrap 配置（测试场景判定）", () => CheckBootstrapOptions(core));
@@ -171,6 +177,57 @@ namespace ReunionMovement.HeadlessCheck
 
             Assert(!ok, "缺依赖应返回 false");
             Assert(errors != null && errors.Contains("未注册"), "错误信息应指出依赖未注册，实际: " + errors);
+        }
+
+        // ---------------------------------------------------------------- 依赖自动补全
+
+        /// <summary>只注册依赖方时，ExpandDependencies 应把"可创建的被依赖模块"补进来，随后 TryBuild 通过。</summary>
+        private static void CheckExpandAddsMissingDependency(Assembly core)
+        {
+            FakeModuleFactory fakes = CreateFactory(core);
+            Type provider = fakes.Create(10);
+            Type dependent = fakes.Create(20, provider);
+            object onlyDependent = fakes.Instantiate(dependent);
+
+            var (expanded, added, unresolved) = Expand(core, onlyDependent);
+
+            Assert(expanded.Count == 2, "补全后应有 2 个模块，实际: " + expanded.Count);
+            Assert(added.Length == 1, "应补入 1 个模块，实际: " + added.Length);
+            Assert(unresolved.Length == 0, "不应有未解析依赖，实际: " + string.Join("；", unresolved));
+
+            var (ok, ordered, errors) = TryBuild(core, ((IEnumerable)expanded).Cast<object>().ToArray());
+            Assert(ok, "补全后 TryBuild 应通过，实际错误: " + errors);
+            Assert(Orders(ordered) == "10,20", "补全后顺序应为 10,20，实际: " + Orders(ordered));
+        }
+
+        /// <summary>依赖已满足时不应重复补入（幂等），且入参列表不被修改。</summary>
+        private static void CheckExpandIsIdempotent(Assembly core)
+        {
+            FakeModuleFactory fakes = CreateFactory(core);
+            Type provider = fakes.Create(10);
+            Type dependent = fakes.Create(20, provider);
+            object providerInstance = fakes.Instantiate(provider);
+            object dependentInstance = fakes.Instantiate(dependent);
+
+            var (expanded, added, unresolved) = Expand(core, dependentInstance, providerInstance);
+
+            Assert(expanded.Count == 2, "已满足依赖时不应补入，实际数量: " + expanded.Count);
+            Assert(added.Length == 0, "已满足依赖时 added 应为空，实际: " + string.Join("；", added));
+            Assert(unresolved.Length == 0, "已满足依赖时 unresolved 应为空");
+        }
+
+        /// <summary>依赖类型不是可创建的模块（这里用 IDisposable）：记入 unresolved，不抛异常（行为退回告警 + 注册顺序）。</summary>
+        private static void CheckExpandReportsUnresolved(Assembly core)
+        {
+            FakeModuleFactory fakes = CreateFactory(core);
+            Type dependent = fakes.Create(20, typeof(IDisposable));
+            object onlyDependent = fakes.Instantiate(dependent);
+
+            var (expanded, added, unresolved) = Expand(core, onlyDependent);
+
+            Assert(expanded.Count == 1, "无法补入时列表不应变长，实际: " + expanded.Count);
+            Assert(added.Length == 0, "无法补入时 added 应为空");
+            Assert(unresolved.Length == 1, "应报告 1 条未解析依赖，实际: " + unresolved.Length);
         }
 
         // ---------------------------------------------------------------- 其它用例
@@ -282,6 +339,7 @@ namespace ReunionMovement.HeadlessCheck
         {
             var factory = BuildFactory(core);
             DynamicFakes = factory.DynamicAssembly;
+            DynamicAssemblies[factory.AssemblyName] = factory.DynamicAssembly;
             return factory;
         }
 
@@ -307,6 +365,29 @@ namespace ReunionMovement.HeadlessCheck
             var args = new object[] { list, null, null };
             bool ok = (bool)tryBuild.Invoke(null, args);
             return (ok, (IList)args[1], (string)args[2]);
+        }
+
+        /// <summary>调用 ModuleCatalog.ExpandDependencies，返回补全后的列表与两类说明。</summary>
+        private static (IList modules, string[] added, string[] unresolved) Expand(Assembly core, params object[] modules)
+        {
+            Type systemInterface = GetType(core, "ReunionMovement.Core.Base.ICustomSystem");
+            Type listType = typeof(List<>).MakeGenericType(systemInterface);
+            var list = (IList)Activator.CreateInstance(listType);
+            foreach (object module in modules) list.Add(module);
+
+            Type catalog = GetType(core, "ReunionMovement.Core.ModuleCatalog");
+            MethodInfo expand = catalog.GetMethod("ExpandDependencies", BindingFlags.Public | BindingFlags.Static);
+            var args = new object[] { list, null, null };
+            var result = (IList)expand.Invoke(null, args);
+
+            return (result, ToStrings(args[1]), ToStrings(args[2]));
+        }
+
+        private static string[] ToStrings(object value)
+        {
+            return value is IEnumerable enumerable
+                ? enumerable.Cast<object>().Select(Convert.ToString).ToArray()
+                : Array.Empty<string>();
         }
 
         /// <summary>把排好序的模块按 [ModuleOrder] 的序号拼成 "10,20,30" 便于断言。</summary>
@@ -481,6 +562,7 @@ namespace ReunionMovement.HeadlessCheck
             string simpleName = new AssemblyName(e.Name).Name;
 
             // 假模块程序集只存在于内存里，按名字加载不到，必须在这里还给它
+            if (DynamicAssemblies.TryGetValue(simpleName, out Assembly fakes)) return fakes;
             if (simpleName == FakeModuleFactory.DynamicAssemblyName) return DynamicFakes;
             foreach (string dir in SearchPaths)
             {

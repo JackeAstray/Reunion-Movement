@@ -21,12 +21,24 @@ namespace ReunionMovement.HeadlessCheck
         /// <summary>动态程序集名。ModuleOrder 的 Type 参数会以程序集限定名保存，需要能被解析回来。</summary>
         public const string DynamicAssemblyName = "ReunionMovement.HeadlessFakes";
 
+        private static int assemblyCounter;
+
         private readonly Type icustomSystem;
         private readonly Type initializable;
         private readonly Type uniTask;
         private readonly Type moduleOrderAttribute;
         private readonly ModuleBuilder module;
         private int counter;
+
+        /// <summary>
+        /// 本工厂的程序集简单名（<see cref="DynamicAssemblyName"/> + 序号）。
+        /// <para>
+        /// 必须每个工厂唯一：<c>[ModuleOrder(typeof(X))]</c> 的参数以"类型名, 程序集名"保存，
+        /// 若所有工厂都用同一个程序集名，读回特性时只能按名解析到其中任意一个程序集，
+        /// 依赖类型就会指向别的工厂里同名的假模块（顺序/依赖全乱）。唯一名字 + 按名查表可根治。
+        /// </para>
+        /// </summary>
+        public string AssemblyName { get; }
 
         /// <summary>内存里的假模块程序集（不落盘，需要 AssemblyResolve 才能被属性反序列化找到）。</summary>
         public Assembly DynamicAssembly { get; }
@@ -38,9 +50,10 @@ namespace ReunionMovement.HeadlessCheck
             this.uniTask = uniTask;
             this.moduleOrderAttribute = moduleOrderAttribute;
 
+            AssemblyName = DynamicAssemblyName + "." + (++assemblyCounter);
             var assembly = AssemblyBuilder.DefineDynamicAssembly(
-                new AssemblyName(DynamicAssemblyName), AssemblyBuilderAccess.Run);
-            module = assembly.DefineDynamicModule(DynamicAssemblyName);
+                new AssemblyName(AssemblyName), AssemblyBuilderAccess.Run);
+            module = assembly.DefineDynamicModule(AssemblyName);
             DynamicAssembly = assembly;
         }
 

@@ -1,4 +1,4 @@
-﻿using ReunionMovement.Core.Base;
+using ReunionMovement.Core.Base;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -156,6 +156,154 @@ namespace ReunionMovement.Core
 
             ordered = result;
             return true;
+        }
+
+        /// <summary>
+        /// 按各模块 <see cref="ModuleOrderAttribute"/> 声明的依赖，把"被依赖但没有注册"的模块补进列表（幂等）。
+        ///
+        /// <para>
+        /// 用途：接入方"只留我需要的模块"时不必再背依赖表 —— 删掉一个被依赖的模块，
+        /// 依赖它的一方会把提供者自动补回来；补入后仍由 <see cref="TryBuild"/> 做拓扑排序与校验。
+        /// </para>
+        /// <para>
+        /// 补入方式：优先取模块类型上的静态入口 <c>Instance</c>（其次 <c>Current</c>），
+        /// 没有单例入口时退回无参构造。两种都失败则记入 <paramref name="unresolved"/>，
+        /// 行为退回改造前（告警 + 按注册顺序启动），不会因为展开失败而中断启动。
+        /// </para>
+        /// </summary>
+        /// <param name="declared">注册顺序的模块列表（不会被修改）</param>
+        /// <param name="added">本次补入的模块说明（形如 <c>AddressableSystem（UISystem 依赖 AddressableSystem）</c>）</param>
+        /// <param name="unresolved">补入失败的依赖说明</param>
+        /// <returns>补全后的模块列表；入参为空时原样返回</returns>
+        public static IList<ICustomSystem> ExpandDependencies(IList<ICustomSystem> declared,
+            out IList<string> added, out IList<string> unresolved)
+        {
+            var addedList = new List<string>();
+            var unresolvedList = new List<string>();
+            added = addedList;
+            unresolved = unresolvedList;
+
+            if (declared == null || declared.Count == 0) return declared;
+
+            var working = new List<ICustomSystem>(declared);
+            var reportedUnresolved = new HashSet<Type>();
+
+            // 最多做清单长度 +1 轮：每轮可能补入新模块，而新模块自己也可能带依赖。
+            int maxPasses = working.Count + 1;
+            for (int pass = 0; pass < maxPasses; pass++)
+            {
+                bool changed = false;
+
+                for (int i = 0; i < working.Count; i++)
+                {
+                    var module = working[i];
+                    if (module == null) continue;
+
+                    var meta = ReadMetadata(module.GetType());
+                    if (meta.DependsOn == null || meta.DependsOn.Length == 0) continue;
+
+                    for (int d = 0; d < meta.DependsOn.Length; d++)
+                    {
+                        Type required = meta.DependsOn[d];
+                        if (required == null) continue;
+                        if (IsSatisfied(working, required)) continue;
+
+                        if (TryCreateProvider(required, out var provider))
+                        {
+                            working.Add(provider);
+                            addedList.Add($"{provider.GetType().Name}（{module.GetType().Name} 依赖 {required.Name}）");
+                            changed = true;
+                        }
+                        else if (reportedUnresolved.Add(required))
+                        {
+                            unresolvedList.Add($"{module.GetType().Name} 依赖 {required.Name}，未注册且无法自动创建");
+                        }
+                    }
+                }
+
+                if (!changed) break;
+            }
+
+            return working;
+        }
+
+        /// <summary>列表里是否已有模块能满足该依赖类型（支持接口 / 基类声明）。</summary>
+        private static bool IsSatisfied(IList<ICustomSystem> modules, Type required)
+        {
+            for (int i = 0; i < modules.Count; i++)
+            {
+                var module = modules[i];
+                if (module != null && required.IsInstanceOfType(module)) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// 尝试为依赖类型造一个实例：静态单例入口优先，其次无参构造。
+        /// 真实模块多是 <c>SingletonMgr&lt;T&gt;</c>（MonoBehaviour），只能通过 <c>Instance</c> 拿到。
+        /// </summary>
+        private static bool TryCreateProvider(Type required, out ICustomSystem provider)
+        {
+            provider = null;
+            if (required == null) return false;
+            if (!typeof(ICustomSystem).IsAssignableFrom(required)) return false;
+            if (required.IsAbstract || required.IsInterface) return false;
+
+            var singleton = TryGetStaticEntry(required);
+            if (singleton is ICustomSystem fromEntry && required.IsInstanceOfType(fromEntry))
+            {
+                provider = fromEntry;
+                return true;
+            }
+
+            try
+            {
+                var ctor = required.GetConstructor(Type.EmptyTypes);
+                if (ctor != null && ctor.Invoke(null) is ICustomSystem created && required.IsInstanceOfType(created))
+                {
+                    provider = created;
+                    return true;
+                }
+            }
+            catch
+            {
+                // 构造抛异常（缺少依赖 / 需要 Unity 运行时）：交给调用方按"未解析"告警
+            }
+
+            return false;
+        }
+
+        /// <summary>读取类型上的静态入口属性/字段（<c>Instance</c>、<c>Current</c>），取不到返回 null。</summary>
+        private static object TryGetStaticEntry(Type type)
+        {
+            const BindingFlags flags = BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy;
+            string[] names = { "Instance", "Current" };
+
+            for (int i = 0; i < names.Length; i++)
+            {
+                try
+                {
+                    var property = type.GetProperty(names[i], flags);
+                    if (property != null && property.CanRead)
+                    {
+                        var value = property.GetValue(null);
+                        if (value != null) return value;
+                    }
+
+                    var field = type.GetField(names[i], flags);
+                    if (field != null)
+                    {
+                        var value = field.GetValue(null);
+                        if (value != null) return value;
+                    }
+                }
+                catch
+                {
+                    // 静态入口内可能依赖 Unity 运行时；取不到就当没有
+                }
+            }
+
+            return null;
         }
 
         /// <summary>

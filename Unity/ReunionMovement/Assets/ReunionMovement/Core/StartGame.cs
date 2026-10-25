@@ -60,24 +60,9 @@ namespace ReunionMovement.Core
         /// </summary>
         public override IList<ICustomSystem> CreateModules()
         {
-            var modules = new List<ICustomSystem>(14);
-
-            modules.Add(ResourcesSystem.Instance);    // 10  资源加载（同步/兜底，多个模块依赖它）
-            modules.Add(AddressableSystem.Instance);  // 20  Addressables（受管异步/远程）
-            modules.Add(SceneSystem.Instance);        // 30  场景管理
-            modules.Add(EventMessageSystem.Instance); // 40  事件总线
-            modules.Add(LanguagesSystem.Instance);    // 50  多语言
-            modules.Add(PauseSystem.Instance);        // 60  暂停管理（Time.timeScale 统一切换）
-            modules.Add(SoundSystem.Instance);        // 70  音频（需要 Update 驱动淡入淡出）
-            modules.Add(TimerMgr.Instance);           // 80  计时器（需要 Update 驱动）
-            modules.Add(UISystem.Instance);           // 90  UI 管理
-            modules.Add(UIInputSystem.Instance);      // 100 UI 输入（需要 Update 驱动导航）
-            modules.Add(UIToolkitSystem.Instance);    // 110 UI Toolkit
-            modules.Add(TerminalSystem.Instance);     // 120 终端（需要 Update 检测按键）
-            modules.Add(NetworkMgr.Instance);         // 130 网络通道管理（需要 Update 消费移除队列）
-            modules.Add(HttpMgr.Instance);            // 140 HTTP 请求（需要 Update 轮询进度）
-
-            return modules;
+            // 清单本身放在 ModulePresets 里，示例工程与接入方共用同一份定义（改这里请改 ModulePresets.Full）。
+            // 实际初始化顺序由各模块的 [ModuleOrder(order, DependsOn...)] 拓扑排序决定，与下面的书写顺序无关。
+            return ModulePresets.Full();
         }
 
         /// <summary>

@@ -46,6 +46,16 @@ namespace ReunionMovement.Core
         /// </summary>
         public bool AllowBuiltInEntryFallback;
 
+        /// <summary>
+        /// 启动时是否按各模块 <c>[ModuleOrder(..., DependsOn)]</c> 声明的依赖，把"被依赖但没注册"的模块自动补入。
+        /// <para>
+        /// 默认 true：接入方删模块时不用背依赖表，缺的提供者会被补回来（启动日志会打印补入了谁）。
+        /// 需要严格按自己的清单启动（例如刻意不启用 Addressables）时设为 false，
+        /// 此时缺依赖退回改造前的行为：告警 + 按注册顺序启动。
+        /// </para>
+        /// </summary>
+        public bool AutoExpandModuleDependencies = true;
+
         /// <summary>场景名是否命中测试规则（前缀优先，其次关键字包含）。</summary>
         public bool IsTestScene(string sceneName)
         {

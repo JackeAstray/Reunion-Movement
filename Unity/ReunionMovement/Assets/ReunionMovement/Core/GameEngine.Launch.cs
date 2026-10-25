@@ -38,9 +38,27 @@ namespace ReunionMovement.Core
 
             GameEntry = entry;
 
+            // 依赖补全：接入方删掉某个模块时，被它依赖的提供者会按 [ModuleOrder(..., DependsOn)] 自动补回，
+            // 避免"缺依赖 → 告警 → 退回注册顺序"这种看不出原因的退化。可用 Bootstrap.Options 关掉。
+            var declaredModules = moduleList;
+            if (Bootstrap.Options.AutoExpandModuleDependencies)
+            {
+                declaredModules = ModuleCatalog.ExpandDependencies(moduleList,
+                    out var addedModules, out var unresolvedModules);
+
+                if (addedModules.Count > 0)
+                {
+                    Log.Debug("[GameEngine] 按 [ModuleOrder] 自动补入依赖模块: {0}", string.Join("、", addedModules));
+                }
+                if (unresolvedModules.Count > 0)
+                {
+                    Log.Warning("[GameEngine] 以下依赖无法自动补入（未注册且无法创建）: {0}", string.Join("；", unresolvedModules));
+                }
+            }
+
             // 模块顺序：优先按 [ModuleOrder] 声明的依赖与序号排序；
             // 校验失败（缺依赖 / 重复注册 / 成环）沿用注册顺序，保证不比改造前更差，同时把问题写进启动日志。
-            if (ModuleCatalog.TryBuild(moduleList, out var orderedModules, out var catalogErrors))
+            if (ModuleCatalog.TryBuild(declaredModules, out var orderedModules, out var catalogErrors))
             {
                 modules = orderedModules;
                 Log.Debug("[GameEngine] 模块顺序: {0}", ModuleCatalog.Describe(modules));
@@ -48,7 +66,7 @@ namespace ReunionMovement.Core
             else
             {
                 Log.Warning("[GameEngine] 模块顺序校验未通过，沿用注册顺序: {0}", catalogErrors);
-                modules = moduleList;
+                modules = declaredModules;
             }
 
             // 失败重试时清空上次已注册的更新模块，避免重复添加导致模块每帧被 Update/LateUpdate 多次
