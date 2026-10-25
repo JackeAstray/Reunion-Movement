@@ -1,4 +1,4 @@
-﻿namespace ReunionMovement.Core.Resources
+namespace ReunionMovement.Core.Resources
 {
     /// <summary>
     /// Addressables 地址常量 —— 消除魔法字符串，统一资源寻址入口。
@@ -16,7 +16,7 @@
         // ========== UI（对应 AddressableAssets/BuiltIn/UI/） ==========
         /// <summary>UI 资源根</summary>
         public const string UIRoot = BuiltInRoot + "UI/";
-        /// <summary>启动界面（与 UINames.StartGame 一致）</summary>
+        /// <summary>启动界面（与 StartGameUIPlane 的窗口 Id 一致）</summary>
         public const string UIStartGame = UIRoot + "StartGameUIPlane";
 
         // ========== Prefabs（对应 AddressableAssets/BuiltIn/Prefabs/） ==========

@@ -16,8 +16,8 @@ namespace ReunionMovement.Core.UI
     [UIWindow("TerminalUIPlane", Layer = PanelType.NormalUI)]
     public class TerminalUIPlane : UIController
     {
-        string openWindow = UINames.Terminal;
-        string closeWindow = UINames.Terminal;
+        string openWindow = nameof(TerminalUIPlane);
+        string closeWindow = nameof(TerminalUIPlane);
 
         string command;
         public Button clear;    //清除
@@ -75,7 +75,7 @@ namespace ReunionMovement.Core.UI
 
             close.onClick.AddListener(() =>
             {
-                UISystem.Instance.CloseWindow(UINames.Terminal);
+                UISystem.Instance.CloseWindow(nameof(TerminalUIPlane));
             });
 
             input.onEndEdit.AddListener(OnEndEdit);

@@ -10,7 +10,7 @@ namespace ReunionMovement.Core.UI
     /// <see cref="UISystem"/> 的类型化窗口 API（增量，不动老接口）。
     ///
     /// <para>
-    /// 老写法靠位置参数：<c>OpenWindowAsync(UINames.Popup, "错误", 3)</c> + 窗口里 <c>GetFromArgs&lt;int&gt;(args, 1)</c>。
+    /// 老写法靠位置参数：<c>OpenWindowAsync("PopupUIPlane", "错误", 3)</c> + 窗口里 <c>GetFromArgs&lt;int&gt;(args, 1)</c>。
     /// 新写法把"参数"变成一个类型：
     /// </para>
     ///

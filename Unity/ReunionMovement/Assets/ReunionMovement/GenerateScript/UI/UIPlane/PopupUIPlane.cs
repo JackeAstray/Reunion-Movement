@@ -15,8 +15,8 @@ namespace ReunionMovement.Core.UI
     [UIWindow("PopupUIPlane", Layer = PanelType.TipsUI, Modal = true)]
     public class PopupUIPlane : UIController
     {
-        string openWindow = UINames.Popup;
-        string closeWindow = UINames.Popup;
+        string openWindow = nameof(PopupUIPlane);
+        string closeWindow = nameof(PopupUIPlane);
 
         public TextMeshProUGUI titleStr;
         public TextMeshProUGUI containerStr;

@@ -31,8 +31,8 @@ namespace ReunionMovement.Core
         /// <summary>进入游戏后加载的首个场景名（业务配置，不是框架约定）。</summary>
         public const string BootSceneName = "Temp";
 
-        /// <summary>启动界面窗口名（与 <see cref="UINames.StartGame"/> 一致）。</summary>
-        public const string StartupWindowName = UINames.StartGame;
+        /// <summary>启动界面窗口名（= <see cref="StartGameUIPlane"/> 的窗口 Id）。</summary>
+        public const string StartupWindowName = "StartGameUIPlane";
 #if UNITY_WEBGL && !UNITY_EDITOR
         [DllImport("__Internal")]
         private static extern void SetFullscreenState(int value);
@@ -121,7 +121,7 @@ namespace ReunionMovement.Core
             }
 
             // 游戏启动时，排除启动界面不随场景切换而隐藏
-            // SceneSystem.Instance.ExcludeWindowFromSceneHide(UINames.StartGame);
+            // SceneSystem.Instance.ExcludeWindowFromSceneHide(StartupWindowName);
 
             // 加载初始场景
             await SceneSystem.Instance.LoadScene(BootSceneName, true, null, null);
