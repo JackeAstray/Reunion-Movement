@@ -382,7 +382,6 @@ namespace ReunionMovement.EditorTools.Addressables
         /// 启用远程 Catalog。
         /// 默认保持关闭（m_BuildRemoteCatalog = false），避免无 CDN 环境下生成无用远程 catalog。
         /// </summary>
-        [MenuItem(MenuRemoteCatalog, false, 411)]
         /// <summary>
         /// 校验远程分组的路径变量：BuildPath / LoadPath 必须指向 Remote 变量，否则强制修正。
         /// 用于修复历史/手动创建分组遗留下的 Local 路径错误（远程热更的前提）。返回是否有改动。
@@ -416,6 +415,7 @@ namespace ReunionMovement.EditorTools.Addressables
             return data != null && data.ProfileName == variableName;
         }
 
+        [MenuItem(MenuRemoteCatalog, false, 411)]
         public static void EnableRemoteCatalog()
         {
             var settings = AddressableAssetSettingsDefaultObject.GetSettings(true);
