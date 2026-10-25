@@ -1,4 +1,4 @@
-﻿//此脚本是由工具自动生成，请勿手动创建
+//此脚本是由工具自动生成，请勿手动创建
 
 using ReunionMovement.Common;
 using ReunionMovement.Common.Util;
@@ -11,6 +11,7 @@ using UnityEngine.UI;
 
 namespace ReunionMovement.Core.UI
 {
+    [UIWindow("PopupUIPlane", Layer = PanelType.TipsUI, Modal = true)]
     public class PopupUIPlane : UIController
     {
         string openWindow = UINames.Popup;

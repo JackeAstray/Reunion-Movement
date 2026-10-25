@@ -1,4 +1,4 @@
-﻿using ReunionMovement.Common;
+using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
 using ReunionMovement.Core.Resources;
 using Cysharp.Threading.Tasks;
@@ -283,7 +283,10 @@ namespace ReunionMovement.Core.UI
 
             // 池化路径：白名单内的轻量窗口放池复用（消除反复 DestroyImmediate/Instantiate 的 GC 与 Canvas 重建）；
             // 同帧关闭再打开时从池取出同一对象，天然避免双实例
-            if (enableWindowPool && poolableWindowNames.Contains(uiName))
+// 池化：窗口声明了 [UIWindow(Pooled = true)] 或仍在老白名单里就复用。
+            // 老白名单保留是为了不破坏现有工程的显式配置。
+            bool poolable = UIWindowCatalog.Get(uiName).Pooled || poolableWindowNames.Contains(uiName);
+            if (enableWindowPool && poolable)
             {
                 PoolWindow(uiName, uiState.uiWindow.gameObject);
             }

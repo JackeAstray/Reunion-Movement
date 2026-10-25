@@ -1,4 +1,4 @@
-﻿using ReunionMovement.Common;
+using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
 using ReunionMovement.Core.Resources;
 using Cysharp.Threading.Tasks;
@@ -38,10 +38,24 @@ namespace ReunionMovement.Core.UI
                 PanelType.TipsUI => tipsUIRoot.transform,
                 _ => uiRoot.transform
             };
+            // 层级来源：显式声明的 [UIWindow(Layer = …)] 优先；没声明就沿用预制体上的 PanelType，
+            // 因此现有 3 个窗口行为完全不变。
+            var descriptor = UIWindowCatalog.Get(uiObj.name);
+            if (descriptor.Declared && descriptor.Layer != windowAsset.panelType)
+            {
+                parent = descriptor.Layer switch
+                {
+                    PanelType.MainUI => mainUIRoot.transform,
+                    PanelType.NormalUI => normalUIRoot.transform,
+                    PanelType.HeadInfoUI => headInfoUIRoot.transform,
+                    PanelType.TipsUI => tipsUIRoot.transform,
+                    _ => uiRoot.transform
+                };
+            }
             uiObj.transform.SetParent(parent);
             if (parent == uiRoot.transform)
             {
-                Log.Error("没有默认PanelType: {0}", windowAsset.panelType);
+                Log.Error("没有默认PanelType: {0}", descriptor.Declared ? descriptor.Layer : windowAsset.panelType);
             }
         }
 

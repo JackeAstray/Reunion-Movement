@@ -76,6 +76,9 @@ namespace ReunionMovement.HeadlessCheck
             Run("依赖自动补全（补入被依赖模块）", () => CheckExpandAddsMissingDependency(core));
             Run("依赖自动补全（幂等，不重复补入）", () => CheckExpandIsIdempotent(core));
             Run("依赖自动补全（无法创建时报 unresolved）", () => CheckExpandReportsUnresolved(core));
+            Run("UI 导航栈（压栈/栈顶/重复项去重）", () => CheckNavStackPushAndDedup(core));
+            Run("UI 导航栈（弹栈与空栈）", () => CheckNavStackPop(core));
+            Run("UI 导航栈（窗口被直接关闭时同步）", () => CheckNavStackRemove(core));
             Run("Modules 访问器（引擎未启动）", () => CheckModulesAccessor(core));
             Run("游戏入口解析（框架不再声明入口）", () => CheckEntryResolver(core));
             Run("Bootstrap 配置（测试场景判定）", () => CheckBootstrapOptions(core));
@@ -230,6 +233,79 @@ namespace ReunionMovement.HeadlessCheck
             Assert(unresolved.Length == 1, "应报告 1 条未解析依赖，实际: " + unresolved.Length);
         }
 
+
+        // ---------------------------------------------------------------- UI 导航栈
+
+        private static object NewNavStack(Assembly core)
+        {
+            return Activator.CreateInstance(GetType(core, "ReunionMovement.Core.UI.UINavigationStack"));
+        }
+
+        private static void NavCall(object stack, string method, params object[] args)
+        {
+            stack.GetType().GetMethod(method).Invoke(stack, args);
+        }
+
+        private static object NavProp(object stack, string name)
+        {
+            return stack.GetType().GetProperty(name).GetValue(stack);
+        }
+
+        /// <summary>压栈语义：栈顶是最后压入的窗口；重复压栈不增加深度，而是移到栈顶。</summary>
+        private static void CheckNavStackPushAndDedup(Assembly core)
+        {
+            object stack = NewNavStack(core);
+
+            NavCall(stack, "Push", "A");
+            NavCall(stack, "Push", "B");
+            Assert((int)NavProp(stack, "Count") == 2, "压 2 个窗口后 Count 应为 2，实际 " + NavProp(stack, "Count"));
+            Assert((string)NavProp(stack, "Top") == "B", "栈顶应为 B，实际 " + NavProp(stack, "Top"));
+
+            NavCall(stack, "Push", "A");
+            Assert((int)NavProp(stack, "Count") == 2, "重复压栈不应增加深度，实际 " + NavProp(stack, "Count"));
+            Assert((string)NavProp(stack, "Top") == "A", "重复压栈应把 A 移到栈顶，实际 " + NavProp(stack, "Top"));
+        }
+
+        /// <summary>弹栈语义：LIFO；空栈返回 false，表示没有可返回的窗口。</summary>
+        private static void CheckNavStackPop(Assembly core)
+        {
+            object stack = NewNavStack(core);
+
+            var emptyArgs = new object[] { null };
+            bool poppedOnEmpty = (bool)stack.GetType().GetMethod("TryPop").Invoke(stack, emptyArgs);
+            Assert(!poppedOnEmpty && emptyArgs[0] == null, "空栈 TryPop 应返回 false");
+            Assert((bool)NavProp(stack, "IsEmpty"), "空栈 IsEmpty 应为 true");
+
+            NavCall(stack, "Push", "A");
+            NavCall(stack, "Push", "B");
+
+            var args = new object[] { null };
+            bool popped = (bool)stack.GetType().GetMethod("TryPop").Invoke(stack, args);
+            Assert(popped && (string)args[0] == "B", "应先弹出 B，实际 " + args[0]);
+            Assert((string)NavProp(stack, "Top") == "A", "弹出一层后栈顶应为 A，实际 " + NavProp(stack, "Top"));
+            Assert(!(bool)NavProp(stack, "IsEmpty"), "还有一层时 IsEmpty 应为 false");
+        }
+
+        /// <summary>窗口被直接关闭时，栈要能同步摘除（否则返回会去关一个已经关掉的窗口）。</summary>
+        private static void CheckNavStackRemove(Assembly core)
+        {
+            object stack = NewNavStack(core);
+            NavCall(stack, "Push", "A");
+            NavCall(stack, "Push", "B");
+
+            Assert((bool)NavCallRet(stack, "Remove", "A"), "移除存在的窗口应返回 true");
+            Assert((int)NavProp(stack, "Count") == 1, "移除后深度应为 1，实际 " + NavProp(stack, "Count"));
+            Assert((string)NavProp(stack, "Top") == "B", "移除 A 后栈顶应仍是 B");
+            Assert(!(bool)NavCallRet(stack, "Remove", "NotExist"), "移除不存在的窗口应返回 false");
+
+            NavCall(stack, "Clear");
+            Assert((bool)NavProp(stack, "IsEmpty"), "Clear 后栈应为空");
+        }
+
+        private static object NavCallRet(object stack, string method, params object[] args)
+        {
+            return stack.GetType().GetMethod(method).Invoke(stack, args);
+        }
         // ---------------------------------------------------------------- 其它用例
 
         private static void CheckModulesAccessor(Assembly core)

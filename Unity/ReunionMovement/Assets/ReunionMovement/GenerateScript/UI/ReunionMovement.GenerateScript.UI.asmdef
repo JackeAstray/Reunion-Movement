@@ -9,8 +9,7 @@
         "UniTask",
         "UnityEngine.UI",
         "Unity.TextMeshPro",
-        "Unity.InputSystem",
-        "DOTween.Modules"
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

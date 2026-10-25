@@ -1,4 +1,4 @@
-﻿//此脚本是由工具自动生成，请勿手动创建
+//此脚本是由工具自动生成，请勿手动创建
 
 using Cysharp.Threading.Tasks;
 using ReunionMovement.Common;
@@ -13,6 +13,7 @@ using UnityEngine.UI;
 
 namespace ReunionMovement.Core.UI
 {
+    [UIWindow("TerminalUIPlane", Layer = PanelType.NormalUI)]
     public class TerminalUIPlane : UIController
     {
         string openWindow = UINames.Terminal;

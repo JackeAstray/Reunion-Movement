@@ -1,4 +1,4 @@
-﻿using ReunionMovement.Common;
+using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
 using ReunionMovement.Core.Resources;
 using Cysharp.Threading.Tasks;
@@ -82,6 +82,10 @@ namespace ReunionMovement.Core.UI
             OnCloseSubject ??= new Subject<UIController>();
 
             await CreateRoot();
+
+            // 预热窗口目录：扫一次程序集 + 特性（约几毫秒），之后按 Id/类型查询零反射，
+            // 避免"第一次打开某个窗口"时才扫描造成的毛刺。
+            UIWindowCatalog.Warmup();
 
             initProgress = 100;
             isInited = true;
