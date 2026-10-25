@@ -12,9 +12,34 @@ using UnityEngine.UI;
 
 namespace ReunionMovement.Core.UI
 {
-    [UIWindow("PopupUIPlane", Layer = PanelType.TipsUI, Modal = true)]
-    public class PopupUIPlane : UIController
+    /// <summary>PopupUIPlane 的打开参数示例（值类型 + IWindowArgs，调用处编译期检查）。</summary>
+    public readonly struct PopupArgs : IWindowArgs
     {
+        public readonly string Title;
+        public readonly string Message;
+
+        public PopupArgs(string title, string message)
+        {
+            Title = title;
+            Message = message;
+        }
+
+        public override string ToString() => Title + " | " + Message;
+    }
+
+    [UIWindow("PopupUIPlane", Layer = PanelType.TipsUI, Modal = true)]
+    public class PopupUIPlane : UIController, IWindowArgsReceiver<PopupArgs>
+    {
+        /// <summary>打开时收到的参数（无参打开时为 default）。</summary>
+        public PopupArgs Args { get; private set; }
+
+        /// <summary>强类型参数入口：由 UISystem.OpenWindowAsync&lt;TWindow, TArgs&gt; 自动调用。</summary>
+        public void OnWindowArgs(PopupArgs args)
+        {
+            Args = args;
+            Debug.Log("[PopupUIPlane] 收到参数: " + args);
+        }
+
         string openWindow = nameof(PopupUIPlane);
         string closeWindow = nameof(PopupUIPlane);
 

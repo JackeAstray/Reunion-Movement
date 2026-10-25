@@ -185,7 +185,17 @@ namespace ReunionMovement.Core.UI
         /// </summary>
         public void ShowPopup()
         {
-            UIRouter.PushAsync<PopupUIPlane>().Forget();
+            // 传值示例：强类型参数，PopupUIPlane 实现 IWindowArgsReceiver<PopupArgs> 即可收到
+            ShowPopup("提示", "这是从 StartGameUIPlane 传过来的参数");
+        }
+
+        /// <summary>
+        /// 打开弹窗并传值。需要"等用户点确定/取消再继续"时改用：
+        /// await UIRouter.PushForResultAsync&lt;PopupUIPlane, PopupArgs, bool&gt;(new PopupArgs(title, message));
+        /// </summary>
+        public void ShowPopup(string title, string message)
+        {
+            UIRouter.PushAsync<PopupUIPlane, PopupArgs>(new PopupArgs(title, message)).Forget();
         }
     }
 }
