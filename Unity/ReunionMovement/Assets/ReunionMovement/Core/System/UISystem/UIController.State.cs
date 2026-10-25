@@ -19,7 +19,7 @@ namespace ReunionMovement.Core.UI
     /// <see cref="UIController"/> 的生命周期状态机（守卫层）。
     ///
     /// <para>
-    /// 原来 7 个 virtual（<c>OnInit/BeforeOpen/OnOpen/OnSet/OnClose/OnSpawned/OnDespawned</c>）
+    /// 原来 7 个 virtual（<c>OnInit/BeforeOpen/OnOpen/OnReopen/OnClose/OnSpawned/OnDespawned</c>）
     /// 之间没有任何约束：重复 <c>OnOpen</c>、没 <c>OnClose</c> 就 <c>OnSpawned</c>（池化复用漏清理）都只是静默发生。
     /// 这里给它们加一个状态机：**签名与调用方式完全不变**，只是在每次进入钩子时校验转换是否合法，
     /// 非法就告警（不抛异常、不改变行为），把"靠自觉"变成"能看见"。

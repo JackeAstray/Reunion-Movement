@@ -401,11 +401,6 @@ namespace ReunionMovement.Core.UI
             base.OnOpen(args);
         }
 
-        public override void OnSet(params object[] args)
-        {
-            base.OnSet(args);
-        }
-
         public override void OnClose()
         {
             base.OnClose();

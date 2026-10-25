@@ -80,7 +80,7 @@ namespace ReunionMovement.Core.UI
         /// <summary>标记初始化完成（由 UISystem 在 OnInit 调用后置位）</summary>
         internal void MarkInitialized() => IsInitialized = true;
 
-        public virtual void BeforeOpen(object[] onOpenArgs, Action doOpen)
+        public virtual void BeforeOpen(Action doOpen)
         {
             doOpen?.Invoke();
         }
@@ -100,7 +100,7 @@ namespace ReunionMovement.Core.UI
         /// UIController设置参数时调用的方法，子类可以重写此方法来实现自定义逻辑。
         /// </summary>
         /// <param name="args"></param>
-        public virtual void OnSet(params object[] args)
+        public virtual void OnReopen()
         {
             // Set 只更新已打开窗口，不抢当前最上层窗口的焦点
             EnsureFocusScope(bringToFront: false);

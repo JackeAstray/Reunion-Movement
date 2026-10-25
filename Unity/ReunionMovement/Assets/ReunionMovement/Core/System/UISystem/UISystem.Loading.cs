@@ -305,7 +305,7 @@ namespace ReunionMovement.Core.UI
                 // 窗口已激活：重复打开不应先广播"关闭"事件（语义矛盾，
                 // 会导致 UIInputSystem.OnUIClosed 误触发 RestorePreviousFocus 弹出焦点）。
                 // 直接走 OnOpen 刷新数据即可。
-                uiBase.BeforeOpen(args, () =>
+                uiBase.BeforeOpen(() =>
                 {
                     LogElapsedTime(() =>
                     {
@@ -329,7 +329,7 @@ namespace ReunionMovement.Core.UI
             uiBase.gameObject.SetActive(true);
             Log.Debug("[UISystem] OnOpen({0}) SetActive(true) → activeSelf={1}", uiBase.gameObject.name, uiBase.gameObject.activeSelf);
 
-            uiBase.BeforeOpen(args, () =>
+            uiBase.BeforeOpen(() =>
             {
                 LogElapsedTime(() =>
                 {

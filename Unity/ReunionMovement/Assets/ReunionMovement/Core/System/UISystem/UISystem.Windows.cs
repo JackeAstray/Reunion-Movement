@@ -117,10 +117,10 @@ namespace ReunionMovement.Core.UI
                 // 在 BeforeOpen 之前激活，确保 UI 可见
                 uiBase.gameObject.SetActive(true);
 
-                uiBase.BeforeOpen(args, () =>
+                uiBase.BeforeOpen(() =>
                 {
                     float setStartTime = Time.realtimeSinceStartup;
-                    uiBase.OnSet(args);
+                    uiBase.OnReopen();
                     float setElapsed = Time.realtimeSinceStartup - setStartTime;
 
                     Log.Debug(string.Format("OnSet UI {0}, cost {1}", uiBase.gameObject.name, setElapsed));
