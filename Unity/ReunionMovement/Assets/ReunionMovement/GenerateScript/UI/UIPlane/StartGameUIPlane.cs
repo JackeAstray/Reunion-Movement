@@ -178,5 +178,14 @@ namespace ReunionMovement.Core.UI
         {
             UISystem.Instance.CloseWindow(closeWindow);
         }
+
+        /// <summary>
+        /// 打开通用弹窗（经导航栈：ESC / 手柄 B 可关；Popup 声明了 Modal，会阻断下层交互）。
+        /// 用法：在启动界面的按钮 onClick 上挂这个方法。
+        /// </summary>
+        public void ShowPopup()
+        {
+            UIRouter.PushAsync<PopupUIPlane>().Forget();
+        }
     }
 }
