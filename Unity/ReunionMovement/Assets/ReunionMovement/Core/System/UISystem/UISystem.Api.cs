@@ -1,4 +1,4 @@
-﻿using ReunionMovement.Common;
+using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
 using ReunionMovement.Core.Resources;
 using Cysharp.Threading.Tasks;
@@ -32,6 +32,7 @@ namespace ReunionMovement.Core.UI
         /// </summary>
         /// <param name="name"></param>
         /// <returns></returns>
+        [Obsolete("改用 IsOpen<TWindow>()", false)]
         public bool IsOpen(string name)
         {
             UIController uiBase = GetUIBase(name);

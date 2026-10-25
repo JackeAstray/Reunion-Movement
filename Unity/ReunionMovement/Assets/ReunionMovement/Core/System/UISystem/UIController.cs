@@ -1,4 +1,4 @@
-﻿using ReunionMovement.Common.Util;
+using ReunionMovement.Common.Util;
 using ReunionMovement.Common;
 using ReunionMovement.Core.UIInput;
 using Cysharp.Threading.Tasks;
@@ -179,6 +179,7 @@ namespace ReunionMovement.Core.UI
         /// <summary>
         /// 推荐使用字符串UI名称进行UI通讯，灵活且不易出错
         /// </summary>
+        [Obsolete("改用 await UIRouter.PushForResultAsync<TWindow, TArgs, TResult>() 拿返回值", false)]
         public static void CallUI(string uiName, Action<UIController, object[]> callback, params object[] args)
         {
             UISystem.Instance.CallUI(uiName, callback, args);

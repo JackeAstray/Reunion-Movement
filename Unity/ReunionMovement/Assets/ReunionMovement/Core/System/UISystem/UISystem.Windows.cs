@@ -18,6 +18,7 @@ namespace ReunionMovement.Core.UI
         /// <summary>
         /// 打开窗口（字符串键）—— 保持现有 API 兼容
         /// </summary>
+        [Obsolete("改用 OpenWindowAsync<TWindow, TArgs>(args) 或 UIRouter.PushAsync<TWindow, TArgs>(args)", false)]
         public UILoadState OpenWindow(string uiName, params object[] args)
         {
             //TODO: 需要先创建脚本对象，再根据脚本中的值进行加载资源
