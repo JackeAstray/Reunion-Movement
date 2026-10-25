@@ -30,16 +30,45 @@ namespace ReunionMovement.UI.ImageExtensions
         /// <summary>上次回读的共享材质引用（引用变化时重新回读）</summary>
         private Material m_loadedSharedMaterial;
 
+        /// <summary>
+        /// ImageEx 着色器在 Resources 下的相对路径 —— 与 <see cref="shaderName"/> 指向同一个资产
+        /// （<c>Resources/Shader/UI/ImageEx/ImageEx.shader</c>）。用于按名字查不到时兜底。
+        /// </summary>
+        private const string kShaderResourcePath = "Shader/UI/ImageEx/ImageEx";
+
+        /// <summary>已解析的着色器（进程内缓存；资产被销毁时 Unity 的重载 == 会判为 null，从而重新解析）</summary>
+        private static Shader s_resolvedShader;
+
+        /// <summary>
+        /// 解析 ImageEx 着色器：先按名字 <see cref="Shader.Find"/>，再按 Resources 路径取。
+        /// <para>
+        /// 两步都在的理由：删掉 <c>Library/</c> 后首次导入时，<c>OnValidate</c> 可能早于着色器导入完成，
+        /// 此时 <c>Shader.Find</c> 会返回 null 并打出"着色器未找到"的假警告；着色器本身就在 Resources 下，
+        /// 按路径取是稳定的。真正的着色器编译错误仍会在 Console 里单独报出来。
+        /// </para>
+        /// </summary>
+        private static Shader ResolveShader()
+        {
+            if (s_resolvedShader != null) return s_resolvedShader;
+
+            s_resolvedShader = Shader.Find(shaderName);
+            if (s_resolvedShader != null) return s_resolvedShader;
+
+            s_resolvedShader = Resources.Load<Shader>(kShaderResourcePath);
+            return s_resolvedShader;
+        }
+
         private Material DynamicMaterial
         {
             get
             {
                 if (dynamicMaterial == null)
                 {
-                    Shader shader = Shader.Find(shaderName);
+                    Shader shader = ResolveShader();
                     if (shader == null)
                     {
-                        Log.Warning("着色器 '{0}' 未找到，已回退到 'Sprites/Default'。请确认项目中存在对应着色器。", shaderName);
+                        Log.Warning("着色器 '{0}' 未找到（已尝试 Shader.Find 与 Resources/{1}），已回退到 'Sprites/Default'。请确认项目中存在对应着色器。",
+                            shaderName, kShaderResourcePath);
                         shader = Shader.Find("Sprites/Default");
                     }
 
@@ -970,7 +999,8 @@ namespace ReunionMovement.UI.ImageExtensions
         /// <returns></returns>
         public Material CreateMaterialAssetFromComponentSettings()
         {
-            Material matAsset = new Material(Shader.Find(shaderName));
+            Shader shader = ResolveShader();
+            Material matAsset = shader != null ? new Material(shader) : new Material(Shader.Find("Sprites/Default"));
             matAsset = GetModifiedMaterial(matAsset);
             string path = EditorUtility.SaveFilePanelInProject("通过ImageEx创建材质",
                 "Material", "mat", "选择位置");
