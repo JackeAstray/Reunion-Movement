@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
@@ -22,30 +22,40 @@ namespace ReunionMovement.EditorTools.Addressables
         private const string OutputFolder = "Build/Addressables";
         private const string VersionFileName = "version.json";
 
+        /// <summary>未安装包或未启用 Addressables 时灰掉构建菜单。</summary>
+        [MenuItem("ReunionMovement/Addressables/构建/构建 Content（当前平台）", true)]
+        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/Windows (x86_64)", true)]
+        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/macOS (Universal)", true)]
+        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/Linux (x86_64)", true)]
+        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/Android", true)]
+        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/iOS", true)]
+        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/WebGL", true)]
+        private static bool BuildMenuValidate() => AddressablesSetup.CanUseAddressables;
+
         /// <summary>按当前激活平台构建 Content（Addressables 自动适配当前平台）</summary>
-        [MenuItem("ReunionMovement/Addressables/构建/构建 Content（当前平台）", priority = 20)]
+        [MenuItem("ReunionMovement/Addressables/构建/构建 Content（当前平台）", false, 420)]
         public static void BuildContent()
         {
             BuildContentForTarget(EditorUserBuildSettings.activeBuildTarget);
         }
 
         // ==================== 选择平台并构建（原生子菜单，悬停/点击即在菜单项右侧展开） ====================
-        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/Windows (x86_64)", priority = 21)]
+        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/Windows (x86_64)", false, 421)]
         public static void BuildWindows() => SwitchAndBuild(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows64);
 
-        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/macOS (Universal)", priority = 21)]
+        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/macOS (Universal)", false, 421)]
         public static void BuildMacOS() => SwitchAndBuild(BuildTargetGroup.Standalone, BuildTarget.StandaloneOSX);
 
-        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/Linux (x86_64)", priority = 21)]
+        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/Linux (x86_64)", false, 421)]
         public static void BuildLinux() => SwitchAndBuild(BuildTargetGroup.Standalone, BuildTarget.StandaloneLinux64);
 
-        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/Android", priority = 21)]
+        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/Android", false, 421)]
         public static void BuildAndroid() => SwitchAndBuild(BuildTargetGroup.Android, BuildTarget.Android);
 
-        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/iOS", priority = 21)]
+        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/iOS", false, 421)]
         public static void BuildIOS() => SwitchAndBuild(BuildTargetGroup.iOS, BuildTarget.iOS);
 
-        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/WebGL", priority = 21)]
+        [MenuItem("ReunionMovement/Addressables/构建/选择平台并构建/WebGL", false, 421)]
         public static void BuildWebGL() => SwitchAndBuild(BuildTargetGroup.WebGL, BuildTarget.WebGL);
 
         /// <summary>切换到目标平台后构建（切换会触发资源重导入，延迟一帧执行）</summary>

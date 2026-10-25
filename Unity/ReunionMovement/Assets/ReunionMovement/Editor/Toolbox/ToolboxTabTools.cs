@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEditor;
 using UnityEngine;
 
@@ -20,7 +20,7 @@ namespace ReunionMovement.EditorTools.Toolbox
                         "运行 Addressables 一键流水线？",
                         "会补齐配置、迁移资源、切到 WebGL 并构建，可能启用远程 Catalog；OSS 凭据已配置时还会上传到外部服务。\n\n" +
                         "目标平台固定 WebGL。请先保存并备份项目。")),
-                    new ToolButton("导出 unitypackage", () => ExecuteMenu("ReunionMovement/导出 unitypackage")));
+                    new ToolButton("导出 unitypackage", () => ExecuteMenu("ReunionMovement/打包/导出 .unitypackage")));
 
                 DrawToolRow("Addressables",
                     new ToolButton("初始化/补齐配置…", () => ExecuteMenu(

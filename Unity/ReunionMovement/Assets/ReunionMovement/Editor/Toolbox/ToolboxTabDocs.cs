@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
@@ -21,13 +21,16 @@ namespace ReunionMovement.EditorTools.Toolbox
 
         private static readonly string[] ReferenceDocs =
         {
-            "重构方案.md",
-            "阶段3-执行清单.md",
-            "阶段3-第一步-程序集拆分-验证报告.md",
-            "阶段2-遗留-MonoBehaviour模块改造方案.md",
-            "UI系统-现状评估与演进方案.md",
+            "design/重构方案.md",
+            "archive/阶段3-执行清单.md",
+            "archive/阶段3-第一步-程序集拆分-验证报告.md",
+            "archive/阶段2-遗留-MonoBehaviour模块改造方案.md",
+            "archive/UI系统-现状评估与演进方案.md",
             "features.md",
-            "工具箱.md",
+            "guides/工具箱.md",
+            "guides/第三方依赖.md",
+            "guides/跨平台构建指南.md",
+            "design/便捷性与可移植性评估.md",
         };
 
         private void DrawDocsTab()
@@ -108,13 +111,16 @@ namespace ReunionMovement.EditorTools.Toolbox
                 case "03-新增一个窗口.md": return "生成器 → Prefab → UINames → 打开/关闭";
                 case "04-接入自己的游戏.md": return "两条接入路线、改启动场景、关掉示例";
                 case "05-常见陷阱.md": return "双驱动 / 暂停 / Addressables / WebGL";
-                case "重构方案.md": return "痛点、分阶段方案、验收指标与待验证清单";
-                case "阶段3-执行清单.md": return "分层归位的可勾选步骤";
-                case "阶段3-第一步-程序集拆分-验证报告.md": return "拆分可行性的实测证据";
-                case "阶段2-遗留-MonoBehaviour模块改造方案.md": return "三个 MonoBehaviour 模块的去留";
-                case "UI系统-现状评估与演进方案.md": return "两套 UI 栈的现状、对比与演进路线";
+                case "design/重构方案.md": return "痛点、分阶段方案、验收指标与待验证清单";
+                case "archive/阶段3-执行清单.md": return "分层归位的可勾选步骤";
+                case "archive/阶段3-第一步-程序集拆分-验证报告.md": return "拆分可行性的实测证据";
+                case "archive/阶段2-遗留-MonoBehaviour模块改造方案.md": return "三个 MonoBehaviour 模块的去留";
+                case "archive/UI系统-现状评估与演进方案.md": return "两套 UI 栈的现状、对比与演进路线";
                 case "features.md": return "框架能力清单";
-                case "工具箱.md": return "本窗口的说明";
+                case "guides/第三方依赖.md": return "第三方版本、重名冲突与二选一";
+                case "guides/跨平台构建指南.md": return "多平台构建、link.xml 与平台备注";
+                case "design/便捷性与可移植性评估.md": return "调用 / 跨平台 / 插件便携性的现状与路线";
+                case "guides/工具箱.md": return "本窗口的说明";
                 default: return string.Empty;
             }
         }

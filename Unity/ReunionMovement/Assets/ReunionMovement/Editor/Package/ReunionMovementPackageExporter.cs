@@ -27,7 +27,7 @@ namespace ReunionMovement.EditorTools.Package
         /// <summary>默认输出（相对项目根）</summary>
         private const string DefaultOutput = "Build/Packages/ReunionMovement.unitypackage";
 
-        [MenuItem("ReunionMovement/导出 unitypackage", false, 130)]
+        [MenuItem("ReunionMovement/打包/导出 .unitypackage", false, 120)]
         public static void ExportPackage()
         {
             if (!Directory.Exists(ExportRoot))

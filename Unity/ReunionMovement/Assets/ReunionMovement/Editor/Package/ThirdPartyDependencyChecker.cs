@@ -20,7 +20,7 @@ namespace ReunionMovement.EditorTools.Package
     ///
     /// 菜单：ReunionMovement → 开发 → 检查第三方依赖冲突
     /// 命令行：-executeMethod ReunionMovement.EditorTools.Package.ThirdPartyDependencyChecker.CheckBatch
-    /// 文档：Docs/第三方依赖.md
+    /// 文档：Docs/guides/第三方依赖.md
     /// </summary>
     public static class ThirdPartyDependencyChecker
     {
@@ -47,7 +47,7 @@ namespace ReunionMovement.EditorTools.Package
             new Rule("DOTween", "com.demigiant.dotween", "Plugins/DOTween"),
         };
 
-        [MenuItem("ReunionMovement/开发/检查第三方依赖冲突", false, 63)]
+        [MenuItem("ReunionMovement/开发/检查第三方依赖冲突", false, 510)]
         public static void CheckFromMenu()
         {
             IList<string> conflicts = Check();
@@ -93,7 +93,7 @@ namespace ReunionMovement.EditorTools.Package
                 string message =
                     $"{rule.Component}: 官方包 {rule.PackageName} 与框架内置副本 {rule.VendorPath} 同时存在。" +
                     "两者会产生同名类型/同名程序集（CS0433），请二选一：删除内置副本，或卸载官方包。" +
-                    "详见 Docs/第三方依赖.md";
+                    "详见 Docs/guides/第三方依赖.md";
                 Debug.LogError("[第三方依赖] " + message);
                 conflicts.Add($"{rule.Component}：{rule.PackageName} ↔ {rule.VendorPath}");
             }

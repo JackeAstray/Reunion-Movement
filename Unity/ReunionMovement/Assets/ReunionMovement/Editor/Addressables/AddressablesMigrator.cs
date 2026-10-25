@@ -38,7 +38,18 @@ namespace ReunionMovement.EditorTools.Addressables
         /// 一键迁移全部资源（UI + 音频 + 图片）。幂等：目标已存在自动跳过复制，只补齐标记，可重复执行。
         /// 推荐入口 —— 流水线与日常发版统一调用，避免漏迁某一类资源。
         /// </summary>
-        [MenuItem("ReunionMovement/Addressables/迁移/一键迁移全部（UI+音频+图片）", priority = 30)]
+        /// <summary>未安装包或未启用 Addressables 时灰掉迁移菜单，避免工具自己把配置创建出来。</summary>
+        [MenuItem("ReunionMovement/Addressables/迁移/一键迁移全部（UI+音频+图片）", true)]
+        [MenuItem("ReunionMovement/Addressables/迁移/UI 资源（复制+重映射）", true)]
+        [MenuItem("ReunionMovement/Addressables/迁移/音频（Sounds → Remote_Sounds）", true)]
+        [MenuItem("ReunionMovement/Addressables/迁移/图片（UI Sprites → Remote_Textures）", true)]
+        [MenuItem("ReunionMovement/Addressables/迁移/配置（ScriptableObjects → BuiltIn_Config）", true)]
+        [MenuItem("ReunionMovement/Addressables/迁移/预制体（非 UI → BuiltIn_Prefabs）", true)]
+        [MenuItem("ReunionMovement/Addressables/迁移/场景（非示例 → Remote_Scenes）", true)]
+        [MenuItem("ReunionMovement/Addressables/迁移/字体（TMP → BuiltIn_Fonts）", true)]
+        private static bool MigrateMenuValidate() => AddressablesSetup.CanUseAddressables;
+
+        [MenuItem("ReunionMovement/Addressables/迁移/一键迁移全部（UI+音频+图片）", false, 430)]
         public static void MigrateAll()
         {
             MigrateUI();
@@ -51,7 +62,7 @@ namespace ReunionMovement.EditorTools.Addressables
             Log.Debug("[AddressablesMigrator] 全部迁移完成（UI + 音频 + 图片 + 配置 + 预制体 + 场景 + 字体）", channel: LogChannel.Resource);
         }
 
-        [MenuItem("ReunionMovement/Addressables/迁移/UI 资源（复制+重映射）", priority = 31)]
+        [MenuItem("ReunionMovement/Addressables/迁移/UI 资源（复制+重映射）", false, 431)]
         public static void MigrateUI()
         {
             // 确保配置与分组存在
@@ -265,7 +276,7 @@ namespace ReunionMovement.EditorTools.Addressables
         // =====================================================================
 
         /// <summary>迁移音频：Resources/Sounds → AddressableAssets/Remote/Sounds（Remote_Sounds 分组）</summary>
-        [MenuItem("ReunionMovement/Addressables/迁移/音频（Sounds → Remote_Sounds）", priority = 32)]
+        [MenuItem("ReunionMovement/Addressables/迁移/音频（Sounds → Remote_Sounds）", false, 432)]
         public static void MigrateSounds()
         {
             MigrateLeafAssets(
@@ -277,7 +288,7 @@ namespace ReunionMovement.EditorTools.Addressables
         }
 
         /// <summary>迁移纹理：Resources/UI/Sprites → AddressableAssets/Remote/Textures（Remote_Textures 分组）</summary>
-        [MenuItem("ReunionMovement/Addressables/迁移/图片（UI Sprites → Remote_Textures）", priority = 33)]
+        [MenuItem("ReunionMovement/Addressables/迁移/图片（UI Sprites → Remote_Textures）", false, 433)]
         public static void MigrateTextures()
         {
             MigrateLeafAssets(
@@ -376,7 +387,7 @@ namespace ReunionMovement.EditorTools.Addressables
         // =====================================================================
 
         /// <summary>迁移配置：Resources/ScriptableObjects → AddressableAssets/BuiltIn/Config（BuiltIn_Config 分组）</summary>
-        [MenuItem("ReunionMovement/Addressables/迁移/配置（ScriptableObjects → BuiltIn_Config）", priority = 34)]
+        [MenuItem("ReunionMovement/Addressables/迁移/配置（ScriptableObjects → BuiltIn_Config）", false, 434)]
         public static void MigrateConfig()
         {
             // 配置资产（GameConfig / LanguagesContainer / SoundConfigContainer）只引用共享脚本，
@@ -391,7 +402,7 @@ namespace ReunionMovement.EditorTools.Addressables
         }
 
         /// <summary>迁移非 UI 预制体：Resources/Prefabs（排除 UIs，由 MigrateUI 负责）→ AddressableAssets/BuiltIn/Prefabs（BuiltIn_Prefabs 分组）</summary>
-        [MenuItem("ReunionMovement/Addressables/迁移/预制体（非 UI → BuiltIn_Prefabs）", priority = 35)]
+        [MenuItem("ReunionMovement/Addressables/迁移/预制体（非 UI → BuiltIn_Prefabs）", false, 435)]
         public static void MigratePrefabs()
         {
             string srcRoot = ReunionPaths.InFramework("Resources/Prefabs");
@@ -490,7 +501,7 @@ namespace ReunionMovement.EditorTools.Addressables
         // =====================================================================
 
         /// <summary>迁移场景：Scenes 顶层（排除 Example 示例）→ Remote_Scenes 分组（原地标记，不复制）</summary>
-        [MenuItem("ReunionMovement/Addressables/迁移/场景（非示例 → Remote_Scenes）", priority = 36)]
+        [MenuItem("ReunionMovement/Addressables/迁移/场景（非示例 → Remote_Scenes）", false, 436)]
         public static void MigrateScenes()
         {
             string srcRoot = ReunionPaths.InFramework("Scenes");
@@ -509,7 +520,7 @@ namespace ReunionMovement.EditorTools.Addressables
         }
 
         /// <summary>迁移字体：Fonts 下 TMP Font Asset（.asset）→ BuiltIn_Fonts 分组（原地标记，SDF 纹理与源字体作隐式依赖）</summary>
-        [MenuItem("ReunionMovement/Addressables/迁移/字体（TMP → BuiltIn_Fonts）", priority = 37)]
+        [MenuItem("ReunionMovement/Addressables/迁移/字体（TMP → BuiltIn_Fonts）", false, 437)]
         public static void MigrateFonts()
         {
             string srcRoot = ReunionPaths.InFramework("Fonts");

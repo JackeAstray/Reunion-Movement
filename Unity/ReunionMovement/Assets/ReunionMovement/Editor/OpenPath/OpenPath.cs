@@ -1,4 +1,4 @@
-﻿using ReunionMovement.Common;
+using ReunionMovement.Common;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,7 +16,7 @@ namespace ReunionMovement.EditorTools
         /// <summary>
         /// 打开 Data Path 文件夹。
         /// </summary>
-        [MenuItem("ReunionMovement/开发/打开文件夹/Data Path", false, 74)]
+        [MenuItem("ReunionMovement/开发/打开文件夹/Data Path", false, 520)]
         public static void OpenFolderDataPath()
         {
             Execute(Application.dataPath);
@@ -25,7 +25,7 @@ namespace ReunionMovement.EditorTools
         /// <summary>
         /// 打开 Persistent Data Path 文件夹。
         /// </summary>
-        [MenuItem("ReunionMovement/开发/打开文件夹/Persistent Data Path", false, 75)]
+        [MenuItem("ReunionMovement/开发/打开文件夹/Persistent Data Path", false, 521)]
         public static void OpenFolderPersistentDataPath()
         {
             Execute(Application.persistentDataPath);
@@ -34,7 +34,7 @@ namespace ReunionMovement.EditorTools
         /// <summary>
         /// 打开 Streaming Assets Path 文件夹。
         /// </summary>
-        [MenuItem("ReunionMovement/开发/打开文件夹/Streaming Assets Path", false, 76)]
+        [MenuItem("ReunionMovement/开发/打开文件夹/Streaming Assets Path", false, 522)]
         public static void OpenFolderStreamingAssetsPath()
         {
             Execute(Application.streamingAssetsPath);
@@ -43,7 +43,7 @@ namespace ReunionMovement.EditorTools
         /// <summary>
         /// 打开 Temporary Cache Path 文件夹。
         /// </summary>
-        [MenuItem("ReunionMovement/开发/打开文件夹/Temporary Cache Path", false, 77)]
+        [MenuItem("ReunionMovement/开发/打开文件夹/Temporary Cache Path", false, 523)]
         public static void OpenFolderTemporaryCachePath()
         {
             Execute(Application.temporaryCachePath);
@@ -54,7 +54,7 @@ namespace ReunionMovement.EditorTools
         /// <summary>
         /// 打开 Console Log Path 文件夹。
         /// </summary>
-        [MenuItem("ReunionMovement/开发/打开文件夹/Console Log Path", false, 78)]
+        [MenuItem("ReunionMovement/开发/打开文件夹/Console Log Path", false, 524)]
         public static void OpenFolderConsoleLogPath()
         {
             Execute(System.IO.Path.GetDirectoryName(Application.consoleLogPath));

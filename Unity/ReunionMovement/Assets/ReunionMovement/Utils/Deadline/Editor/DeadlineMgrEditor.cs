@@ -1,4 +1,4 @@
-﻿using Microsoft.Win32;
+using Microsoft.Win32;
 using ReunionMovement.Common.Util;
 using System;
 using System.IO;
@@ -30,7 +30,7 @@ namespace ReunionMovement.EditorTools
             }
         }
 
-        [MenuItem("ReunionMovement/开发/清除截止日期数据", false, 106)]
+        [MenuItem("ReunionMovement/开发/清除截止日期数据", false, 540)]
         private static void ClearDeadlineDataMenu()
         {
             if (EditorUtility.DisplayDialog(

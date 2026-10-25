@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -23,10 +23,11 @@ namespace ReunionMovement.EditorTools.Toolbox
             Modules = 2,
             Guards = 3,
             Tools = 4,
-            Docs = 5,
+            Addressables = 5,
+            Docs = 6,
         }
 
-        private static readonly string[] TabLabels = { "概览", "检查", "模块", "守卫", "工具", "文档" };
+        private static readonly string[] TabLabels = { "概览", "检查", "模块", "守卫", "工具", "Addressables", "文档" };
 
         private readonly List<DiagnosticItem> diagnostics = new List<DiagnosticItem>();
         private readonly List<ModuleInfo> modules = new List<ModuleInfo>();
@@ -73,6 +74,7 @@ namespace ReunionMovement.EditorTools.Toolbox
                 case Tab.Modules: DrawModulesTab(); break;
                 case Tab.Guards: DrawGuardsTab(); break;
                 case Tab.Tools: DrawToolsTab(); break;
+                case Tab.Addressables: DrawAddressablesTab(); break;
                 case Tab.Docs: DrawDocsTab(); break;
             }
             EditorGUILayout.EndScrollView();
@@ -146,7 +148,7 @@ namespace ReunionMovement.EditorTools.Toolbox
                 string refreshed = lastRefreshAt == default ? "尚未检查" : "最近检查 " + lastRefreshAt.ToString("HH:mm:ss");
                 EditorGUILayout.LabelField(refreshed, EditorStyles.centeredGreyMiniLabel, GUILayout.Width(160f));
                 GUILayout.FlexibleSpace();
-                EditorGUILayout.LabelField("文档 Docs/ · 守卫 ReunionMovement/开发/守卫 · 方案 Docs/重构方案.md",
+                EditorGUILayout.LabelField("文档 Docs/ · 守卫 ReunionMovement/开发/守卫 · 案案 Docs/重构案案.md",
                     EditorStyles.centeredGreyMiniLabel);
             }
         }

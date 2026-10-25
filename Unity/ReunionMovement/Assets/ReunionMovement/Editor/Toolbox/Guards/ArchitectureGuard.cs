@@ -59,14 +59,14 @@ namespace ReunionMovement.Editor.Guards
             },
         };
 
-        [MenuItem("ReunionMovement/开发/守卫/运行架构检查", false, 61)]
+        [MenuItem("ReunionMovement/开发/守卫/运行架构检查", false, 501)]
         public static void RunAllFromMenu()
         {
             bool ok = RunAll();
             EditorUtility.DisplayDialog("架构检查", ok ? "全部通过 ✅" : "发现问题 ❌，详见 Console", "好");
         }
 
-        [MenuItem("ReunionMovement/开发/守卫/只检查超大文件", false, 62)]
+        [MenuItem("ReunionMovement/开发/守卫/只检查超大文件", false, 502)]
         public static void RunFileSizeOnlyFromMenu()
         {
             bool ok = CheckFileSizes();

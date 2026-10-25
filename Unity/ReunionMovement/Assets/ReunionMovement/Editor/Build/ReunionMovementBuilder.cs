@@ -40,22 +40,22 @@ namespace ReunionMovement.EditorTools.Build
     {
         private const string OutputRoot = "Build";
 
-        [MenuItem("ReunionMovement/构建/Windows (x64)", false, 141)]
+        [MenuItem("ReunionMovement/构建/Windows (x64)", false, 201)]
         public static void BuildWindows() => BuildInteractive(BuildTarget.StandaloneWindows64);
 
-        [MenuItem("ReunionMovement/构建/macOS", false, 142)]
+        [MenuItem("ReunionMovement/构建/macOS", false, 202)]
         public static void BuildMacOS() => BuildInteractive(BuildTarget.StandaloneOSX);
 
-        [MenuItem("ReunionMovement/构建/Linux (x64)", false, 143)]
+        [MenuItem("ReunionMovement/构建/Linux (x64)", false, 203)]
         public static void BuildLinux() => BuildInteractive(BuildTarget.StandaloneLinux64);
 
-        [MenuItem("ReunionMovement/构建/Android (APK)", false, 144)]
+        [MenuItem("ReunionMovement/构建/Android (APK)", false, 204)]
         public static void BuildAndroid() => BuildInteractive(BuildTarget.Android);
 
-        [MenuItem("ReunionMovement/构建/WebGL", false, 145)]
+        [MenuItem("ReunionMovement/构建/WebGL", false, 205)]
         public static void BuildWebGL() => BuildInteractive(BuildTarget.WebGL);
 
-        [MenuItem("ReunionMovement/构建/iOS (Xcode 工程)", false, 146)]
+        [MenuItem("ReunionMovement/构建/iOS (Xcode 工程)", false, 206)]
         public static void BuildIOS() => BuildInteractive(BuildTarget.iOS);
 
         /// <summary>命令行入口：构建当前 Active Build Target。</summary>

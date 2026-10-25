@@ -40,20 +40,20 @@ namespace ReunionMovement.EditorTools.Package
         }
 
         private const string PackageName = "com.reunion.movement";
-        private const string PackageVersion = "1.1.0";
+        private const string PackageVersion = "1.2.0";
         private const string DefaultOutputRelative = "Build/Packages";
 
         /// <summary>默认输出根（<c>&lt;project&gt;/Build/Packages</c>）。</summary>
         public static string DefaultOutputRoot =>
             Path.GetFullPath(Path.Combine(Application.dataPath, "..", DefaultOutputRelative));
 
-        [MenuItem("ReunionMovement/打包/导出 UPM 包（运行时）", false, 131)]
+        [MenuItem("ReunionMovement/打包/导出 UPM 包（运行时）", false, 110)]
         public static void ExportRuntimeFromMenu() => ExportWithDialog(PackageProfile.Runtime);
 
-        [MenuItem("ReunionMovement/打包/导出 UPM 包（完整）", false, 132)]
+        [MenuItem("ReunionMovement/打包/导出 UPM 包（完整）", false, 111)]
         public static void ExportFullFromMenu() => ExportWithDialog(PackageProfile.Full);
 
-        [MenuItem("ReunionMovement/打包/导出 UPM 包（OpenUPM 依赖）", false, 133)]
+        [MenuItem("ReunionMovement/打包/导出 UPM 包（OpenUPM 依赖）", false, 112)]
         public static void ExportOpenUpmFromMenu() => ExportWithDialog(PackageProfile.RuntimeOpenUpm);
 
         /// <summary>命令行入口：运行时 profile，输出到默认目录。</summary>
@@ -368,7 +368,19 @@ Unity 6000.3 游戏框架（{profile} 包）。
         {
             return $@"# Changelog
 
-## [{PackageVersion}] - 2026-10-22
+## [{PackageVersion}] - 2026-10-25
+
+### Added
+- `ModulePresets.Full / Minimal / Without<T> / Of`：模块清单从「背依赖表」变成选一行。
+- `ModuleCatalog.ExpandDependencies`：启动时按 `[ModuleOrder(..., DependsOn)]` 自动补回缺失的被依赖模块，
+  由 `BootstrapOptions.AutoExpandModuleDependencies`（默认开）控制。
+
+### Changed
+- Addressables 默认关闭：仓库不再带 `Assets/AddressableAssetsData`，`AddressablesSetup` 不再自动执行；
+  只有显式启用（工具箱「Addressables」页 / 菜单）时才检查包安装并按需初始化。
+- 菜单顶层按段位固化：工具箱 → 打包 → 构建 → 内容 → Addressables → 开发；`导出 unitypackage` 收进 `打包`。
+
+## [1.1.0] - 2026-10-22
 
 ### Added
 - 标准 UPM 包结构（package.json / README / CHANGELOG / LICENSE / Documentation~）。

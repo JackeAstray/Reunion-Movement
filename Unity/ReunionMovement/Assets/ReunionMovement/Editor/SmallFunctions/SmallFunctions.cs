@@ -1,4 +1,4 @@
-﻿using ReunionMovement.UI.RippleAnimation;
+using ReunionMovement.UI.RippleAnimation;
 using System;
 using System.Collections.Generic;
 using UnityEditor;
@@ -22,7 +22,7 @@ namespace ReunionMovement.EditorTools
         /// <summary>
         /// 小功能窗口
         /// </summary>
-        [MenuItem("ReunionMovement/开发/小功能", false, 107)]
+        [MenuItem("ReunionMovement/开发/小功能", false, 541)]
         public static void SmallFunctionsWindow()
         {
             //version = new System.Version(PlayerSettings.bundleVersion);

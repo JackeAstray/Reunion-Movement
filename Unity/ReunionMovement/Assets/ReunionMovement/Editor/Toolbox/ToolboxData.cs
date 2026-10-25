@@ -36,6 +36,9 @@ namespace ReunionMovement.EditorTools.Toolbox
         private string addressablesCheckMessage;
         private bool addressablesStructureValid;
 
+        /// <summary>GameConfig.enableHotUpdate —— Addressables 的唯一开关（默认关闭）。</summary>
+        private bool hotUpdateEnabled;
+
         // ---------------------------------------------------------------- 诊断收集
 
         private void CollectDiagnostics()
@@ -157,6 +160,8 @@ namespace ReunionMovement.EditorTools.Toolbox
                 return;
             }
 
+            hotUpdateEnabled = hotUpdate.boolValue;
+
             diagnostics.Add(new DiagnosticItem(
                 hotUpdate.boolValue ? DiagnosticLevel.Warning : DiagnosticLevel.Passed,
                 DiagnosticCategory.Config,
@@ -240,6 +245,20 @@ namespace ReunionMovement.EditorTools.Toolbox
 
         private void AddAddressablesSettingsCheck()
         {
+            // 关闭状态下不检查配置：运行时压根不走 Addressables，缺 AddressableAssetsData 是预期状态。
+            if (!hotUpdateEnabled)
+            {
+                diagnostics.Add(new DiagnosticItem(
+                    DiagnosticLevel.Passed,
+                    DiagnosticCategory.Addressables,
+                    "Addressables 配置",
+                    addressablesSettingsFound
+                        ? "Addressables 已关闭（默认走 Resources）。检测到本地已有配置 " + addressablesSettingsPath + "，关闭状态下不会被使用。"
+                        : "Addressables 已关闭（默认走 Resources）：不需要 AddressableAssetsData，也不会自动创建。需要热更时到「Addressables」页启用。",
+                    null, null));
+                return;
+            }
+
             bool ok = addressablesStructureValid && !string.IsNullOrEmpty(addressablesSettingsPath);
             diagnostics.Add(new DiagnosticItem(
                 ok ? DiagnosticLevel.Passed : DiagnosticLevel.Warning,

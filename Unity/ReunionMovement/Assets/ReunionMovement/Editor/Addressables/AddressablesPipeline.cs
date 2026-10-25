@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text;
 using ReunionMovement.Common;
@@ -25,8 +25,12 @@ namespace ReunionMovement.EditorTools.Addressables
         /// <summary>流水线结果输出文件（相对项目根）</summary>
         private const string ResultFile = "Build/Addressables/pipeline_result.txt";
 
+        /// <summary>未安装包或未启用 Addressables 时灰掉流水线菜单。</summary>
+        [MenuItem("ReunionMovement/Addressables/一键流水线（迁移+构建+上传 OSS）", true)]
+        private static bool PipelineMenuValidate() => AddressablesSetup.CanUseAddressables;
+
         /// <summary>编辑器菜单入口（目标平台 WebGL）</summary>
-        [MenuItem("ReunionMovement/Addressables/一键流水线（迁移+构建+上传 OSS）", priority = 5)]
+        [MenuItem("ReunionMovement/Addressables/一键流水线（迁移+构建+上传 OSS）", false, 405)]
         public static void RunPipelineMenu()
         {
             RunPipeline(BuildTarget.WebGL);

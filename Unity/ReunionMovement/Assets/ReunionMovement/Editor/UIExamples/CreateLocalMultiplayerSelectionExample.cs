@@ -44,7 +44,7 @@ namespace ReunionMovement.EditorTools
             public int[] nextLevelByOption;
         }
 
-        [MenuItem("ReunionMovement/内容/生成示例场景", false, 54)]
+        [MenuItem("ReunionMovement/内容/生成示例场景", false, 305)]
         public static void Create()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;

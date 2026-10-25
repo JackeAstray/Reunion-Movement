@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -73,14 +73,19 @@ namespace ReunionMovement.EditorTools.Addressables
         // ============================================================
         //  上传入口（独立菜单触发）
         // ============================================================
+        /// <summary>未安装包或未启用 Addressables 时灰掉上传菜单。</summary>
+        [MenuItem("ReunionMovement/Addressables/上传/OSS 上传配置…", true)]
+        [MenuItem("ReunionMovement/Addressables/上传/上传到 OSS（增量）", true)]
+        private static bool UploadMenuValidate() => AddressablesSetup.CanUseAddressables;
+
         /// <summary>打开 OSS 上传配置窗口（Endpoint / Bucket / AK / SK / Prefix / Version）</summary>
-        [MenuItem("ReunionMovement/Addressables/上传/OSS 上传配置…", priority = 40)]
+        [MenuItem("ReunionMovement/Addressables/上传/OSS 上传配置…", false, 440)]
         public static void OpenConfigWindow()
         {
             OSSUploadConfigWindow.Open();
         }
 
-        [MenuItem("ReunionMovement/Addressables/上传/上传到 OSS（增量）", priority = 41)]
+        [MenuItem("ReunionMovement/Addressables/上传/上传到 OSS（增量）", false, 441)]
         public static void UploadToOSS()
         {
             bool ok = UploadToOSSCore(out string message);
