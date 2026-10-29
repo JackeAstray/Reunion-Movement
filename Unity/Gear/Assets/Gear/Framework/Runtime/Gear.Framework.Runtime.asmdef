@@ -1,0 +1,27 @@
+{
+    "name": "Gear.Framework.Runtime",
+    "rootNamespace": "Gear.Framework.Runtime",
+    "references": [
+        "Gear.Base",
+        "Gear.Common",
+        "Gear.Framework.Modules",
+        "Gear.Utilities",
+        "Gear.GenerateScript.AutoScripts",
+        "UniTask",
+        "UniTask.Addressables",
+        "UnityEngine.UI",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "Unity.Addressables",
+        "Unity.ResourceManager"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

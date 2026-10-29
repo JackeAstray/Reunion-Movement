@@ -1,0 +1,23 @@
+{
+    "name": "Gear.Utilities.UI.ImageExtensions.Editor",
+    "rootNamespace": "Gear.UI.ImageExtensions.Editor",
+    "references": [
+        "Gear.Utilities",
+        "Gear.Common",
+        "Gear.Framework.Runtime",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro",
+        "Gear.Editor.Shared"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

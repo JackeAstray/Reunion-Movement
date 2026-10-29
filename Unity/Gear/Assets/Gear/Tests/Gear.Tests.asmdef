@@ -1,0 +1,37 @@
+{
+    "name": "Gear.Tests",
+    "rootNamespace": "Gear.Tests",
+    "references": [
+        "Gear.Base",
+        "Gear.Common",
+        "Gear.Framework.Modules",
+        "Gear.Utilities",
+        "Gear.Framework.Runtime",
+        "Gear.GenerateScript.AutoScripts",
+        "Gear.Toolbox.Editor",
+        "UniTask",
+        "UniTask.Addressables",
+        "UnityEngine.UI",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "Unity.Addressables",
+        "Unity.ResourceManager",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

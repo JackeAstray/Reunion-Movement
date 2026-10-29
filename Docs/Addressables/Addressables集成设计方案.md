@@ -1,4 +1,4 @@
-# Addressables 集成设计方案（Astray）
+# Addressables 集成设计方案（Gear）
 
 > 说明：本文档为设计交付物。资源数量等为 2026-08-11 工作区实测数据；凡标有【估算】的数值（如 Bundle 体积、迁移工时）均为工程估算值，落地前需以实际构建结果校准。
 
@@ -6,7 +6,7 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 目标项目 | Astray（Unity WebGL 为主，兼容移动端 / PC） |
+| 目标项目 | Gear（Unity WebGL 为主，兼容移动端 / PC） |
 | 目标平台 | WebGL（Build/index.html 已有输出） |
 | 相关版本 | Addressables 2.9.1（已安装）、UniTask.Addressables（已随 UniTask 提供） |
 | 现状 | Addressables 包已装但从未配置（无 AddressableAssetsData 目录） |
@@ -37,7 +37,7 @@
 | 构建/发布工具 | 无 Editor 一键构建、无部署清单生成 |
 
 ### 1.3 现有资源规模（实测）
-`Assets/Astray/Resources/` 下共约 139 个资源文件：
+`Assets/Gear/Resources/` 下共约 139 个资源文件：
 
 | 类型 | 数量 | 建议归属 |
 | --- | --- | --- |
@@ -154,7 +154,7 @@ modules.Add(SceneSystem.Instance);       // 2: 场景管理（原 1，顺延）
 
 ### 5.2 类骨架与 API
 ```csharp
-namespace Astray.Framework.Runtime.Resources
+namespace Gear.Framework.Runtime.Resources
 {
     /// <summary>
     /// Addressables 统一封装：受管资源异步加载/实例化/释放 + 远程更新。
@@ -219,7 +219,7 @@ namespace Astray.Framework.Runtime.Resources
 新建静态常量类，消除魔法字符串（与 `Config` 的 const 风格一致）：
 
 ```csharp
-namespace Astray.Framework.Runtime.Resources
+namespace Gear.Framework.Runtime.Resources
 {
     public static class AddressableKeys
     {
@@ -249,19 +249,19 @@ namespace Astray.Framework.Runtime.Resources
 | Profile 名 | Local.LoadPath | Remote.LoadPath |
 | --- | --- | --- |
 | `DevLocal`（**默认激活**） | `{UnityEngine.AddressableAssets.Addressables.BuildPath}` | `http://localhost:8080/StreamingAssets` |
-| `Publish` | `{UnityEngine.AddressableAssets.Addressables.BuildPath}` | `https://cdn.example.com/astray/{version}/` |
+| `Publish` | `{UnityEngine.AddressableAssets.Addressables.BuildPath}` | `https://cdn.example.com/gear/{version}/` |
 
 - 默认激活 `DevLocal`（`AddressablesSetup` 自动切换），避免停留在 `Default`（其 `Remote.LoadPath` 为 `<undefined>`）。
-- **远程 Catalog 默认关闭**（`m_BuildRemoteCatalog=false`）：`AddressablesSetup` 不主动开启；Phase 3 部署 CDN 前执行菜单 `Astray → Addressables → 配置/启用远程 Catalog（Phase 3 热更）` 手动开启（自动把 `RemoteCatalogBuildPath/LoadPath` 指向 Remote 变量）。
+- **远程 Catalog 默认关闭**（`m_BuildRemoteCatalog=false`）：`AddressablesSetup` 不主动开启；Phase 3 部署 CDN 前执行菜单 `Gear → Addressables → 配置/启用远程 Catalog（Phase 3 热更）` 手动开启（自动把 `RemoteCatalogBuildPath/LoadPath` 指向 Remote 变量）。
 - `AddressablesSetup` 对已存在的 Remote 分组会**校验并修正** BuildPath/LoadPath 指向 Remote 变量（修复历史/手动创建分组遗留的 Local 路径错误）。
 - `Remote.LoadPath` 的 base URL + `{version}` 写入 `GameConfig`（`remoteBundleUrl`、`remoteCatalogUrl`），构建时由 Editor 工具回填，避免硬编码。
 - 移动端/PC 的 Remote Bundle 走 `Caching`；WebGL 走浏览器 IndexedDB。
 
-### 6.2 Editor 工具（新增 `Assets/Astray/Editor/Addressables/`）
+### 6.2 Editor 工具（新增 `Assets/Gear/Editor/Addressables/`）
 | 脚本 | 职责 |
 | --- | --- |
 | `AddressablesSetup.cs` | 一键创建 `AddressableAssetsData`、分组、Label、Profile；`[InitializeOnLoad]` 检测缺失时自动建；已存在分组也校验/修正 Remote 路径；默认激活 `DevLocal`；提供「配置/启用远程 Catalog」菜单（默认关闭） |
-| `AddressablesBuildWindow.cs` | 菜单 `Astray/Addressables/一键构建`：构建 Addressables → 输出 catalog hash → 写版本清单 `Build/Addressables/version.json` |
+| `AddressablesBuildWindow.cs` | 菜单 `Gear/Addressables/一键构建`：构建 Addressables → 输出 catalog hash → 写版本清单 `Build/Addressables/version.json` |
 | `AddressablesDeployReport.cs` | 生成部署清单（哪些 Bundle 需上传 CDN、md5、大小），供 CI/人工上传 |
 
 ### 6.3 WebGL 部署清单

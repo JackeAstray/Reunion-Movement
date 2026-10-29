@@ -1,0 +1,24 @@
+{
+    "name": "Gear.GenerateScript.UI",
+    "rootNamespace": "Gear.Framework.Runtime.UI",
+    "references": [
+        "Gear.Base",
+        "Gear.Common",
+        "Gear.Framework.Runtime",
+        "Gear.Framework.Modules",
+        "Gear.Utilities",
+        "UniTask",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

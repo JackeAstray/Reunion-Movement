@@ -1,4 +1,4 @@
-# Astray
+# Gear
 
 A Unity game framework focused on a **pure C# lifecycle**, modular systems, a four-transport network layer,
 Addressables hot update, and SDF-based UI.
@@ -21,9 +21,9 @@ URP and replacing APIs such as `FindObjectsByType`; this is not verified.
 
 ## Quick start
 
-1. Open `Unity/Astray` with Unity Hub.
+1. Open `Unity/Gear` with Unity Hub.
 2. Wait for the first import and compilation to finish.
-3. Open `Assets/Astray/Scenes/StartGame.unity` and press Play.
+3. Open `Assets/Gear/Scenes/StartGame.unity` and press Play.
 4. `Bootstrap` creates the engine, initializes the registered modules, loads the boot scene and opens
    the start-up UI.
 
@@ -31,7 +31,7 @@ The example entry lives in `Game/StartGameEntry.cs` and is **not** shipped in th
 For your own game, declare:
 
 ```csharp
-[assembly: AstrayGameEntry(typeof(MyGame.MyGameEntry))]
+[assembly: GearGameEntry(typeof(MyGame.MyGameEntry))]
 ```
 
 or set `Bootstrap.Options.Entry`. Without an entry, `Bootstrap` logs an error and skips startup instead
@@ -42,14 +42,14 @@ of taking over the host project.
 Export a package from the editor menu:
 
 ```
-Astray → 打包 → 导出 UPM 包（运行时 / 完整 / OpenUPM 依赖）
+Gear → 打包 → 导出 UPM 包（运行时 / 完整 / OpenUPM 依赖）
 ```
 
-The default output is `Unity/Astray/Build/Packages/com.jackeastray.astray`.
+The default output is `Unity/Gear/Build/Packages/com.jackeastray.gear`.
 Then add it to the target project's `Packages/manifest.json`:
 
 ```json
-"com.jackeastray.astray": "file:../../Astray/Unity/Astray/Build/Packages/com.jackeastray.astray"
+"com.jackeastray.gear": "file:../../Gear/Unity/Gear/Build/Packages/com.jackeastray.gear"
 ```
 
 Or use Package Manager → `+` → *Add package from disk...* and select its `package.json`.
@@ -66,7 +66,7 @@ See [Docs/Packaging/UPM打包指南.md](Docs/Packaging/UPM打包指南.md) for d
 ## Project layout
 
 ```
-Unity/Astray/Assets/Astray/
+Unity/Gear/Assets/Gear/
 ├── Common/      Logging, config, enums, singleton base
 ├── Framework/
 │   ├── Base/      Interfaces and state only

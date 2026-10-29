@@ -1,0 +1,793 @@
+using Cysharp.Threading.Tasks;
+using System;
+using System.CodeDom.Compiler;
+using System.Collections.Generic;
+using UnityEngine.Networking;
+
+using Gear.Common;
+using Gear.Utilities;
+namespace Gear.Framework.Modules.Download
+{
+    /// <summary>
+    /// Unity 文件下载器，负责调度并下载一组 URL 到本地。
+    /// </summary>
+    public class FileDownloader : IDownloader
+    {
+        public FileDownloader() { }
+
+        public FileDownloader(
+            string downloadPath,
+            bool isMd5Name,
+            bool downloadToRoot,
+            int maxConcurrency,
+            bool abandonOnFailure,
+            bool continueAfterFailure,
+            bool tryMultipartDownload,
+            List<string> uris
+        )
+        {
+            DownloadPath = downloadPath;
+            IsMD5Name = isMd5Name;
+            DownloadToRoot = downloadToRoot;
+            MaxConcurrency = maxConcurrency;
+            AbandonOnFailure = abandonOnFailure;
+            ContinueAfterFailure = continueAfterFailure;
+            this.tryMultipartDownload = tryMultipartDownload;
+            Uris = uris?.ToArray() ?? Array.Empty<string>();
+        }
+
+        internal readonly SemaphoreLocker Locker = new SemaphoreLocker();
+
+        internal int initialCount;
+        internal int timeout = HttpDefaults.DefaultChunkTimeoutSeconds;
+        internal int maxConcurrency = 4;
+        internal bool abandonOnFailure = true;
+        internal bool continueAfterFailure = false;
+        internal bool downloading = false;
+        internal bool paused = false;
+        internal bool didError = false;
+        // 用户/内部是否触发过 Cancel：用于区分"正常完成"与"被取消"，
+        // 否则 Download() 等待循环因 downloading=false 退出后会把取消误报为成功
+        internal bool didCancel = false;
+        internal int numFilesRemaining = 0;
+        internal long startTime = 0, endTime = 0;
+        internal string downloadPath;
+        internal bool downloadToRoot;
+        internal bool isMd5Name;
+        internal string[] pendingUris = null;
+        // 待处理 URI 的 FIFO 取队偏移量，代替每次 Skip().ToArray()。
+        private int pendingOffset = 0;
+        // 被 Cancel(string uri) 标记为取消的 pendingUris 索引（按位置而非 URI 值，兼容重复 URI）。
+        // Cancel 只移除 executors 而不动 pendingUris，必须同步标记位置才能维持双队列 FIFO 对齐。
+        private readonly HashSet<int> cancelledPendingIndices = new HashSet<int>();
+
+        #region Events/Actions
+        public event Action OnDownloadsSuccess;
+        public event Action OnDownloadInvoked;
+        public event Action OnCancelInvoked;
+        public event Action<string> OnCancelIndividual;
+        public event Action<string> OnDownloadIndividualInvoked;
+        public event Action OnCancel;
+        #endregion
+
+        public override string iDownloadExecutorClassName => "UWRExecutor";
+
+        public override long StartTime => startTime;
+        public override long EndTime => endTime;
+
+        /// <summary>
+        /// 每秒处理的文件数（下载速度指标）。
+        /// </summary>
+        /// <value></value>
+        public override float NumFilesPerSecond
+        {
+            get
+            {
+                if (ElapsedTime == 0 || DownloadedUris == null || DownloadedUris.Length == 0)
+                {
+                    return 0f;
+                }
+                return (DownloadedUris.Length * 1000f) / ElapsedTime;
+            }
+        }
+
+        public float MegabytesDownloadedPerSecond => BytesDownloadedPerSecond / 1000f;
+
+        public float BytesDownloadedPerSecond
+        {
+            get
+            {
+                float totalBytes = 0;
+                float totalElapsed = 0;
+                for (int i = 0; i < executors.Count; i++)
+                {
+                    totalBytes += executors[i].BytesDownloaded;
+                    totalElapsed += executors[i].ElapsedTime;
+                }
+                for (int i = 0; i < executorsOld.Count; i++)
+                {
+                    totalBytes += executorsOld[i].BytesDownloaded;
+                    totalElapsed += executorsOld[i].ElapsedTime;
+                }
+                return totalElapsed > 0 ? totalBytes / totalElapsed : 0;
+            }
+        }
+
+        public override int Timeout
+        {
+            get => timeout;
+            set => timeout = value;
+        }
+
+        public override int MaxConcurrency
+        {
+            get => maxConcurrency;
+            set => maxConcurrency = value;
+        }
+
+        public override string DownloadPath
+        {
+            get => downloadPath;
+            set => downloadPath = value;
+        }
+
+        public override bool IsMD5Name
+        {
+            get => isMd5Name;
+            set => isMd5Name = value;
+        }
+
+
+        public override bool DownloadToRoot
+        {
+            get => downloadToRoot;
+            set => downloadToRoot = value;
+        }
+
+        public override bool AbandonOnFailure
+        {
+            get => abandonOnFailure;
+            set => abandonOnFailure = value;
+        }
+
+        public override bool ContinueAfterFailure
+        {
+            get => continueAfterFailure;
+            set => continueAfterFailure = value;
+        }
+
+        public override bool Downloading => downloading;
+
+        public override bool DidError
+        {
+            get => didError;
+            protected set => didError = value;
+        }
+
+        public override bool Paused => paused;
+
+        public override int NumFilesRemaining => numFilesRemaining;
+
+        public override string[] PendingURIS => pendingUris;
+
+        public override List<string> IncompletedURIS => incompletedUris;
+
+        public int NumThreads => n;
+        internal int n = 0;
+
+        /// <summary>
+        /// 下载所有 URI 并等待完成，超过最大等待时间（默认 = Timeout × 文件数量，最低 30 秒）则强制取消。
+        /// </summary>
+        /// <returns></returns>
+        public override async UniTask<bool> Download()
+        {
+            if (Downloading || Uris == null || Uris.Length == 0)
+            {
+                Log.Error("{0}.Download() 调用失败：Uris 为 null 或为空，已取消下载", GetType().FullName);
+                return false;
+            }
+            OnDownloadInvoked?.Invoke();
+            // Uris 已在上方守卫保证非空非空数组，Clone 替代 LINQ ToArray
+            pendingUris = (string[])Uris.Clone();
+            pendingOffset = 0;
+            cancelledPendingIndices.Clear();
+            numFilesRemaining = Uris.Length;
+            startTime = Environment.TickCount;
+            downloading = true;
+            // 重置跨轮统计：否则二次 Download() 后成功/失败 URI 列表翻倍；
+            // didError 不重置会把上一轮失败沿带到本轮；didCancel 同理
+            downloadedUris.Clear();
+            incompletedUris.Clear();
+            didError = false;
+            didCancel = false;
+
+            // 二次 Download() 支持：上一轮下载结束后 executors 已被 Dispatch 清空，
+            // 通过 Uris setter 重建执行器队列（含 URI 过滤、事件订阅与请求头深拷贝），否则会卡死到超时。
+            if (executors.Count == 0)
+            {
+                executorsOld.Clear();
+                string[] currentUris = Uris;
+                Uris = currentUris;
+            }
+
+            initialCount = Uris.Length;
+            int threadCount = Math.Min(MaxConcurrency, numFilesRemaining);
+            if (threadCount <= 0)
+            {
+                Log.Error("{0}.错误：MaxConcurrency 需要大于 0", GetType().FullName);
+                // 回滚 downloading 状态，避免实例永久卡在 Downloading 状态无法再次调用
+                downloading = false;
+                return false;
+            }
+            var tasks = new List<UniTask<bool>>(threadCount);
+            for (int i = 0; i < threadCount; i++)
+            {
+                tasks.Add(Dispatch());
+            }
+
+            await UniTask.WhenAll(tasks);
+
+            // 超时等待循环：最多等待 (Timeout * 文件数 * 2) 秒，最低 30 秒
+            int maxWaitSeconds = Math.Max(30, Timeout * Uris.Length * 2);
+            float waited = 0f;
+            const float pollInterval = 0.1f;
+            bool timedOut = false;
+
+            while (Downloading && !(DidError && !ContinueAfterFailure))
+            {
+                if (paused)
+                {
+                    // 暂停期间不累计超时：用户主动暂停不应被下载超时强杀
+                    await UniTask.Delay((int)(pollInterval * 1000));
+                    continue;
+                }
+                if (waited >= maxWaitSeconds)
+                {
+                    Log.Error("下载超时：已等待 {0} 秒，仍有 {1} 个文件未完成，强制取消下载", maxWaitSeconds, NumFilesRemaining);
+                    timedOut = true;
+                    await Cancel();
+                    break;
+                }
+                await UniTask.Delay((int)(pollInterval * 1000));
+                waited += pollInterval;
+            }
+
+            // 返回真实结果：未超时、未被取消 且（无失败 或 配置为容忍失败继续）才算成功。
+            // 修复：原先无条件 return true，超时/失败/用户取消时调用方无法区分。
+            return !timedOut && !didCancel && (!DidError || ContinueAfterFailure);
+        }
+
+        /// <summary>
+        /// 下载单个 URI。
+        /// </summary>
+        /// <param name="uri"></param>
+        /// <returns></returns>
+        public override UniTask<bool> Download(string uri)
+        {
+            if (!Downloading)
+            {
+                didError = false;
+                didCancel = false;
+                downloading = true;
+                startTime = Environment.TickCount;
+                initialCount = 1;
+            }
+
+            if (FindExecutor(executors, uri) == null && FindExecutor(executorsOld, uri) == null)
+            {
+                var idf = DownloadExecutorFactory.CreateFromClassName(iDownloadExecutorClassName);
+                idf.Uri = uri;
+                idf.DownloadPath = DownloadPath;
+                idf.IsMD5Name = IsMD5Name;
+                idf.DownloadToRoot = DownloadToRoot;
+                idf.AbandonOnFailure = AbandonOnFailure;
+                idf.Timeout = Timeout;
+                // pendingUris 可能为 null（未先调用无参 Download()），需判空后再追加。
+                // 使用项目自带的 string[] 扩展 Add（非 LINQ），避免 Append+ToArray 分配
+                pendingUris = (pendingUris ?? Array.Empty<string>()).Add(uri);
+                executors.Add(idf);
+                numFilesRemaining++;
+            }
+            else if (FindExecutor(executorsOld, uri) != null)
+            {
+                var idf = FindExecutor(executorsOld, uri);
+                executorsOld.Remove(idf);
+                pendingUris = (pendingUris ?? Array.Empty<string>()).Add(uri);
+                executors.Add(idf);
+            }
+
+            OnDownloadIndividualInvoked?.Invoke(uri);
+            return UniTask.FromResult(true);
+        }
+
+        /// <summary>
+        /// 返回 false 的异步结果。
+        /// </summary>
+        /// <returns></returns>
+        internal UniTask<bool> ReturnFalseAsync() => UniTask.FromResult(false);
+
+        /// <summary>
+        /// 分发下一个任务，使用偏移量代替 Skip+ToArray（避免每次重新分配数组）。
+        /// </summary>
+        internal UniTask<bool> Dispatch()
+        {
+            // 跳过被 Cancel(string uri) 标记的位置，维持 pendingUris 与 executors 的 FIFO 对齐
+            // （Cancel 已从 executors 移除对应执行器并递减 numFilesRemaining，此处只推进偏移）
+            while (pendingUris != null && pendingOffset < pendingUris.Length &&
+                   cancelledPendingIndices.Contains(pendingOffset))
+            {
+                cancelledPendingIndices.Remove(pendingOffset);
+                pendingOffset++;
+            }
+
+            if (pendingUris == null || pendingOffset >= pendingUris.Length)
+            {
+                return ReturnFalseAsync();
+            }
+
+            // executors 与异步回调访问 pendingUris 不同步，需越界保护
+            if (executors.Count == 0)
+            {
+                Log.Error("Dispatch: executors 列表为空，无法分发任务");
+                return ReturnFalseAsync();
+            }
+
+            string uri = pendingUris[pendingOffset];
+            IDownloadExecutor idf = executors[0];
+            pendingOffset++;
+            // List 原地操作：头部移除 + 尾部追加，零数组分配
+            // （原 Skip(1).ToArray() + Append().ToArray() 每次分发分配两个新数组）
+            executors.RemoveAt(0);
+            executorsOld.Add(idf);
+
+            if (idf.CompletedMultipartDownload)
+            {
+                // 该 executor 已完成分块下载（可能被 Download(string uri) 从 executorsOld 重新入队）：
+                // 必须走 DispatchCompletion 递减计数并继续分发下一个任务，
+                // 否则 numFilesRemaining 永不归零 → OnDownloadsSuccess 永不触发，任务队列卡死。
+                _ = DispatchCompletion(idf);
+                return ReturnFalseAsync();
+            }
+
+            if (!idf.DidHeadReq && idf.TryMultipartDownload)
+            {
+                // 自定义执行器也可能开启 TryMultipartDownload，但仅 UWRExecutor 支持 HEAD 预检：
+                // 硬转会抛 InvalidCastException（Dispatch 无异常隔离，直接炸掉下载主流程），
+                // 这里安全回退到整包下载
+                if (idf is UWRExecutor uwrExec)
+                {
+                    var treq = uwrExec.HeadRequest();
+
+                    if (treq != null)
+                    {
+                        n++;
+                        treq.completed += (obj) =>
+                        {
+                            // 取消后 HEAD 完成回调不再发起首块下载，避免取消后仍产生网络 IO 与文件写入
+                            if (!Downloading)
+                            {
+                                n--;
+                                return;
+                            }
+                            var rv = idf.Download();
+                            if (rv != null)
+                            {
+                                rv.completed += resp =>
+                                {
+                                    n--;
+                                    _ = DispatchCompletion(idf);
+                                };
+                            }
+                            else
+                            {
+                                Log.Warning("Download for {0} returned null，未启动下载流程", idf.Uri);
+                                n--;
+                                // 走统一完成处理：递减 numFilesRemaining 并继续分发/完成检测。
+                                // 修复：旧逻辑只 n-- + Dispatch，numFilesRemaining 不减 →
+                                // “文件已存在跳过下载”（UWRExecutor 续传）场景会让队列挂起到超时。
+                                _ = DispatchCompletion(idf);
+                            }
+                        };
+                    }
+                    else
+                    {
+                        // HeadRequest 返回 null，说明该 URI 不可分块，直接进入下一步
+                        Log.Warning("HeadRequest for {0} returned null，跳过该 URI", idf.Uri);
+                        _ = DispatchCompletion(idf);
+                    }
+
+                    return ReturnFalseAsync();
+                }
+                // 非 UWRExecutor：关闭分块预检，回退整包下载
+                idf.TryMultipartDownload = false;
+            }
+
+            var req = idf.Download();
+            if (req == null)
+            {
+                // 传 idf：Download 返回 null 可能是"跳过"也可能是"启动失败"（DidError），
+                // 不带参数的 DispatchCompletion 会把错误当"已处理"吞掉，文件静默丢失
+                _ = DispatchCompletion(idf);
+                return ReturnFalseAsync();
+            }
+            n++;
+            req.completed += resp =>
+            {
+                n--;
+                _ = DispatchCompletion(idf);
+            };
+            return ReturnFalseAsync();
+        }
+
+        /// <summary>
+        /// 下载指定的 IDF，用于分块下载。
+        /// </summary>
+        /// <param name="idf"></param>
+        /// <returns></returns>
+        internal UniTask<bool> Dispatch(IDownloadExecutor idf)
+        {
+            var req = idf.Download();
+            if (req == null)
+            {
+                _ = DispatchCompletion(idf);
+                return ReturnFalseAsync();
+            }
+            n++;
+            req.completed += resp =>
+            {
+                n--;
+                _ = DispatchCompletion(idf);
+            };
+            return ReturnFalseAsync();
+        }
+
+        internal async UniTask DispatchCompletion()
+        {
+            bool invokeSuccess = false;
+            await Locker.LockAsync(async () =>
+            {
+                if (!Downloading)
+                {
+                    return;
+                }
+
+                // 该 URI 未启动下载（Download 返回 null），视为已处理
+                numFilesRemaining = Math.Max(0, numFilesRemaining - 1);
+                // pendingUris 数组永不收缩，必须用 offset 判断是否还有待分发任务
+                if (pendingOffset < pendingUris.Length)
+                {
+                    await Dispatch();
+                    // Dispatch 可能因尾部全是取消标记/执行器耗尽而直接返回 false，
+                    // 此时若所有在途请求也已结束，必须补一次完成判定，
+                    // 否则 OnDownloadsSuccess 永不触发、Download() 拖到超时强杀。
+                    if (pendingOffset >= pendingUris.Length && NumThreads == 0)
+                    {
+                        invokeSuccess = true;
+                        endTime = Environment.TickCount;
+                        downloading = false;
+                    }
+                }
+                else if (NumThreads == 0)
+                {
+                    invokeSuccess = true;
+                    endTime = Environment.TickCount;
+                    downloading = false;
+                }
+            });
+
+            // 用户回调移出锁外：避免锁内执行用户代码导致的重入死锁（SemaphoreSlim 非可重入）
+            if (invokeSuccess)
+            {
+                OnDownloadsSuccess?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// 异步方式处理单个下载完成，不阻塞等待。
+        /// </summary>
+        /// <param name="idf"></param>
+        /// <returns></returns>
+        internal async UniTask DispatchCompletion(IDownloadExecutor idf)
+        {
+            bool invokeSuccess = false;
+            await Locker.LockAsync(async () =>
+            {
+                if (!Downloading)
+                {
+                    idf.Cancel();
+                    return;
+                }
+
+                // 单个 URI 取消路径：Cancel(uri) 已中止在途 UWR 并递减 numFilesRemaining，
+                // 本回调不再重复处理（否则会双递减计数，或对分块下载重新发起下一块）
+                if (idf.IsCanceled) return;
+
+                if (idf.DidError)
+                {
+                    // 记录下载器级失败状态（Download() 据此返回结果，调用方可区分成败）
+                    didError = true;
+                    numFilesRemaining = Math.Max(0, numFilesRemaining - 1);
+                    if (ContinueAfterFailure && pendingOffset < pendingUris.Length)
+                    {
+                        _ = Dispatch();
+                    }
+                    else
+                    {
+                        await Cancel();
+                    }
+                }
+                else
+                {
+                    if (!idf.CompletedMultipartDownload && idf.MultipartDownload)
+                    {
+                        _ = Dispatch(idf);
+                        return;
+                    }
+                    numFilesRemaining = Math.Max(0, numFilesRemaining - 1);
+                    if (pendingOffset < pendingUris.Length)
+                    {
+                        _ = Dispatch();
+                    }
+                    else if (NumThreads == 0)
+                    {
+                        invokeSuccess = true;
+                        endTime = Environment.TickCount;
+                        downloading = false;
+                    }
+                }
+            });
+
+            // 用户回调移出锁外（同上：避免锁内执行用户代码）
+            if (invokeSuccess)
+            {
+                OnDownloadsSuccess?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// 获取对应的执行器。
+        /// </summary>
+        /// <param name="uri"></param>
+        /// <returns></returns>
+        public IDownloadExecutor GetExecutor(string uri)
+        {
+            var exec = FindExecutor(executors, uri);
+            if (exec != null)
+            {
+                return exec;
+            }
+            return FindExecutor(executorsOld, uri);
+        }
+
+        /// <summary>
+        /// 暂停所有在途下载：中止在途请求但保留已完成部分，配合 Resume 断点续传。
+        /// 等待循环在暂停期间不累计超时。
+        /// </summary>
+        public void Pause()
+        {
+            if (paused || !downloading) return;
+            paused = true;
+            for (int i = 0; i < executors.Count; i++)
+            {
+                try { executors[i].Pause(); } catch (Exception ex) { Log.Error("Pause executor 异常: {0}", ex.Message); }
+            }
+            for (int i = 0; i < executorsOld.Count; i++)
+            {
+                try { executorsOld[i].Pause(); } catch (Exception ex) { Log.Error("Pause executor 异常: {0}", ex.Message); }
+            }
+        }
+
+        /// <summary>
+        /// 恢复全部暂停的下载：重新发起在途执行器的下载（UWRExecutor 基于已存在文件走 Range 续传），
+        /// 并重接完成回调（计数/分发语义与 Dispatch 一致）。
+        /// </summary>
+        public void Resume()
+        {
+            if (!paused) return;
+            paused = false;
+            for (int i = 0; i < executorsOld.Count; i++)
+            {
+                var exec = executorsOld[i];
+                try
+                {
+                    if (!exec.Resume()) continue; // 非暂停中的执行器（已完成/已取消）跳过
+                    n++;
+                    var rv = exec.Download();
+                    if (rv != null)
+                    {
+                        // lambda 参数不得命名为 _：会遮蔽丢弃符，导致 "_ = DispatchCompletion(exec)" 变成对参数赋值
+                        rv.completed += resp =>
+                        {
+                            n--;
+                            _ = DispatchCompletion(exec);
+                        };
+                    }
+                    else
+                    {
+                        n--;
+                        _ = DispatchCompletion(exec);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("Resume executor 异常: {0}", ex.Message);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 取消所有下载。
+        /// </summary>
+        /// <returns></returns>
+        public override UniTask<bool> Cancel()
+        {
+            downloading = false;
+            didCancel = true;
+            // 订阅者异常隔离：回调抛异常不得中断后续 executor 的取消循环
+            // （否则在途 UWR 继续运行、文件继续写，而调用方已以为取消成功）
+            try { OnCancel?.Invoke(); } catch (Exception ex) { Log.Warning("OnCancel 订阅者异常: {0}", ex.Message); }
+            try { OnCancelInvoked?.Invoke(); } catch (Exception ex) { Log.Warning("OnCancelInvoked 订阅者异常: {0}", ex.Message); }
+            endTime = Environment.TickCount;
+
+            // 总是中止所有在途 executor（无论 AbandonOnFailure 配置），
+            // 避免取消后网络 IO 继续运行、文件被重新写回、回调仍触发。
+            // UWRExecutor.Cancel 内部会 Abort 在途 UWR，并视 abandonOnFailure 删除未完成文件。
+            for (int i = 0; i < executors.Count; i++)
+            {
+                try { executors[i].Cancel(); } catch (Exception ex) { Log.Error("Cancel executor 异常: {0}", ex.Message); }
+            }
+            for (int i = 0; i < executorsOld.Count; i++)
+            {
+                try { executorsOld[i].Cancel(); } catch (Exception ex) { Log.Error("Cancel executor 异常: {0}", ex.Message); }
+            }
+
+            return UniTask.FromResult(true);
+        }
+
+        /// <summary>
+        /// 取消单个 URI 的下载。
+        /// </summary>
+        /// <param name="uri"></param>
+        /// <returns></returns>
+        public override UniTask<bool> Cancel(string uri)
+        {
+            // 与 Cancel() 保持一致：订阅者异常不得中断取消本身。本调用不是终态语句，
+            // 抛异常会跳过下面的中止与计数递减 ⇒ 该 URI 仍在下载，而调用方已以为取消成功
+            // （Cancel() 的注释里写明了这一后果）。
+            try { OnCancelIndividual?.Invoke(uri); }
+            catch (Exception ex) { Log.Warning("OnCancelIndividual 订阅者异常: {0}", ex.Message); }
+
+            int idx = FindExecutorIndex(executors, uri);
+            if (idx >= 0)
+            {
+                var exec = executors[idx];
+                exec.Cancel();
+                executors.RemoveAt(idx);
+                executorsOld.Add(exec);
+
+                // 关键修复：同步标记 pendingUris 对应位置为跳过，否则 Dispatch 取到的
+                // URI 与 executors[0] 错位 → 文件被写到错误执行器的路径/请求头，甚至卡死。
+                // 注意：executors[idx] 对应的是 pendingUris 中【第 idx 个未被取消标记的位置】，
+                // 不能直接用 pendingOffset + idx（更早的取消标记位置未消费时会错位，
+                // 连续取消多个 URI 时会把后一个 URI 标到已标记位置上导致漏标）。
+                int pendingIndex = -1;
+                if (pendingUris != null)
+                {
+                    int remaining = idx;
+                    for (int i = pendingOffset; i < pendingUris.Length; i++)
+                    {
+                        if (cancelledPendingIndices.Contains(i)) continue;
+                        if (remaining == 0)
+                        {
+                            pendingIndex = i;
+                            break;
+                        }
+                        remaining--;
+                    }
+                }
+                if (pendingIndex >= 0)
+                {
+                    cancelledPendingIndices.Add(pendingIndex);
+                }
+                // 该 URI 的任务被终结（未分发即无在途 UWR，不会再有 completed 回调递减计数）
+                numFilesRemaining = Math.Max(0, numFilesRemaining - 1);
+            }
+            else if (FindExecutor(executorsOld, uri) == null)
+            {
+                Log.Error("从未下载过该 URI，无法取消 {0}", uri);
+                return UniTask.FromResult(false);
+            }
+            else
+            {
+                var oldExec = FindExecutor(executorsOld, uri);
+                // 在途执行器（已 Dispatch、UWR 下载中）：必须真正中止 —— 否则 UWR 继续跑、
+                // 文件继续写，却向调用方返回 true（原逻辑只打“已完成”日志）。
+                // 已完成（completed / CompletedMultipartDownload / 已取消）的执行器不再处理。
+                if (oldExec != null && !oldExec.IsCanceled && !oldExec.CompletedMultipartDownload && !oldExec.completed)
+                {
+                    oldExec.Cancel();
+                    numFilesRemaining = Math.Max(0, numFilesRemaining - 1);
+                    Log.Warning("已取消在途下载 {0}", uri);
+                }
+                else
+                {
+                    Log.Error("已完成的 URI 无法取消");
+                }
+            }
+
+            // 逐个取消后计数可能归零且无在途请求：必须补完成判定，
+            // 否则 Download() 等待循环（Downloading 仍 true）会一直挂到超时强杀
+            if (numFilesRemaining <= 0 && NumThreads == 0 && Downloading)
+            {
+                downloading = false;
+                endTime = Environment.TickCount;
+                OnDownloadsSuccess?.Invoke();
+            }
+            return UniTask.FromResult(true);
+        }
+
+        /// <summary>
+        /// 若 AbandonOnFailure 为真，失败时取消并清理已下载的文件。
+        /// </summary>
+        internal void HandleAbandonOnFailure()
+        {
+            if (AbandonOnFailure)
+            {
+                for (int i = 0; i < executors.Count; i++) executors[i].Cancel();
+                for (int i = 0; i < executorsOld.Count; i++) executorsOld[i].Cancel();
+            }
+        }
+
+        /// <summary>
+        /// 重置下载器为初始下载状态。
+        /// </summary>
+        public override void Reset()
+        {
+            if (Downloading)
+            {
+                Log.Error("下载中无法执行重置，请先取消下载。");
+                return;
+            }
+            downloading = false;
+            timeout = HttpDefaults.DefaultChunkTimeoutSeconds;
+            maxConcurrency = 4;
+            abandonOnFailure = true;
+            continueAfterFailure = false;
+            paused = false;
+            didError = false;
+            numFilesRemaining = 0;
+            startTime = 0;
+            endTime = 0;
+            pendingOffset = 0;
+            cancelledPendingIndices.Clear();
+            pendingUris = Array.Empty<string>();
+            downloadedUris = new List<string>();
+            incompletedUris = new List<string>();
+            executors.Clear();
+            executorsOld.Clear();
+            Uris = Array.Empty<string>();
+            n = 0;
+            initialCount = 0;
+        }
+
+        /// <summary>在 executor 列表中按 URI 查找（零分配，替代 LINQ FirstOrDefault/Any）</summary>
+        private static IDownloadExecutor FindExecutor(List<IDownloadExecutor> list, string uri)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (list[i].Uri == uri) return list[i];
+            }
+            return null;
+        }
+
+        /// <summary>在 executor 列表中按 URI 查找索引（Cancel 需要索引以标记 pendingUris 对应位置）</summary>
+        private static int FindExecutorIndex(List<IDownloadExecutor> list, string uri)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (list[i].Uri == uri) return i;
+            }
+            return -1;
+        }
+    }
+}

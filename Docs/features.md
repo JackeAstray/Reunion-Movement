@@ -35,8 +35,8 @@
 - **ImageEx**：SDF 形状图片 + 渐变/模糊/描边/过渡特效
 - **ImageEx Editor**：形状/特效参数可视化编辑，含相机画面（Camera Feed）接入
 - **Shader 变体剥离器**：WebGL 构建体积优化
-- **Addressables 流水线**：一键迁移（UI/音频/图片/配置/预制体/场景/字体）→ 构建 Content → 上传 OSS（菜单：Astray → Addressables）
-- **打包工具**：一键导出 `Astray.unitypackage`（菜单：Astray → 打包 → 导出 .unitypackage）
+- **Addressables 流水线**：一键迁移（UI/音频/图片/配置/预制体/场景/字体）→ 构建 Content → 上传 OSS（菜单：Gear → Addressables）
+- **打包工具**：一键导出 `Gear.unitypackage`（菜单：Gear → 打包 → 导出 .unitypackage）
 - **轮播选择控制器**：`CarouselSelectionController` 线性 / 矩阵模式选择（角色 / 车辆等界面，键盘 / 手柄导航）
 
 > **框架保留工具**（暂无调用点，作为框架能力保留，请勿删除）：`VibrationUtil`、`ScreenCaptureUtil`、`AssemblyUtil`、`ColorUtil`、`EncryptUtil`、`TimeUtil`、`GachaSystem`、`Billboard`、`DeadlineMgr`。
@@ -77,7 +77,7 @@
 
 ## 示例
 
-示例场景位于 `Assets → Astray → Scenes → Example`。
+示例场景位于 `Assets → Gear → Scenes → Example`。
 
 <img src="../Images/示例路径.png" alt="示例" width="280"/>
 
@@ -103,7 +103,7 @@
 **Download Example** —— 展示下载
 <img src="../Images/download-example-loop-min.gif" alt="download-example-min" width="520"/>
 
-**ImageEx Example** —— SDF 形状 UI：12 种形状 + 渐变 / 模糊 / 描边 / 过渡（着色器 `Astray/UI/ImageEx`）
+**ImageEx Example** —— SDF 形状 UI：12 种形状 + 渐变 / 模糊 / 描边 / 过渡（着色器 `Gear/UI/ImageEx`）
 <img src="../Images/imageEx-example-loop-min.gif" alt="imageEx-example-min" width="520"/>
 
 **LoopScrollRect Example** —— 展示循环列表

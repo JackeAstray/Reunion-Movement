@@ -1,6 +1,6 @@
-# Addressables 集成文档（Astray）
+# Addressables 集成文档（Gear）
 
-> 本文档集是 Astray 中 Addressables 集成的**唯一权威说明**。所有文档均为中文，按用途组织，建议按"阅读顺序"通读一遍后按需查阅。
+> 本文档集是 Gear 中 Addressables 集成的**唯一权威说明**。所有文档均为中文，按用途组织，建议按"阅读顺序"通读一遍后按需查阅。
 
 ## 文档地图
 
@@ -28,12 +28,12 @@
 | `AddressableSystem`（运行时封装） | ✅ 已实现 | 加载/实例化/场景/释放/降级/远程更新检查/缓存清理/调试统计 |
 | `AddressableKeys`（地址常量） | ✅ 已实现 | `BuiltIn/UI/...` 前缀 + Label 约定 |
 | `Config`/`GameConfig` 配置 | ✅ 已实现 | `enableHotUpdate`（唯一开关）/ 远程 URL；`AddressablesMode` 由开关派生（Remote/Off） |
-| `AddressablesSetup`（按需配置） | ✅ 已实现 | 默认**不自动执行**、仓库不带 `AddressableAssetsData`；显式启用（工具箱 Addressables 页 / 菜单）时才检查安装并创建分组/Label/Profile，校验并修正 Remote 分组路径变量，默认激活 `DevLocal`；远程 Catalog **默认关闭**（`Astray → Addressables → 配置/启用远程 Catalog（Phase 3 热更）` 手动开启） |
+| `AddressablesSetup`（按需配置） | ✅ 已实现 | 默认**不自动执行**、仓库不带 `AddressableAssetsData`；显式启用（工具箱 Addressables 页 / 菜单）时才检查安装并创建分组/Label/Profile，校验并修正 Remote 分组路径变量，默认激活 `DevLocal`；远程 Catalog **默认关闭**（`Gear → Addressables → 配置/启用远程 Catalog（Phase 3 热更）` 手动开启） |
 | `AddressablesMigrator`（资源迁移） | ✅ 已实现 | 复制+GUID 重映射+导入设置+Addressable 标记；`迁移/一键迁移全部（UI+音频+图片）` 统一入口（幂等，流水线也调用），亦可单项补迁 |
 | `AddressablesBuildWindow`（构建） | ✅ 已实现 | 当前平台构建 + 全平台子菜单切换 + version.json |
 | `AddressablesCdnUploader`（自动上传） | ✅ 已实现 | 阿里云 OSS HTTP PUT + 签名，增量上传 `.bundle`+远程 catalog（`catalog_*.bin`/`.hash`，独立菜单触发，需配置 AK/SK） |
-| `AddressablesPipeline`（一键流水线） | ✅ 已实现 | 迁移（音频/图片）→ 构建 Content → 上传 OSS 串联；编辑器菜单 `Astray → Addressables → 一键流水线（迁移+构建+上传 OSS）` 或批处理 `-executeMethod Astray.EditorTools.Addressables.AddressablesPipeline.RunPipeline`（默认 WebGL，结果写 `Build/Addressables/pipeline_result.txt`） |
-| `AstrayPackageExporter`（打包） | ✅ 已实现 | 一键导出 .unitypackage（独立于 Addressables，见 `Docs/Packaging/打包指南.md`） |
+| `AddressablesPipeline`（一键流水线） | ✅ 已实现 | 迁移（音频/图片）→ 构建 Content → 上传 OSS 串联；编辑器菜单 `Gear → Addressables → 一键流水线（迁移+构建+上传 OSS）` 或批处理 `-executeMethod Gear.EditorTools.Addressables.AddressablesPipeline.RunPipeline`（默认 WebGL，结果写 `Build/Addressables/pipeline_result.txt`） |
+| `GearPackageExporter`（打包） | ✅ 已实现 | 一键导出 .unitypackage（独立于 Addressables，见 `Docs/Packaging/打包指南.md`） |
 | UI 双轨加载（`LoadWindowAsync`） | ✅ 已实现 | Addressables 优先 → Resources 降级 |
 | SoundSystem 双轨加载（`GetAudioClipAsync`） | ✅ 已实现 | Addressables 优先（`Remote/Sounds/...`）→ Resources 降级，按来源释放 |
 | SceneSystem 双轨加载（`LoadScene`） | ✅ 已实现 | Addressable 场景优先（`Remote/Scenes/...`）→ SceneManager 降级，切换释放旧场景 |
@@ -47,7 +47,7 @@
 ## 菜单结构（2026-08-13 整理）
 
 ```text
-Astray/Addressables/
+Gear/Addressables/
 ├─ 一键流水线（迁移+构建+上传 OSS）      ← 推荐入口（优先 0）
 ├─ 配置/
 │   ├─ 初始化配置（分组+Label+Profile）
@@ -65,7 +65,7 @@ Astray/Addressables/
     └─ 上传到 OSS（增量）
 ```
 
-> 全部菜单日志走 `Astray.Common.Log`（频道 `LogChannel.Resource`），与运行时 `AddressableSystem` 一致，可按频道过滤。
+> 全部菜单日志走 `Gear.Common.Log`（频道 `LogChannel.Resource`），与运行时 `AddressableSystem` 一致，可按频道过滤。
 
 ## 关键术语速查
 

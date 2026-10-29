@@ -1,0 +1,22 @@
+{
+    "name": "Gear.Samples.HelloWorld",
+    "rootNamespace": "Gear.Samples.HelloWorld",
+    "references": [
+        "Gear.Base",
+        "Gear.Common",
+        "Gear.Framework.Runtime",
+        "Gear.Framework.Modules",
+        "Gear.Utilities",
+        "UniTask",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

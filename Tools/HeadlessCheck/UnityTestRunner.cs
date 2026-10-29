@@ -4,10 +4,10 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 
-namespace Astray.HeadlessCheck
+namespace Gear.HeadlessCheck
 {
     /// <summary>
-    /// 极简 NUnit 执行器：把 <c>Astray.Tests.dll</c> 里的用例在纯 .NET 进程里跑一遍。
+    /// 极简 NUnit 执行器：把 <c>Gear.Tests.dll</c> 里的用例在纯 .NET 进程里跑一遍。
     /// <para>
     /// 不引用 NUnit，全部按名字匹配；断言失败靠 <c>NUnit.Framework.AssertionException</c> 识别。
     /// 需要 Unity 的用例会抛 <c>SecurityException</c> 或栈里带 <c>UnityEngine.</c>，统一算 SKIP 而不是 FAIL。

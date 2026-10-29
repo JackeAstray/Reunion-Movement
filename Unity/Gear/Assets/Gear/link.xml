@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Gear IL2CPP 裁剪保护。
+  UnityLinker 会读取 Assets/Packages 下所有 link.xml；这里只保留“反射/序列化会用到、
+  但编译器看不到直接引用”的类型，不整程序集 preserve=all（避免包体膨胀）。
+
+  接入方注意：如果你自己的入口类型只通过 [assembly: GearGameEntry(typeof(X))]
+  被反射实例化，请在你自己的程序集里补一条 <type fullname="X" preserve="all" />，
+  或给 X 加 [UnityEngine.Scripting.Preserve]。
+-->
+<linker>
+  <assembly fullname="Gear.Framework.Runtime">
+    <!-- GameEntryResolver 用 Attribute.GetCustomAttribute + Activator.CreateInstance 找入口 -->
+    <type fullname="Gear.Framework.Runtime.GameEntryResolver" preserve="all" />
+    <type fullname="Gear.Framework.Runtime.Base.GearGameEntryAttribute" preserve="all" />
+    <!-- 仓库示例入口；接入方换成自己的类型时可在自己的 link.xml 里补 -->
+    <type fullname="Gear.Framework.Runtime.StartGame" preserve="all" />
+  </assembly>
+
+  <!-- Excel 生成的配置数据与容器：Newtonsoft 泛型反序列化 + Resources.Load -->
+  <assembly fullname="Gear.GenerateScript.AutoScripts" preserve="all" />
+
+  <!-- 工具生成的 UI 控制器：场景 / 预制体按 GUID 引用，避免被 IL2CPP 裁掉 -->
+  <assembly fullname="Gear.GenerateScript.UI" preserve="all" />
+
+  <assembly fullname="Gear.Common">
+    <!-- Resources.Load<GameConfig> + ScriptableObject 序列化字段 -->
+    <type fullname="Gear.GameConfig" preserve="all" />
+  </assembly>
+</linker>

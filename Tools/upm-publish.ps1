@@ -4,11 +4,11 @@
 
 .DESCRIPTION
     为什么要这个脚本：
-      `Unity/Astray/Build/` 被 `.gitignore` 忽略（它是 Unity 的构建目录），
+      `Unity/Gear/Build/` 被 `.gitignore` 忽略（它是 Unity 的构建目录），
       所以"能看能改"的包目录永远不在 git 里，git URL 安装也就无从谈起。
       本脚本把导出结果放进一个独立分支，历史只有一个提交，包内容位于分支根目录：
 
-          https://github.com/<owner>/Astray.git#upm
+          https://github.com/<owner>/Gear.git#upm
 
     用法（在仓库根目录执行）：
 
@@ -84,15 +84,15 @@ function Read-Utf8 {
 
 $repoRoot = (& git rev-parse --show-toplevel 2>$null)
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($repoRoot)) {
-    throw "当前目录不是 git 仓库；请在 Astray 仓库内执行。"
+    throw "当前目录不是 git 仓库；请在 Gear 仓库内执行。"
 }
 $repoRoot = ([string]$repoRoot).Trim().Replace('\', '/')
 
 if ([string]::IsNullOrWhiteSpace($PackagePath)) {
-    $PackagePath = Join-Path $repoRoot 'Unity/Astray/Build/Packages/com.jackeastray.astray'
+    $PackagePath = Join-Path $repoRoot 'Unity/Gear/Build/Packages/com.jackeastray.gear'
 }
 if (-not (Test-Path $PackagePath)) {
-    throw "找不到要发布的包目录：$PackagePath`n先执行 Unity → Astray → 打包 → 导出 UPM 包（运行时），或加 -Export。"
+    throw "找不到要发布的包目录：$PackagePath`n先执行 Unity → Gear → 打包 → 导出 UPM 包（运行时），或加 -Export。"
 }
 
 $packageJsonPath = Join-Path $PackagePath 'package.json'
@@ -126,10 +126,10 @@ if ($Export) {
         throw "找不到 Unity 可执行文件。用 -UnityPath 'C:\...\Unity.exe' 指定，或先在编辑器里手动导出包。"
     }
 
-    $projectPath = Join-Path $repoRoot 'Unity/Astray'
-    Write-Host "重新导出 : $unity -batchmode -executeMethod AstrayUpmExporter.ExportRuntimeBatch"
+    $projectPath = Join-Path $repoRoot 'Unity/Gear'
+    Write-Host "重新导出 : $unity -batchmode -executeMethod GearUpmExporter.ExportRuntimeBatch"
     & $unity -batchmode -quit -nographics -projectPath $projectPath `
-        -executeMethod Astray.EditorTools.Package.AstrayUpmExporter.ExportRuntimeBatch `
+        -executeMethod Gear.EditorTools.Package.GearUpmExporter.ExportRuntimeBatch `
         -logFile -
     if ($LASTEXITCODE -ne 0) { throw "Unity 导出失败（退出码 $LASTEXITCODE）。" }
 }
@@ -137,7 +137,7 @@ if ($Export) {
 # ------------------------------------------------------------------ 过期检查
 
 # 包是否"新鲜"用最可靠的信号：源码比 package.json 新，就认为包可能过期。
-$sourceRoot = Join-Path $repoRoot 'Unity/Astray/Assets/Astray'
+$sourceRoot = Join-Path $repoRoot 'Unity/Gear/Assets/Gear'
 $packageStamp = (Get-Item $packageJsonPath).LastWriteTimeUtc
 $newer = @()
 if (Test-Path $sourceRoot) {

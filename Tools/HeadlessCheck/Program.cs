@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Astray.HeadlessCheck
+namespace Gear.HeadlessCheck
 {
     /// <summary>
     /// 无 Unity 的核心逻辑自检工具。
@@ -21,7 +21,7 @@ namespace Astray.HeadlessCheck
     /// </summary>
     public static class Program
     {
-        private const string CoreAssemblyName = "Astray.Framework.Runtime";
+        private const string CoreAssemblyName = "Gear.Framework.Runtime";
 
         private static readonly List<string> SearchPaths = new List<string>();
         private static int passed;
@@ -39,7 +39,7 @@ namespace Astray.HeadlessCheck
             string repoRoot = FindRepoRoot();
             if (repoRoot == null)
             {
-                Console.WriteLine("[FAIL] 找不到仓库根目录（缺少 Unity/Astray 目录）");
+                Console.WriteLine("[FAIL] 找不到仓库根目录（缺少 Unity/Gear 目录）");
                 return 2;
             }
 
@@ -49,21 +49,21 @@ namespace Astray.HeadlessCheck
             Assembly core;
             try
             {
-                core = Assembly.LoadFrom(Path.Combine(repoRoot, "Unity/Astray/Temp/bin/Debug", CoreAssemblyName + ".dll"));
+                core = Assembly.LoadFrom(Path.Combine(repoRoot, "Unity/Gear/Temp/bin/Debug", CoreAssemblyName + ".dll"));
             }
             catch (Exception ex)
             {
                 Console.WriteLine("[FAIL] 无法加载 " + CoreAssemblyName + ".dll：" + ex.Message);
-                Console.WriteLine("       请先在 Unity/Astray 下执行 dotnet build（生成 Temp/bin/Debug）。");
+                Console.WriteLine("       请先在 Unity/Gear 下执行 dotnet build（生成 Temp/bin/Debug）。");
                 return 2;
             }
 
-            Console.WriteLine("=== Astray 无 Unity 自检 ===");
+            Console.WriteLine("=== Gear 无 Unity 自检 ===");
             Console.WriteLine("程序集: " + core.Location);
 
             PreloadFrameworkAssemblies();
             Console.WriteLine("已加载框架程序集: " + string.Join(", ",
-                new[] { "Astray.Base", "Astray.Common", "Astray.Framework.Modules", "Astray.Framework.Runtime" }
+                new[] { "Gear.Base", "Gear.Common", "Gear.Framework.Modules", "Gear.Framework.Runtime" }
                     .Where(n => AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name == n))));
             Console.WriteLine();
 
@@ -239,7 +239,7 @@ namespace Astray.HeadlessCheck
 
         private static object NewNavStack(Assembly core)
         {
-            return Activator.CreateInstance(GetType(core, "Astray.Framework.Runtime.UI.UINavigationStack"));
+            return Activator.CreateInstance(GetType(core, "Gear.Framework.Runtime.UI.UINavigationStack"));
         }
 
         private static void NavCall(object stack, string method, params object[] args)
@@ -311,7 +311,7 @@ namespace Astray.HeadlessCheck
         /// <summary>WindowResult&lt;T&gt; 语义：默认是 None；有值时能取到；None 走兜底值。</summary>
         private static void CheckWindowResult(Assembly core)
         {
-            Type open = GetType(core, "Astray.Framework.Runtime.UI.WindowResult`1");
+            Type open = GetType(core, "Gear.Framework.Runtime.UI.WindowResult`1");
             Type closed = open.MakeGenericType(typeof(int));
 
             object none = Activator.CreateInstance(closed);
@@ -328,8 +328,8 @@ namespace Astray.HeadlessCheck
 
         private static void CheckModulesAccessor(Assembly core)
         {
-            Type modules = GetType(core, "Astray.Framework.Runtime.Modules");
-            Type systemType = GetType(core, "Astray.Framework.Runtime.UI.UISystem");
+            Type modules = GetType(core, "Gear.Framework.Runtime.Modules");
+            Type systemType = GetType(core, "Gear.Framework.Runtime.UI.UISystem");
 
             IList all = (IList)modules.GetProperty("All", BindingFlags.Public | BindingFlags.Static).GetValue(null);
             Assert(all != null, "Modules.All 不应为 null");
@@ -360,7 +360,7 @@ namespace Astray.HeadlessCheck
 
         private static void CheckEntryResolver(Assembly core)
         {
-            Type resolver = GetType(core, "Astray.Framework.Runtime.GameEntryResolver");
+            Type resolver = GetType(core, "Gear.Framework.Runtime.GameEntryResolver");
             Type entryType = (Type)resolver.GetMethod("FindEntryType", BindingFlags.Public | BindingFlags.Static).Invoke(null, null);
 
             // 框架程序集不再声明入口：示例入口在 Assembly-CSharp（Game/StartGameEntry.cs）。
@@ -371,7 +371,7 @@ namespace Astray.HeadlessCheck
 
         private static void CheckBootstrapOptions(Assembly core)
         {
-            Type optionsType = GetType(core, "Astray.Framework.Runtime.BootstrapOptions");
+            Type optionsType = GetType(core, "Gear.Framework.Runtime.BootstrapOptions");
             object options = Activator.CreateInstance(optionsType);
             MethodInfo isTestScene = optionsType.GetMethod("IsTestScene");
 
@@ -383,13 +383,13 @@ namespace Astray.HeadlessCheck
             Assert(!(bool)isTestScene.Invoke(options, new object[] { "" }), "空串不应判为测试场景");
         }
 
-        /// <summary>跑 Astray.Tests 里的用例；需要 Unity 的会自动算 SKIP。</summary>
+        /// <summary>跑 Gear.Tests 里的用例；需要 Unity 的会自动算 SKIP。</summary>
         private static void RunUnityTests(string repoRoot)
         {
-            string path = Path.Combine(repoRoot, "Unity/Astray/Temp/bin/Debug/Astray.Tests.dll");
+            string path = Path.Combine(repoRoot, "Unity/Gear/Temp/bin/Debug/Gear.Tests.dll");
             if (!File.Exists(path))
             {
-                Console.WriteLine("[SKIP] Unity 测试程序集不存在（先 dotnet build Astray.Tests.csproj）");
+                Console.WriteLine("[SKIP] Unity 测试程序集不存在（先 dotnet build Gear.Tests.csproj）");
                 return;
             }
 
@@ -440,21 +440,21 @@ namespace Astray.HeadlessCheck
         private static FakeModuleFactory BuildFactory(Assembly core)
         {
             return new FakeModuleFactory(
-                GetType(core, "Astray.Framework.Runtime.Base.ICustomSystem"),
-                GetType(core, "Astray.Framework.Runtime.Base.ISystemInitializable"),
+                GetType(core, "Gear.Framework.Runtime.Base.ICustomSystem"),
+                GetType(core, "Gear.Framework.Runtime.Base.ISystemInitializable"),
                 GetType(core, "Cysharp.Threading.Tasks.UniTask"),
-                GetType(core, "Astray.Framework.Runtime.Base.ModuleOrderAttribute"));
+                GetType(core, "Gear.Framework.Runtime.Base.ModuleOrderAttribute"));
         }
 
         /// <summary>把假模块装进 List&lt;ICustomSystem&gt; 再交给 TryBuild。</summary>
         private static (bool ok, IList ordered, string errors) TryBuild(Assembly core, params object[] modules)
         {
-            Type systemInterface = GetType(core, "Astray.Framework.Runtime.Base.ICustomSystem");
+            Type systemInterface = GetType(core, "Gear.Framework.Runtime.Base.ICustomSystem");
             Type listType = typeof(List<>).MakeGenericType(systemInterface);
             var list = (IList)Activator.CreateInstance(listType);
             foreach (object module in modules) list.Add(module);
 
-            Type catalog = GetType(core, "Astray.Framework.Runtime.ModuleCatalog");
+            Type catalog = GetType(core, "Gear.Framework.Runtime.ModuleCatalog");
             MethodInfo tryBuild = catalog.GetMethod("TryBuild", BindingFlags.Public | BindingFlags.Static);
             var args = new object[] { list, null, null };
             bool ok = (bool)tryBuild.Invoke(null, args);
@@ -464,12 +464,12 @@ namespace Astray.HeadlessCheck
         /// <summary>调用 ModuleCatalog.ExpandDependencies，返回补全后的列表与两类说明。</summary>
         private static (IList modules, string[] added, string[] unresolved) Expand(Assembly core, params object[] modules)
         {
-            Type systemInterface = GetType(core, "Astray.Framework.Runtime.Base.ICustomSystem");
+            Type systemInterface = GetType(core, "Gear.Framework.Runtime.Base.ICustomSystem");
             Type listType = typeof(List<>).MakeGenericType(systemInterface);
             var list = (IList)Activator.CreateInstance(listType);
             foreach (object module in modules) list.Add(module);
 
-            Type catalog = GetType(core, "Astray.Framework.Runtime.ModuleCatalog");
+            Type catalog = GetType(core, "Gear.Framework.Runtime.ModuleCatalog");
             MethodInfo expand = catalog.GetMethod("ExpandDependencies", BindingFlags.Public | BindingFlags.Static);
             var args = new object[] { list, null, null };
             var result = (IList)expand.Invoke(null, args);
@@ -487,7 +487,7 @@ namespace Astray.HeadlessCheck
         /// <summary>把排好序的模块按 [ModuleOrder] 的序号拼成 "10,20,30" 便于断言。</summary>
         private static string Orders(IList ordered)
         {
-            Type attributeType = GetType(Assembly.GetExecutingAssembly(), "Astray.Framework.Runtime.Base.ModuleOrderAttribute");
+            Type attributeType = GetType(Assembly.GetExecutingAssembly(), "Gear.Framework.Runtime.Base.ModuleOrderAttribute");
             var parts = new List<string>();
             foreach (object module in ordered)
             {
@@ -571,7 +571,7 @@ namespace Astray.HeadlessCheck
             var dir = new DirectoryInfo(AppContext.BaseDirectory);
             while (dir != null)
             {
-                if (Directory.Exists(Path.Combine(dir.FullName, "Unity/Astray"))) return dir.FullName;
+                if (Directory.Exists(Path.Combine(dir.FullName, "Unity/Gear"))) return dir.FullName;
                 dir = dir.Parent;
             }
             return null;
@@ -579,7 +579,7 @@ namespace Astray.HeadlessCheck
 
         private static void PrepareSearchPaths(string repoRoot)
         {
-            string project = Path.Combine(repoRoot, "Unity/Astray");
+            string project = Path.Combine(repoRoot, "Unity/Gear");
 
             AddSearchPath(Path.Combine(project, "Temp/bin/Debug"));
             AddSearchPath(Path.Combine(project, "Library/ScriptAssemblies"));
@@ -596,7 +596,7 @@ namespace Astray.HeadlessCheck
 
             // 从 Unity 生成的 csproj 里收集 UnityEngine 等 DLL 的绝对路径
             // 所有 Unity 生成的 csproj 都扫一遍：nunit 只在 Tests.csproj 的 HintPath 里
-            foreach (string csproj in Directory.GetFiles(project, "Astray*.csproj"))
+            foreach (string csproj in Directory.GetFiles(project, "Gear*.csproj"))
             {
                 foreach (Match m in Regex.Matches(File.ReadAllText(csproj), @"<HintPath>([^<]+)</HintPath>"))
                 {
@@ -620,10 +620,10 @@ namespace Astray.HeadlessCheck
         {
             string[] names =
             {
-                "Astray.Base",
-                "Astray.Common",
-                "Astray.Framework.Modules",
-                "Astray.Framework.Runtime",
+                "Gear.Base",
+                "Gear.Common",
+                "Gear.Framework.Modules",
+                "Gear.Framework.Runtime",
                 "UniTask",
                 "R3",
             };

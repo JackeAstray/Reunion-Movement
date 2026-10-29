@@ -1,0 +1,20 @@
+{
+    "name": "Gear.Framework.Modules.CSG.Example.Editor",
+    "rootNamespace": "Gear.Common.Util.Example.Editor",
+    "references": [
+        "Gear.Framework.Modules",
+        "Gear.Utilities",
+        "Gear.Common"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

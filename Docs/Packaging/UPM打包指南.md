@@ -1,30 +1,30 @@
-# Astray UPM 打包指南
+# Gear UPM 打包指南
 
 > 目标：把框架作为标准 Unity Package（UPM）分发，支持 `file:` / git URL 安装、版本升级与按需导入；
-> 同时保留 `Assets/Astray` 作为开发期源码目录。
+> 同时保留 `Assets/Gear` 作为开发期源码目录。
 > 旧的分发方式（整目录 `.unitypackage`）仍在，见 [.unitypackage 打包指南](打包指南.md)。
 
 ## 1. 导出
 
-菜单：`Astray → 打包 → 导出 UPM 包（运行时 / 完整 / OpenUPM 依赖）`。
-选择输出目录后生成 `<dir>/com.jackeastray.astray`。
+菜单：`Gear → 打包 → 导出 UPM 包（运行时 / 完整 / OpenUPM 依赖）`。
+选择输出目录后生成 `<dir>/com.jackeastray.gear`。
 
-命令行（不弹窗，输出到 `Unity/Astray/Build/Packages/`）：
+命令行（不弹窗，输出到 `Unity/Gear/Build/Packages/`）：
 
 ```powershell
-Unity -batchmode -quit -projectPath Unity/Astray `
-  -executeMethod Astray.EditorTools.Package.AstrayUpmExporter.ExportRuntimeBatch
+Unity -batchmode -quit -projectPath Unity/Gear `
+  -executeMethod Gear.EditorTools.Package.GearUpmExporter.ExportRuntimeBatch
 
 # 完整包
-Unity -batchmode -quit -projectPath Unity/Astray `
-  -executeMethod Astray.EditorTools.Package.AstrayUpmExporter.ExportFullBatch
+Unity -batchmode -quit -projectPath Unity/Gear `
+  -executeMethod Gear.EditorTools.Package.GearUpmExporter.ExportFullBatch
 
 # OpenUPM 依赖包（不内置 UniTask/R3/ZString）
-Unity -batchmode -quit -projectPath Unity/Astray `
-  -executeMethod Astray.EditorTools.Package.AstrayUpmExporter.ExportOpenUpmBatch
+Unity -batchmode -quit -projectPath Unity/Gear `
+  -executeMethod Gear.EditorTools.Package.GearUpmExporter.ExportOpenUpmBatch
 ```
 
-实现：`Editor/Package/AstrayUpmExporter.cs`。
+实现：`Editor/Package/GearUpmExporter.cs`。
 
 ## 2. 三种 profile
 
@@ -42,7 +42,7 @@ Unity -batchmode -quit -projectPath Unity/Astray `
 Runtime / Full 包含 `Plugins` 里的 UniTask / R3 / DOTween / ZString / kcp2k / Telepathy / SimpleWebTransport；
 OpenUPM 模式不含 UniTask / R3 / ZString，其余相同。
 两种运行时包都包含 `Resources` 其余资源、`Editor` 工具、`GenerateScript/UI`、`Documentation~`。
-iOS 触觉原生实现 `Plugins/iOS/AstrayHaptics.mm` 会随包分发；Android 的 `VIBRATE` 权限由
+iOS 触觉原生实现 `Plugins/iOS/GearHaptics.mm` 会随包分发；Android 的 `VIBRATE` 权限由
 `Editor/Build/AndroidVibratePermission.cs` 在构建时注入。
 
 ### OpenUPM 依赖模式
@@ -60,7 +60,7 @@ iOS 触觉原生实现 `Plugins/iOS/AstrayHaptics.mm` 会随包分发；Android 
 ]
 ```
 
-然后再把 `com.jackeastray.astray` 加进 `Packages/manifest.json`。版本由包的 `package.json` 声明：
+然后再把 `com.jackeastray.gear` 加进 `Packages/manifest.json`。版本由包的 `package.json` 声明：
 UniTask 2.5.11。DOTween / R3 / ZString 仍内置。
 
 > R3 的 OpenUPM 包只带 `R3.Unity`、不带核心 `R3.dll`；ZString 官方包要求每个 asmdef 显式引用，
@@ -69,19 +69,19 @@ UniTask 2.5.11。DOTween / R3 / ZString 仍内置。
 ## 3. 包结构
 
 ```text
-com.jackeastray.astray/
+com.jackeastray.gear/
 ├── package.json
 ├── README.md
 ├── CHANGELOG.md
 ├── LICENSE.md
 ├── Common/ Core/ Utils/ UI/ GenerateScript/ Resources/ Plugins/ 3rd/
 ├── Editor/
-│   ├── Shared/AstrayPaths.cs       # 框架根解析
+│   ├── Shared/GearPaths.cs       # 框架根解析
 │   ├── Toolbox/
 │   └── ...
 ├── Samples~/HelloWorld/             # Package Manager → Import Sample
 └── Documentation~/
-    ├── Astray 使用指南.md
+    ├── Gear 使用指南.md
     ├── CustomSystem.cs.txt
     └── Docs/                         # 从仓库 Docs/ 复制
 ```
@@ -94,7 +94,7 @@ com.jackeastray.astray/
 所以 URL 不需要 `?path=`：
 
 ```json
-"com.jackeastray.astray": "https://github.com/JackeAstray/Astray.git#upm"
+"com.jackeastray.gear": "https://github.com/JackeAstray/Gear.git#upm"
 ```
 
 需要锁定到某次发布时，把 `upm` 换成那次提交的短哈希（`#4f85b79`）。
@@ -118,7 +118,7 @@ powershell -ExecutionPolicy Bypass -File Tools/upm-publish.ps1 -CheckOnly
 ### 4.2 本地路径（离线开发）
 
 ```json
-"com.jackeastray.astray": "file:../../Astray/Unity/Astray/Build/Packages/com.jackeastray.astray"
+"com.jackeastray.gear": "file:../../Gear/Unity/Gear/Build/Packages/com.jackeastray.gear"
 ```
 
 `Build/` 是 Unity 的构建目录、被 `.gitignore` 忽略，所以**别人 clone 下来的仓库里没有这个目录**，
@@ -134,7 +134,7 @@ powershell -ExecutionPolicy Bypass -File Tools/upm-publish.ps1 -CheckOnly
 
 ```csharp
 // 1) 在任意程序集声明入口（框架不会自动接管宿主启动）
-[assembly: AstrayGameEntry(typeof(MyGameEntry))]
+[assembly: GearGameEntry(typeof(MyGameEntry))]
 
 // 2) 选模块清单：Full() 全量 14 个；Minimal() 只要资源/Addressables/场景/UI
 public class MyGameEntry : GameEntry
@@ -148,10 +148,10 @@ public class MyGameEntry : GameEntry
 
 ## 5. 包安装模式下的行为
 
-- `AstrayPaths` 用 `Astray.Core.asmdef` 反查根目录，兼容 `Assets/Astray` 与
-  `Packages/com.jackeastray.astray`。
+- `GearPaths` 用 `Gear.Core.asmdef` 反查根目录，兼容 `Assets/Gear` 与
+  `Packages/com.jackeastray.gear`。
 - 读框架资源用 `InFramework`；写生成物用 `InWritable`。包安装时写入
-  `Assets/AstrayGenerated/`（包目录只读）。
+  `Assets/GearGenerated/`（包目录只读）。
 - Excel 导表 / UI 生成器在包安装模式下会拒绝重新生成包内已存在的类型，避免 `Assembly-CSharp`
   与包程序集出现同名类型（CS0433）；新表名 / 新类名不受影响。
 
@@ -160,26 +160,26 @@ public class MyGameEntry : GameEntry
 1. Runtime 不含字体、示例场景、示例 UI；需要这些请用 Full，或自行放入目标工程。
 2. `Editor/UIExamples` 依赖 `UI/Select` 演示代码，Runtime 两者一起排除；Full 一起包含。
 3. 两个 profile 都**不包含** `Game/StartGameEntry.cs`（示例入口）。宿主必须声明自己的
-   `[assembly: AstrayGameEntry]`，或设置 `Bootstrap.Options.Entry`；否则 Bootstrap 会报错并跳过启动，
+   `[assembly: GearGameEntry]`，或设置 `Bootstrap.Options.Entry`；否则 Bootstrap 会报错并跳过启动，
    不会接管宿主工程。
 4. Runtime 包里的 `StartGame` 示例流程不可用（缺 `Temp` 场景和启动 UI prefab）；请使用自己的 GameEntry。
 5. 包通过 `upm` 分支发布（`Tools/upm-publish.ps1`）；本地导出目录 `Build/` 仍被忽略、不进 git。
 6. `.unitypackage` 导出仍保留（已排除 `Game/`）；两者不要同时导入同一个工程。
 7. 包内仍带 vendored 的 UniTask / R3 / ZString / DOTween。宿主已装官方同名包时，
-   用 `Astray → 开发 → 检查第三方依赖冲突` 检查；二者只能留一套。详见 [第三方依赖](../guides/第三方依赖.md)。
+   用 `Gear → 开发 → 检查第三方依赖冲突` 检查；二者只能留一套。详见 [第三方依赖](../guides/第三方依赖.md)。
 
 ## 7. 验收
 
 ```powershell
 # 1. 编译
-dotnet build Unity/Astray/Astray.Core.csproj
+dotnet build Unity/Gear/Gear.Core.csproj
 
 # 2. Unity 侧（独占工程）
 pwsh Tools/unity-verify.ps1
 
 # 3. 导出
-Unity -batchmode -quit -projectPath Unity/Astray `
-  -executeMethod Astray.EditorTools.Package.AstrayUpmExporter.ExportRuntimeBatch
+Unity -batchmode -quit -projectPath Unity/Gear `
+  -executeMethod Gear.EditorTools.Package.GearUpmExporter.ExportRuntimeBatch
 
 # 4. 空工程安装
 #    新建 Unity 6000.3 工程 → Packages/manifest.json 加 file: 包 → 打开，Console 无红色报错
@@ -189,7 +189,7 @@ Unity -batchmode -quit -projectPath Unity/Astray `
 
 - `ExportRuntimeBatch` 产出 **42.6 MB / 1,855 文件**；
 - 新建 Unity 6000.3 工程，`Packages/manifest.json` 加 `file:` 包 → 打开后 **0 编译错误**；
-- 产出 `Astray.Core` / `Utils` / `GenerateScript.UI` / `DOTween.Modules` 等 30+ 程序集；
+- 产出 `Gear.Core` / `Utils` / `GenerateScript.UI` / `DOTween.Modules` 等 30+ 程序集；
 - Addressables 2.9.1 / Input System 1.18.0 / Newtonsoft.Json 3.2.2 / uGUI 2.0.0 / URP 17.3.0 由 `package.json` 依赖自动解析；
 - 空工程探针 `GameEntryResolver.FindEntryType()` 返回 `null`（日志 `[Probe] entry=null`），
   确认包安装后不会接管宿主启动；

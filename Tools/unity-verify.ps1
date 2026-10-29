@@ -36,7 +36,7 @@ $ErrorActionPreference = 'Stop'
 
 # ---- 路径 ----
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$projectPath = Join-Path $repoRoot 'Unity\Astray'
+$projectPath = Join-Path $repoRoot 'Unity\Gear'
 $resultDir = Join-Path $projectPath 'Logs\verify'
 $testResults = Join-Path $resultDir 'editmode-results.xml'
 $testLog = Join-Path $resultDir 'editmode.log'
@@ -150,7 +150,7 @@ if (-not $SkipGuard) {
     Write-Step '运行架构守卫…'
     $guardExit = Invoke-UnityBatch @(
         '-batchmode', '-nographics', '-quit', '-projectPath', $projectPath,
-        '-executeMethod', 'Astray.Editor.Guards.ArchitectureGuard.RunAllBatch',
+        '-executeMethod', 'Gear.Editor.Guards.ArchitectureGuard.RunAllBatch',
         '-logFile', $guardLog
     )
 
