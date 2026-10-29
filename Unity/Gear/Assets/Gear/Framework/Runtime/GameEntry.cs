@@ -13,7 +13,8 @@ namespace Gear.Framework.Runtime
     {
         /// <summary>
         /// 创建游戏模块列表。子类重写以注册自定义模块。
-        /// 列表顺序即初始化顺序（先注册的先初始化）。
+        /// 列表决定"注册哪些模块"；初始化顺序由各模块的 [ModuleOrder] 拓扑排序决定，
+        /// 未声明顺序的模块才保持这里的相对次序。
         /// </summary>
         /// <returns>模块列表</returns>
         public virtual IList<ICustomSystem> CreateModules()

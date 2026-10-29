@@ -2,7 +2,6 @@
 using Cysharp.Threading.Tasks;
 using R3;
 using Gear.Common;
-using Gear.Framework.Modules;
 using Gear.Utilities;
 using Gear.Framework.Runtime.Resources;
 
@@ -50,17 +49,28 @@ namespace Gear.Framework.Runtime.Terminal
         [RegisterCommand(Help = "PerfStat（打印当前 FPS/历史最低 FPS/托管内存）")]
         internal static void PerfStat(CommandArg[] args)
         {
-            var monitor = PerformanceMonitor.Instance;
+            var monitor = Gear.Framework.Runtime.Base.PerformanceStatsBridge.GetOrCreate();
+            if (monitor == null)
+            {
+                Log.Warning("[Cmd] PerfStat: PerformanceMonitor 未初始化（Modules 未加载或尚未创建实例）");
+                return;
+            }
+
             Log.Debug("[Cmd] PerfStat FPS={0:F1} 最低={1:F1} 托管内存={2}MB",
                 monitor.CurrentFps, monitor.MinFpsRecord, monitor.CurrentMemoryMB);
         }
 
         /// <summary>上报本地错误日志：ReportErrors</summary>
-        [RegisterCommand(Help = "ReportErrors（上传错误日志到 ErrorReporter.UploadUrl）")]
+        [RegisterCommand(Help = "ReportErrors（上传本地错误日志，需要 ErrorReporter 已启用）")]
         internal static void ReportErrors(CommandArg[] args)
         {
             Log.Debug("[Cmd] ReportErrors 开始上传错误日志...");
-            ErrorReporter.UploadErrorLog(ok => Log.Debug("[Cmd] ReportErrors 上传结果: {0}", ok));
+            bool started = Gear.Framework.Runtime.Base.ErrorReportingBridge.TryUploadLog(
+                ok => Log.Debug("[Cmd] ReportErrors 上传结果: {0}", ok));
+            if (!started)
+            {
+                Log.Warning("[Cmd] ReportErrors: ErrorReporter 未启用（Modules 未加载）");
+            }
         }
 
         /// <summary>运行 Addressables 热更检查与下载：AddrUpdate</summary>

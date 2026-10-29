@@ -10,7 +10,6 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-using Gear.Common;
 namespace Gear.Utilities.UI.ButtonClick
 {
     /// <summary>

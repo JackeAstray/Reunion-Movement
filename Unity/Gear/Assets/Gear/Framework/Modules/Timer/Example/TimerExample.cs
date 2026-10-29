@@ -3,7 +3,6 @@ using Gear.Framework.Modules.Timer;
 using TMPro;
 using UnityEngine;
 
-using Gear.Common;
 using Gear.Utilities;
 namespace Gear.Example
 {

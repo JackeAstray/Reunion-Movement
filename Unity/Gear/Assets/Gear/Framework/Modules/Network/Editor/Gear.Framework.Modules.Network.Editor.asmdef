@@ -1,6 +1,6 @@
 {
     "name": "Gear.Framework.Modules.Network.Editor",
-    "rootNamespace": "Gear.Common.Util.Editor",
+    "rootNamespace": "Gear.Framework.Modules.EditorTools",
     "references": [
         "Gear.Framework.Modules",
         "Gear.Utilities",

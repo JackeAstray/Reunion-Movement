@@ -1,6 +1,6 @@
 {
     "name": "Gear.Framework.Modules.CSG.Example.Editor",
-    "rootNamespace": "Gear.Common.Util.Example.Editor",
+    "rootNamespace": "Gear.Framework.Modules.EditorTools",
     "references": [
         "Gear.Framework.Modules",
         "Gear.Utilities",

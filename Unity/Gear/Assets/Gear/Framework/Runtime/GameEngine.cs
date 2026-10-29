@@ -159,7 +159,6 @@ namespace Gear.Framework.Runtime
             IsApplicationQuit = false;
             IsApplicationFocus = true;
             IsAppPlaying = false;
-            ModuleRuntime.IsEngineRunning = false;
         }
 
     }

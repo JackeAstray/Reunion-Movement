@@ -108,7 +108,7 @@ namespace Gear.EditorTools.Toolbox
                 case "00-快速开始.md": return "环境、按 Play 会发生什么、第一个改动";
                 case "01-架构总览.md": return "分层与一次启动的完整时序";
                 case "02-新增一个系统.md": return "[ModuleOrder] → 注册 → 获取 → 测试";
-                case "03-新增一个窗口.md": return "生成器 → Prefab → UINames → 打开/关闭";
+                case "03-新增一个窗口.md": return "生成器 → Prefab → [UIWindow] → 打开/关闭";
                 case "04-接入自己的游戏.md": return "两条接入路线、改启动场景、关掉示例";
                 case "05-常见陷阱.md": return "双驱动 / 暂停 / Addressables / WebGL";
                 case "design/重构方案.md": return "痛点、分阶段方案、验收指标与待验证清单";

@@ -651,8 +651,11 @@ MonoBehaviour:
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
     chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
-  parallelogram:
-    parallelogramValue: 0
+  quadrilateral:
+    topLeftOffset: {x: 0, y: 0}
+    topRightOffset: {x: 0, y: 0}
+    bottomLeftOffset: {x: 0, y: 0}
+    bottomRightOffset: {x: 0, y: 0}
   nStarPolygon:
     sideCount: 3
     inset: 2
@@ -738,6 +741,7 @@ MonoBehaviour:
   m_GradientOffset: 0
   m_GradientScale: 1
   m_BlendType: 0
+  cameraTexture: {fileID: 0}
 --- !u!1 &510605601
 GameObject:
   m_ObjectHideFlags: 0
@@ -1500,8 +1504,11 @@ MonoBehaviour:
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
     chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
-  parallelogram:
-    parallelogramValue: 0
+  quadrilateral:
+    topLeftOffset: {x: 0, y: 0}
+    topRightOffset: {x: 0, y: 0}
+    bottomLeftOffset: {x: 0, y: 0}
+    bottomRightOffset: {x: 0, y: 0}
   nStarPolygon:
     sideCount: 3
     inset: 2
@@ -1587,6 +1594,7 @@ MonoBehaviour:
   m_GradientOffset: 0
   m_GradientScale: 1
   m_BlendType: 0
+  cameraTexture: {fileID: 0}
 --- !u!1 &1026839557
 GameObject:
   m_ObjectHideFlags: 0
@@ -2037,8 +2045,11 @@ MonoBehaviour:
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
     chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
-  parallelogram:
-    parallelogramValue: 0
+  quadrilateral:
+    topLeftOffset: {x: 0, y: 0}
+    topRightOffset: {x: 0, y: 0}
+    bottomLeftOffset: {x: 0, y: 0}
+    bottomRightOffset: {x: 0, y: 0}
   nStarPolygon:
     sideCount: 3
     inset: 2
@@ -2124,6 +2135,7 @@ MonoBehaviour:
   m_GradientOffset: 0
   m_GradientScale: 1
   m_BlendType: 0
+  cameraTexture: {fileID: 0}
 --- !u!1 &1281474699
 GameObject:
   m_ObjectHideFlags: 0
@@ -2366,8 +2378,11 @@ MonoBehaviour:
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
     chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
-  parallelogram:
-    parallelogramValue: 0
+  quadrilateral:
+    topLeftOffset: {x: 0, y: 0}
+    topRightOffset: {x: 0, y: 0}
+    bottomLeftOffset: {x: 0, y: 0}
+    bottomRightOffset: {x: 0, y: 0}
   nStarPolygon:
     sideCount: 3
     inset: 2
@@ -2453,6 +2468,7 @@ MonoBehaviour:
   m_GradientOffset: 0
   m_GradientScale: 1
   m_BlendType: 0
+  cameraTexture: {fileID: 0}
 --- !u!1 &1346367381
 GameObject:
   m_ObjectHideFlags: 0
@@ -2816,9 +2832,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   stringArgument: TerminalUIPlane
-  panelType: 1
+  panelType: 3
   panelSize: 0
-  isHidenWhenLeaveScene: 1
+  isHiddenWhenLeaveScene: 1
   groupName: 
 --- !u!224 &1717195137
 RectTransform:
@@ -2853,6 +2869,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   uiName: 
+  requestUIControl: 1
+  firstSelected: {fileID: 0}
   clear: {fileID: 1850672326}
   close: {fileID: 497886226}
   input: {fileID: 1187022920}
@@ -3302,8 +3320,11 @@ MonoBehaviour:
   chamferBox:
     chamferBoxSize: {x: 1, y: 1}
     chamferBoxRadius: {x: 0, y: 0, z: 0, w: 0}
-  parallelogram:
-    parallelogramValue: 0
+  quadrilateral:
+    topLeftOffset: {x: 0, y: 0}
+    topRightOffset: {x: 0, y: 0}
+    bottomLeftOffset: {x: 0, y: 0}
+    bottomRightOffset: {x: 0, y: 0}
   nStarPolygon:
     sideCount: 3
     inset: 2
@@ -3389,6 +3410,7 @@ MonoBehaviour:
   m_GradientOffset: 0
   m_GradientScale: 1
   m_BlendType: 0
+  cameraTexture: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

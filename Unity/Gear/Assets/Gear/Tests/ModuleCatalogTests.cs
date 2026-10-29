@@ -96,6 +96,40 @@ namespace Gear.Tests
         }
 
         [Test]
+        public void Dependency_On_Interface_Uses_First_Declared_Provider()
+        {
+            // DependsOn 可以写接口；多个提供者时取注册顺序里第一个（与 ModuleCatalog 的文档一致）
+            var consumer = new InterfaceConsumer();
+            var providerA = new InterfaceProviderA();
+            var providerB = new InterfaceProviderB();
+            var declared = new List<ICustomSystem> { consumer, providerB, providerA };
+
+            Assert.IsTrue(ModuleCatalog.TryBuild(declared, out var ordered, out var errors), errors);
+            Assert.Less(ordered.IndexOf(providerB), ordered.IndexOf(consumer),
+                "消费者必须排在按注册顺序选中的提供者之后");
+        }
+
+        [Test]
+        public void Dependency_On_Base_Class_Is_Supported()
+        {
+            var consumer = new BaseConsumer();
+            var provider = new DerivedProvider();
+            var declared = new List<ICustomSystem> { consumer, provider };
+
+            Assert.IsTrue(ModuleCatalog.TryBuild(declared, out var ordered, out var errors), errors);
+            Assert.Less(ordered.IndexOf(provider), ordered.IndexOf(consumer));
+        }
+
+        [Test]
+        public void Self_Dependency_Is_Reported()
+        {
+            var declared = new List<ICustomSystem> { new SelfDependent() };
+
+            Assert.IsFalse(ModuleCatalog.TryBuild(declared, out _, out var errors));
+            StringAssert.Contains("依赖了自己", errors);
+        }
+
+        [Test]
         public void Null_Entry_Is_Reported()
         {
             var declared = new List<ICustomSystem> { null };
@@ -129,6 +163,77 @@ namespace Gear.Tests
             var text = ModuleCatalog.Describe(ordered);
             StringAssert.Contains("FakeFirst(10)", text);
             StringAssert.Contains("FakeSecond(20)", text);
+        }
+
+        [Test]
+        public void ExpandDependencies_Adds_Missing_Providers_Recursively()
+        {
+            var declared = new List<ICustomSystem> { new ChainConsumer() };
+
+            var expanded = ModuleCatalog.ExpandDependencies(declared, out var added, out var unresolved);
+
+            Assert.AreEqual(0, unresolved.Count);
+            Assert.AreEqual(2, added.Count, "应补入直接依赖，以及它自己依赖的提供者");
+            Assert.AreEqual(3, expanded.Count);
+            Assert.IsTrue(ModuleCatalog.TryBuild(expanded, out var ordered, out var errors), errors);
+            Assert.IsInstanceOf<ChainProviderC>(ordered[0]);
+            Assert.IsInstanceOf<ChainProviderB>(ordered[1]);
+            Assert.IsInstanceOf<ChainConsumer>(ordered[2]);
+        }
+
+        [Test]
+        public void ExpandDependencies_Leaves_Satisfied_List_Unchanged()
+        {
+            var consumer = new PairConsumer();
+            var provider = new PairProvider();
+            var declared = new List<ICustomSystem> { consumer, provider };
+
+            var expanded = ModuleCatalog.ExpandDependencies(declared, out var added, out var unresolved);
+
+            Assert.AreEqual(0, added.Count);
+            Assert.AreEqual(0, unresolved.Count);
+            Assert.AreEqual(2, expanded.Count);
+            Assert.AreSame(consumer, expanded[0]);
+            Assert.AreSame(provider, expanded[1]);
+        }
+
+        [Test]
+        public void ExpandDependencies_Prefers_Static_Instance_Entry()
+        {
+            // 真实模块多是 MonoBehaviour 单例，拿不到无参构造，只能走静态 Instance
+            var declared = new List<ICustomSystem> { new ConsumerOfStaticEntry() };
+
+            var expanded = ModuleCatalog.ExpandDependencies(declared, out var added, out var unresolved);
+
+            Assert.AreEqual(0, unresolved.Count);
+            Assert.AreEqual(1, added.Count);
+            CollectionAssert.Contains(expanded, StaticEntryProvider.Instance);
+        }
+
+        [Test]
+        public void ExpandDependencies_Reports_Unresolvable_Dependency()
+        {
+            var declared = new List<ICustomSystem> { new ConsumerOfMissingInterface() };
+
+            var expanded = ModuleCatalog.ExpandDependencies(declared, out var added, out var unresolved);
+
+            Assert.AreEqual(0, added.Count);
+            Assert.AreEqual(1, unresolved.Count);
+            StringAssert.Contains(nameof(IMissingProvider), unresolved[0]);
+            Assert.AreEqual(1, expanded.Count, "补入失败时应保持原清单，不能吞掉模块");
+        }
+
+        [Test]
+        public void ExpandDependencies_Handles_Null_And_Empty()
+        {
+            Assert.IsNull(ModuleCatalog.ExpandDependencies(null, out var addedForNull, out var unresolvedForNull));
+            Assert.AreEqual(0, addedForNull.Count);
+            Assert.AreEqual(0, unresolvedForNull.Count);
+
+            var empty = new List<ICustomSystem>();
+            Assert.AreSame(empty, ModuleCatalog.ExpandDependencies(empty, out var addedForEmpty, out var unresolvedForEmpty));
+            Assert.AreEqual(0, addedForEmpty.Count);
+            Assert.AreEqual(0, unresolvedForEmpty.Count);
         }
 
         // ---- 测试用假模块（顺序只由 [ModuleOrder] 决定）----
@@ -169,5 +274,66 @@ namespace Gear.Tests
 
         [ModuleOrder(2, typeof(CycleA))]
         private sealed class CycleB : FakeModule { }
+
+        [ModuleOrder(10, typeof(PairProvider))]
+        private sealed class PairConsumer : FakeModule { }
+
+        [ModuleOrder(20)]
+        private sealed class PairProvider : FakeModule
+        {
+            public PairProvider() { }
+        }
+
+        [ModuleOrder(10, typeof(ChainProviderB))]
+        private sealed class ChainConsumer : FakeModule { }
+
+        [ModuleOrder(20, typeof(ChainProviderC))]
+        private sealed class ChainProviderB : FakeModule
+        {
+            public ChainProviderB() { }
+        }
+
+        [ModuleOrder(30)]
+        private sealed class ChainProviderC : FakeModule
+        {
+            public ChainProviderC() { }
+        }
+
+        private interface IMissingProvider : ICustomSystem { }
+
+        [ModuleOrder(10, typeof(IMissingProvider))]
+        private sealed class ConsumerOfMissingInterface : FakeModule { }
+
+        [ModuleOrder(10, typeof(StaticEntryProvider))]
+        private sealed class ConsumerOfStaticEntry : FakeModule { }
+
+        private interface IProviderRole { }
+
+        [ModuleOrder(10)]
+        private sealed class InterfaceProviderA : FakeModule, IProviderRole { }
+
+        [ModuleOrder(20)]
+        private sealed class InterfaceProviderB : FakeModule, IProviderRole { }
+
+        [ModuleOrder(1, typeof(IProviderRole))]
+        private sealed class InterfaceConsumer : FakeModule { }
+
+        private abstract class ProviderBase : FakeModule { }
+
+        [ModuleOrder(10)]
+        private sealed class DerivedProvider : ProviderBase { }
+
+        [ModuleOrder(1, typeof(ProviderBase))]
+        private sealed class BaseConsumer : FakeModule { }
+
+        [ModuleOrder(10, typeof(SelfDependent))]
+        private sealed class SelfDependent : FakeModule { }
+
+        [ModuleOrder(20)]
+        private sealed class StaticEntryProvider : FakeModule
+        {
+            public static StaticEntryProvider Instance { get; } = new StaticEntryProvider();
+            private StaticEntryProvider() { }
+        }
     }
 }

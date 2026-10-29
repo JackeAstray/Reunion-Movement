@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-using Gear.Common;
 namespace Gear.Example
 {
     public class TreeViewExample : MonoBehaviour

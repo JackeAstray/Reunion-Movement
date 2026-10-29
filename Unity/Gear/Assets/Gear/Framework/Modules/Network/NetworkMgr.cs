@@ -8,13 +8,33 @@ using Gear.Utilities;
 namespace Gear.Framework.Modules
 {
     /// <summary>
-    /// 网络通道管理器 —— 同时作为 MonoBehaviour 单例和 GameEngine 模块（ISystemUpdatable 驱动移除队列消费）。
+    /// 网络通道管理器 —— 同时作为 MonoBehaviour 单例（示例场景按组件挂载）和 GameEngine 模块。
+    /// <para>
+    /// 移除队列只由 GameEngine 的 <see cref="ISystemUpdatable"/> 驱动；不再保留 MonoBehaviour.Update 兜底。
+    /// 没有引擎时可显式调用 <see cref="Tick"/>。
+    /// </para>
     /// </summary>
     [ModuleOrder(130)]
-    public sealed class NetworkMgr : SingletonMgr<NetworkMgr>, ICustomSystem, ISystemUpdatable
+    public sealed class NetworkMgr : ICustomSystem, ISystemUpdatable, ISystemDisposable
     {
-        /// <summary>网络通道（KCP/Telepathy 的线程与连接）跨场景保持，避免切场景断开连接</summary>
-        protected override bool IsPersistentAcrossScenes => true;
+        private static Lazy<NetworkMgr> instance = new Lazy<NetworkMgr>(() => new NetworkMgr());
+
+        /// <summary>单例（懒创建，不创建 GameObject）。</summary>
+        public static NetworkMgr Instance => instance.Value;
+
+        /// <summary>是否已创建实例（不会触发懒加载）。</summary>
+        public static bool IsInitialized => instance.IsValueCreated;
+
+        /// <summary>复位跨 Play 会话的静态实例（关闭 Domain Reload 时由 SingletonResets 调用）。</summary>
+        public static void ResetStatics()
+        {
+            instance = new Lazy<NetworkMgr>(() => new NetworkMgr());
+        }
+
+        private NetworkMgr()
+        {
+            OnInit(null);
+        }
 
         // 主通道列表（用于 Tick 迭代，List 遍历比 Dictionary 快）
         List<INetworkChannel> channelList = new List<INetworkChannel>();
@@ -32,12 +52,6 @@ namespace Gear.Framework.Modules
                     return channelList.Count;
                 }
             }
-        }
-
-        protected override void Awake()
-        {
-            base.Awake();
-            OnInit(null);
         }
 
         public void AddChannel(INetworkChannel channel)
@@ -192,11 +206,11 @@ namespace Gear.Framework.Modules
             }
         }
 
-        /// <summary>ICustomSystem 初始化进度（恒为 100，NetworkMgr 由 Awake 完成初始化）</summary>
+        /// <summary>ICustomSystem 初始化进度（恒为 100，NetworkMgr 由私有构造函数完成初始化）</summary>
         public double InitProgress => 100;
 
         /// <summary>
-        /// ICustomSystem 初始化（幂等）：Awake 已通过 OnInit(null) 完成，这里仅保证接口契约。
+        /// ICustomSystem 初始化（幂等）：私有构造函数已通过 OnInit(null) 完成，这里仅保证接口契约。
         /// 注意：不能在此重复调用 OnInit 清理通道 —— NetworkMgr 跨场景/跨引擎重建存活，
         /// 引擎重初始化时误清空会断开在途的网络连接。
         /// </summary>
@@ -263,16 +277,18 @@ namespace Gear.Framework.Modules
         }
 
         /// <summary>
-        /// MonoBehaviour Update 兜底：仅在 GameEngine 未运行时消费移除队列，
-        /// 引擎运行时会通过 ISystemUpdatable.Update 驱动，避免双重消费。
-        /// 注意：通道 Tick 由 UniversalNetworkBehaviour.Update 自行驱动，此处不重复。
+        /// 手动消费移除队列（无引擎的工具/测试；正常游戏由 GameEngine 驱动）。
+        /// 通道 Tick 由 UniversalNetworkBehaviour.Update 自行驱动，此处不重复。
         /// </summary>
-        void Update()
+        public void Tick()
         {
-            // 引擎运行中由 ISystemUpdatable.Update 驱动，避免双重消费；
-            // 引擎未运行才用 MonoBehaviour Update 兜底
-            if (ModuleRuntime.IsEngineRunning) return;
             DrainRemoveQueue();
+        }
+
+        /// <summary>ISystemDisposable：引擎销毁/清理时关闭所有通道（旧 MonoBehaviour.OnDestroy 的替代）。</summary>
+        public void Clear()
+        {
+            OnTermination();
         }
 
         public void OnTermination()
@@ -292,10 +308,5 @@ namespace Gear.Framework.Modules
             }
         }
 
-        protected override void OnDestroy()
-        {
-            OnTermination();
-            base.OnDestroy();
-        }
     }
 }

@@ -1,7 +1,5 @@
-using Gear.Framework.Modules;
+using Gear.Common;
 using Gear.Utilities;
-using Gear.Framework.Modules.Http;
-using Gear.Framework.Modules.Timer;
 using Gear.Framework.Runtime.Base;
 using Gear.Framework.Runtime.EventMessage;
 using Gear.Framework.Runtime.Languages;
@@ -24,7 +22,7 @@ namespace Gear.Framework.Runtime
     /// <para>
     /// 三个入口覆盖接入时的常见起点：
     /// <list type="bullet">
-    /// <item><see cref="Full"/>：14 个模块，与改造前的 <c>StartGame.CreateModules()</c> 完全一致；</item>
+    /// <item><see cref="Full"/>：14 个模块（11 个 Runtime 模块 + 3 个由 Modules 注册表贡献的模块）；</item>
     /// <item><see cref="Minimal"/>：资源 + Addressables + 场景 + UI，够跑起一个界面；</item>
     /// <item><see cref="Without{T}"/>：从任意清单里去掉某类模块，缺的依赖由
     ///       <see cref="ModuleCatalog.ExpandDependencies"/> 在启动时自动补回。</item>
@@ -37,7 +35,7 @@ namespace Gear.Framework.Runtime
     ///
     /// // 只要最小集，再去掉终端和网络
     /// public override IList&lt;ICustomSystem&gt; CreateModules()
-    ///     =&gt; ModulePresets.Minimal().Without&lt;TerminalSystem&gt;().Without&lt;NetworkMgr&gt;();
+    ///     =&gt; ModulePresets.Minimal().Without&lt;TerminalSystem&gt;();
     /// </code>
     ///
     /// <para>
@@ -48,7 +46,8 @@ namespace Gear.Framework.Runtime
     public static class ModulePresets
     {
         /// <summary>
-        /// 全部 14 个模块 = <see cref="Minimal"/> 的 4 个 + 另外 10 个。
+        /// 全部 14 个模块 = <see cref="Minimal"/> 的 4 个 + 另外 10 个
+        /// （其中 Timer / Network / Http 由 Modules 程序集通过 <see cref="ModuleSourceRegistry"/> 贡献）。
         /// 清单顺序不代表初始化顺序：实际顺序由各模块的 <c>[ModuleOrder]</c> 拓扑排序决定。
         /// </summary>
         public static IList<ICustomSystem> Full()
@@ -59,12 +58,17 @@ namespace Gear.Framework.Runtime
             modules.Add(LanguagesSystem.Instance);     // 50  多语言
             modules.Add(PauseSystem.Instance);         // 60  暂停管理（Time.timeScale 统一切换）
             modules.Add(SoundSystem.Instance);         // 70  音频（需要 Update 驱动淡入淡出）
-            modules.Add(TimerMgr.Instance);            // 80  计时器（需要 Update 驱动）
             modules.Add(UIInputSystem.Instance);       // 100 UI 输入（需要 Update 驱动导航）
             modules.Add(UIToolkitSystem.Instance);     // 110 UI Toolkit
             modules.Add(TerminalSystem.Instance);      // 120 终端（需要 Update 检测按键）
-            modules.Add(NetworkMgr.Instance);          // 130 网络通道管理（需要 Update 消费移除队列）
-            modules.Add(HttpMgr.Instance);             // 140 HTTP 请求（需要 Update 轮询进度）
+
+            // Timer(80) / Network(130) / Http(140) 来自 Modules 程序集：
+            // Runtime 不直接引用 Modules，删掉 Modules 时它们会自然缺席，启动由 ModuleCatalog 校验。
+            if (ModuleSourceRegistry.Collect(modules) == 0)
+            {
+                Log.Warning("[ModulePresets] 没有注册任何模块来源（Modules 未加载或手动启动早于 SubsystemRegistration）；"
+                    + "Full() 只包含 Runtime 模块。需要 Modules 的模块时先调用 ModuleSourceRegistration.EnsureRegistered()。");
+            }
 
             return modules;
         }

@@ -96,6 +96,15 @@ namespace Gear.Framework.Modules.StateMachine
         /// </summary>
         public void Update()
         {
+            Update(Time.deltaTime);
+        }
+
+        /// <summary>
+        /// 用显式时间步推进状态机（固定步长驱动，或在没有 Unity PlayerLoop 的环境里测试）。
+        /// 不读取 <c>Time.deltaTime</c>，行为与 <see cref="Update()"/> 一致。
+        /// </summary>
+        public void Update(float deltaTime)
+        {
             if (isPaused)
             {
                 return;
@@ -104,31 +113,30 @@ namespace Gear.Framework.Modules.StateMachine
             // 回调异常隔离：单个订阅者抛异常不得中断整个状态机本帧更新
             try { GlobalUpdate?.Invoke(); } catch (Exception ex) { Log.Error("StateMachine GlobalUpdate 订阅者异常（已隔离）: {0}", ex.Message); }
 
-            if (currentState == null)
+            // 主状态与并行状态相互独立：没有主状态时，并行状态仍应继续更新/超时。
+            if (currentState != null)
             {
-                return;
-            }
+                // 用局部快照：OnUpdate 回调内可能调用 ChangeState/Reset 修改 currentState。
+                // 注意：对局部快照判空是无效防御（快照刚来自非空 currentState），
+                // 必须在 OnUpdate 之后重新校验 currentState 是否仍指向同一状态实例，
+                // 否则会对已退出的旧状态累加计时并触发虚假的超时切换。
+                var state = currentState;
+                try { state.OnUpdate?.Invoke(); } catch (Exception ex) { Log.Error("StateMachine OnUpdate 订阅者异常（已隔离）: {0}", ex.Message); }
+                if (!ReferenceEquals(currentState, state)) return;
 
-            // 用局部快照：OnUpdate 回调内可能调用 ChangeState/Reset 修改 currentState。
-            // 注意：对局部快照判空是无效防御（快照刚来自非空 currentState），
-            // 必须在 OnUpdate 之后重新校验 currentState 是否仍指向同一状态实例，
-            // 否则会对已退出的旧状态累加计时并触发虚假的超时切换。
-            var state = currentState;
-            try { state.OnUpdate?.Invoke(); } catch (Exception ex) { Log.Error("StateMachine OnUpdate 订阅者异常（已隔离）: {0}", ex.Message); }
-            if (!ReferenceEquals(currentState, state)) return;
+                state.elapsedTime += deltaTime;
 
-            state.elapsedTime += Time.deltaTime;
-
-            if (state.elapsedTime >= state.timeout)
-            {
-                HandleStateTimeout(state);
+                if (state.elapsedTime >= state.timeout)
+                {
+                    HandleStateTimeout(state);
+                }
             }
 
             // 并行状态更新（倒序遍历以支持超时移除）
             for (int i = parallelStates.Count - 1; i >= 0; i--)
             {
                 var parallelState = parallelStates[i];
-                parallelState.elapsedTime += Time.deltaTime;
+                parallelState.elapsedTime += deltaTime;
                 if (parallelState.elapsedTime >= parallelState.timeout)
                 {
                     try { parallelState.OnStop?.Invoke(); } catch (Exception ex) { Log.Error("StateMachine 并行状态 OnStop 异常（已隔离）: {0}", ex.Message); }
@@ -160,7 +168,17 @@ namespace Gear.Framework.Modules.StateMachine
         /// <param name="onStop"></param>
         public void AddState(TLabel label, Action onStart = null, Action onUpdate = null, Action onStop = null)
         {
-            stateDictionary[label] = new State(label, onStart, onUpdate, onStop);
+            AddState(label, float.MaxValue, 0, onStart, onUpdate, onStop);
+        }
+
+        /// <summary>
+        /// 添加带超时与优先级的状态。超过 <paramref name="timeout"/> 秒后自动切到
+        /// <see cref="SetDefaultState"/> 设置的状态；未设置默认状态时只重置计时，不切换。
+        /// </summary>
+        public void AddState(TLabel label, float timeout, int priority = 0,
+            Action onStart = null, Action onUpdate = null, Action onStop = null)
+        {
+            stateDictionary[label] = new State(label, onStart, onUpdate, onStop, timeout, priority);
         }
 
         /// <summary>

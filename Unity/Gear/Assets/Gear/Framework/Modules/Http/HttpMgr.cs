@@ -13,13 +13,28 @@ using Gear.Utilities;
 namespace Gear.Framework.Modules.Http
 {
     /// <summary>
-    /// HTTP管理器 —— 同时作为 MonoBehaviour 单例和 GameEngine 模块（ISystemUpdatable 驱动进度轮询）。
+    /// HTTP 管理器 —— 纯 C# 单例 + GameEngine 模块（ISystemUpdatable 驱动进度轮询）。
+    /// <para>
+    /// 不再依赖 MonoBehaviour：请求由 <see cref="IHttpService"/> + UniTask 驱动；
+    /// 没有引擎时（工具/测试）可显式调用 <see cref="Tick"/> 轮询进度。
+    /// </para>
     /// </summary>
     [ModuleOrder(140)]
-    public class HttpMgr : SingletonMgr<HttpMgr>, ICustomSystem, ISystemUpdatable
+    public class HttpMgr : ICustomSystem, ISystemUpdatable
     {
-        /// <summary>HTTP 请求可能在切场景期间仍在途，保持跨场景存活</summary>
-        protected override bool IsPersistentAcrossScenes => true;
+        private static Lazy<HttpMgr> instance = new Lazy<HttpMgr>(() => new HttpMgr());
+
+        /// <summary>单例（懒创建，不创建 GameObject）。</summary>
+        public static HttpMgr Instance => instance.Value;
+
+        /// <summary>是否已创建实例（不会触发懒加载）。</summary>
+        public static bool IsInitialized => instance.IsValueCreated;
+
+        /// <summary>复位跨 Play 会话的静态实例（关闭 Domain Reload 时由 SingletonResets 调用）。</summary>
+        public static void ResetStatics()
+        {
+            instance = new Lazy<HttpMgr>(() => new HttpMgr());
+        }
 
         private IHttpService service;
         private Dictionary<string, string> superHeaders;
@@ -45,17 +60,16 @@ namespace Gear.Framework.Modules.Http
         }
         private readonly Queue<PendingHttpRequest> pendingRequests = new Queue<PendingHttpRequest>();
 
-        protected override void Awake()
+        private HttpMgr()
         {
-            base.Awake();
             Init(new UnityHttpService());
         }
 
-        /// <summary>ICustomSystem 初始化进度（恒为 100，HttpMgr 由 Awake 完成初始化）</summary>
+        /// <summary>ICustomSystem 初始化进度（恒为 100，HttpMgr 由构造函数完成默认服务初始化）</summary>
         public double InitProgress => 100;
 
         /// <summary>
-        /// ICustomSystem 初始化（幂等）：Awake 已通过 Init(IHttpService) 完成，这里仅保证接口契约。
+        /// ICustomSystem 初始化（幂等）：构造函数已通过 Init(IHttpService) 完成，这里仅保证接口契约。
         /// </summary>
         public UniTask Init()
         {
@@ -465,15 +479,9 @@ namespace Gear.Framework.Modules.Http
             }
         }
 
-        /// <summary>
-        /// MonoBehaviour Update 兜底：仅在 GameEngine 未运行时自行轮询进度，
-        /// 引擎运行时会通过 ISystemUpdatable.Update 驱动，避免双重轮询。
-        /// </summary>
-        public void Update()
+        /// <summary>手动轮询进度（无引擎的工具/测试；正常游戏由 GameEngine 驱动）。</summary>
+        public void Tick()
         {
-            // 引擎运行中由 ISystemUpdatable.Update 驱动，避免双重轮询；
-            // 引擎未运行（含运行前/销毁后）才用 MonoBehaviour Update 兜底
-            if (ModuleRuntime.IsEngineRunning) return;
             UpdateProgressPump();
         }
 

@@ -1,4 +1,4 @@
-﻿# UI 输入系统（键盘 / 鼠标 / 手柄 / 赛车方向盘 / 飞行摇杆）
+# UI 输入系统（键盘 / 鼠标 / 手柄 / 赛车方向盘 / 飞行摇杆）
 
 本文档说明 `UIInputSystem` 与 `CarouselSelectionController` 的多设备输入约定。
 
@@ -300,10 +300,10 @@ UIInputSystem.Instance.ResetDeviceBindings(device);
 
 ## 8. 相关文件
 
-- `Assets/Gear/Core/System/UIInputSystem/UIInputSystem.cs`：设备轮询、玩家槽位、焦点域路由、事件派发
-- `Assets/Gear/Core/System/UIInputSystem/UIFocusScope.cs`：窗口焦点域，负责窗口栈顶与 PlayerSlot 路由
-- `Assets/Gear/Core/System/UIInputSystem/UIInputDeviceProfile.cs`：设备识别、默认按键、按设备重绑定
-- `Assets/Gear/Core/System/UIInputSystem/UIInputTargets.cs`：导航目标接口与事件结构
+- `Assets/Gear/Framework/Runtime/System/UIInputSystem/UIInputSystem.cs`：设备轮询、玩家槽位、焦点域路由、事件派发
+- `Assets/Gear/Framework/Runtime/System/UIInputSystem/UIFocusScope.cs`：窗口焦点域，负责窗口栈顶与 PlayerSlot 路由
+- `Assets/Gear/Framework/Runtime/System/UIInputSystem/UIInputDeviceProfile.cs`：设备识别、默认按键、按设备重绑定
+- `Assets/Gear/Framework/Runtime/System/UIInputSystem/UIInputTargets.cs`：导航目标接口与事件结构
 - `Assets/Gear/UI/Select/CarouselSelectionController.cs`：轮播选择框
 - `Assets/Gear/UI/Select/CarouselSelectionGroup.cs`：同一玩家的多选择框切换
 - `Assets/Gear/UI/Select/CarouselMenuStack.cs`：开始菜单的层级跳转

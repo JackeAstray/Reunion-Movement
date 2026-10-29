@@ -12,9 +12,23 @@
   <assembly fullname="Gear.Framework.Runtime">
     <!-- GameEntryResolver 用 Attribute.GetCustomAttribute + Activator.CreateInstance 找入口 -->
     <type fullname="Gear.Framework.Runtime.GameEntryResolver" preserve="all" />
-    <type fullname="Gear.Framework.Runtime.Base.GearGameEntryAttribute" preserve="all" />
     <!-- 仓库示例入口；接入方换成自己的类型时可在自己的 link.xml 里补 -->
     <type fullname="Gear.Framework.Runtime.StartGame" preserve="all" />
+  </assembly>
+
+  <assembly fullname="Gear.Base">
+    <!-- 入口声明特性：类型在 Gear.Base 程序集，由 GameEntryResolver 反射读取 -->
+    <type fullname="Gear.Framework.Runtime.Base.GearGameEntryAttribute" preserve="all" />
+  </assembly>
+
+  <assembly fullname="Gear.Framework.Modules">
+    <!-- Runtime 不再直接引用 Modules，模块来源/分辨率实现通过 Base 注册表在运行时接入 -->
+    <type fullname="Gear.Framework.Modules.ModuleSourceRegistration" preserve="all" />
+    <type fullname="Gear.Framework.Modules.ModulesModuleSource" preserve="all" />
+    <type fullname="Gear.Framework.Modules.ResolutionMgr" preserve="all" />
+    <type fullname="Gear.Framework.Modules.SingletonResets" preserve="all" />
+    <type fullname="Gear.Framework.Modules.ErrorReporter" preserve="all" />
+    <type fullname="Gear.Framework.Modules.PerformanceMonitor" preserve="all" />
   </assembly>
 
   <!-- Excel 生成的配置数据与容器：Newtonsoft 泛型反序列化 + Resources.Load -->

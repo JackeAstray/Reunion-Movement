@@ -33,17 +33,17 @@ Unity 菜单：`Gear → 工具箱`。
 
 工具箱“扩展模块”区提供“复制模块模板”和“定位注册入口”。
 
-1. 复制随包模板 [CustomSystem.cs.txt](CustomSystem.cs.txt)，保存为插件 `Core/System/CustomSystem/CustomSystem.cs`；模板是纯 C# 模块，不是 MonoBehaviour。
-2. 保持默认命名空间 `Gear.Core.Custom`，或重命名类并同步修改单例字段、构造函数和注册代码。
-3. 在 `Core/StartGame.cs` 添加 `using Gear.Core.Custom;`。
+1. 复制随包模板 [CustomSystem.cs.txt](CustomSystem.cs.txt)，保存为 `Framework/Runtime/System/CustomSystem/CustomSystem.cs`；模板是纯 C# 模块，不是 MonoBehaviour。
+2. 保持默认命名空间 `Gear.Framework.Runtime.Custom`，或重命名类并同步修改单例字段、构造函数和注册代码。
+3. 在 `Framework/Runtime/StartGame.cs` 添加 `using Gear.Framework.Runtime.Custom;`。
 4. 在 `CreateModules()` 的 `return modules;` 前添加 `modules.Add(CustomSystem.Instance);`。
 5. 如新增一个模块，可将列表初始容量从 14 改为 15（不是功能必需）。
 
 模块必须实现 `InitProgress`（0–100）和 `UniTask Init()`；Update / Clear 是可选接口。模板包含三者，按需删除不需要的接口及方法。Init 完成前把进度设为 100，Clear 中解除订阅、取消任务并释放资源。
 
-列表顺序决定初始化顺序。依赖模块必须先注册，ResourcesSystem 保持最前。工具箱不会自动改注册列表，也不会创建运行时模块实例。
+初始化顺序由各模块类上的 `[ModuleOrder(order, DependsOn...)]` 决定；`CreateModules()` 只决定“注册哪些模块”，缺的依赖会按声明自动补入（`Bootstrap.Options.AutoExpandModuleDependencies`，默认开）。ResourcesSystem 的 Order 是 10，保持在最前即可。工具箱不会自动改注册列表，也不会创建运行时模块实例。
 
-推荐目录沿用 `Gear.Core` 程序集，无需新 asmdef。不要直接保存到无 asmdef 的普通 Assets 目录：那会进入 Assembly-CSharp，而 Core 无法引用它。也不要随意拆出一个反向依赖 Core 的程序集再让 Core 引用它，以免循环引用。
+推荐目录沿用 `Gear.Framework.Runtime` 程序集，无需新 asmdef。不要直接保存到无 asmdef 的普通 Assets 目录：那会进入 Assembly-CSharp，而 `Gear.Framework.Runtime` 无法引用它。也不要随意拆出一个反向依赖 Runtime 的程序集再让 Runtime 引用它，以免循环引用。
 
 ## 常见问题
 

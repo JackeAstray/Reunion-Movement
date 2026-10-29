@@ -1,6 +1,6 @@
 {
     "name": "Gear.Utilities.UI.ImageExtensions.Editor",
-    "rootNamespace": "Gear.UI.ImageExtensions.Editor",
+    "rootNamespace": "Gear.EditorTools.ImageExtensions",
     "references": [
         "Gear.Utilities",
         "Gear.Common",

@@ -84,6 +84,48 @@ jobs:
           path: editmode-results
           if-no-files-found: warn
 
+  playmode-tests:
+    needs: license-check
+    if: needs.license-check.outputs.configured == 'true'
+    name: PlayMode 测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 1
+
+      - name: 缓存 Library
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.UNITY_PROJECT_PATH }}/Library
+          key: Library-PlayMode-${{ runner.os }}-${{ hashFiles('Unity/Gear/Packages/packages-lock.json') }}
+          restore-keys: |
+            Library-PlayMode-${{ runner.os }}-
+            Library-${{ runner.os }}-
+
+      - name: 运行 PlayMode 测试
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          projectPath: ${{ env.UNITY_PROJECT_PATH }}
+          testMode: playmode
+          artifactsPath: playmode-results
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: PlayMode 测试
+          customParameters: -nographics
+
+      - name: 上传测试结果
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playmode-results
+          path: playmode-results
+          if-no-files-found: warn
+
   webgl-build:
     needs: license-check
     name: WebGL 构建
@@ -270,7 +312,7 @@ jobs:
           check "$base/Common/Gear.Common.asmdef" "Gear.Common" Gear.Framework.Modules Gear.Utilities Gear.Framework.Runtime
           check "$base/Framework/Modules/Gear.Framework.Modules.asmdef" "Gear.Framework.Modules" Gear.Framework.Runtime
           check "$base/Utilities/Gear.Utilities.asmdef" "Gear.Utilities" Gear.Framework.Modules Gear.Framework.Runtime
-          check "$base/Framework/Runtime/Gear.Framework.Runtime.asmdef" "Gear.Framework.Runtime" Gear.EditorTools Gear.Toolbox.Editor Gear.Tests
+          check "$base/Framework/Runtime/Gear.Framework.Runtime.asmdef" "Gear.Framework.Runtime" Gear.Framework.Modules Gear.EditorTools Gear.Toolbox.Editor Gear.Tests
           exit $fail
 
       - name: .Instance 使用点只减不增
@@ -313,3 +355,20 @@ jobs:
             fi
           done < <(find Assets/Gear -name '*.cs' -type f)
           exit $fail
+
+      - name: 旧命名残留（改名 / 目录归位）
+        run: |
+          set -euo pipefail
+          pattern='\bGear\.(Core|Utils)\b|\bCore/(StartGame|System|Base)\b|\bUtils/(Timer|Http|Network|Util|UI)\b'
+          hits=$(grep -rnE "$pattern" \
+            --include='*.cs' --include='*.md' --include='*.txt' --include='*.asmdef' --include='*.ps1' \
+            --exclude='ArchitectureGuard.cs' \
+            --exclude-dir=.git --exclude-dir=Library --exclude-dir=Plugins --exclude-dir=3rd \
+            --exclude-dir=GenerateScript --exclude-dir=Examples --exclude-dir=archive --exclude-dir=design \
+            . 2>/dev/null || true)
+          if [ -n "$hits" ]; then
+            echo "$hits"
+            echo "::error::发现改名前的旧命名残留（应为 Gear.Framework.Runtime / Framework/Runtime/System 等）"
+            exit 1
+          fi
+          echo "未发现旧命名残留"

@@ -1,5 +1,5 @@
 ﻿using Gear.Common;
-using Gear.Framework.Modules;
+using Gear.Framework.Runtime.Base;
 using Gear.Utilities;
 using Gear.Framework.Runtime.Languages;
 using System;
@@ -169,14 +169,20 @@ namespace Gear.Framework.Runtime
                     Log.Debug("[GameOption] 当前平台分辨率由系统控制，跳过 SetResolution({0}x{1})",
                         currentOption.resolutionWidth, currentOption.resolutionHeight);
                 }
-                else if (ResolutionMgr.IsInitialized)
-                {
-                    ResolutionMgr.Instance.ApplyResolutionFromOptions(
-                        currentOption.resolutionWidth, currentOption.resolutionHeight, currentOption.fullscreen);
-                }
                 else
                 {
-                    Screen.SetResolution(currentOption.resolutionWidth, currentOption.resolutionHeight, currentOption.fullscreen);
+                    // ResolutionMgr（Modules）存在时由它统一应用；没有实现者时退回 Screen.SetResolution。
+                    // 通过 Base 的桥取实现者，Runtime 不再直接引用 Modules 程序集。
+                    IResolutionApplier applier = ResolutionBridge.Current;
+                    if (applier != null)
+                    {
+                        applier.ApplyResolutionFromOptions(
+                            currentOption.resolutionWidth, currentOption.resolutionHeight, currentOption.fullscreen);
+                    }
+                    else
+                    {
+                        Screen.SetResolution(currentOption.resolutionWidth, currentOption.resolutionHeight, currentOption.fullscreen);
+                    }
                 }
 
                 // 垂直同步
