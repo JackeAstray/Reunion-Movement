@@ -1,6 +1,6 @@
-# Reunion-Movement 文档索引
+# Astray 文档索引
 
-> 只读文档，代码在 `Unity/ReunionMovement/Assets/ReunionMovement/`。第一次来请从 **① 上手** 开始读。
+> 只读文档，代码在 `Unity/Astray/Assets/Astray/`。第一次来请从 **① 上手** 开始读。
 
 ## ① 上手（按顺序读，约 1 小时）
 

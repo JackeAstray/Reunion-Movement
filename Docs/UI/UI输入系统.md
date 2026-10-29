@@ -300,16 +300,16 @@ UIInputSystem.Instance.ResetDeviceBindings(device);
 
 ## 8. 相关文件
 
-- `Assets/ReunionMovement/Core/System/UIInputSystem/UIInputSystem.cs`：设备轮询、玩家槽位、焦点域路由、事件派发
-- `Assets/ReunionMovement/Core/System/UIInputSystem/UIFocusScope.cs`：窗口焦点域，负责窗口栈顶与 PlayerSlot 路由
-- `Assets/ReunionMovement/Core/System/UIInputSystem/UIInputDeviceProfile.cs`：设备识别、默认按键、按设备重绑定
-- `Assets/ReunionMovement/Core/System/UIInputSystem/UIInputTargets.cs`：导航目标接口与事件结构
-- `Assets/ReunionMovement/UI/Select/CarouselSelectionController.cs`：轮播选择框
-- `Assets/ReunionMovement/UI/Select/CarouselSelectionGroup.cs`：同一玩家的多选择框切换
-- `Assets/ReunionMovement/UI/Select/CarouselMenuStack.cs`：开始菜单的层级跳转
-- `Assets/ReunionMovement/UI/Select/SettingsPanelController.cs`：单页设置的滑动条/下拉框/开关与导航
-- `Assets/ReunionMovement/UI/Select/StartMenuActions.cs`：开始菜单退出
-- `Assets/ReunionMovement/UI/Select/LocalMultiplayerSelectionManager.cs`：P1-Pn 位置/颜色/准备与读秒
-- `Assets/ReunionMovement/UI/Select/LocalMultiplayerPlayerCard.cs`：单个玩家卡片与输入目标
-- `Assets/ReunionMovement/UI/Select/LocalMultiplayerTrackView.cs`：赛道位置槽的 P#/颜色标记
-- `Assets/ReunionMovement/UI/Select/CarouselPointerBridge.cs`：鼠标悬停/滚轮转发
+- `Assets/Astray/Core/System/UIInputSystem/UIInputSystem.cs`：设备轮询、玩家槽位、焦点域路由、事件派发
+- `Assets/Astray/Core/System/UIInputSystem/UIFocusScope.cs`：窗口焦点域，负责窗口栈顶与 PlayerSlot 路由
+- `Assets/Astray/Core/System/UIInputSystem/UIInputDeviceProfile.cs`：设备识别、默认按键、按设备重绑定
+- `Assets/Astray/Core/System/UIInputSystem/UIInputTargets.cs`：导航目标接口与事件结构
+- `Assets/Astray/UI/Select/CarouselSelectionController.cs`：轮播选择框
+- `Assets/Astray/UI/Select/CarouselSelectionGroup.cs`：同一玩家的多选择框切换
+- `Assets/Astray/UI/Select/CarouselMenuStack.cs`：开始菜单的层级跳转
+- `Assets/Astray/UI/Select/SettingsPanelController.cs`：单页设置的滑动条/下拉框/开关与导航
+- `Assets/Astray/UI/Select/StartMenuActions.cs`：开始菜单退出
+- `Assets/Astray/UI/Select/LocalMultiplayerSelectionManager.cs`：P1-Pn 位置/颜色/准备与读秒
+- `Assets/Astray/UI/Select/LocalMultiplayerPlayerCard.cs`：单个玩家卡片与输入目标
+- `Assets/Astray/UI/Select/LocalMultiplayerTrackView.cs`：赛道位置槽的 P#/颜色标记
+- `Assets/Astray/UI/Select/CarouselPointerBridge.cs`：鼠标悬停/滚轮转发

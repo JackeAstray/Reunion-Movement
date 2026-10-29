@@ -1,0 +1,24 @@
+{
+    "name": "Astray.GenerateScript.UI",
+    "rootNamespace": "Astray.Framework.Runtime.UI",
+    "references": [
+        "Astray.Base",
+        "Astray.Common",
+        "Astray.Framework.Runtime",
+        "Astray.Framework.Modules",
+        "Astray.Utilities",
+        "UniTask",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

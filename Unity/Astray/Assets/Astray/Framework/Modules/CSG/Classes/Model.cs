@@ -1,0 +1,194 @@
+using System;
+using UnityEngine;
+using System.Collections.Generic;
+using System.Linq;
+
+using Astray.Common;
+using Astray.Utilities;
+namespace Astray.Framework.Modules
+{
+    /// <summary>
+    /// 模型
+    /// </summary>
+    public sealed class Model
+    {
+        List<Vertex> m_Vertices;
+        List<Material> m_Materials;
+        List<List<int>> m_Indices;
+
+        public List<Material> Materials
+        {
+            get { return m_Materials; }
+            set { m_Materials = value; InvalidateMeshCache(); }
+        }
+
+        public List<Vertex> vertices
+        {
+            get { return m_Vertices; }
+            set { m_Vertices = value; InvalidateMeshCache(); }
+        }
+
+        public List<List<int>> indices
+        {
+            get { return m_Indices; }
+            set { m_Indices = value; InvalidateMeshCache(); }
+        }
+
+        private Mesh m_CachedMesh;
+
+        /// <summary>
+        /// 几何数据被整体替换后必须让缓存的 Mesh 失效，否则 .mesh 返回的是旧几何
+        /// （调用方"改数据再取网格"会静默拿到过期结果）。
+        /// 注意：原地修改 List 内容无法被侦测，此时需自行调用 <see cref="InvalidateMeshCache"/>。
+        /// </summary>
+        internal void InvalidateMeshCache()
+        {
+            if (m_CachedMesh != null)
+            {
+                // 运行时 Destroy 延迟到帧末；编辑器（非播放）必须用 DestroyImmediate，
+                // 否则残留的中间 Mesh 会一直存在并报 "Destroy may not be called from edit mode"
+                if (Application.isPlaying) UnityEngine.Object.Destroy(m_CachedMesh);
+                else UnityEngine.Object.DestroyImmediate(m_CachedMesh);
+                m_CachedMesh = null;
+            }
+        }
+
+        public Mesh mesh
+        {
+            get
+            {
+                // 缓存转换结果：显式转换每次调用都新建 Mesh（顶点/索引/材质全量复制），
+                // 多次访问（示例中先赋 MeshFilter 再 ToArray 等）会重复构建
+                if (m_CachedMesh == null)
+                {
+                    m_CachedMesh = (Mesh)this;
+                }
+                return m_CachedMesh;
+            }
+        }
+
+        public Model(GameObject gameObject) :
+            this(gameObject.GetComponent<MeshFilter>()?.sharedMesh,
+                gameObject.GetComponent<MeshRenderer>()?.sharedMaterials,
+                gameObject.GetComponent<Transform>())
+        {
+        }
+
+        /// <summary>
+        /// 从UnityEngine初始化模型。网格和变换
+        /// </summary>
+        public Model(Mesh mesh, Material[] materials, Transform transform)
+        {
+            if (mesh == null)
+                throw new ArgumentNullException("mesh");
+
+            if (transform == null)
+                throw new ArgumentNullException("transform");
+
+            m_Vertices = VertexUtility.GetVertices(mesh).Select(x => transform.TransformVertex(x)).ToList();
+            m_Materials = new List<Material>(materials);
+            m_Indices = new List<List<int>>();
+
+            for (int i = 0, c = mesh.subMeshCount; i < c; i++)
+            {
+                if (mesh.GetTopology(i) != MeshTopology.Triangles)
+                    continue;
+                var indices = new List<int>();
+                mesh.GetIndices(indices, i);
+                m_Indices.Add(indices);
+            }
+        }
+
+        internal Model(List<Polygon> polygons)
+        {
+            // 预计算总顶点数以预分配容量，避免多次扩容
+            int totalVertCount = 0;
+            for (int i = 0; i < polygons.Count; i++)
+            {
+                // 退化多边形（顶点数 < 3）会算出负容量，导致 new List<Vertex>(负数) 抛异常；
+                // 容量仅为预分配提示，钳到非负即可（实际添加时 List 自动扩容）
+                int triangleVerts = (polygons[i].vertices.Count - 2) * 3;
+                if (triangleVerts > 0) totalVertCount += triangleVerts;
+            }
+
+            m_Vertices = new List<Vertex>(Math.Max(0, totalVertCount));
+            Dictionary<Material, List<int>> submeshes = new Dictionary<Material, List<int>>();
+
+            int p = 0;
+
+            for (int i = 0; i < polygons.Count; i++)
+            {
+                Polygon poly = polygons[i];
+                List<int> indices;
+
+                if (!submeshes.TryGetValue(poly.material, out indices))
+                {
+                    indices = new List<int>();
+                    submeshes.Add(poly.material, indices);
+                }
+
+                for (int j = 2; j < poly.vertices.Count; j++)
+                {
+                    m_Vertices.Add(poly.vertices[0]);
+                    indices.Add(p++);
+
+                    m_Vertices.Add(poly.vertices[j - 1]);
+                    indices.Add(p++);
+
+                    m_Vertices.Add(poly.vertices[j]);
+                    indices.Add(p++);
+                }
+            }
+
+            // 保持 Keys/Values 的配对顺序（显式遍历而非依赖 Dictionary 内部顺序）
+            m_Materials = new List<Material>(submeshes.Count);
+            m_Indices = new List<List<int>>(submeshes.Count);
+            foreach (var kvp in submeshes)
+            {
+                m_Materials.Add(kvp.Key);
+                m_Indices.Add(kvp.Value);
+            }
+        }
+
+        internal List<Polygon> ToPolygons()
+        {
+            List<Polygon> list = new List<Polygon>();
+
+            for (int s = 0, c = m_Indices.Count; s < c; s++)
+            {
+                var indices = m_Indices[s];
+
+                for (int i = 0, ic = indices.Count; i < ic; i += 3)
+                {
+                    List<Vertex> triangle = new List<Vertex>(3)
+                    {
+                        m_Vertices[indices[i + 0]],
+                        m_Vertices[indices[i + 1]],
+                        m_Vertices[indices[i + 2]]
+                    };
+
+                    list.Add(new Polygon(triangle, m_Materials[s]));
+                }
+            }
+
+            return list;
+        }
+
+        public static explicit operator Mesh(Model model)
+        {
+            var mesh = new Mesh();
+            VertexUtility.SetMesh(mesh, model.m_Vertices);
+            mesh.subMeshCount = model.m_Indices.Count;
+            for (int i = 0, c = mesh.subMeshCount; i < c; i++)
+            {
+#if UNITY_2019_3_OR_NEWER
+                mesh.SetIndices(model.m_Indices[i], MeshTopology.Triangles, i);
+#else
+                mesh.SetIndices(model.m_Indices[i].ToArray(), MeshTopology.Triangles, i);
+#endif
+            }
+
+            return mesh;
+        }
+    }
+}

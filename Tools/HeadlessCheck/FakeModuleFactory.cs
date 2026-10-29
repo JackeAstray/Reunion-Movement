@@ -2,7 +2,7 @@ using System;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace ReunionMovement.HeadlessCheck
+namespace Astray.HeadlessCheck
 {
     /// <summary>
     /// 用 Reflection.Emit 在内存里造"假模块"。
@@ -19,7 +19,7 @@ namespace ReunionMovement.HeadlessCheck
     internal sealed class FakeModuleFactory
     {
         /// <summary>动态程序集名。ModuleOrder 的 Type 参数会以程序集限定名保存，需要能被解析回来。</summary>
-        public const string DynamicAssemblyName = "ReunionMovement.HeadlessFakes";
+        public const string DynamicAssemblyName = "Astray.HeadlessFakes";
 
         private static int assemblyCounter;
 

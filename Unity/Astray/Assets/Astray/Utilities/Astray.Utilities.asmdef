@@ -1,0 +1,24 @@
+{
+    "name": "Astray.Utilities",
+    "rootNamespace": "Astray.Utilities",
+    "references": [
+        "Astray.Base",
+        "Astray.Common",
+        "UniTask",
+        "Astray.Telepathy",
+        "Astray.Kcp2k",
+        "Astray.SimpleWeb",
+        "UnityEngine.UI",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

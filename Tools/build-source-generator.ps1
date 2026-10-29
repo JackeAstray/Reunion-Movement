@@ -1,10 +1,10 @@
-<#
+﻿<#
 .SYNOPSIS
     重建 Assets 内的源码生成器 DLL。
 
 .DESCRIPTION
-    `Assets/ReunionMovement/Plugins/Generators/ReunionMovement.SourceGenerator.dll` 是提交在仓库里的构建产物，
-    源码在 `Unity/ReunionMovement/Tools/ReunionMovement.SourceGenerator/`。
+    `Assets/Astray/Plugins/Generators/Astray.SourceGenerator.dll` 是提交在仓库里的构建产物，
+    源码在 `Unity/Astray/Tools/Astray.SourceGenerator/`。
 
     生成器用 **元数据名字符串**匹配 `[RegisterCommand]` 与 `UIController`
     （见 TerminalCommandRegistryGenerator / UIControllerRegistryGenerator 里的 MetadataName 常量），
@@ -24,13 +24,13 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$generatorDir = Join-Path $repoRoot 'Unity\ReunionMovement\Tools\ReunionMovement.SourceGenerator'
-$target = Join-Path $repoRoot 'Unity\ReunionMovement\Assets\ReunionMovement\Plugins\Generators\ReunionMovement.SourceGenerator.dll'
+$generatorDir = Join-Path $repoRoot 'Unity\Astray\Tools\Astray.SourceGenerator'
+$target = Join-Path $repoRoot 'Unity\Astray\Assets\Astray\Plugins\Generators\Astray.SourceGenerator.dll'
 
 if (-not (Test-Path $generatorDir)) { throw "找不到生成器源码目录: $generatorDir" }
 if (-not (Test-Path $target)) { throw "找不到目标 DLL: $target" }
 
-$work = Join-Path ([System.IO.Path]::GetTempPath()) ("reunion-gen-" + [guid]::NewGuid().ToString('N').Substring(0, 8))
+$work = Join-Path ([System.IO.Path]::GetTempPath()) ("astray-gen-" + [guid]::NewGuid().ToString('N').Substring(0, 8))
 New-Item -ItemType Directory -Path $work -Force | Out-Null
 
 $csproj = @"
@@ -39,7 +39,7 @@ $csproj = @"
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <AssemblyName>ReunionMovement.SourceGenerator</AssemblyName>
+    <AssemblyName>Astray.SourceGenerator</AssemblyName>
     <NoWarn>RS1035;CS8032;RS2008</NoWarn>
   </PropertyGroup>
   <ItemGroup>
@@ -56,7 +56,7 @@ Write-Host "==> 编译生成器（Roslyn $RoslynVersion）…" -ForegroundColor 
 & dotnet build (Join-Path $work 'Gen.csproj') -c Release -v q --nologo
 if ($LASTEXITCODE -ne 0) { throw "生成器编译失败（退出码 $LASTEXITCODE）" }
 
-$built = Join-Path $work 'bin\Release\netstandard2.0\ReunionMovement.SourceGenerator.dll'
+$built = Join-Path $work 'bin\Release\netstandard2.0\Astray.SourceGenerator.dll'
 if (-not (Test-Path $built)) { throw "没有产出 DLL: $built" }
 
 Copy-Item -LiteralPath $built -Destination $target -Force

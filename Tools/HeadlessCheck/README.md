@@ -12,12 +12,12 @@
 工程里的 `.csproj` 是 Unity 生成的（不入库），所以先用 dotnet 编一遍：
 
 ```bash
-cd Unity/ReunionMovement
-dotnet build ReunionMovement.Core.csproj -v q --nologo
-dotnet build ReunionMovement.Utils.csproj -v q --nologo
+cd Unity/Astray
+dotnet build Astray.Core.csproj -v q --nologo
+dotnet build Astray.Utils.csproj -v q --nologo
 ```
 
-产物在 `Unity/ReunionMovement/Temp/bin/Debug/`，本工具从这里加载。
+产物在 `Unity/Astray/Temp/bin/Debug/`，本工具从这里加载。
 
 ## 用法
 
@@ -77,7 +77,7 @@ dotnet run --project Tools/HeadlessCheck
 
 **结论**：这两类用例改用真实编译的类型写，放在 `Tests/ModuleCatalogTests.cs` 里
 （`Cycle_Is_Reported`、`Repeated_Dependency_Is_Not_A_Cycle`）。它们是真正的 C# 类，
-没有 `Type` 身份问题，而且**同样能在本工具里跑**——因为测试代码就在 `ReunionMovement.Tests.dll` 里。
+没有 `Type` 身份问题，而且**同样能在本工具里跑**——因为测试代码就在 `Astray.Tests.dll` 里。
 
 > 换句话说：要测"依赖关系"就写 NUnit 用例，别指望 Reflection.Emit。
 > `Repeated_Dependency_Is_Not_A_Cycle` 这条一开始写成假模块，报的是缺依赖；
@@ -92,7 +92,7 @@ Unity 侧另有两个用例：在 `Assembly-CSharp` 已加载时断言返回 `St
 
 ## 顺带把 Unity 的用例也跑一遍
 
-`ReunionMovement.Tests.dll` 里的用例大多不依赖 Unity。工具会加载它、按 NUnit 规则
+`Astray.Tests.dll` 里的用例大多不依赖 Unity。工具会加载它、按 NUnit 规则
 （`[Test]` / `[TestCase]` / `[SetUp]` / `[TearDown]`）逐条执行，**需要 Unity 的自动算 SKIP**：
 
 ```

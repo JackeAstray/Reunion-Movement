@@ -1,0 +1,20 @@
+{
+    "name": "Astray.Framework.Modules.Deadline.Editor",
+    "rootNamespace": "Astray.Common.Util.Editor",
+    "references": [
+        "Astray.Framework.Modules",
+        "Astray.Utilities",
+        "Astray.Common"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

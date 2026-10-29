@@ -1,0 +1,369 @@
+using Astray.Common;
+using System;
+using System.Globalization;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+using Astray.Utilities;
+namespace Astray.Framework.Modules
+{
+    /// <summary>
+    /// 截止日期管理器
+    /// </summary>
+    public class DeadlineMgr : SingletonMgr<DeadlineMgr>
+    {
+        /// <summary>
+        /// 截止日期校验按场景执行（每次进入新场景都会重新校验），无需跨场景存活；
+        /// 违规时 PurgeActiveScene 会连同自身一起销毁，场景卸载后 instance 由 OnDestroy 自动清空。
+        /// </summary>
+        protected override bool IsPersistentAcrossScenes => false;
+
+        [Tooltip("是否启用日期限制（默认关闭：未配置日期时不会启动即清空场景；开启后请务必配置下方起止日期）")]
+        public bool enableDateRestriction = false;
+
+        [Tooltip("起始日期，格式建议：yyyy-MM-dd（也兼容yyyy-M-d）")]
+        public string startDate = "2025-9-20";
+        [Tooltip("截止日期，格式建议：yyyy-MM-dd（也兼容yyyy-M-d）")]
+        public string deadlineDate = "2025-9-25";
+        [Tooltip("当前日期（运行时自动填充，格式：yyyy-MM-dd）")]
+        public string currentDate;
+
+        // 本地存储 key
+        private const string prefKey_LastUtcTicks = "Deadline_LastUtcTicks_v1";
+        private const string prefKey_Hash = "Deadline_LastUtcHash_v1";
+        // 简单的内置 salt（最好构建时注入或由服务端提供）
+        private const string internalSalt = "@REUNION_m0v3m3nt$alt";
+
+        // 跨存储安装标记：仅删 PlayerPrefs 键（注册表/plist）无法绕过首次运行判定，
+        // 攻击者需同时删除持久化目录下的标记文件
+        private static string MarkerPath =>
+            Path.Combine(Application.persistentDataPath, "DeadlineMgr", "installed.marker");
+
+        // 容忍的向后跳阈值（例如：1 分钟）。如果跳得比这个多则认为可疑。
+        private static readonly TimeSpan RollbackTolerance = TimeSpan.FromMinutes(1);
+
+        void Start()
+        {
+            // 未启用日期限制时直接放行，避免默认日期过期导致启动即清空场景
+            if (!enableDateRestriction)
+            {
+                Log.Debug("DeadlineMgr: 日期限制未启用（enableDateRestriction=false），跳过检查。");
+                return;
+            }
+            EnforceDateRestriction();
+        }
+
+        /// <summary>
+        /// 执行日期限制检查（包含离线时钟回拨检测）
+        /// </summary>
+        private void EnforceDateRestriction()
+        {
+            // 使用本地时间作日期比较（保持原行为）
+            var nowLocal = DateTime.Now.Date;
+            currentDate = nowLocal.ToString("yyyy-MM-dd");
+
+            // 先做离线时钟回拨检测（基于 UTC）
+            var nowUtc = DateTime.UtcNow;
+            if (IsClockRolledBackOrTampered(nowUtc))
+            {
+                Log.Warning("DeadlineMgr: 检测到系统时间被回拨或本地记录被篡改，触发限制处理。");
+                PurgeActiveScene();
+                return;
+            }
+
+            if (!TryParseDate(startDate, out var start) || !TryParseDate(deadlineDate, out var end))
+            {
+                Log.Error("DeadlineMgr: 日期格式错误，请使用 yyyy-MM-dd 或 yyyy-M-d。");
+                return;
+            }
+
+            // 容错：若起始晚于截止，自动交换
+            if (start > end)
+            {
+                Log.Warning("DeadlineMgr: StartDate({0:yyyy-MM-dd}) 晚于 DeadlineDate({1:yyyy-MM-dd})，已自动交换。", start, end);
+                var tmp = start;
+                start = end;
+                end = tmp;
+            }
+
+            // 不在 [start, end]（含边界）范围内则清空场景
+            if (nowLocal < start || nowLocal > end)
+            {
+                PurgeActiveScene();
+            }
+        }
+
+        /// <summary>
+        /// 检测时钟回拨或本地记录被篡改。
+        /// 逻辑：
+        ///  - 如果没有本地记录（ticks/hash/标记文件均不存在），创建记录（安全哈希随存）。
+        ///  - 如果存在部分缺失（仅 ticks 或仅 hash） -> 认为被篡改。
+        ///  - 如果存在记录但哈希不匹配 -> 认为被篡改。
+        ///  - 如果标记文件存在但 PlayerPrefs 记录被清空 -> 认为被篡改（堵住删键绕过）。
+        ///  - 如果存在记录且当前 UTC 时间小于记录 - 容忍阈值 -> 认为回拨。
+        ///  - 否则更新记录为 max(记录, 当前时间) 并保存哈希。
+        /// 返回 true 表示确认发现问题（哈希不匹配 / 记录缺失 / 确认回拨）。
+        /// 注意：IO 与 PlayerPrefs 访问异常一律不视为篡改（返回 false），
+        /// 因为返回 true 的调用方会 PurgeActiveScene()，不能让环境错误触发破坏性动作。
+        /// </summary>
+        private bool IsClockRolledBackOrTampered(DateTime nowUtc)
+        {
+            try
+            {
+                var hasTicks = PlayerPrefs.HasKey(prefKey_LastUtcTicks);
+                var hasHash = PlayerPrefs.HasKey(prefKey_Hash);
+                var hasMarker = File.Exists(MarkerPath);
+
+                // 首次运行或无任何记录：写入当前 UTC（含标记文件）
+                if (!hasTicks && !hasHash && !hasMarker)
+                {
+                    SaveUtcTicks(nowUtc.Ticks);
+                    return false;
+                }
+
+                // 标记文件存在但 PlayerPrefs 记录被清空：玩家删键绕过首次运行判定
+                if (hasMarker && !hasTicks && !hasHash)
+                {
+                    Log.Warning("DeadlineMgr: 检测到安装标记存在但本地时间记录被清空，已视为被篡改。");
+                    return true;
+                }
+
+                // 如果存在部分缺失，视为被篡改
+                if (!hasTicks || !hasHash)
+                {
+                    Log.Warning("DeadlineMgr: 本地存储不完整（ticks/hash 缺失），已视为被篡改。");
+                    return true;
+                }
+
+                var storedTicksStr = PlayerPrefs.GetString(prefKey_LastUtcTicks, string.Empty);
+                var storedHash = PlayerPrefs.GetString(prefKey_Hash, string.Empty);
+
+                if (!long.TryParse(storedTicksStr, out var storedTicks))
+                {
+                    // 数据异常，认为被篡改
+                    Log.Warning("DeadlineMgr: 本地存储的时间格式异常，已视为被篡改。");
+                    return true;
+                }
+
+                // 验证哈希
+                var expectedHash = ComputeHashForTicks(storedTicks);
+                if (!string.Equals(expectedHash, storedHash, StringComparison.OrdinalIgnoreCase))
+                {
+                    Log.Warning("DeadlineMgr: 本地存储的完整性校验失败，已视为被篡改。");
+                    return true;
+                }
+
+                // 标记文件交叉校验：内容须与 ticks 记录一致（旧版安装无标记文件则迁移补写，不误判）
+                if (hasMarker)
+                {
+                    string markerContent = null;
+                    try
+                    {
+                        markerContent = File.ReadAllText(MarkerPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        // IO 失败（只读目录/磁盘满/文件被占用）不是篡改证据：
+                        // 过去此处 return true 会走到 PurgeActiveScene() 清空整个场景，
+                        // 把一次瞬时环境错误放大成"游戏被清空"。安全方向应是不执行破坏性动作。
+                        Log.Warning("DeadlineMgr: 读取标记文件失败（按非篡改处理，仅记录）。{0}", ex.Message);
+                        return false;
+                    }
+                    if (!string.Equals(markerContent, storedTicksStr, StringComparison.Ordinal))
+                    {
+                        Log.Warning("DeadlineMgr: 安装标记与时间记录不一致，已视为被篡改。");
+                        return true;
+                    }
+                }
+                else
+                {
+                    // 旧版（仅 PlayerPrefs）升级：补写标记文件，保持记录一致
+                    WriteMarkerFile(storedTicksStr);
+                }
+
+                var storedUtc = new DateTime(storedTicks, DateTimeKind.Utc);
+
+                // 如果当前 UTC 小于存储时间减去容忍阈值，则认为是回拨
+                if (nowUtc < storedUtc - RollbackTolerance)
+                {
+                    Log.Warning("DeadlineMgr: 发现系统时间回拨（当前UTC={0:o}，记录UTC={1:o}）。", nowUtc, storedUtc);
+                    return true;
+                }
+
+                // 更新存储为较大的时间（防止攻击者在未来设置一个更小的时间绕过检测）
+                var newTicks = Math.Max(storedTicks, nowUtc.Ticks);
+                SaveUtcTicks(newTicks);
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                // 兜底：本方法内的异常主要来自文件 IO / PlayerPrefs（非篡改证据）。
+                // 不可返回 true —— 调用方会 PurgeActiveScene()，即用一次 IO 异常清空玩家场景。
+                Log.Warning("DeadlineMgr: 检测时钟回拨时出现异常，按非篡改处理（仅记录）。异常: {0}", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 保存给定的 UTC ticks 及其哈希
+        /// </summary>
+        /// <param name="ticks"></param>
+        private void SaveUtcTicks(long ticks)
+        {
+            // 仅变化时写盘：每场景 Start 都会调用本方法（Max 后多数情况不变），
+            // 无条件 PlayerPrefs.Save() 每次强制同步落盘，造成无意义的 IO 卡顿
+            string ticksStr = ticks.ToString();
+            if (string.Equals(PlayerPrefs.GetString(prefKey_LastUtcTicks, ""), ticksStr, StringComparison.Ordinal))
+            {
+                return;
+            }
+            PlayerPrefs.SetString(prefKey_LastUtcTicks, ticksStr);
+            PlayerPrefs.SetString(prefKey_Hash, ComputeHashForTicks(ticks));
+            PlayerPrefs.Save();
+            WriteMarkerFile(ticksStr);
+        }
+
+        /// <summary>写安装标记文件（跨存储冗余：删 PlayerPrefs 键无法单独绕过）</summary>
+        private void WriteMarkerFile(string ticksStr)
+        {
+            try
+            {
+                var dir = Path.GetDirectoryName(MarkerPath);
+                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+                File.WriteAllText(MarkerPath, ticksStr);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("DeadlineMgr: 写入标记文件失败（不影响 PlayerPrefs 记录）: {0}", ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// 计算给定 ticks 的安全哈希
+        /// </summary>
+        /// <param name="ticks"></param>
+        /// <returns></returns>
+        private string ComputeHashForTicks(long ticks)
+        {
+            // 使用简单的 SHA256(ticks + Application.identifier + salt) 作为完整性校验
+            var payload = ticks.ToString() + "|" + Application.identifier + "|" + internalSalt;
+            using (var sha = SHA256.Create())
+            {
+                var bytes = Encoding.UTF8.GetBytes(payload);
+                var hash = sha.ComputeHash(bytes);
+                return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+            }
+        }
+
+        /// <summary>
+        /// 尝试解析日期字符串
+        /// </summary>
+        /// <param name="s"></param>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        private static bool TryParseDate(string s, out DateTime date)
+        {
+            date = default;
+            if (string.IsNullOrEmpty(s)) return false;
+
+            // 兼容 2025-9-7 / 2025-09-07 等
+            var formats = new[] { "yyyy-MM-dd", "yyyy-M-d", "yyyy-M-dd", "yyyy-MM-d" };
+            if (DateTime.TryParseExact(s, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed) ||
+                DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed))
+            {
+                date = parsed.Date;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 清空当前活动场景的所有根对象
+        /// </summary>
+        private void PurgeActiveScene()
+        {
+            // 先展示用户可见提示（黑屏前）；动态创建的提示对象不在场景根列表，不会被后续清理销毁
+            ShowViolationNotice();
+
+            var scene = SceneManager.GetActiveScene();
+            var roots = scene.GetRootGameObjects();
+
+            // 缓存自身引用，防止父对象先被销毁导致 this.gameObject 为 null
+            var self = gameObject;
+
+            // 先销毁其它根对象
+            for (int i = 0; i < roots.Length; i++)
+            {
+                var go = roots[i];
+                if (go != self)
+                {
+                    Destroy(go);
+                }
+            }
+
+            // 最后销毁自身（避免循环中被销毁导致异常）
+            if (self != null)
+            {
+                Destroy(self);
+            }
+
+            Log.Warning("DeadlineMgr: 当前日期不在允许范围内或检测到篡改，已删除当前场景的所有对象。");
+        }
+
+        /// <summary>
+        /// 用户可见提示：场景清空前展示，避免用户面对无解释的黑屏。
+        /// 编辑器弹对话框；运行时创建全屏黑底提示（动态对象不在场景根列表，不会被 Purge 销毁）。
+        /// </summary>
+        private void ShowViolationNotice()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorUtility.DisplayDialog(
+                "DeadlineMgr",
+                "当前日期不在允许范围内或检测到系统时间被回拨，场景内容已被锁定。",
+                "确定");
+#else
+            try
+            {
+                var notice = new GameObject("[DeadlineNotice]");
+                UnityEngine.Object.DontDestroyOnLoad(notice);
+                var canvas = notice.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+                var bgGo = new GameObject("Background");
+                bgGo.transform.SetParent(notice.transform, false);
+                var bg = bgGo.AddComponent<UnityEngine.UI.Image>();
+                bg.color = Color.black;
+                var bgRt = bg.rectTransform;
+                bgRt.anchorMin = Vector2.zero;
+                bgRt.anchorMax = Vector2.one;
+                bgRt.offsetMin = Vector2.zero;
+                bgRt.offsetMax = Vector2.zero;
+
+                var textGo = new GameObject("Text");
+                textGo.transform.SetParent(notice.transform, false);
+                var text = textGo.AddComponent<UnityEngine.UI.Text>();
+                text.text = "当前日期不在允许范围内，游戏内容已锁定。";
+                var font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+                if (font != null) text.font = font;
+                text.fontSize = 28;
+                text.alignment = TextAnchor.MiddleCenter;
+                text.color = Color.white;
+                var rt = text.rectTransform;
+                rt.anchorMin = Vector2.zero;
+                rt.anchorMax = Vector2.one;
+                rt.offsetMin = Vector2.zero;
+                rt.offsetMax = Vector2.zero;
+            }
+            catch (Exception ex)
+            {
+                Log.Error("DeadlineMgr: 创建违规提示 UI 失败: {0}", ex.Message);
+            }
+#endif
+        }
+    }
+}

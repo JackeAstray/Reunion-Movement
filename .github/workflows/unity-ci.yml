@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  UNITY_PROJECT_PATH: Unity/ReunionMovement
+  UNITY_PROJECT_PATH: Unity/Astray
 
 jobs:
   license-check:
@@ -60,7 +60,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.UNITY_PROJECT_PATH }}/Library
-          key: Library-${{ runner.os }}-${{ hashFiles('Unity/ReunionMovement/Packages/packages-lock.json') }}
+          key: Library-${{ runner.os }}-${{ hashFiles('Unity/Astray/Packages/packages-lock.json') }}
           restore-keys: |
             Library-${{ runner.os }}-
 
@@ -101,7 +101,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.UNITY_PROJECT_PATH }}/Library
-          key: Library-WebGL-${{ runner.os }}-${{ hashFiles('Unity/ReunionMovement/Packages/packages-lock.json') }}
+          key: Library-WebGL-${{ runner.os }}-${{ hashFiles('Unity/Astray/Packages/packages-lock.json') }}
           restore-keys: |
             Library-WebGL-${{ runner.os }}-
             Library-${{ runner.os }}-
@@ -140,7 +140,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.UNITY_PROJECT_PATH }}/Library
-          key: Library-Windows-${{ runner.os }}-${{ hashFiles('Unity/ReunionMovement/Packages/packages-lock.json') }}
+          key: Library-Windows-${{ runner.os }}-${{ hashFiles('Unity/Astray/Packages/packages-lock.json') }}
           restore-keys: |
             Library-Windows-${{ runner.os }}-
             Library-${{ runner.os }}-
@@ -179,7 +179,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.UNITY_PROJECT_PATH }}/Library
-          key: Library-Android-${{ runner.os }}-${{ hashFiles('Unity/ReunionMovement/Packages/packages-lock.json') }}
+          key: Library-Android-${{ runner.os }}-${{ hashFiles('Unity/Astray/Packages/packages-lock.json') }}
           restore-keys: |
             Library-Android-${{ runner.os }}-
             Library-${{ runner.os }}-
@@ -222,14 +222,14 @@ jobs:
               echo "::error file=$f::缺少 .meta（移动/新建文件时必须一起提交）"
               missing=1
             fi
-          done < <(find Unity/ReunionMovement/Assets/ReunionMovement \( -name '*.cs' -o -name '*.asmdef' \) -type f)
+          done < <(find Unity/Astray/Assets/Astray \( -name '*.cs' -o -name '*.asmdef' \) -type f)
           exit $missing
 
       - name: 单文件行数（新文件不得超过 600 行）
         run: |
           set -euo pipefail
-          cd Unity/ReunionMovement
-          baseline="Assets/ReunionMovement/Editor/Toolbox/Guards/file-size-baseline.txt"
+          cd Unity/Astray
+          baseline="Assets/Astray/Editor/Toolbox/Guards/file-size-baseline.txt"
           fail=0
           while IFS= read -r f; do
             case "$f" in
@@ -248,7 +248,7 @@ jobs:
               echo "::error file=$f::$lines 行，超过 600 行且未登记基线"
               fail=1
             fi
-          done < <(find Assets/ReunionMovement -name '*.cs' -type f)
+          done < <(find Assets/Astray -name '*.cs' -type f)
           exit $fail
 
       - name: asmdef 依赖方向
@@ -265,25 +265,25 @@ jobs:
               fi
             done
           }
-          base=Unity/ReunionMovement/Assets/ReunionMovement
-          check "$base/Framework/Base/ReunionMovement.Base.asmdef" "ReunionMovement.Base" ReunionMovement.Common ReunionMovement.Framework.Modules ReunionMovement.Utilities ReunionMovement.Framework.Runtime
-          check "$base/Common/ReunionMovement.Common.asmdef" "ReunionMovement.Common" ReunionMovement.Framework.Modules ReunionMovement.Utilities ReunionMovement.Framework.Runtime
-          check "$base/Framework/Modules/ReunionMovement.Framework.Modules.asmdef" "ReunionMovement.Framework.Modules" ReunionMovement.Framework.Runtime
-          check "$base/Utilities/ReunionMovement.Utilities.asmdef" "ReunionMovement.Utilities" ReunionMovement.Framework.Modules ReunionMovement.Framework.Runtime
-          check "$base/Framework/Runtime/ReunionMovement.Framework.Runtime.asmdef" "ReunionMovement.Framework.Runtime" ReunionMovement.EditorTools ReunionMovement.Toolbox.Editor ReunionMovement.Tests
+          base=Unity/Astray/Assets/Astray
+          check "$base/Framework/Base/Astray.Base.asmdef" "Astray.Base" Astray.Common Astray.Framework.Modules Astray.Utilities Astray.Framework.Runtime
+          check "$base/Common/Astray.Common.asmdef" "Astray.Common" Astray.Framework.Modules Astray.Utilities Astray.Framework.Runtime
+          check "$base/Framework/Modules/Astray.Framework.Modules.asmdef" "Astray.Framework.Modules" Astray.Framework.Runtime
+          check "$base/Utilities/Astray.Utilities.asmdef" "Astray.Utilities" Astray.Framework.Modules Astray.Framework.Runtime
+          check "$base/Framework/Runtime/Astray.Framework.Runtime.asmdef" "Astray.Framework.Runtime" Astray.EditorTools Astray.Toolbox.Editor Astray.Tests
           exit $fail
 
       - name: .Instance 使用点只减不增
         run: |
           set -euo pipefail
-          cd Unity/ReunionMovement
-          baseline="Assets/ReunionMovement/Editor/Toolbox/Guards/instance-usage-baseline.txt"
+          cd Unity/Astray
+          baseline="Assets/Astray/Editor/Toolbox/Guards/instance-usage-baseline.txt"
           fail=0
           while read -r name limit; do
             case "$name" in ''|\#*) continue ;; esac
             actual=$(grep -rho --include='*.cs' --exclude-dir=Plugins --exclude-dir=3rd \
                        --exclude-dir=GenerateScript --exclude-dir=Examples --exclude-dir=Samples \
-                       "\\b${name}\\.Instance\\b" Assets/ReunionMovement 2>/dev/null | wc -l | tr -d ' \r')
+                       "\\b${name}\\.Instance\\b" Assets/Astray 2>/dev/null | wc -l | tr -d ' \r')
             if [ -z "$actual" ] || [ -z "$limit" ]; then
               echo "::error::基线行解析失败：name=[$name] actual=[$actual] limit=[$limit]"
               fail=1
@@ -301,7 +301,7 @@ jobs:
       - name: ICustomSystem 必须声明 ModuleOrder
         run: |
           set -euo pipefail
-          cd Unity/ReunionMovement
+          cd Unity/Astray
           fail=0
           while IFS= read -r f; do
             case "$f" in */Tests/*|*/Editor/*|*ModuleOrderAttribute.cs) continue ;; esac
@@ -311,5 +311,5 @@ jobs:
                 fail=1
               fi
             fi
-          done < <(find Assets/ReunionMovement -name '*.cs' -type f)
+          done < <(find Assets/Astray -name '*.cs' -type f)
           exit $fail

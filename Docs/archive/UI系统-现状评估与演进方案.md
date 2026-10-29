@@ -52,7 +52,7 @@ public async UniTask<UILoadState> OpenWindowAsync<T>(params object[] args) where
 ```
 
 - **代价**：把 `StartGameUIPlane` 类改名，窗口就在运行期悄悄打不开（`typeof(T).Name` 找不到同名资源）。编译器完全帮不上忙。
-- **改法**：给 `UIController` 加 `[WindowId("StartGameUIPlane")]`，`OpenWindowAsync<T>` 优先读特性、回退类名；或者用 source generator 生成 `UINames` 常量（项目里已经有 `ReunionMovement.SourceGenerator.dll`）。
+- **改法**：给 `UIController` 加 `[WindowId("StartGameUIPlane")]`，`OpenWindowAsync<T>` 优先读特性、回退类名；或者用 source generator 生成 `UINames` 常量（项目里已经有 `Astray.SourceGenerator.dll`）。
 - **验收**：故意把类改名，窗口仍能打开（特性生效）。
 
 ### P3 `GetControl(Type, uri)` 的字符串路径

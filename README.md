@@ -1,4 +1,4 @@
-# Reunion-Movement 整合运动
+# Astray 整合运动
 
 Unity 游戏框架 —— 纯 C# 生命周期、模块化系统、四传输网络层、Addressables 热更、SDF 形状 UI。
 
@@ -10,27 +10,27 @@ Unity 游戏框架 —— 纯 C# 生命周期、模块化系统、四传输网�
 
 ## 快速开始
 
-1. 用 Unity Hub 打开 `Unity/ReunionMovement`。
+1. 用 Unity Hub 打开 `Unity/Astray`。
 2. 等首次导入完成（Package 解析 + 编译，Console 无红色报错）。
-3. 打开场景 `Assets/ReunionMovement/Scenes/StartGame.unity`。
+3. 打开场景 `Assets/Astray/Scenes/StartGame.unity`。
 4. 按 Play。`Bootstrap` 会自动创建引擎、初始化 14 个模块、加载 `Temp` 场景并打开启动界面。
-5. 想单独看某个功能：打开 `Assets/ReunionMovement/Scenes/Example/` 下对应场景再 Play（场景名命中测试规则时会跳过自动跳转）。
+5. 想单独看某个功能：打开 `Assets/Astray/Scenes/Example/` 下对应场景再 Play（场景名命中测试规则时会跳过自动跳转）。
 
 > 更细的步骤、地址见 [Docs/00-快速开始.md](Docs/00-快速开始.md)。
-> 包内还有一份随框架分发的简明指南：`Assets/ReunionMovement/Documentation/ReunionMovement 使用指南.md`。
+> 包内还有一份随框架分发的简明指南：`Assets/Astray/Documentation/Astray 使用指南.md`。
 
 ## 作为 UPM 包接入（一条 URL）
 
 在目标工程的 `Packages/manifest.json` 里加一行（包发布在 `upm` 分支，不需要 `?path=`）：
 
 ```json
-"com.reunion.movement": "https://github.com/JackeAstray/Reunion-Movement.git#upm"
+"com.jackeastray.astray": "https://github.com/JackeAstray/Astray.git#upm"
 ```
 
 然后在自己的程序集里声明入口并选模块清单：
 
 ```csharp
-[assembly: ReunionGameEntry(typeof(MyGameEntry))]
+[assembly: AstrayGameEntry(typeof(MyGameEntry))]
 
 public class MyGameEntry : GameEntry
 {
@@ -47,10 +47,10 @@ public class MyGameEntry : GameEntry
 ## 目录地图
 
 ```
-Assets/ReunionMovement/
+Assets/Astray/
 ├── Common/      最底层：日志、配置、枚举、单例基类        （无 asmdef 依赖）
 ├── Framework/
-│   ├── Base/      只有接口与状态（ReunionMovement.Base）
+│   ├── Base/      只有接口与状态（Astray.Base）
 │   ├── Runtime/   引擎与系统：Bootstrap、GameEngine、System/*  ← 从这里开始读
 │   └── Modules/   运行时系统：Network/Http/Download/Timer/…
 ├── Utilities/   纯工具 + 可复用 UI 组件（ImageEx、LoopScrollRect…）

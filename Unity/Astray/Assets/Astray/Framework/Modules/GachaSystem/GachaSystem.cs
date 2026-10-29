@@ -1,0 +1,578 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Text;
+using UnityEngine;
+using System.Security.Cryptography;
+
+using Astray.Common;
+using Astray.Utilities;
+namespace Astray.Framework.Modules
+{
+    /// <summary>
+    /// 抽卡系统 模拟
+    /// 注意：客户端抽卡仅为表现层模拟，实际抽卡结果应由服务端下发以保证公平性。
+    /// 客户端使用加密随机数生成器增加不可预测性。
+    /// </summary>
+    public class GachaSystem : MonoBehaviour
+    {
+        // ===== 加密随机数生成器（不可预测，替代 UnityEngine.Random） =====
+        // 使用 RandomNumberGenerator 替代已过时的 RNGCryptoServiceProvider
+
+        /// <summary>生成 [0, 1) 范围的加密随机浮点数（GetInt32 避免每次 new byte[4] 分配）</summary>
+        private static float CryptoRandomValue()
+        {
+            return RandomNumberGenerator.GetInt32(0, int.MaxValue) / (float)int.MaxValue;
+        }
+
+        /// <summary>生成 [min, max) 范围的加密随机整数（GetInt32 内部无模偏差）</summary>
+        private static int CryptoRandomRange(int min, int max)
+        {
+            if (min >= max) return min;
+            return RandomNumberGenerator.GetInt32(min, max);
+        }
+        // ===== 数据结构 =====
+        [System.Serializable]
+        public class GachaItem
+        {
+            public string itemName;
+            public int starRating; // 3/4/5
+            public Sprite icon;    // 物品图标
+            public bool isWeapon;  // 是否为武器
+        }
+
+        // ===== 卡池配置 =====
+        public List<GachaItem> up5StarPool;   // UP五星池
+        public List<GachaItem> standard5StarPool; // 常驻五星池
+        public List<GachaItem> up4StarPool;   // UP四星池
+        public List<GachaItem> standard4StarPool; // 常驻四星池
+        public List<GachaItem> standard3StarPool; // 三星池
+
+        // ===== 系统状态 =====
+        [SerializeField]
+        private int pity5Star = 0;        // 五星保底计数
+        [SerializeField]
+        private int pity4Star = 0;        // 四星保底计数
+        [SerializeField]
+        private bool isGuaranteedUp5Star = false; // 大保底标记
+        [SerializeField]
+        private bool isGuaranteedUp4Star = false; // 四星保底标记
+        private int last5StarPullCount = 0; // 记录第几抽抽到5星
+        private bool isLastPullUp = false; // 记录最近一次抽卡是否为UP
+
+        // ===== 公开查询 API（UI 展示保底进度/结果用，此前只能依赖 Log 输出） =====
+        /// <summary>当前五星保底计数（距离硬保底 90 抽）</summary>
+        public int Pity5Star => pity5Star;
+        /// <summary>当前四星保底计数（距离硬保底 10 抽）</summary>
+        public int Pity4Star => pity4Star;
+        /// <summary>最近一次抽出五星时的抽数（0 = 尚未出过五星）</summary>
+        public int Last5StarPullCount => last5StarPullCount;
+        /// <summary>最近一次抽卡是否为 UP</summary>
+        public bool IsLastPullUp => isLastPullUp;
+        /// <summary>是否处于五星大保底（下一次五星必为 UP）</summary>
+        public bool IsGuaranteedUp5Star => isGuaranteedUp5Star;
+        /// <summary>是否处于四星保底（下一次四星必为 UP，与五星查询 API 对称）</summary>
+        public bool IsGuaranteedUp4Star => isGuaranteedUp4Star;
+
+        // ===== 概率参数 =====
+        private const float BASE_5STAR_RATE = 0.006f;    // 0.6%
+        private const float BASE_4STAR_RATE = 0.051f;    // 5.1%
+        private const int HARD_PITY_5STAR = 90;          // 硬保底
+        private const int SOFT_PITY_START = 73;          // 概率递增起点
+
+        // ===== 核心抽卡逻辑 =====
+        /// <summary>
+        /// 执行一次抽卡（优先判定五星，其次四星，否则三星）。
+        /// 每次抽卡同时推进五星和四星保底计数，并同步保底持久化。
+        /// </summary>
+        /// <returns></returns>
+        public GachaItem PerformPull()
+        {
+            // 卡池全空时不应推进保底：否则空配置下保底被无意义消耗，且结果恒为 null
+            if ((up5StarPool == null || up5StarPool.Count == 0)
+                && (standard5StarPool == null || standard5StarPool.Count == 0)
+                && (up4StarPool == null || up4StarPool.Count == 0)
+                && (standard4StarPool == null || standard4StarPool.Count == 0)
+                && (standard3StarPool == null || standard3StarPool.Count == 0))
+            {
+                Log.Error("所有卡池为空！请在 Inspector 中配置卡池列表");
+                return null;
+            }
+
+            pity5Star++;
+            pity4Star++;
+
+            GachaItem result;
+            // 五星保底判断
+            if (Check5StarPull())
+            {
+                result = Get5StarItem();
+            }
+            // 四星保底判断
+            else if (Check4StarPull())
+            {
+                result = Get4StarItem();
+            }
+            else
+            {
+                result = Get3StarItem();
+            }
+
+            // 保底持久化：每次抽卡更新存档（PlayerPrefs.SetString 为内存操作，
+            // Unity 在正常退出时统一落盘，避免"重启游戏保底清零"）
+            SavePityState();
+            return result;
+        }
+
+        /// <summary>
+        /// 应用服务端下发的抽卡结果（客户端仅表现层，权威结果应由服务端下发以保证公平性）：
+        /// 按结果星级推进/重置保底计数，并同步保底/UP 状态与最近结果，返回结果供 UI 展示。
+        /// </summary>
+        /// <param name="serverResult">服务端下发的抽卡结果项</param>
+        /// <param name="isUp">服务端下发的该结果是否为 UP（驱动大保底/UP 提示状态）</param>
+        public GachaItem ApplyServerResult(GachaItem serverResult, bool isUp = false)
+        {
+            if (serverResult == null) return null;
+
+            // 服务端结果校验：星级仅允许 3/4/5（非法值按三星处理并告警，
+            // 防止伪造字段扰乱保底状态机——如 starRating=6 落入 default 分支被当三星推进计数）
+            if (serverResult.starRating < 3 || serverResult.starRating > 5)
+            {
+                Log.Warning("ApplyServerResult 收到非法星级 {0}，按三星处理", serverResult.starRating);
+                serverResult.starRating = 3;
+            }
+
+            pity5Star++;
+            pity4Star++;
+
+            switch (serverResult.starRating)
+            {
+                case 5:
+                    last5StarPullCount = pity5Star;
+                    // 五星重置五星保底（四星保底独立，不重置）
+                    ResetCounters();
+                    // 同步保底/UP 状态：否则 IsGuaranteedUp5Star/IsLastPullUp 永远停留在
+                    // 本地模拟遗留值，大保底提示 UI 显示错误
+                    isGuaranteedUp5Star = !isUp;
+                    isLastPullUp = isUp;
+                    break;
+                case 4:
+                    pity4Star = 0;
+                    isGuaranteedUp4Star = !isUp;
+                    isLastPullUp = isUp;
+                    break;
+                default:
+                    // 3 星：仅推进计数，最近一次结果非 UP
+                    isLastPullUp = false;
+                    break;
+            }
+            // 服务端权威结果同样需要持久化（客户端展示的保底进度跨重启保持一致）
+            SavePityState();
+            return serverResult;
+        }
+
+        #region 保底状态持久化
+        private const string PitySaveKey = "gacha_pity_save_v1";
+        /// <summary>保底存档完整性盐：PlayerPrefs 明文 JSON 可被随手篡改，加 SHA256 校验提高篡改成本。
+        /// 注意：客户端存档始终可被彻底清空（删 PlayerPrefs），权威保底必须由服务端下发。</summary>
+        private const string PityHashSalt = "@Astray_GachaPity_v1";
+
+        [Serializable]
+        private class PitySaveData
+        {
+            public int pity5Star;
+            public int pity4Star;
+            public bool isGuaranteedUp5Star;
+            public bool isGuaranteedUp4Star;
+            public int last5StarPullCount;
+            public bool isLastPullUp;
+            /// <summary>完整性校验（SHA256，旧存档无此字段视为合法）</summary>
+            public string integrityHash;
+        }
+
+        /// <summary>计算保底状态的完整性哈希</summary>
+        private static string ComputePityHash(PitySaveData data)
+        {
+            string payload = string.Concat(
+                data.pity5Star, "|", data.pity4Star, "|",
+                data.isGuaranteedUp5Star, "|", data.isGuaranteedUp4Star, "|",
+                data.last5StarPullCount, "|", data.isLastPullUp, "|", PityHashSalt);
+            using (var sha = SHA256.Create())
+            {
+                var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(payload));
+                return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+            }
+        }
+
+        /// <summary>
+        /// 判定保底存档内容是否发生变化（值未变则无需落盘，避免无条件 Save 造成的无意义同步 IO）。
+        /// 抽成纯函数是为了能在 Unity 之外直接断言 —— SavePityState 依赖 PlayerPrefs，脱离 Unity 无法执行。
+        /// </summary>
+        internal static bool PityStateChanged(string storedJson, string newJson)
+        {
+            return !string.Equals(storedJson ?? string.Empty, newJson ?? string.Empty, StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// 保存保底状态到 PlayerPrefs（SetString 为内存操作）。
+        /// 落盘策略：<b>内容发生变化时立即落盘</b>（值未变则跳过，避免无条件 Save 造成的无意义同步 IO —— 与
+        /// DeadlineMgr 的"变更才落盘"一致）；<paramref name="flush"/> 为 true 时无论是否变化都强制落盘，
+        /// 供关键节点（账号登出/付费点）使用。
+        /// 之所以不再只依赖"退出时统一落盘"：WebGL 关页不会可靠触发 OnApplicationQuit，
+        /// 仅靠退出落盘会丢失保底进度（玩家资产级数据）；另有失焦/暂停钩子作为兜底。
+        /// </summary>
+        public void SavePityState(bool flush = false)
+        {
+            var data = new PitySaveData
+            {
+                pity5Star = pity5Star,
+                pity4Star = pity4Star,
+                isGuaranteedUp5Star = isGuaranteedUp5Star,
+                isGuaranteedUp4Star = isGuaranteedUp4Star,
+                last5StarPullCount = last5StarPullCount,
+                isLastPullUp = isLastPullUp,
+            };
+            data.integrityHash = ComputePityHash(data);
+
+            string json = JsonUtility.ToJson(data);
+            bool changed = PityStateChanged(PlayerPrefs.GetString(PitySaveKey, string.Empty), json);
+            PlayerPrefs.SetString(PitySaveKey, json);
+            if (flush || changed) PlayerPrefs.Save();
+        }
+
+        /// <summary>从 PlayerPrefs 恢复保底状态（玩家重启后保底不清零，避免"重开"绕过保底）</summary>
+        public void LoadPityState()
+        {
+            if (!PlayerPrefs.HasKey(PitySaveKey)) return;
+            try
+            {
+                var data = JsonUtility.FromJson<PitySaveData>(PlayerPrefs.GetString(PitySaveKey));
+                if (data == null) return;
+
+                // 完整性校验：哈希不匹配（数据被篡改）时拒绝加载，保持默认状态
+                if (!string.IsNullOrEmpty(data.integrityHash)
+                    && !string.Equals(data.integrityHash, ComputePityHash(data), StringComparison.OrdinalIgnoreCase))
+                {
+                    Log.Warning("GachaSystem 保底存档完整性校验失败，已忽略篡改数据");
+                    return;
+                }
+
+                // 值域钳制：防手改 PlayerPrefs 把计数改成负数/超限值
+                pity5Star = Mathf.Clamp(data.pity5Star, 0, HARD_PITY_5STAR);
+                pity4Star = Mathf.Clamp(data.pity4Star, 0, 10);
+                isGuaranteedUp5Star = data.isGuaranteedUp5Star;
+                isGuaranteedUp4Star = data.isGuaranteedUp4Star;
+                last5StarPullCount = Mathf.Max(0, data.last5StarPullCount);
+                isLastPullUp = data.isLastPullUp;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("GachaSystem 保底状态恢复失败: {0}", ex.Message);
+            }
+        }
+
+        /// <summary>清空持久化的保底状态（测试/重置账号）</summary>
+        public void ResetPityState()
+        {
+            PlayerPrefs.DeleteKey(PitySaveKey);
+            // DeleteKey 只改内存状态；WebGL 下关页不会可靠触发 OnApplicationQuit，不显式落盘则这次删除可能不生效
+            // （与 DeadlineMgrEditor 删除注册表键后紧接 PlayerPrefs.Save() 的做法保持一致）
+            PlayerPrefs.Save();
+        }
+
+        // 生命周期兜底落盘：WebGL 关页/切后台不一定触发 OnApplicationQuit，
+        // 失焦与暂停是浏览器环境下最可靠的落盘时机（主路径仍是 SavePityState 的"值变化即落盘"）。
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (!hasFocus) PlayerPrefs.Save();
+        }
+
+        private void OnApplicationPause(bool pauseStatus)
+        {
+            if (pauseStatus) PlayerPrefs.Save();
+        }
+
+        private void OnApplicationQuit()
+        {
+            PlayerPrefs.Save();
+        }
+        #endregion
+
+        /// <summary>
+        /// 五星保底判断
+        /// </summary>
+        /// <returns></returns>
+        private bool Check5StarPull()
+        {
+            // 硬保底触发
+            if (pity5Star >= HARD_PITY_5STAR) return true;
+
+            // 动态概率计算[1](@ref)
+            float currentRate = pity5Star >= SOFT_PITY_START ?
+                BASE_5STAR_RATE + 0.06f * (pity5Star - SOFT_PITY_START) :
+                BASE_5STAR_RATE;
+            // 上限保护，防止概率溢出
+            currentRate = Mathf.Min(currentRate, 1.0f);
+
+            return CryptoRandomValue() <= currentRate;
+        }
+
+        /// <summary>
+        /// 五星物品获取
+        /// </summary>
+        private GachaItem Get5StarItem()
+        {
+            // 判断是否为UP
+            bool isUp = isGuaranteedUp5Star ? true : CryptoRandomValue() <= 0.5f;
+
+            // 选择卡池：UP 池为空时回退常驻池（否则保底已消耗但出货丢失）
+            List<GachaItem> pool = isUp ? up5StarPool : standard5StarPool;
+            if (pool == null || pool.Count == 0)
+            {
+                pool = isUp ? standard5StarPool : up5StarPool;
+                if (pool == null || pool.Count == 0)
+                {
+                    Log.Error("五星卡池全部为空（UP 与常驻），无法出货");
+                    // 双池皆空：不消耗保底、不改动 UP 状态与最近抽数，等待配置修复
+                    return null;
+                }
+            }
+
+            // 仅在实际出货时更新状态
+            last5StarPullCount = pity5Star;
+            isGuaranteedUp5Star = !isUp; // 未出UP则触发大保底
+            isLastPullUp = isUp;
+
+            ResetCounters();
+            return SelectRandomItem(pool);
+        }
+
+        /// <summary>
+        /// 四星保底判断
+        /// </summary>
+        /// <returns></returns>
+        private bool Check4StarPull()
+        {
+            // 硬保底触发（第 10 抽必出四星）
+            if (pity4Star >= 10) return true;
+
+            // 动态概率：第 9 抽起从 66% 递增，第 10 抽达到 100%。
+            // 注意偏移量必须是 (pity4Star - 9)：若用 -8，第 9 抽即达 1.0，
+            // 第 10 抽的硬保底分支将永远不可达。
+            float currentRate = BASE_4STAR_RATE;
+            if (pity4Star >= 9)
+            {
+                currentRate = Mathf.Min(0.66f + (0.34f * (pity4Star - 9)), 1.0f);
+            }
+            return CryptoRandomValue() <= currentRate;
+        }
+
+        /// <summary>
+        /// 获取四星物品
+        /// </summary>
+        /// <returns></returns>
+        private GachaItem Get4StarItem()
+        {
+            // 判断是否触发UP保底
+            bool isUp = isGuaranteedUp4Star ? true : CryptoRandomValue() <= 0.5f;
+
+            // 选择卡池：UP 池为空时回退常驻池（否则保底已消耗但出货丢失）
+            List<GachaItem> pool = isUp ? up4StarPool : standard4StarPool;
+            if (pool == null || pool.Count == 0)
+            {
+                pool = isUp ? standard4StarPool : up4StarPool;
+                if (pool == null || pool.Count == 0)
+                {
+                    Log.Error("四星卡池全部为空（UP 与常驻），无法出货");
+                    // 双池皆空：不消耗保底、不改动 UP 状态，等待配置修复
+                    return null;
+                }
+            }
+
+            isGuaranteedUp4Star = !isUp; // 更新保底状态
+            isLastPullUp = isUp;
+
+            pity4Star = 0; // 重置四星计数器
+            return SelectRandomItem(pool);
+        }
+
+        /// <summary>
+        /// 获取三星物品
+        /// </summary>
+        /// <returns></returns>
+        private GachaItem Get3StarItem()
+        {
+            // 从常驻三星池随机选取
+            return SelectRandomItem(standard3StarPool);
+        }
+
+        // ===== 辅助方法 =====
+        /// <summary>
+        /// 重置计数器
+        /// </summary>
+        private void ResetCounters()
+        {
+            pity5Star = 0;
+            // 获取五星不重置四星保底（独立重置）
+        }
+
+        /// <summary>
+        /// 随机选择物品
+        /// </summary>
+        /// <param name="pool"></param>
+        /// <returns></returns>
+        private GachaItem SelectRandomItem(List<GachaItem> pool)
+        {
+            if (pool == null || pool.Count == 0)
+            {
+                Log.Error("卡池为空！请在 Inspector 中配置卡池列表");
+                return null;
+            }
+            return pool[CryptoRandomRange(0, pool.Count)];
+        }
+
+        // ===== 十连优化 =====
+        /// <summary>
+        /// 执行十连抽卡（保底至少一个四星或以上物品）。
+        /// 优先保留原有的五星/四星结果；仅在没有任何 4★+ 时替换最后一个 3★ 为 4★。
+        /// </summary>
+        /// <returns></returns>
+        public List<GachaItem> Perform10Pull()
+        {
+            List<GachaItem> results = new List<GachaItem>();
+            bool hasFourStarOrAbove = false;
+            int lastThreeStarIndex = -1;
+
+            for (int i = 0; i < 10; i++)
+            {
+                GachaItem item = PerformPull();
+                results.Add(item);
+                // 卡池为空时 PerformPull 可能返回 null（SelectRandomItem 已告警），跳过统计避免 NRE
+                if (item == null) continue;
+                if (item.starRating >= 4)
+                    hasFourStarOrAbove = true;
+                else
+                    lastThreeStarIndex = i; // 记录最后一个三星的位置
+            }
+
+            // 确保至少有一个四星或以上物品。
+            // 直接调用 Get4StarItem 替换最后一个三星结果，避免 PerformPullForce4Star 额外推进 pity5Star 导致保底计数偏移。
+            if (!hasFourStarOrAbove && lastThreeStarIndex >= 0)
+            {
+                // 十连保底替换不应消耗硬保底计数：替换后恢复 pity4Star，
+                // 与主流抽卡"十连至少一四星"独立于硬保底的语义一致
+                int pityBeforeReplace = pity4Star;
+                bool guaranteedBeforeReplace = isGuaranteedUp4Star;
+                bool lastPullUpBeforeReplace = isLastPullUp;
+                results[lastThreeStarIndex] = Get4StarItem();
+                pity4Star = pityBeforeReplace;
+                // 同样恢复 UP 保底标记：Get4StarItem 内部翻转的 isGuaranteedUp4Star/isLastPullUp
+                // 属于"正常抽卡"语义，十连保底替换不应消耗/污染玩家的四星大保底状态
+                isGuaranteedUp4Star = guaranteedBeforeReplace;
+                isLastPullUp = lastPullUpBeforeReplace;
+            }
+
+            return results;
+        }
+
+
+
+        // ===== 测试方法 =====
+        void Start()
+        {
+#if UNITY_EDITOR
+            // Test(); // 仅在需要调试时手动取消注释，避免覆盖 Inspector 中配置的卡池数据
+#endif
+        }
+
+        /// <summary>
+        /// 测试用：填充演示卡池（会覆盖 Inspector 中配置的卡池数据）。
+        /// 此前为 public 可被业务误调覆盖配置；降为私有，仅调试代码内部可用。
+        /// </summary>
+        private void Test()
+        {
+            // 配置卡池
+            up5StarPool = new List<GachaItem>
+            {
+                new GachaItem { itemName = "UP五星1", starRating = 5 },
+                new GachaItem { itemName = "UP五星2", starRating = 5 },
+                new GachaItem { itemName = "UP五星3", starRating = 5 },
+            };
+            standard5StarPool = new List<GachaItem>
+            {
+                new GachaItem { itemName = "常驻五星1", starRating = 5 },
+                new GachaItem { itemName = "常驻五星2", starRating = 5 },
+                new GachaItem { itemName = "常驻五星3", starRating = 5 },
+            };
+            up4StarPool = new List<GachaItem>
+            {
+                new GachaItem { itemName = "UP四星1", starRating = 4 },
+                new GachaItem { itemName = "UP四星2", starRating = 4 },
+                new GachaItem { itemName = "UP四星3", starRating = 4 },
+            };
+            standard4StarPool = new List<GachaItem>
+            {
+                new GachaItem { itemName = "常驻四星1", starRating = 4 },
+                new GachaItem { itemName = "常驻四星2", starRating = 4 },
+                new GachaItem { itemName = "常驻四星3", starRating = 4 },
+                new GachaItem { itemName = "常驻四星4", starRating = 4 },
+                new GachaItem { itemName = "常驻四星5", starRating = 4 },
+            };
+            standard3StarPool = new List<GachaItem>
+            {
+                new GachaItem { itemName = "三星1", starRating = 3 },
+                new GachaItem { itemName = "三星2", starRating = 3 },
+                new GachaItem { itemName = "三星3", starRating = 3 },
+                new GachaItem { itemName = "三星4", starRating = 3 },
+                new GachaItem { itemName = "三星5", starRating = 3 },
+                new GachaItem { itemName = "三星6", starRating = 3 },
+                new GachaItem { itemName = "三星7", starRating = 3 },
+                new GachaItem { itemName = "三星8", starRating = 3 },
+            };
+        }
+
+        [ContextMenu("TestPull")]
+        public void TestPull()
+        {
+            // 统计单抽星级数量
+            Dictionary<int, int> singlePullStarCount = new Dictionary<int, int> { { 3, 0 }, { 4, 0 }, { 5, 0 } };
+            for (int i = 0; i < 90; i++)
+            {
+                GachaItem item = PerformPull();
+                if (item == null) continue; // 卡池为空时跳过统计，避免 NRE
+                singlePullStarCount[item.starRating]++;
+                if (item.starRating == 5)
+                {
+                    Log.Debug("<color=#ffd32a>第 {0} 抽抽到了5星: {1}| 是否UP: {2}</color>", last5StarPullCount, item.itemName, isLastPullUp);
+                }
+                //else
+                //{
+                //    Debug.Log($"第 {i + 1} 抽: {item.itemName} | 星级: {item.starRating} | 是否UP: {isLastPullUp}");
+                //}
+            }
+            Log.Debug("单抽统计: 三星: {0} | 四星: {1} | 五星: {2}", singlePullStarCount[3], singlePullStarCount[4], singlePullStarCount[5]);
+            Log.Debug("-------------------------");
+
+            // 统计十连抽星级数量
+            Dictionary<int, int> tenPullStarCount = new Dictionary<int, int> { { 3, 0 }, { 4, 0 }, { 5, 0 } };
+            for (int i = 0; i < 9; i++)
+            {
+                List<GachaItem> tenPullResults = Perform10Pull();
+                foreach (var item in tenPullResults)
+                {
+                    if (item == null) continue; // 卡池为空时跳过统计，避免 NRE
+                    tenPullStarCount[item.starRating]++;
+                    if (item.starRating == 5)
+                    {
+                        Log.Debug("<color=#ffd32a>第 {0} 抽抽到了5星: {1}| 是否UP: {2}</color>", last5StarPullCount, item.itemName, isLastPullUp);
+                    }
+                    //else
+                    //{
+                    //    Debug.Log($"十连抽: {item.itemName} | 星级: {item.starRating} | 是否UP: {isLastPullUp}");
+                    //}
+                }
+            }
+            Log.Debug("十连抽统计: 三星: {0} | 四星: {1} | 五星: {2}", tenPullStarCount[3], tenPullStarCount[4], tenPullStarCount[5]);
+        }
+    }
+}
