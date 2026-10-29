@@ -49,8 +49,11 @@ public class MyGameEntry : GameEntry
 ```
 Assets/ReunionMovement/
 ├── Common/      最底层：日志、配置、枚举、单例基类        （无 asmdef 依赖）
-├── Core/        引擎与系统：Bootstrap、GameEngine、System/*  ← 从这里开始读
-├── Utils/       运行时系统 + 通用工具 + 可复用 UI 组件
+├── Framework/
+│   ├── Base/      只有接口与状态（ReunionMovement.Base）
+│   ├── Runtime/   引擎与系统：Bootstrap、GameEngine、System/*  ← 从这里开始读
+│   └── Modules/   运行时系统：Network/Http/Download/Timer/…
+├── Utilities/   纯工具 + 可复用 UI 组件（ImageEx、LoopScrollRect…）
 ├── UI/          项目自带的界面逻辑（示例 / 业务混合）
 ├── Editor/      编辑器工具：导表、打包、Addressables 流水线、工具箱
 ├── Plugins/     第三方：UniTask、R3、DOTween、ZString、kcp2k、Telepathy、SimpleWebTransport

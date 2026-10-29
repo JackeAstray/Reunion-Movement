@@ -68,8 +68,11 @@ See [Docs/Packaging/UPM打包指南.md](Docs/Packaging/UPM打包指南.md) for d
 ```
 Unity/ReunionMovement/Assets/ReunionMovement/
 ├── Common/      Logging, config, enums, singleton base
-├── Core/        Bootstrap, GameEngine, System/*
-├── Utils/       Runtime systems, utilities, reusable UI
+├── Framework/
+│   ├── Base/      Interfaces and state only
+│   ├── Runtime/   Bootstrap, GameEngine, System/*  ← start reading here
+│   └── Modules/   Runtime systems: Network, Http, Download, Timer, …
+├── Utilities/   Pure helpers + reusable UI (ImageEx, LoopScrollRect, …)
 ├── UI/          Project UI (examples / business)
 ├── Editor/      Excel, packaging, Addressables pipeline, toolbox
 ├── Plugins/     UniTask, R3, DOTween, ZString, kcp2k, Telepathy, SimpleWebTransport

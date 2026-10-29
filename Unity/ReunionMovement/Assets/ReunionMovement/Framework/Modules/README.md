@@ -1,18 +1,21 @@
-# Utils —— 运行时系统与通用工具（最大目录：193 文件 / 约 3.6 万行）
+# Framework/Modules —— 运行时系统（可复用模块）
 
-**放**：
+**放**：有生命周期、需要被 `GameEngine` 驱动、或自身带状态的框架系统。
 
 | 子目录 | 内容 |
 |---|---|
 | `Network/` `Http/` `Download/` | 传输、请求、断点下载 |
 | `Timer/` `StateMachine/` `ObjectPool/` `GachaSystem/` | 运行时机制 |
-| `Util/` | 纯工具：`StringUtil`、`FileOperationUtil`、`AlgorithmUtil`、`SaveSystem` 等 |
-| `UI/` | 可复用 UI 组件：`ImageEx`、`LoopScrollRect`、`TreeView`、`Ripple` |
+| `ColliderUtil/` `CSG/` `Camera/` `Raycast/` `Deadline/` | 场景侧工具系统 |
+| `SafeArea/` `ScreenResolution/` `ScreenLogger/` `Fps/` | 平台与调试 |
 
-**不放**：依赖 `ReunionMovement.Core` 的代码。
+**不放**：纯函数式工具（去 `Utilities/`）、引擎与 UI 核心（去 `Framework/Runtime/`）。
 
 **注意**：
-- 命名空间是 `ReunionMovement.Common.Util.*`，与目录名不一致（历史原因，见 `Docs/重构方案.md` 阶段 3）。
-- 这个目录是当前重构的重点。**新代码不要再往这里堆**：框架系统加到 `Core/System/`，纯工具加到 `Utils/Util/`。
+
+- 目录名是 `Framework/Modules`，**程序集名暂时仍叫 `ReunionMovement.Utils`** —— 这是有意保留的，
+  避免同时改动 `link.xml`、`Tools/HeadlessCheck` 与 `InternalsVisibleTo`。程序集改名是独立一步。
+- 命名空间暂时仍是 `ReunionMovement.Common.Util.*`（阶段 3 第 3 步未做）。
+- 新代码不要再往这里堆：框架系统加到 `Framework/Runtime/System/`，纯工具加到 `Utilities/`。
 
 **已有示例**：各系统下的 `Example/` 子目录，最终会迁到 `Samples/`。
