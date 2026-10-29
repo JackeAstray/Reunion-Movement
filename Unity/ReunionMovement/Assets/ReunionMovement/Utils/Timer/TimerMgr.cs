@@ -39,9 +39,6 @@ namespace ReunionMovement.Common.Util.Timer
         /// <summary>
         /// GameEngine 驱动的 Update（与 MonoBehaviour Update 逻辑相同，避免双重调用）
         /// </summary>
-        /// <summary>
-        /// GameEngine 驱动的 Update（与 MonoBehaviour Update 逻辑相同，避免双重调用）
-        /// </summary>
         void ISystemUpdatable.Update(float logicTime, float realTime)
         {
             // 双驱动防护：引擎驱动的模块实例必须与单例一致，否则两个实例会各自 Tick
