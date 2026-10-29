@@ -154,7 +154,7 @@ modules.Add(SceneSystem.Instance);       // 2: 场景管理（原 1，顺延）
 
 ### 5.2 类骨架与 API
 ```csharp
-namespace ReunionMovement.Core.Resources
+namespace ReunionMovement.Framework.Runtime.Resources
 {
     /// <summary>
     /// Addressables 统一封装：受管资源异步加载/实例化/释放 + 远程更新。
@@ -219,7 +219,7 @@ namespace ReunionMovement.Core.Resources
 新建静态常量类，消除魔法字符串（与 `Config` 的 const 风格一致）：
 
 ```csharp
-namespace ReunionMovement.Core.Resources
+namespace ReunionMovement.Framework.Runtime.Resources
 {
     public static class AddressableKeys
     {

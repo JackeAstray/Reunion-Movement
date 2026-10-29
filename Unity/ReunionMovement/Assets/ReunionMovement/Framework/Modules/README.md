@@ -13,9 +13,9 @@
 
 **注意**：
 
-- 目录名是 `Framework/Modules`，**程序集名暂时仍叫 `ReunionMovement.Utils`** —— 这是有意保留的，
-  避免同时改动 `link.xml`、`Tools/HeadlessCheck` 与 `InternalsVisibleTo`。程序集改名是独立一步。
-- 命名空间暂时仍是 `ReunionMovement.Common.Util.*`（阶段 3 第 3 步未做）。
+- 目录名是 `Framework/Modules`，命名空间已是 `ReunionMovement.Framework.Modules.*`（2026-10-29 归位），
+  但**程序集名仍叫 `ReunionMovement.Utils`** —— 有意保留，避免同时改动 `link.xml`、`Tools/HeadlessCheck`
+  与 `InternalsVisibleTo`。程序集改名是独立一步。
 - 新代码不要再往这里堆：框架系统加到 `Framework/Runtime/System/`，纯工具加到 `Utilities/`。
 
 **已有示例**：各系统下的 `Example/` 子目录，最终会迁到 `Samples/`。

@@ -9,5 +9,5 @@
 
 **不放**：需要被 `GameEngine` 驱动的系统（去 `Framework/Modules/`）、引擎与 UI 核心（去 `Framework/Runtime/`）。
 
-**注意**：程序集是 `ReunionMovement.Utilities`；命名空间暂时仍是旧名（`ReunionMovement.Common.Util.*`、
-`ReunionMovement.UI.*`），属于阶段 3 第 3 步的待办。
+**注意**：程序集是 `ReunionMovement.Utilities`，命名空间是 `ReunionMovement.Utilities.*`
+（2026-10-29 已从 `ReunionMovement.Common.Util.*` / `ReunionMovement.UI.*` 归位）。
