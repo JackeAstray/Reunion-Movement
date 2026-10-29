@@ -4,7 +4,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Linq;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// 分辨率管理

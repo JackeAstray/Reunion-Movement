@@ -1,6 +1,8 @@
 ﻿using System;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// 服务端连接元数据：客户端 ID、地址、连接时间、流量统计与用户自定义标记。

@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace ReunionMovement.Core
+namespace ReunionMovement.Framework.Runtime
 {
     /// <summary>
     /// 游戏加载模式

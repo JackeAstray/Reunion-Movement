@@ -1,6 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 
-namespace ReunionMovement.Core.Base
+namespace ReunionMovement.Framework.Runtime.Base
 {
     /// <summary>
     /// 可初始化系统 —— 仅需 Init 的轻量接口。

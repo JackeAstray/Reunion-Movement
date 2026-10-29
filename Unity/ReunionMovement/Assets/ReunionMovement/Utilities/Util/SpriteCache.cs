@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities
 {
     /// <summary>
     /// Sprite 缓存 —— 避免重复调用 Sprite.Create() 产生 GC。

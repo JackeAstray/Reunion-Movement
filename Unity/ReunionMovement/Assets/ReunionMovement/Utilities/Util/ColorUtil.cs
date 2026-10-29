@@ -3,7 +3,8 @@ using System.Globalization;
 using Cysharp.Text;
 using UnityEngine;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities
 {
     /// <summary>
     /// 颜色工具类，包含颜色与十六进制互转、颜色明暗调整等常用方法

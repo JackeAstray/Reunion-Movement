@@ -1,5 +1,5 @@
 using ReunionMovement.Common;
-using ReunionMovement.Core.Base;
+using ReunionMovement.Framework.Runtime.Base;
 using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using UnityEngine.Events;
 using UnityEngine.U2D;
 using Object = UnityEngine.Object;
 
-namespace ReunionMovement.Core.Resources
+namespace ReunionMovement.Framework.Runtime.Resources
 {
     /// <summary>
     /// 资源系统

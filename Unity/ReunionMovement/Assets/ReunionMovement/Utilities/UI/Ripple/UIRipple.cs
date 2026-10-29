@@ -5,7 +5,8 @@ using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using UnityEngine.EventSystems;
 
-namespace ReunionMovement.UI.RippleAnimation
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities.UI.RippleAnimation
 {
     /// <summary>
     /// UI波纹动画

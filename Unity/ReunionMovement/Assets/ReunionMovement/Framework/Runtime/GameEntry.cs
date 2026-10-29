@@ -1,9 +1,9 @@
 ﻿using ReunionMovement.Common;
-using ReunionMovement.Core.Base;
+using ReunionMovement.Framework.Runtime.Base;
 using Cysharp.Threading.Tasks;
 using System.Collections.Generic;
 
-namespace ReunionMovement.Core
+namespace ReunionMovement.Framework.Runtime
 {
     /// <summary>
     /// 游戏入口抽象基类 —— 纯 C# 类，不再依赖 MonoBehaviour。

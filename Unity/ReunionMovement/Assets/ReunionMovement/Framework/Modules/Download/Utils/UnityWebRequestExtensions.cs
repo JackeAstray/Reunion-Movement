@@ -1,7 +1,9 @@
 ﻿using Cysharp.Threading.Tasks;
 using UnityEngine.Networking;
 
-namespace ReunionMovement.Common.Util.Download
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules.Download
 {
     /// <summary>
     /// UnityWebRequest 扩展 —— await UnityWebRequestAsyncOperation 的零分配实现。

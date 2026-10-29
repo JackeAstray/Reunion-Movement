@@ -1,4 +1,4 @@
-using ReunionMovement.Core.Languages;
+using ReunionMovement.Framework.Runtime.Languages;
 using ReunionMovement.Editor.Shared;
 using System;
 using System.IO;
@@ -10,8 +10,9 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
-using ReunionMovement.UI.ImageExtensions;
+using ReunionMovement.Utilities.UI.ImageExtensions;
 
+using ReunionMovement.Common;
 namespace ReunionMovement.EditorTools.ImageExtensions
 {
     public static class EditorUtility

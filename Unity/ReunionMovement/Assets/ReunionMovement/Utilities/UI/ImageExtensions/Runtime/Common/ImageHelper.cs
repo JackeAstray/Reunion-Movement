@@ -2,7 +2,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace ReunionMovement.UI.ImageExtensions
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities.UI.ImageExtensions
 {
     /// <summary>
     /// 图像辅助类（Public API）：生成精灵网格、阴影四边形、径向填充等顶点数据。

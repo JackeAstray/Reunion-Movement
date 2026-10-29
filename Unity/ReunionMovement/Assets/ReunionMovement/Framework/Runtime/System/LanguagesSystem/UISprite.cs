@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace ReunionMovement.Core.Languages
+namespace ReunionMovement.Framework.Runtime.Languages
 {
     /// <summary>
     /// UI 多语言图片组件 —— 按当前语言切换 Sprite（配 Image 组件）。

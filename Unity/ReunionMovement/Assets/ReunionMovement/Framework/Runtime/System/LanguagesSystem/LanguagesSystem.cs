@@ -1,19 +1,19 @@
 ﻿using ReunionMovement.Common;
-using ReunionMovement.Core.Base;
-using ReunionMovement.Core.Resources;
-using ReunionMovement.Core.Sound;
+using ReunionMovement.Framework.Runtime.Base;
+using ReunionMovement.Framework.Runtime.Resources;
+using ReunionMovement.Framework.Runtime.Sound;
 using Cysharp.Threading.Tasks;
 using R3;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace ReunionMovement.Core.Languages
+namespace ReunionMovement.Framework.Runtime.Languages
 {
     /// <summary>
     /// 语言系统 —— 使用 R3 ReactiveProperty 管理语言切换通知
     /// </summary>
-    [ModuleOrder(50, typeof(ReunionMovement.Core.Resources.ResourcesSystem))]
+    [ModuleOrder(50, typeof(ReunionMovement.Framework.Runtime.Resources.ResourcesSystem))]
     public class LanguagesSystem : ICustomSystem, ISystemDisposable
     {
         #region 单例与初始化

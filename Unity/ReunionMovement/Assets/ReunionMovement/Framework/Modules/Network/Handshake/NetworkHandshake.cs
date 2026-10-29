@@ -1,7 +1,9 @@
 using System;
 using System.Security.Cryptography;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// 加密握手（Encrypted Handshake）工具 —— 客户端/服务端在明文阶段交换随机数

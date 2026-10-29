@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
-using ReunionMovement.Common.Util;
+using ReunionMovement.Framework.Modules;
+using ReunionMovement.Utilities;
 using ReunionMovement.Common;
 
 namespace ReunionMovement.Example

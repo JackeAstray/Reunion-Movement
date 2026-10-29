@@ -1,8 +1,10 @@
 ﻿using ReunionMovement.Common;
-using ReunionMovement.Common.Util.Timer;
+using ReunionMovement.Framework.Modules.Timer;
 using TMPro;
 using UnityEngine;
 
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
 namespace ReunionMovement.Example
 {
     public class TimerExample : MonoBehaviour

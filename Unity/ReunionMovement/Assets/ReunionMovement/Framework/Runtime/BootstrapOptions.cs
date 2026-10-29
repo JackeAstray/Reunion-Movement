@@ -1,6 +1,6 @@
 using System;
 
-namespace ReunionMovement.Core
+namespace ReunionMovement.Framework.Runtime
 {
     /// <summary>
     /// Bootstrap 启动配置。默认值与原硬编码行为完全一致，修改它不会破坏现有工程。

@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 
-namespace ReunionMovement.Core.UIInput
+namespace ReunionMovement.Framework.Runtime.UIInput
 {
     /// <summary>UI 输入设备类别。</summary>
     public enum UIInputDeviceKind

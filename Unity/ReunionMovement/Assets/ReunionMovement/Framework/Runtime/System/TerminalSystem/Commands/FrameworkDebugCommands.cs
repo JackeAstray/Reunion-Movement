@@ -2,10 +2,11 @@
 using Cysharp.Threading.Tasks;
 using R3;
 using ReunionMovement.Common;
-using ReunionMovement.Common.Util;
-using ReunionMovement.Core.Resources;
+using ReunionMovement.Framework.Modules;
+using ReunionMovement.Utilities;
+using ReunionMovement.Framework.Runtime.Resources;
 
-namespace ReunionMovement.Core.Terminal
+namespace ReunionMovement.Framework.Runtime.Terminal
 {
     /// <summary>
     /// 框架调试终端命令 —— 通过 [RegisterCommand] 源码生成器注册（仅编辑器/开发构建编译）。

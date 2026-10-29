@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using ReunionMovement.Common;
 using UnityEngine;
 
-namespace ReunionMovement.Core.UIInput
+namespace ReunionMovement.Framework.Runtime.UIInput
 {
     /// <summary>
     /// 一个 UI 窗口的焦点域。窗口打开时压栈，关闭时出栈；

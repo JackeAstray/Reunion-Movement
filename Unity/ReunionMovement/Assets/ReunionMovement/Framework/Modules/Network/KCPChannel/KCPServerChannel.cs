@@ -2,7 +2,9 @@
 using ReunionMovement.Kcp2k;
 using ReunionMovement.Common;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Utilities;
+using Log = ReunionMovement.Common.Log;
+namespace ReunionMovement.Framework.Modules
 {
     //================================================
     /*

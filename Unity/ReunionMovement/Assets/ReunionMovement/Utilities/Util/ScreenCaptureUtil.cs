@@ -1,10 +1,11 @@
 ﻿using Cysharp.Threading.Tasks;
 using System;
 using System.IO;
-using ReunionMovement.Core;
+using ReunionMovement.Framework.Runtime;
 using UnityEngine;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities
 {
     /// <summary>  
     /// 截屏工具类（UniTask 零 GC）

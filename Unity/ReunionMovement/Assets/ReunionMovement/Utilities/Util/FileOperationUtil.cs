@@ -8,7 +8,8 @@ using UnityEngine.Networking;
 using UnityEngine;
 using Newtonsoft.Json;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities
 {
     /// <summary>
     /// 文件操作工具类

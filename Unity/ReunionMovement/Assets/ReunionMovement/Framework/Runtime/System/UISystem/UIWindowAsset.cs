@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
-using ReunionMovement.Core.Scene;
+using ReunionMovement.Framework.Runtime.Scene;
 
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Framework.Runtime.UI
 {
     /// <summary>
     /// UIWindowAsset是每个UI界面的窗口资源类，负责管理UI窗口的资源和属性。

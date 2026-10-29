@@ -17,15 +17,16 @@
 #   ImageExEditor.cs 1079        → ImageExEditor.cs 217 + .Inspector.cs 438 + .GUI.cs 460
 # 2026-10-29 ImageHelper.cs 按 region 拆分完成，删除一条豁免：
 #   ImageHelper.cs 636           → ImageHelper.cs 374 + ImageHelper.Internal.cs 273
+# 2026-10-29 阶段 3 命名空间改名：7 个文件各 +1~+2 行（补 using / 消歧别名），一次性对齐。
 # 棘轮从此开始真正收缩：条目只能被删除，数值只能下调。
 
 628 Assets/ReunionMovement/Editor/Addressables/AddressablesCdnUploader.cs
-929 Assets/ReunionMovement/Editor/Excel/Scripts/ExcelSystem.cs
+930 Assets/ReunionMovement/Editor/Excel/Scripts/ExcelSystem.cs
 929 Assets/ReunionMovement/Editor/UIExamples/CreateLocalMultiplayerSelectionExample.cs
-666 Assets/ReunionMovement/Framework/Modules/ColliderUtil/ColliderUtil.cs
-791 Assets/ReunionMovement/Framework/Modules/Download/FileDownloader.cs
-854 Assets/ReunionMovement/Framework/Modules/Network/Core/NetworkClient.cs
-747 Assets/ReunionMovement/Framework/Modules/Network/Core/NetworkServer.cs
+668 Assets/ReunionMovement/Framework/Modules/ColliderUtil/ColliderUtil.cs
+793 Assets/ReunionMovement/Framework/Modules/Download/FileDownloader.cs
+856 Assets/ReunionMovement/Framework/Modules/Network/Core/NetworkClient.cs
+749 Assets/ReunionMovement/Framework/Modules/Network/Core/NetworkServer.cs
 808 Assets/ReunionMovement/Framework/Runtime/System/AddressableSystem/AddressableSystem.cs
 713 Assets/ReunionMovement/Framework/Runtime/System/EventMessageSystem/EventMessageSystem.cs
 743 Assets/ReunionMovement/Framework/Runtime/System/SceneSystem/SceneSystem.cs
@@ -34,8 +35,8 @@
 844 Assets/ReunionMovement/Framework/Runtime/System/UIInputSystem/UIInputSystem.Targets.cs
 1136 Assets/ReunionMovement/UI/Select/CarouselSelectionController.cs
 615 Assets/ReunionMovement/UI/Select/LocalMultiplayerPlayerCard.cs
-1335 Assets/ReunionMovement/Utilities/UI/LoopScrollRect/LoopScrollRect.cs
-610 Assets/ReunionMovement/Utilities/Util/AlgorithmUtil.Components.cs
-942 Assets/ReunionMovement/Utilities/Util/AlgorithmUtil.GameObjects.cs
-778 Assets/ReunionMovement/Utilities/Util/AlgorithmUtil.Transforms.cs
-655 Assets/ReunionMovement/Utilities/Util/SaveSystem.cs
+1336 Assets/ReunionMovement/Utilities/UI/LoopScrollRect/LoopScrollRect.cs
+611 Assets/ReunionMovement/Utilities/Util/AlgorithmUtil.Components.cs
+943 Assets/ReunionMovement/Utilities/Util/AlgorithmUtil.GameObjects.cs
+779 Assets/ReunionMovement/Utilities/Util/AlgorithmUtil.Transforms.cs
+656 Assets/ReunionMovement/Utilities/Util/SaveSystem.cs

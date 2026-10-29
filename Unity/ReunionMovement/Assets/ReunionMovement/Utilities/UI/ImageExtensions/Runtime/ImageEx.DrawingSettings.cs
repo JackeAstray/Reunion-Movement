@@ -6,7 +6,7 @@ using UnityEngine.UI;
 using UnityEditor;
 #endif
 
-namespace ReunionMovement.UI.ImageExtensions
+namespace ReunionMovement.Utilities.UI.ImageExtensions
 {
     /// <summary>
     /// ImageEx partial part: Drawing Settings (same class, no behavior/serialization change)

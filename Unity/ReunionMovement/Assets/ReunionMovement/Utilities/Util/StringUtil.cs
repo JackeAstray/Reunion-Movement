@@ -8,7 +8,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities
 {
     /// <summary>
     /// 字符串工具类

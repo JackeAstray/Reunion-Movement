@@ -1,7 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
 using UnityEngine;
 
-namespace ReunionMovement.Core.Base
+namespace ReunionMovement.Framework.Runtime.Base
 {
     /// <summary>
     /// 游戏入口接口

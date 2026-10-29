@@ -1,9 +1,11 @@
 ﻿using Cysharp.Threading.Tasks;
-using ReunionMovement.Core.Base;
+using ReunionMovement.Framework.Runtime.Base;
 using System;
 using System.Collections.Generic;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// 网络通道管理器 —— 同时作为 MonoBehaviour 单例和 GameEngine 模块（ISystemUpdatable 驱动移除队列消费）。

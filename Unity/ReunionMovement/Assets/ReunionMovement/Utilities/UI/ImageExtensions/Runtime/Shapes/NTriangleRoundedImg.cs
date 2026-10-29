@@ -5,7 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace ReunionMovement.UI.ImageExtensions
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities.UI.ImageExtensions
 {
     [Serializable]
     public class NTriangleRoundedImg : UIImgComponent

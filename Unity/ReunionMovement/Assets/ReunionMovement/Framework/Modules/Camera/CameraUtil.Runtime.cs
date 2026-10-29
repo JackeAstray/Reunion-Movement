@@ -7,7 +7,8 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.EnhancedTouch;
 using Touch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// CameraUtil partial part: Runtime (same class, no behavior change)

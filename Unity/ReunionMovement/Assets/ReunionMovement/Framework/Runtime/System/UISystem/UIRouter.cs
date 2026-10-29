@@ -1,11 +1,11 @@
 using ReunionMovement.Common;
-using ReunionMovement.Core.UIInput;
+using ReunionMovement.Framework.Runtime.UIInput;
 using Cysharp.Threading.Tasks;
 using R3;
 using System;
 using UnityEngine;
 
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Framework.Runtime.UI
 {
     /// <summary>
     /// UI 路由 —— 在 <see cref="UISystem"/> 之上补一层"界面之间怎么走"的能力。

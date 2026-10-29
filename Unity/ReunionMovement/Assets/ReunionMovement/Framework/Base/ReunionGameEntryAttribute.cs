@@ -1,9 +1,9 @@
 using System;
 
-namespace ReunionMovement.Core.Base
+namespace ReunionMovement.Framework.Runtime.Base
 {
     /// <summary>
-    /// 声明本程序集使用的游戏入口（<see cref="ReunionMovement.Core.GameEntry"/> 子类）。
+    /// 声明本程序集使用的游戏入口（<see cref="ReunionMovement.Framework.Runtime.GameEntry"/> 子类）。
     /// <para>
     /// 用法：在<b>你自己的程序集</b>里写一行（放在任意 .cs 文件的最外层，命名空间之外）：
     /// </para>

@@ -1,4 +1,4 @@
-using ReunionMovement.UI.RippleAnimation;
+using ReunionMovement.Utilities.UI.RippleAnimation;
 using System;
 using System.Collections.Generic;
 using UnityEditor;
@@ -6,7 +6,8 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 using ReunionMovement.Common;
-using ReunionMovement.Common.Util;
+using ReunionMovement.Framework.Modules;
+using ReunionMovement.Utilities;
 
 namespace ReunionMovement.EditorTools
 {

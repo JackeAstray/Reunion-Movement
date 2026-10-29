@@ -3,7 +3,7 @@ using R3;
 using System.Threading;
 using ReunionMovement.Common;
 
-namespace ReunionMovement.Core.Resources
+namespace ReunionMovement.Framework.Runtime.Resources
 {
     /// <summary>
     /// Addressables 热更流程状态机 —— 封装"检查 Catalog 更新 → 下载 → 应用"标准流程。

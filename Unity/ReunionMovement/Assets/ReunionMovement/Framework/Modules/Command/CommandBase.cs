@@ -2,7 +2,9 @@
 using System.Collections;
 using UnityEngine;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// 命令基类（纯 C#）—— 不依赖 MonoBehaviour，可在任意上下文中使用（游戏逻辑、服务端、测试等）。

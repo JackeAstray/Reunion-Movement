@@ -1,10 +1,11 @@
-﻿using ReunionMovement.UI.ImageExtensions;
+﻿using ReunionMovement.Utilities.UI.ImageExtensions;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace ReunionMovement.UI.ImageExtensions
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities.UI.ImageExtensions
 {
     [Serializable]
     public class SquircleImg : UIImgComponent

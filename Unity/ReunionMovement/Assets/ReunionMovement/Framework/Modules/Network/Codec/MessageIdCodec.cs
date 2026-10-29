@@ -1,6 +1,8 @@
 ﻿using System;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// [2 字节消息 ID（小端）][负载] 编解码器（数据报模式）。

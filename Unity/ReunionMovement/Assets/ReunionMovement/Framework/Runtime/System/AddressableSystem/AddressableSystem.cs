@@ -1,5 +1,5 @@
 ﻿using ReunionMovement.Common;
-using ReunionMovement.Core.Base;
+using ReunionMovement.Framework.Runtime.Base;
 using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
@@ -16,7 +16,7 @@ using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
-namespace ReunionMovement.Core.Resources
+namespace ReunionMovement.Framework.Runtime.Resources
 {
     /// <summary>
     /// Addressables 远程更新检查结果
@@ -35,7 +35,7 @@ namespace ReunionMovement.Core.Resources
     /// 生命周期由 Addressables 自带引用计数管理，调用方须成对调用 Load / Release。
     /// 设计文档：仓库 Docs/Addressables/Addressables集成设计方案.md §5
     /// </summary>
-    [ModuleOrder(20, typeof(ReunionMovement.Core.Resources.ResourcesSystem))]
+    [ModuleOrder(20, typeof(ReunionMovement.Framework.Runtime.Resources.ResourcesSystem))]
     public class AddressableSystem : ICustomSystem, ISystemDisposable
     {
         #region 单例与初始化

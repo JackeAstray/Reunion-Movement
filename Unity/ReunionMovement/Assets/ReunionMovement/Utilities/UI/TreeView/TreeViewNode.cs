@@ -1,4 +1,4 @@
-﻿using ReunionMovement.Common.Util;
+﻿using ReunionMovement.Utilities;
 using System;
 using System.Collections.Generic;
 using TMPro;
@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
+using ReunionMovement.Common;
 namespace ReunionMovement
 {
     /// <summary>

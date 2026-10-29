@@ -7,7 +7,8 @@ using UnityEditor;
 #endif
 using UnityEngine;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities
 {
     /// <summary>
     /// 程序集相关工具类

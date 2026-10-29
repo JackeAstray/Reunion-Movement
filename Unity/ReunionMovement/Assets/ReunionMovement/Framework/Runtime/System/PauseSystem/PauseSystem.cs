@@ -1,12 +1,12 @@
 using Cysharp.Threading.Tasks;
 using R3;
 using ReunionMovement.Common;
-using ReunionMovement.Core.Base;
+using ReunionMovement.Framework.Runtime.Base;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace ReunionMovement.Core.Pause
+namespace ReunionMovement.Framework.Runtime.Pause
 {
     /// <summary>
     /// 暂停系统 —— 统一管理游戏暂停/恢复（此前项目 Time.timeScale 赋值 0 处，缺统一暂停能力）。

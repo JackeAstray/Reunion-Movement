@@ -5,7 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine.Tilemaps;
 
-namespace ReunionMovement.Common.Util.Download
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules.Download
 {
     /// <summary>
     /// 下载执行器工厂

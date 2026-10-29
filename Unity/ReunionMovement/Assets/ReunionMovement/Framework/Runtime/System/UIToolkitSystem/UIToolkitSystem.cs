@@ -1,6 +1,6 @@
 ﻿using ReunionMovement.Common;
-using ReunionMovement.Core.Base;
-using ReunionMovement.Core.Resources;
+using ReunionMovement.Framework.Runtime.Base;
+using ReunionMovement.Framework.Runtime.Resources;
 using Cysharp.Threading.Tasks;
 using R3;
 using System;
@@ -8,13 +8,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace ReunionMovement.Core.UIToolkit
+namespace ReunionMovement.Framework.Runtime.UIToolkit
 {
     /// <summary>
     /// UI Toolkit 系统 —— 基于 UIDocument + UXML/USS 的声明式 UI 模块。
     /// 与现有 UISystem (uGUI/Canvas) 并存，可按界面粒度混用两种 UI 方案。
     /// </summary>
-    [ModuleOrder(110, typeof(ReunionMovement.Core.Resources.ResourcesSystem))]
+    [ModuleOrder(110, typeof(ReunionMovement.Framework.Runtime.Resources.ResourcesSystem))]
     public class UIToolkitSystem : ICustomSystem, ISystemDisposable
     {
         #region 单例与初始化

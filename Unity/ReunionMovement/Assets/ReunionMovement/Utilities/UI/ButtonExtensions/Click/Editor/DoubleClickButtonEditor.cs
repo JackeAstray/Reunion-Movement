@@ -1,4 +1,4 @@
-﻿using ReunionMovement.UI.ButtonClick;
+﻿using ReunionMovement.Utilities.UI.ButtonClick;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine.UIElements;
 
+using ReunionMovement.Common;
 namespace ReunionMovement.EditorTools
 {
     [CustomEditor(typeof(DoubleClickButton))]

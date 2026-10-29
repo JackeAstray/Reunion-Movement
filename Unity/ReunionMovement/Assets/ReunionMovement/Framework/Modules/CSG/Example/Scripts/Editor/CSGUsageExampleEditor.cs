@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
-using ReunionMovement.Common.Util.Example;
+using ReunionMovement.Framework.Modules.Example;
 
-namespace ReunionMovement.Common.Util.EditorTools
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules.EditorTools
 {
     /// <summary>
     /// 这是一个简单的编辑器辅助脚本，用于快速测试/原型制作！

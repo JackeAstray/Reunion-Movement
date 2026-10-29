@@ -1,6 +1,6 @@
 using System;
 
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Framework.Runtime.UI
 {
     /// <summary>
     /// 窗口元数据 —— 挂在 <see cref="UIController"/> 派生类上，声明这个窗口"是什么"。

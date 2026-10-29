@@ -1,13 +1,13 @@
 ﻿using ReunionMovement.Common;
-using ReunionMovement.Core.UIToolkit;
-using ReunionMovement.Core.Resources;
-using ReunionMovement.Core.Sound;
+using ReunionMovement.Framework.Runtime.UIToolkit;
+using ReunionMovement.Framework.Runtime.Resources;
+using ReunionMovement.Framework.Runtime.Sound;
 using Cysharp.Threading.Tasks;
 using System;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Framework.Runtime.UI
 {
     /// <summary>
     /// 启动界面（UI Toolkit 版）—— 完全复刻 StartGameUIPlane (uGUI) 的动画效果。

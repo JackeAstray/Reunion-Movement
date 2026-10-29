@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using ReunionMovement.Core;
+using ReunionMovement.Framework.Runtime;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities
 {
     /// <summary>
     /// 算法工具类

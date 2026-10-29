@@ -2,7 +2,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace ReunionMovement.Core.UIInput
+namespace ReunionMovement.Framework.Runtime.UIInput
 {
     /// <summary>
     /// 一次 UI 导航事件（由 UIInputSystem 的设备轮询器产生）。

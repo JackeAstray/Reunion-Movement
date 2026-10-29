@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-namespace ReunionMovement.Core.Languages
+namespace ReunionMovement.Framework.Runtime.Languages
 {
     /// <summary>
     /// UI 多语言文本组件 —— 通过 R3 订阅语言切换事件自动更新

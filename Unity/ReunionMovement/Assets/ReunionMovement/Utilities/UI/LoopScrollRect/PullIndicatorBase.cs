@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities
 {
     /// <summary>
     /// 拉动指示器基类，负责显示“拉动中 / 刷新中 / 完成”等状态。

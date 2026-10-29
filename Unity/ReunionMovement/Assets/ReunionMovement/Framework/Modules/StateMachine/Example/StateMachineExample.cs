@@ -5,9 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using ReunionMovement.Common;
-using ReunionMovement.Common.Util.StateMachine;
+using ReunionMovement.Framework.Modules.StateMachine;
 using UnityEngine.InputSystem;
 
+using ReunionMovement.Utilities;
 namespace ReunionMovement.Example
 {
     /// <summary>

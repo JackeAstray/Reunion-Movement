@@ -3,6 +3,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 
+using ReunionMovement.Utilities;
 namespace ReunionMovement
 {
     /// <summary>

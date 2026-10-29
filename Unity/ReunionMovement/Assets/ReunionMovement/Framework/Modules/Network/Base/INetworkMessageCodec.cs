@@ -1,6 +1,8 @@
 ﻿using System;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// 网络消息编解码器 —— 定义消息"帧"的边界与消息 ID 格式。

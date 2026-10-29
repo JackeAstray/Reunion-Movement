@@ -1,14 +1,14 @@
 using ReunionMovement.Common;
-using ReunionMovement.Core.Base;
-using ReunionMovement.Core.UI;
+using ReunionMovement.Framework.Runtime.Base;
+using ReunionMovement.Framework.Runtime.UI;
 using Cysharp.Threading.Tasks;
 using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace ReunionMovement.Core.Terminal
+namespace ReunionMovement.Framework.Runtime.Terminal
 {
-    [ModuleOrder(120, typeof(ReunionMovement.Core.UI.UISystem))]
+    [ModuleOrder(120, typeof(ReunionMovement.Framework.Runtime.UI.UISystem))]
     public class TerminalSystem : ICustomSystem, ISystemUpdatable, ISystemDisposable
     {
         #region 单例与初始化

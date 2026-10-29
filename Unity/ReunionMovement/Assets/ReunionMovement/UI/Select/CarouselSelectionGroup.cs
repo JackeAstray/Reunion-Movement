@@ -1,4 +1,4 @@
-﻿using ReunionMovement.Core.UIInput;
+﻿using ReunionMovement.Framework.Runtime.UIInput;
 using UnityEngine;
 
 namespace ReunionMovement.UI.Select

@@ -1,5 +1,5 @@
 ﻿using NUnit.Framework;
-using ReunionMovement.Core;
+using ReunionMovement.Framework.Runtime;
 using UnityEngine;
 
 namespace ReunionMovement.Tests

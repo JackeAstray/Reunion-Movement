@@ -1,8 +1,9 @@
 ﻿using System.IO;
 using UnityEditor;
 using UnityEngine;
-using ReunionMovement.UI.ImageExtensions;
+using ReunionMovement.Utilities.UI.ImageExtensions;
 
+using ReunionMovement.Common;
 namespace ReunionMovement.EditorTools.ImageExtensions
 {
     [InitializeOnLoad]

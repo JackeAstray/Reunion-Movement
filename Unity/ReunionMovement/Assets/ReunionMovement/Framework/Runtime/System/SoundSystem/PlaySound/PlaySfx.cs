@@ -1,9 +1,9 @@
 ﻿using Cysharp.Threading.Tasks;
 using ReunionMovement.Common;
-using ReunionMovement.Core.Sound;
+using ReunionMovement.Framework.Runtime.Sound;
 using UnityEngine;
 
-namespace ReunionMovement.Core.Sound
+namespace ReunionMovement.Framework.Runtime.Sound
 {
     /// <summary>
     /// 播放音效

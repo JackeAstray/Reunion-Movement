@@ -5,7 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace ReunionMovement.Common.Util.Download
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules.Download
 {
     /// <summary>
     /// 信号锁

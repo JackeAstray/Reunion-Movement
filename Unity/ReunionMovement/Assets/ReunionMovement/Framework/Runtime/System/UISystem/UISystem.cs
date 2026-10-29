@@ -1,6 +1,6 @@
 using ReunionMovement.Common;
-using ReunionMovement.Core.Base;
-using ReunionMovement.Core.Resources;
+using ReunionMovement.Framework.Runtime.Base;
+using ReunionMovement.Framework.Runtime.Resources;
 using Cysharp.Threading.Tasks;
 using R3;
 using System;
@@ -8,12 +8,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Framework.Runtime.UI
 {
     /// <summary>
     /// UI系统 —— UI 生命周期事件使用 R3 Subject 替代 static event
     /// </summary>
-    [ModuleOrder(90, typeof(ReunionMovement.Core.Resources.ResourcesSystem), typeof(ReunionMovement.Core.Resources.AddressableSystem), typeof(ReunionMovement.Core.Scene.SceneSystem))]
+    [ModuleOrder(90, typeof(ReunionMovement.Framework.Runtime.Resources.ResourcesSystem), typeof(ReunionMovement.Framework.Runtime.Resources.AddressableSystem), typeof(ReunionMovement.Framework.Runtime.Scene.SceneSystem))]
     public partial class UISystem : ICustomSystem, ISystemDisposable
     {
         #region 单例与初始化

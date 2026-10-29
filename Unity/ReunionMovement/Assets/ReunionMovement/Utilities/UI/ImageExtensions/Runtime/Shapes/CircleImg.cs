@@ -1,7 +1,8 @@
 ﻿using System;
 using UnityEngine;
 
-namespace ReunionMovement.UI.ImageExtensions
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities.UI.ImageExtensions
 {
     /// <summary>
     /// 圆形

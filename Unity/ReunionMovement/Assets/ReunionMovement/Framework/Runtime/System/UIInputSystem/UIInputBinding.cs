@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ReunionMovement.Core.UIInput
+namespace ReunionMovement.Framework.Runtime.UIInput
 {
     /// <summary>
     /// UI 按键绑定配置数据类

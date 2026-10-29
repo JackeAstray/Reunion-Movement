@@ -2,8 +2,9 @@
 
 using Cysharp.Threading.Tasks;
 using ReunionMovement.Common;
-using ReunionMovement.Common.Util;
-using ReunionMovement.Core.Terminal;
+using ReunionMovement.Framework.Modules;
+using ReunionMovement.Utilities;
+using ReunionMovement.Framework.Runtime.Terminal;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -11,7 +12,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Framework.Runtime.UI
 {
     [UIWindow("TerminalUIPlane", Layer = PanelType.NormalUI)]
     public class TerminalUIPlane : UIController, IWindowArgsReceiver<TerminalWindowArgs>

@@ -1,12 +1,13 @@
-using ReunionMovement.Common.Util;
+using ReunionMovement.Framework.Modules;
+using ReunionMovement.Utilities;
 using ReunionMovement.Common;
-using ReunionMovement.Core.UIInput;
+using ReunionMovement.Framework.Runtime.UIInput;
 using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Framework.Runtime.UI
 {
     /// <summary>
     /// UIController是每个UI界面的基类，负责管理UI的生命周期和基本功能。

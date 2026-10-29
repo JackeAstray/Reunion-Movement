@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using NUnit.Framework;
-using ReunionMovement.Core.Pause;
+using ReunionMovement.Framework.Runtime.Pause;
 using UnityEngine;
 using UnityEngine.TestTools;
 

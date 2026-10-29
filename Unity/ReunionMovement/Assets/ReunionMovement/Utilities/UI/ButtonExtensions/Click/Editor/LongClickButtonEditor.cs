@@ -1,8 +1,9 @@
 ﻿using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
-using ReunionMovement.UI.ButtonClick;
+using ReunionMovement.Utilities.UI.ButtonClick;
 
+using ReunionMovement.Common;
 namespace ReunionMovement.EditorTools
 {
     [CustomEditor(typeof(LongClickButton))]

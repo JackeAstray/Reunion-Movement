@@ -1,13 +1,13 @@
 ﻿using ReunionMovement.Common;
-using ReunionMovement.Core;
-using ReunionMovement.Core.Base;
-using ReunionMovement.Core.EventMessage;
-using ReunionMovement.Core.Languages;
-using ReunionMovement.Core.Resources;
-using ReunionMovement.Core.Scene;
-using ReunionMovement.Core.Sound;
-using ReunionMovement.Core.Terminal;
-using ReunionMovement.Core.UI;
+using ReunionMovement.Framework.Runtime;
+using ReunionMovement.Framework.Runtime.Base;
+using ReunionMovement.Framework.Runtime.EventMessage;
+using ReunionMovement.Framework.Runtime.Languages;
+using ReunionMovement.Framework.Runtime.Resources;
+using ReunionMovement.Framework.Runtime.Scene;
+using ReunionMovement.Framework.Runtime.Sound;
+using ReunionMovement.Framework.Runtime.Terminal;
+using ReunionMovement.Framework.Runtime.UI;
 using Cysharp.Threading.Tasks;
 using System.Collections.Generic;
 

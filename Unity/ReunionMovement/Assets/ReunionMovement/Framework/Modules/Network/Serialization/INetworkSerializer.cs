@@ -1,6 +1,8 @@
 ﻿using System;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// 网络对象序列化器 —— 强类型消息（SendObject / RegisterObjectHandler / RPC）的负载序列化抽象。

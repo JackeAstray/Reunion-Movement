@@ -1,7 +1,7 @@
 ﻿using System;
 using NUnit.Framework;
-using ReunionMovement.Core;
-using ReunionMovement.Core.UI;
+using ReunionMovement.Framework.Runtime;
+using ReunionMovement.Framework.Runtime.UI;
 using UnityEngine;
 
 namespace ReunionMovement.Tests

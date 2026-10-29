@@ -1,9 +1,9 @@
 using System;
 using System.Reflection;
 using ReunionMovement.Common;
-using ReunionMovement.Core.Base;
+using ReunionMovement.Framework.Runtime.Base;
 
-namespace ReunionMovement.Core
+namespace ReunionMovement.Framework.Runtime
 {
     /// <summary>
     /// 解析 <see cref="ReunionGameEntryAttribute"/> 声明的游戏入口。

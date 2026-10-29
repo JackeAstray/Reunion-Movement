@@ -2,7 +2,9 @@
 using System.IO;
 using System.IO.Compression;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// 压缩编解码器包装器 —— 包装底层编解码器，对负载进行 Deflate 压缩/解压。

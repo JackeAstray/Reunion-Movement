@@ -1,7 +1,8 @@
 using ReunionMovement.Common;
-using ReunionMovement.Common.Util;
-using ReunionMovement.Core;
-using ReunionMovement.Core.UI;
+using ReunionMovement.Framework.Modules;
+using ReunionMovement.Utilities;
+using ReunionMovement.Framework.Runtime;
+using ReunionMovement.Framework.Runtime.UI;
 using ReunionMovement.Editor.Shared;
 using Cysharp.Threading.Tasks;
 using System;
@@ -274,7 +275,7 @@ namespace ReunionMovement.EditorTools
         /// </summary>
         private static Type FindUIType(string typeName)
         {
-            const string ns = "ReunionMovement.Core.UI.";
+            const string ns = "ReunionMovement.Framework.Runtime.UI.";
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
                 var type = assembly.GetType(ns + typeName, false);
@@ -384,7 +385,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Framework.Runtime.UI
 {
     [UIWindow(""{_0_}"")]
     public class {_0_} : UIController

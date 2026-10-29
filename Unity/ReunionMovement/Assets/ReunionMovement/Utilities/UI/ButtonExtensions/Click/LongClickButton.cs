@@ -10,7 +10,8 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-namespace ReunionMovement.UI.ButtonClick
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities.UI.ButtonClick
 {
     /// <summary>
     /// 长按按钮

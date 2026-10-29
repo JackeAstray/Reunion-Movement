@@ -1,11 +1,12 @@
 ﻿using ReunionMovement.Common;
-using ReunionMovement.Common.Util;
-using ReunionMovement.Core.Languages;
+using ReunionMovement.Framework.Modules;
+using ReunionMovement.Utilities;
+using ReunionMovement.Framework.Runtime.Languages;
 using System;
 using UnityEngine;
-using ReunionMovement.Core.Sound;
+using ReunionMovement.Framework.Runtime.Sound;
 
-namespace ReunionMovement.Core
+namespace ReunionMovement.Framework.Runtime
 {
     public static class GameOption
     {

@@ -1,7 +1,8 @@
 ﻿using System.IO;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
-using ReunionMovement.Common.Util;
+using ReunionMovement.Framework.Modules;
+using ReunionMovement.Utilities;
 using UnityEngine;
 using UnityEngine.TestTools;
 

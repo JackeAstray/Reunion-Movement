@@ -1,5 +1,5 @@
 ﻿using ReunionMovement.Common;
-using ReunionMovement.UI.ButtonClick;
+using ReunionMovement.Utilities.UI.ButtonClick;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;

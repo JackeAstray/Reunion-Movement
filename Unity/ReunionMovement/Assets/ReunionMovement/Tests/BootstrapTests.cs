@@ -1,6 +1,6 @@
 using NUnit.Framework;
-using ReunionMovement.Core;
-using ReunionMovement.Core.Base;
+using ReunionMovement.Framework.Runtime;
+using ReunionMovement.Framework.Runtime.Base;
 using System;
 using System.Linq;
 

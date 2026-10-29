@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ReunionMovement.Core
+namespace ReunionMovement.Framework.Runtime
 {
     /// <summary>
     /// 引擎初始化结果

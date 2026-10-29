@@ -1,7 +1,7 @@
 ﻿using ReunionMovement.Common;
-using ReunionMovement.Core.Base;
-using ReunionMovement.Core.Resources;
-using ReunionMovement.Core.Scene;
+using ReunionMovement.Framework.Runtime.Base;
+using ReunionMovement.Framework.Runtime.Resources;
+using ReunionMovement.Framework.Runtime.Scene;
 using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
@@ -10,12 +10,12 @@ using UnityEngine;
 using UnityEngine.Pool;
 using UnityEngine.Rendering;
 
-namespace ReunionMovement.Core.Sound
+namespace ReunionMovement.Framework.Runtime.Sound
 {
     /// <summary>
     /// 声音系统
     /// </summary>
-    [ModuleOrder(70, typeof(ReunionMovement.Core.Resources.ResourcesSystem), typeof(ReunionMovement.Core.Resources.AddressableSystem))]
+    [ModuleOrder(70, typeof(ReunionMovement.Framework.Runtime.Resources.ResourcesSystem), typeof(ReunionMovement.Framework.Runtime.Resources.AddressableSystem))]
     public partial class SoundSystem : ICustomSystem, ISystemUpdatable, ISystemDisposable
     {
         #region 单例与初始化

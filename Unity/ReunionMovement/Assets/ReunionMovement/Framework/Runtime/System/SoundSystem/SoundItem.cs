@@ -2,7 +2,7 @@
 using System.Threading;
 using UnityEngine;
 
-namespace ReunionMovement.Core.Sound
+namespace ReunionMovement.Framework.Runtime.Sound
 {
     /// <summary>
     /// 声音对象

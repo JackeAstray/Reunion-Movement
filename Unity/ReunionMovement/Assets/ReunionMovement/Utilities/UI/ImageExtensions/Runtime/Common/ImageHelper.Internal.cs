@@ -2,7 +2,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace ReunionMovement.UI.ImageExtensions
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities.UI.ImageExtensions
 {
     /// <summary>
     /// 图像辅助类（Private helpers）：四边形 / UV / 径向填充的具体实现。

@@ -6,7 +6,7 @@ using UnityEngine.UI;
 using UnityEditor;
 #endif
 
-namespace ReunionMovement.UI.ImageExtensions
+namespace ReunionMovement.Utilities.UI.ImageExtensions
 {
     /// <summary>
     /// ImageEx partial part：字段、着色器解析与生命周期（Awake / Init / OnDestroy / 材质重建）。

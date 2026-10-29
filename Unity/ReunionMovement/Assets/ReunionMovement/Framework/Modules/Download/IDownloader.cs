@@ -3,7 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace ReunionMovement.Common.Util.Download
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules.Download
 {
     /// <summary>
     /// 下载器接口

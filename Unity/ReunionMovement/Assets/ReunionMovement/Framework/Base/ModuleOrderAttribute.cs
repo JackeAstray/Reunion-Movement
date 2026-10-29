@@ -1,9 +1,9 @@
 using System;
 
-namespace ReunionMovement.Core.Base
+namespace ReunionMovement.Framework.Runtime.Base
 {
     /// <summary>
-    /// 声明模块的初始化顺序与依赖，由 <see cref="ReunionMovement.Core.ModuleCatalog"/> 在启动前校验。
+    /// 声明模块的初始化顺序与依赖，由 <see cref="ReunionMovement.Framework.Runtime.ModuleCatalog"/> 在启动前校验。
     /// <para>
     /// 用法（加在模块类上，依赖项必须也在本次启动的模块列表里）：
     /// </para>

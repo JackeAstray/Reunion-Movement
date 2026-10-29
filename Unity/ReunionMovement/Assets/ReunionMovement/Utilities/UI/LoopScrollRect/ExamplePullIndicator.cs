@@ -1,8 +1,9 @@
-﻿using ReunionMovement.Common.Util;
+﻿using ReunionMovement.Utilities;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+using ReunionMovement.Common;
 namespace ReunionMovement.Example
 {
     /// <summary>

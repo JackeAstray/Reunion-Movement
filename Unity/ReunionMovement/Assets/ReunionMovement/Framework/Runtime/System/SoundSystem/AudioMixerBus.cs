@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.Audio;
 
-namespace ReunionMovement.Core.Sound
+namespace ReunionMovement.Framework.Runtime.Sound
 {
     /// <summary>
     /// AudioMixer 音量分组工具 —— 代码侧接口层。

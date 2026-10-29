@@ -2,7 +2,7 @@ using ReunionMovement.Common;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Framework.Runtime.UI
 {
     /// <summary>
     /// <see cref="UIRouter"/> 的"模态"部分：模态窗口打开时，隔离下层窗口的交互（可选变暗）。

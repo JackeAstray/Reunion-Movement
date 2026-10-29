@@ -1,7 +1,7 @@
 ﻿using ReunionMovement.Common;
-using ReunionMovement.Core.Base;
-using ReunionMovement.Core.Resources;
-using ReunionMovement.Core.UI;
+using ReunionMovement.Framework.Runtime.Base;
+using ReunionMovement.Framework.Runtime.Resources;
+using ReunionMovement.Framework.Runtime.UI;
 using Cysharp.Threading.Tasks;
 using R3;
 using System;
@@ -13,7 +13,7 @@ using UnityEngine.InputSystem.Controls;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.InputSystem.UI;
 
-namespace ReunionMovement.Core.UIInput
+namespace ReunionMovement.Framework.Runtime.UIInput
 {
     public partial class UIInputSystem
     {

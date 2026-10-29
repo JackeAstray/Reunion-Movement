@@ -5,7 +5,9 @@ using System.Text;
 using UnityEngine;
 using System.Security.Cryptography;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// 抽卡系统 模拟

@@ -4,7 +4,7 @@ using UnityEditor.UI;
 using UnityEngine;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
-using ReunionMovement.UI.ImageExtensions;
+using ReunionMovement.Utilities.UI.ImageExtensions;
 using ReunionMovement.Common;
 
 namespace ReunionMovement.EditorTools.ImageExtensions

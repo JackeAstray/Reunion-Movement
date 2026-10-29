@@ -1,4 +1,4 @@
-﻿namespace ReunionMovement.Common.Util
+﻿namespace ReunionMovement.Framework.Modules
 {
     public class TcpConstants
     {

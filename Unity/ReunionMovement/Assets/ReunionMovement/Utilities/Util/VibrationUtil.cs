@@ -5,7 +5,8 @@ using System.Runtime.InteropServices;
 using UnityEngine.iOS;
 #endif
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities
 {
     /// <summary>
     /// iOS Android 震动

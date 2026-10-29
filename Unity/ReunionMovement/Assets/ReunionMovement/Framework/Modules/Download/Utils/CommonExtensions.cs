@@ -1,6 +1,8 @@
 ﻿using System;
 
-namespace ReunionMovement.Common.Util.Download
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules.Download
 {
     /// <summary>
     /// string[] 扩展（仅保留有调用点的成员；Then/Dequeue/执行器数组合并等无调用点成员已删除）

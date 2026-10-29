@@ -1,11 +1,12 @@
 ﻿using ReunionMovement.Common;
-using ReunionMovement.Common.Util;
+using ReunionMovement.Framework.Modules;
+using ReunionMovement.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 
-namespace ReunionMovement.Core.Terminal
+namespace ReunionMovement.Framework.Runtime.Terminal
 {
     /// <summary>
     /// 命令信息

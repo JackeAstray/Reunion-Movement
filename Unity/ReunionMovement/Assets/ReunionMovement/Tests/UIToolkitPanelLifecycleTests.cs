@@ -1,6 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using NUnit.Framework;
-using ReunionMovement.Core.UIToolkit;
+using ReunionMovement.Framework.Runtime.UIToolkit;
 using System;
 using UnityEngine.TestTools;
 

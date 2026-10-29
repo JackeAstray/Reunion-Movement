@@ -1,5 +1,5 @@
 using ReunionMovement.Common;
-using ReunionMovement.Core.Base;
+using ReunionMovement.Framework.Runtime.Base;
 using Cysharp.Threading.Tasks;
 using R3;
 using System;
@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
 
-namespace ReunionMovement.Core
+namespace ReunionMovement.Framework.Runtime
 {
     public sealed partial class GameEngine
     {

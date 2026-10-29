@@ -2,7 +2,8 @@ using Cysharp.Threading.Tasks;
 //此脚本是由工具自动生成，请勿手动创建
 
 using ReunionMovement.Common;
-using ReunionMovement.Common.Util;
+using ReunionMovement.Framework.Modules;
+using ReunionMovement.Utilities;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -10,7 +11,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Framework.Runtime.UI
 {
     /// <summary>PopupUIPlane 的打开参数示例（值类型 + IWindowArgs，调用处编译期检查）。</summary>
     public readonly struct PopupArgs : IWindowArgs

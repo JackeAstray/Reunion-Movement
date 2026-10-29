@@ -1,6 +1,6 @@
 ﻿using ReunionMovement.Common;
-using ReunionMovement.Core.Base;
-using ReunionMovement.Core.Resources;
+using ReunionMovement.Framework.Runtime.Base;
+using ReunionMovement.Framework.Runtime.Resources;
 using Cysharp.Threading.Tasks;
 using R3;
 using System;
@@ -12,9 +12,9 @@ using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.SceneManagement;
 using UnityEngine;
-using ReunionMovement.Core.UI;
+using ReunionMovement.Framework.Runtime.UI;
 
-namespace ReunionMovement.Core.Scene
+namespace ReunionMovement.Framework.Runtime.Scene
 {
     /// <summary>
     /// 场景加载状态
@@ -34,7 +34,7 @@ namespace ReunionMovement.Core.Scene
     /// <summary>
     /// 场景系统 —— 使用 R3 Subject/ReactiveProperty 管理场景加载状态与进度
     /// </summary>
-    [ModuleOrder(30, typeof(ReunionMovement.Core.Resources.ResourcesSystem), typeof(ReunionMovement.Core.Resources.AddressableSystem))]
+    [ModuleOrder(30, typeof(ReunionMovement.Framework.Runtime.Resources.ResourcesSystem), typeof(ReunionMovement.Framework.Runtime.Resources.AddressableSystem))]
     public class SceneSystem : ICustomSystem, ISystemDisposable
     {
         #region 单例与初始化

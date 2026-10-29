@@ -1,7 +1,10 @@
 ﻿using System;
 using ReunionMovement.Telepathy;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+using Log = ReunionMovement.Common.Log;
+namespace ReunionMovement.Framework.Modules
 {
     public class TcpServerChannel : INetworkServerChannel
     {

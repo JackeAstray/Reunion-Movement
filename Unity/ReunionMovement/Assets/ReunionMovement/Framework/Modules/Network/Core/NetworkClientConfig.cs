@@ -1,7 +1,9 @@
 ﻿using System;
 using UnityEngine;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// 网络客户端配置（可序列化，供 Inspector / ScriptableObject / 代码使用）。

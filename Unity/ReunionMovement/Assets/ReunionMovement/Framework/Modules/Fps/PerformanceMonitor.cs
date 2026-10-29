@@ -1,7 +1,9 @@
 ﻿using System;
 using UnityEngine;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// 性能监控 —— 每秒采样一次 FPS 与托管内存，超阈值时告警（防抖：同一指标只告警一次，恢复后允许再次告警）。

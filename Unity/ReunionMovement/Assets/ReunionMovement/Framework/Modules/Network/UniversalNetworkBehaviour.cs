@@ -4,7 +4,9 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     [Serializable]
     public class StringEvent : UnityEvent<string> { }

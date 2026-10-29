@@ -1,4 +1,4 @@
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Framework.Runtime.UI
 {
     /// <summary>
     /// 窗口回传的结果。用它而不是裸 <c>T</c>，是为了区分两种"没拿到值"：

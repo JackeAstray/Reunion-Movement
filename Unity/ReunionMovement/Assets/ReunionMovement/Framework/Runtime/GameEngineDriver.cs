@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace ReunionMovement.Core
+namespace ReunionMovement.Framework.Runtime
 {
     /// <summary>
     /// MonoBehaviour 桥接 —— 将 Unity 生命周期事件转发给纯 C# 的 GameEngine。

@@ -1,7 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
 using NUnit.Framework;
-using ReunionMovement.Core;
-using ReunionMovement.Core.Base;
+using ReunionMovement.Framework.Runtime;
+using ReunionMovement.Framework.Runtime.Base;
 using System.Collections.Generic;
 
 namespace ReunionMovement.Tests

@@ -1,7 +1,10 @@
 ﻿using System;
 using ReunionMovement.SimpleWeb;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+using Log = ReunionMovement.Common.Log;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// WebSocket 客户端通道（SimpleWebTransport）—— 统一到 INetworkClientChannel。

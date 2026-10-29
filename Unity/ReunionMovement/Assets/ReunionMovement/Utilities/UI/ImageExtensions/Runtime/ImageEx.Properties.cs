@@ -6,7 +6,7 @@ using UnityEngine.UI;
 using UnityEditor;
 #endif
 
-namespace ReunionMovement.UI.ImageExtensions
+namespace ReunionMovement.Utilities.UI.ImageExtensions
 {
     /// <summary>
     /// ImageEx partial part：形状与外观属性（形状 / 渐变 / 色调 / 颜色 / 边缘 / 采样 / 目标）。

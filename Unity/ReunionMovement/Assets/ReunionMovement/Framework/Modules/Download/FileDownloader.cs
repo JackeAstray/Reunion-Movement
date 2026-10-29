@@ -4,7 +4,9 @@ using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using UnityEngine.Networking;
 
-namespace ReunionMovement.Common.Util.Download
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules.Download
 {
     /// <summary>
     /// Unity 文件下载器，负责调度并下载一组 URL 到本地。

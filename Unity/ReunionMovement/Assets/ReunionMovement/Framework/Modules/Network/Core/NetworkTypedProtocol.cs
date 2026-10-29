@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// 类型 ↔ 消息 ID 注册表：支撑 SendObject&lt;T&gt; / RegisterObjectHandler&lt;T&gt; 等强类型 API。

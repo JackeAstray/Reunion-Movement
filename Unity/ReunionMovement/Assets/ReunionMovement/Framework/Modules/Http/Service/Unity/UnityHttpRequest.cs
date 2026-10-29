@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using UnityEngine.Networking;
 
-namespace ReunionMovement.Common.Util.HttpService
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules.Http
 {
     public class UnityHttpRequest : IHttpRequest, IUpdateProgress, IDisposable
     {

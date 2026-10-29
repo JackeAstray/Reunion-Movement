@@ -7,7 +7,8 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// 截止日期管理器

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using ReunionMovement.Common;
 
-namespace ReunionMovement.UI.ImageExtensions
+namespace ReunionMovement.Utilities.UI.ImageExtensions
 {
     /// <summary>
     /// 渐变效果

@@ -3,7 +3,7 @@ using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Framework.Runtime.UI
 {
     /// <summary>
     /// <see cref="UIRouter"/> 的"页面返回值"部分：打开窗口时挂一个等待槽，窗口关闭时把结果交回来。

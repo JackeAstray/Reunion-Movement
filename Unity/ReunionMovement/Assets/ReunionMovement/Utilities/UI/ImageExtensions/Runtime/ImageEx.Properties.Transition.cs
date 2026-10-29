@@ -6,7 +6,7 @@ using UnityEngine.UI;
 using UnityEditor;
 #endif
 
-namespace ReunionMovement.UI.ImageExtensions
+namespace ReunionMovement.Utilities.UI.ImageExtensions
 {
     /// <summary>
     /// ImageEx partial part：过渡与细节属性（过渡 / 细节 / 混合 / 模糊 / 阴影）。

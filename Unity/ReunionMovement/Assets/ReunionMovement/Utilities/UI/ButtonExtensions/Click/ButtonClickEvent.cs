@@ -5,7 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine.Events;
 
-namespace ReunionMovement.UI.ButtonClick
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities.UI.ButtonClick
 {
     public class ButtonClickEvent : UnityEvent
     {

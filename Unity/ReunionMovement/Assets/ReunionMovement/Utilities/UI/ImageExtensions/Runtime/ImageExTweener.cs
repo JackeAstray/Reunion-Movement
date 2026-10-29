@@ -2,7 +2,8 @@ using System;
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace ReunionMovement.UI.ImageExtensions
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities.UI.ImageExtensions
 {
     /// <summary>
     /// ImageEx 效果动画器：使用 AnimationCurve 驱动 ImageEx 效果参数的渐变过渡。

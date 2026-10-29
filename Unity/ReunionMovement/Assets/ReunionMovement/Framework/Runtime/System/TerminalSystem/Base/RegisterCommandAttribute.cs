@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace ReunionMovement.Core.Terminal
+namespace ReunionMovement.Framework.Runtime.Terminal
 {
     /// <summary>
     /// 注册命令属性

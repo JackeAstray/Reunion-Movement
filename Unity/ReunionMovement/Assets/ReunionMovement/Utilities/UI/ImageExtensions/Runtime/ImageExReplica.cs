@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 
-namespace ReunionMovement.UI.ImageExtensions
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities.UI.ImageExtensions
 {
     /// <summary>
     /// ImageEx 效果复制器：从源 ImageEx 或预设复制所有效果参数到自身 ImageEx 组件。

@@ -6,7 +6,7 @@ using UnityEngine.UI;
 using UnityEditor;
 #endif
 
-namespace ReunionMovement.UI.ImageExtensions
+namespace ReunionMovement.Utilities.UI.ImageExtensions
 {
     /// <summary>
     /// ImageEx partial part：网格生成与材质合成（OnPopulateMesh / GetModifiedMaterial / InitValuesFromSharedMaterial）。

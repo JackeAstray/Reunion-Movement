@@ -1,6 +1,6 @@
 ﻿using ReunionMovement.Common;
-using ReunionMovement.Core.Base;
-using ReunionMovement.Core.Resources;
+using ReunionMovement.Framework.Runtime.Base;
+using ReunionMovement.Framework.Runtime.Resources;
 using Cysharp.Threading.Tasks;
 using R3;
 using System;
@@ -8,7 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 
-namespace ReunionMovement.Core.EventMessage
+namespace ReunionMovement.Framework.Runtime.EventMessage
 {
     /// <summary>
     /// 事件数据（struct 避免堆分配，但 object data 字段对值类型仍会产生装箱）。

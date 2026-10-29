@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities
 {
     /// <summary>
     /// 平台能力判定（纯函数，便于测试与按目标平台预判）。

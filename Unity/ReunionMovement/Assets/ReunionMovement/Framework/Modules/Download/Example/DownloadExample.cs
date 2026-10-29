@@ -1,7 +1,8 @@
 ﻿using ReunionMovement.Common;
-using ReunionMovement.Common.Util;
-using ReunionMovement.Common.Util.Download;
-using ReunionMovement.Core;
+using ReunionMovement.Framework.Modules;
+using ReunionMovement.Utilities;
+using ReunionMovement.Framework.Modules.Download;
+using ReunionMovement.Framework.Runtime;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;

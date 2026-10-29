@@ -1,12 +1,12 @@
 ﻿using ReunionMovement.Common;
-using ReunionMovement.Core;
-using ReunionMovement.Core.Sound;
+using ReunionMovement.Framework.Runtime;
+using ReunionMovement.Framework.Runtime.Sound;
 using Cysharp.Threading.Tasks;
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
 
-namespace ReunionMovement.Core.Sound
+namespace ReunionMovement.Framework.Runtime.Sound
 {
     /// <summary>
     /// 播放音乐

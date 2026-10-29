@@ -9,15 +9,15 @@ using Microsoft.CodeAnalysis.Text;
 namespace ReunionMovement.SourceGenerator
 {
     /// <summary>
-    /// 源码生成器 —— 扫描 ReunionMovement.Core.UI 命名空间下所有 UIController 子类，
+    /// 源码生成器 —— 扫描 ReunionMovement.Framework.Runtime.UI 命名空间下所有 UIController 子类，
     /// 生成 name → Type 的静态注册表，替代 UISystem.CreateUIController 的运行时
     /// AppDomain.GetAssemblies() + GetType 反射。
     /// </summary>
     [Generator]
     public class UIControllerRegistryGenerator : ISourceGenerator
     {
-        private const string UIControllerMetadataName = "ReunionMovement.Core.UI.UIController";
-        private const string TargetNamespace = "ReunionMovement.Core.UI";
+        private const string UIControllerMetadataName = "ReunionMovement.Framework.Runtime.UI.UIController";
+        private const string TargetNamespace = "ReunionMovement.Framework.Runtime.UI";
 
         public void Initialize(GeneratorInitializationContext context) { }
 

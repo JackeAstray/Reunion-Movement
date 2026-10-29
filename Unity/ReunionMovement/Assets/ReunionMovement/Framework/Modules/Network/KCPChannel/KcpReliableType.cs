@@ -1,4 +1,4 @@
-﻿namespace ReunionMovement.Common.Util
+﻿namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// 网络消息发送类型；

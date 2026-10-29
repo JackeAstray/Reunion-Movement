@@ -11,10 +11,10 @@
 <linker>
   <assembly fullname="ReunionMovement.Core">
     <!-- GameEntryResolver 用 Attribute.GetCustomAttribute + Activator.CreateInstance 找入口 -->
-    <type fullname="ReunionMovement.Core.GameEntryResolver" preserve="all" />
-    <type fullname="ReunionMovement.Core.Base.ReunionGameEntryAttribute" preserve="all" />
+    <type fullname="ReunionMovement.Framework.Runtime.GameEntryResolver" preserve="all" />
+    <type fullname="ReunionMovement.Framework.Runtime.Base.ReunionGameEntryAttribute" preserve="all" />
     <!-- 仓库示例入口；接入方换成自己的类型时可在自己的 link.xml 里补 -->
-    <type fullname="ReunionMovement.Core.StartGame" preserve="all" />
+    <type fullname="ReunionMovement.Framework.Runtime.StartGame" preserve="all" />
   </assembly>
 
   <!-- Excel 生成的配置数据与容器：Newtonsoft 泛型反序列化 + Resources.Load -->

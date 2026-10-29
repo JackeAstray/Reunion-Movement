@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 
-namespace ReunionMovement.Core
+namespace ReunionMovement.Framework.Runtime
 {
     /// <summary>
     /// 通用并发单飞加载门（Single Flight）：同名 key 的并发请求共享同一在途任务并等待同一结果，

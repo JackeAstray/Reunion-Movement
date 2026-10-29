@@ -1,6 +1,6 @@
 using ReunionMovement.Common;
 
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Framework.Runtime.UI
 {
     /// <summary>窗口生命周期状态。由 <see cref="UIController"/> 的钩子驱动，业务一般不直接读写。</summary>
     public enum UIWindowState

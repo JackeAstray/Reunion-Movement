@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ReunionMovement.Core.Base
+namespace ReunionMovement.Framework.Runtime.Base
 {
     /// <summary>
     /// [已废弃] 标记接口：请改用 ISystemUpdatable。

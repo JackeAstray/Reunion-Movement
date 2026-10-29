@@ -1,7 +1,8 @@
 ﻿using UnityEditor;
 using UnityEngine;
-using ReunionMovement.UI.ButtonAnimated;
+using ReunionMovement.Utilities.UI.ButtonAnimated;
 
+using ReunionMovement.Common;
 namespace ReunionMovement.EditorTools
 {
     [CustomEditor(typeof(ButtonAni))]

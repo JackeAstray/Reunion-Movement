@@ -1,10 +1,10 @@
 using ReunionMovement.Common;
-using ReunionMovement.Core.Base;
+using ReunionMovement.Framework.Runtime.Base;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace ReunionMovement.Core
+namespace ReunionMovement.Framework.Runtime
 {
     /// <summary>
     /// 统一的模块访问入口 —— 只暴露"本次启动真正注册过"的模块。

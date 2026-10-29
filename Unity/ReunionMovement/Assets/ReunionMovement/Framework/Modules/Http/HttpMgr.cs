@@ -1,5 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
-using ReunionMovement.Core.Base;
+using ReunionMovement.Framework.Runtime.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +8,9 @@ using System.Threading;
 using UnityEngine;
 using UnityEngine.Networking;
 
-namespace ReunionMovement.Common.Util.HttpService
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules.Http
 {
     /// <summary>
     /// HTTP管理器 —— 同时作为 MonoBehaviour 单例和 GameEngine 模块（ISystemUpdatable 驱动进度轮询）。

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Framework.Runtime.UI
 {
     /// <summary>
     /// 窗口导航栈 —— 纯 C# 逻辑，不依赖 UnityEngine，可直接单元测试。

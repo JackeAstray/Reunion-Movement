@@ -1,6 +1,7 @@
 using System;
 using NUnit.Framework;
-using ReunionMovement.Common.Util;
+using ReunionMovement.Framework.Modules;
+using ReunionMovement.Utilities;
 
 namespace ReunionMovement.Tests
 {

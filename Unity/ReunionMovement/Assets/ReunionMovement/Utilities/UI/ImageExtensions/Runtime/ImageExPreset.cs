@@ -1,6 +1,7 @@
 using UnityEngine;
 
-namespace ReunionMovement.UI.ImageExtensions
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities.UI.ImageExtensions
 {
     /// <summary>
     /// ImageEx 效果预设：把 <b>大部分</b> Phase 1-3 效果参数保存为 ScriptableObject，

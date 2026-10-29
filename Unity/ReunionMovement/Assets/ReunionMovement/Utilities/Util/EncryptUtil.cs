@@ -4,7 +4,8 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities
 {
     /// <summary>
     /// 加密工具类

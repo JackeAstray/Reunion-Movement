@@ -3,14 +3,14 @@ using Cysharp.Threading.Tasks;
 
 using DG.Tweening;
 using ReunionMovement.Common;
-using ReunionMovement.Core.Sound;
-using ReunionMovement.UI.ImageExtensions;
+using ReunionMovement.Framework.Runtime.Sound;
+using ReunionMovement.Utilities.UI.ImageExtensions;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Framework.Runtime.UI
 {
     [UIWindow("StartGameUIPlane", Layer = PanelType.NormalUI)]
     public class StartGameUIPlane : UIController

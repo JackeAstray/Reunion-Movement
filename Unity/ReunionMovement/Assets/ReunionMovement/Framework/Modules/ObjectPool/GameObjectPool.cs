@@ -2,7 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Pool;
 
-namespace ReunionMovement.Common.Util.Pool
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules.Pool
 {
     /// <summary>
     /// 通用 GameObject 对象池（单预制体）。挂载到场景后配置 prefab/预热/上限即可使用。

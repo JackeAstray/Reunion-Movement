@@ -2,7 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace ReunionMovement.UI.RippleAnimation
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities.UI.RippleAnimation
 {
     /// <summary>
     /// UI波纹动画 - 速率

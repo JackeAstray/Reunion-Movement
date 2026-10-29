@@ -2,7 +2,9 @@
 using TMPro;
 using Cysharp.Text;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// FPS计数器工具（使用 TextMeshPro 替代旧版 OnGUI）。

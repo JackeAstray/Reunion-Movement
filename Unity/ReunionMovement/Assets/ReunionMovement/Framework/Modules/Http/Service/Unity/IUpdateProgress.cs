@@ -1,4 +1,4 @@
-﻿namespace ReunionMovement.Common.Util.HttpService
+﻿namespace ReunionMovement.Framework.Modules.Http
 {
     public interface IUpdateProgress
     {

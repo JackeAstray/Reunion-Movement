@@ -1,4 +1,4 @@
-using ReunionMovement.Core.UIInput;
+using ReunionMovement.Framework.Runtime.UIInput;
 using ReunionMovement.UI.Select;
 using UnityEditor;
 using UnityEditor.SceneManagement;

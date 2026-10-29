@@ -1,4 +1,6 @@
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// 通道工厂 —— 按传输类型创建客户端/服务端通道，

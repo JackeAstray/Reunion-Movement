@@ -1,5 +1,6 @@
 ﻿using NUnit.Framework;
-using ReunionMovement.Common.Util;
+using ReunionMovement.Framework.Modules;
+using ReunionMovement.Utilities;
 using UnityEngine;
 
 namespace ReunionMovement.Tests

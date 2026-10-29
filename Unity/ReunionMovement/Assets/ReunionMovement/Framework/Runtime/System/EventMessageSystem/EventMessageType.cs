@@ -1,4 +1,4 @@
-﻿namespace ReunionMovement.Core.EventMessage
+﻿namespace ReunionMovement.Framework.Runtime.EventMessage
 {
     public enum EventMessageType
     {

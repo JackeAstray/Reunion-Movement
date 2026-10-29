@@ -1,21 +1,22 @@
-using ReunionMovement.Common.Util;
-using ReunionMovement.Common.Util.HttpService;
-using ReunionMovement.Common.Util.Timer;
-using ReunionMovement.Core.Base;
-using ReunionMovement.Core.EventMessage;
-using ReunionMovement.Core.Languages;
-using ReunionMovement.Core.Pause;
-using ReunionMovement.Core.Resources;
-using ReunionMovement.Core.Scene;
-using ReunionMovement.Core.Sound;
-using ReunionMovement.Core.Terminal;
-using ReunionMovement.Core.UI;
-using ReunionMovement.Core.UIInput;
-using ReunionMovement.Core.UIToolkit;
+using ReunionMovement.Framework.Modules;
+using ReunionMovement.Utilities;
+using ReunionMovement.Framework.Modules.Http;
+using ReunionMovement.Framework.Modules.Timer;
+using ReunionMovement.Framework.Runtime.Base;
+using ReunionMovement.Framework.Runtime.EventMessage;
+using ReunionMovement.Framework.Runtime.Languages;
+using ReunionMovement.Framework.Runtime.Pause;
+using ReunionMovement.Framework.Runtime.Resources;
+using ReunionMovement.Framework.Runtime.Scene;
+using ReunionMovement.Framework.Runtime.Sound;
+using ReunionMovement.Framework.Runtime.Terminal;
+using ReunionMovement.Framework.Runtime.UI;
+using ReunionMovement.Framework.Runtime.UIInput;
+using ReunionMovement.Framework.Runtime.UIToolkit;
 using System;
 using System.Collections.Generic;
 
-namespace ReunionMovement.Core
+namespace ReunionMovement.Framework.Runtime
 {
     /// <summary>
     /// 模块清单预设 —— 把"这次启动注册哪些模块"从背依赖表变成选一行。

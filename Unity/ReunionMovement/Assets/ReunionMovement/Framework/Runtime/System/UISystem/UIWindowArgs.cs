@@ -1,4 +1,4 @@
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Framework.Runtime.UI
 {
     /// <summary>
     /// 窗口参数的标记接口。用 <c>readonly struct</c> / <c>record</c> 实现，调用方与窗口之间就有了编译期契约。

@@ -1,5 +1,5 @@
 ﻿using NUnit.Framework;
-using ReunionMovement.Common.Util.Timer;
+using ReunionMovement.Framework.Modules.Timer;
 
 namespace ReunionMovement.Tests
 {

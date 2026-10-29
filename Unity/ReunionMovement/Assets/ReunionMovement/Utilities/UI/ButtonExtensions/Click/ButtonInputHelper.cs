@@ -1,6 +1,7 @@
 ﻿using UnityEngine.InputSystem;
 
-namespace ReunionMovement.UI.ButtonClick
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities.UI.ButtonClick
 {
     /// <summary>
     /// 按钮类共用的键盘/手柄输入检测工具。

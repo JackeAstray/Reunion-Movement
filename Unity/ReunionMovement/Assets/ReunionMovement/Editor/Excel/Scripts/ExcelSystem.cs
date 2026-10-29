@@ -1,5 +1,6 @@
 using ReunionMovement.Common;
-using ReunionMovement.Common.Util;
+using ReunionMovement.Framework.Modules;
+using ReunionMovement.Utilities;
 using Cysharp.Threading.Tasks;
 using System;
 using System.Collections;
@@ -714,7 +715,7 @@ namespace ReunionMovement
             // 优先检查最相关的程序集，减少遍历和重名歧义概率。
             Assembly[] preferredAssemblies =
             {
-                typeof(ReunionMovement.Core.Resources.ResourcesSystem).Assembly,
+                typeof(ReunionMovement.Framework.Runtime.Resources.ResourcesSystem).Assembly,
                 typeof(ReunionMovement.EditorTools.ExcelSystem).Assembly
             };
 

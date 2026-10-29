@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using NUnit.Framework;
-using ReunionMovement.Core.Terminal;
+using ReunionMovement.Framework.Runtime.Terminal;
 using UnityEngine;
 using UnityEngine.TestTools;
 

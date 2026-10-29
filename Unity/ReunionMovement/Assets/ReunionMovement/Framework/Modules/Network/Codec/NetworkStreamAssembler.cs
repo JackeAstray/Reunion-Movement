@@ -1,6 +1,8 @@
 using System;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// 网络字节流组装器 —— 将任意分片的字节块重组为完整帧（帧边界由编解码器判定）。

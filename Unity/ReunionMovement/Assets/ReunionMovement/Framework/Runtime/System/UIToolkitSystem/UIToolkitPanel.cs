@@ -3,7 +3,7 @@ using ReunionMovement.Common;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace ReunionMovement.Core.UIToolkit
+namespace ReunionMovement.Framework.Runtime.UIToolkit
 {
     /// <summary>
     /// UI Toolkit 面板基类 —— 每个基于 UI Toolkit 的界面继承此类。

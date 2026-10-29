@@ -1,6 +1,7 @@
 using ReunionMovement.Common;
-using ReunionMovement.Common.Util;
-using ReunionMovement.Core.Base;
+using ReunionMovement.Framework.Modules;
+using ReunionMovement.Utilities;
+using ReunionMovement.Framework.Runtime.Base;
 using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
@@ -12,7 +13,7 @@ using UnityEngine;
 // 接入自己的游戏：在你自己的程序集里声明 [assembly: ReunionGameEntry(typeof(MyGameEntry))]。
 [assembly: InternalsVisibleTo("ReunionMovement.Tests")]
 
-namespace ReunionMovement.Core
+namespace ReunionMovement.Framework.Runtime
 {
     /// <summary>
     /// 游戏启动引导器 —— 通过 RuntimeInitializeOnLoadMethod 在场景加载前自动启动引擎。

@@ -50,9 +50,9 @@ namespace ReunionMovement.EditorTools.Toolbox
             SectionHeader("扩展模块", "复制模板 → 保存到 Core/System → 在 StartGame.CreateModules() 显式注册。工具箱不会自动改启动列表。");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                EditorGUILayout.LabelField("模板：ReunionMovement.Core.Custom.CustomSystem", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("模板：ReunionMovement.Framework.Runtime.Custom.CustomSystem", EditorStyles.boldLabel);
                 EditorGUILayout.LabelField(
-                    "保存为 Core/System/CustomSystem/CustomSystem.cs，沿用 ReunionMovement.Core 程序集；不要放进无 asmdef 的 Assets 根目录。",
+                    "保存为 Core/System/CustomSystem/CustomSystem.cs，沿用 ReunionMovement.Framework.Runtime 程序集；不要放进无 asmdef 的 Assets 根目录。",
                     EditorStyles.wordWrappedMiniLabel);
 
                 using (new EditorGUILayout.HorizontalScope())

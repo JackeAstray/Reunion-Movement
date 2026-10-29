@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using UnityEngine.Pool;
 
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
 namespace ReunionMovement.Example
 {
     /// <summary>

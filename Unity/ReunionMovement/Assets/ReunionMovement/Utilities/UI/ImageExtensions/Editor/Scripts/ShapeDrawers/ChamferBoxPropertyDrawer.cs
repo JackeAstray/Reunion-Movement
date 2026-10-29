@@ -5,8 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
-using ReunionMovement.UI.ImageExtensions;
+using ReunionMovement.Utilities.UI.ImageExtensions;
 
+using ReunionMovement.Common;
 namespace ReunionMovement.EditorTools.ImageExtensions
 {
     [CustomPropertyDrawer(typeof(ChamferBoxImg))]

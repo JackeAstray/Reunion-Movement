@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace ReunionMovement.Common.Util.Example
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules.Example
 {
     public class CSGUsageExample : MonoBehaviour
     {

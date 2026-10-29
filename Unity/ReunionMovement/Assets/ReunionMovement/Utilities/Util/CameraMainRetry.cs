@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities
 {
     /// <summary>
     /// Camera.main 限流重试 —— Camera.main 内部是 FindGameObjectsWithTag（极慢），

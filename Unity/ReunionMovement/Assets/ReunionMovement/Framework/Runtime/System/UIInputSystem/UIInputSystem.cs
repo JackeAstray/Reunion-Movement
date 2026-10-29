@@ -1,7 +1,7 @@
 using ReunionMovement.Common;
-using ReunionMovement.Core.Base;
-using ReunionMovement.Core.Resources;
-using ReunionMovement.Core.UI;
+using ReunionMovement.Framework.Runtime.Base;
+using ReunionMovement.Framework.Runtime.Resources;
+using ReunionMovement.Framework.Runtime.UI;
 using Cysharp.Threading.Tasks;
 using R3;
 using System;
@@ -13,7 +13,7 @@ using UnityEngine.InputSystem.Controls;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.InputSystem.UI;
 
-namespace ReunionMovement.Core.UIInput
+namespace ReunionMovement.Framework.Runtime.UIInput
 {
     /// <summary>
     /// UI 输入系统 —— 统一轮询键盘、鼠标、手柄、赛车方向盘、飞行摇杆并驱动 UGUI 导航。
@@ -21,7 +21,7 @@ namespace ReunionMovement.Core.UIInput
     /// 导航/确认/取消由本系统的轮询器派发；InputSystemUIInputModule 只保留指针动作，
     /// 避免同一次按键被 EventSystem 与本系统重复处理。
     /// </summary>
-    [ModuleOrder(100, typeof(ReunionMovement.Core.UI.UISystem), typeof(ReunionMovement.Core.Resources.ResourcesSystem))]
+    [ModuleOrder(100, typeof(ReunionMovement.Framework.Runtime.UI.UISystem), typeof(ReunionMovement.Framework.Runtime.Resources.ResourcesSystem))]
     public partial class UIInputSystem : ICustomSystem, ISystemUpdatable, ISystemDisposable
     {
         #region 单例与初始化

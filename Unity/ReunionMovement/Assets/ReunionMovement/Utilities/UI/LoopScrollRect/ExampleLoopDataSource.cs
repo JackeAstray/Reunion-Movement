@@ -1,5 +1,5 @@
 ﻿using ReunionMovement.Common;
-using ReunionMovement.Common.Util;
+using ReunionMovement.Utilities;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 
+using ReunionMovement.Common;
 namespace ReunionMovement.Example
 {
     /// <summary>

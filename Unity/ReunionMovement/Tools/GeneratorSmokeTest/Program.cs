@@ -12,7 +12,7 @@ class Program
         // 模拟 Assembly-CSharp 中与生成器相关的关键代码
         string source = @"
 using System;
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Framework.Runtime.UI
 {
     public class UIController : UnityEngine.MonoBehaviour { }
     public class StartGameUIPlane : UIController { }
@@ -20,7 +20,7 @@ namespace ReunionMovement.Core.UI
     public abstract class AbstractUI : UIController { }
     public class NotUI { }
 }
-namespace ReunionMovement.Core.Terminal
+namespace ReunionMovement.Framework.Runtime.Terminal
 {
     public struct CommandArg { public string String; }
     public class RegisterCommandAttribute : Attribute

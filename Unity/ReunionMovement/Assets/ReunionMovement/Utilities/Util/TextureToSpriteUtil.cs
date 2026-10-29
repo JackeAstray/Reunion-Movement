@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities
 {
     /// <summary>
     /// Texture2D 与 Sprite 互转工具（零 GC 设计）

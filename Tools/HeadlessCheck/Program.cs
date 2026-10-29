@@ -239,7 +239,7 @@ namespace ReunionMovement.HeadlessCheck
 
         private static object NewNavStack(Assembly core)
         {
-            return Activator.CreateInstance(GetType(core, "ReunionMovement.Core.UI.UINavigationStack"));
+            return Activator.CreateInstance(GetType(core, "ReunionMovement.Framework.Runtime.UI.UINavigationStack"));
         }
 
         private static void NavCall(object stack, string method, params object[] args)
@@ -311,7 +311,7 @@ namespace ReunionMovement.HeadlessCheck
         /// <summary>WindowResult&lt;T&gt; 语义：默认是 None；有值时能取到；None 走兜底值。</summary>
         private static void CheckWindowResult(Assembly core)
         {
-            Type open = GetType(core, "ReunionMovement.Core.UI.WindowResult`1");
+            Type open = GetType(core, "ReunionMovement.Framework.Runtime.UI.WindowResult`1");
             Type closed = open.MakeGenericType(typeof(int));
 
             object none = Activator.CreateInstance(closed);
@@ -328,8 +328,8 @@ namespace ReunionMovement.HeadlessCheck
 
         private static void CheckModulesAccessor(Assembly core)
         {
-            Type modules = GetType(core, "ReunionMovement.Core.Modules");
-            Type systemType = GetType(core, "ReunionMovement.Core.UI.UISystem");
+            Type modules = GetType(core, "ReunionMovement.Framework.Runtime.Modules");
+            Type systemType = GetType(core, "ReunionMovement.Framework.Runtime.UI.UISystem");
 
             IList all = (IList)modules.GetProperty("All", BindingFlags.Public | BindingFlags.Static).GetValue(null);
             Assert(all != null, "Modules.All 不应为 null");
@@ -360,7 +360,7 @@ namespace ReunionMovement.HeadlessCheck
 
         private static void CheckEntryResolver(Assembly core)
         {
-            Type resolver = GetType(core, "ReunionMovement.Core.GameEntryResolver");
+            Type resolver = GetType(core, "ReunionMovement.Framework.Runtime.GameEntryResolver");
             Type entryType = (Type)resolver.GetMethod("FindEntryType", BindingFlags.Public | BindingFlags.Static).Invoke(null, null);
 
             // 框架程序集不再声明入口：示例入口在 Assembly-CSharp（Game/StartGameEntry.cs）。
@@ -371,7 +371,7 @@ namespace ReunionMovement.HeadlessCheck
 
         private static void CheckBootstrapOptions(Assembly core)
         {
-            Type optionsType = GetType(core, "ReunionMovement.Core.BootstrapOptions");
+            Type optionsType = GetType(core, "ReunionMovement.Framework.Runtime.BootstrapOptions");
             object options = Activator.CreateInstance(optionsType);
             MethodInfo isTestScene = optionsType.GetMethod("IsTestScene");
 
@@ -440,21 +440,21 @@ namespace ReunionMovement.HeadlessCheck
         private static FakeModuleFactory BuildFactory(Assembly core)
         {
             return new FakeModuleFactory(
-                GetType(core, "ReunionMovement.Core.Base.ICustomSystem"),
-                GetType(core, "ReunionMovement.Core.Base.ISystemInitializable"),
+                GetType(core, "ReunionMovement.Framework.Runtime.Base.ICustomSystem"),
+                GetType(core, "ReunionMovement.Framework.Runtime.Base.ISystemInitializable"),
                 GetType(core, "Cysharp.Threading.Tasks.UniTask"),
-                GetType(core, "ReunionMovement.Core.Base.ModuleOrderAttribute"));
+                GetType(core, "ReunionMovement.Framework.Runtime.Base.ModuleOrderAttribute"));
         }
 
         /// <summary>把假模块装进 List&lt;ICustomSystem&gt; 再交给 TryBuild。</summary>
         private static (bool ok, IList ordered, string errors) TryBuild(Assembly core, params object[] modules)
         {
-            Type systemInterface = GetType(core, "ReunionMovement.Core.Base.ICustomSystem");
+            Type systemInterface = GetType(core, "ReunionMovement.Framework.Runtime.Base.ICustomSystem");
             Type listType = typeof(List<>).MakeGenericType(systemInterface);
             var list = (IList)Activator.CreateInstance(listType);
             foreach (object module in modules) list.Add(module);
 
-            Type catalog = GetType(core, "ReunionMovement.Core.ModuleCatalog");
+            Type catalog = GetType(core, "ReunionMovement.Framework.Runtime.ModuleCatalog");
             MethodInfo tryBuild = catalog.GetMethod("TryBuild", BindingFlags.Public | BindingFlags.Static);
             var args = new object[] { list, null, null };
             bool ok = (bool)tryBuild.Invoke(null, args);
@@ -464,12 +464,12 @@ namespace ReunionMovement.HeadlessCheck
         /// <summary>调用 ModuleCatalog.ExpandDependencies，返回补全后的列表与两类说明。</summary>
         private static (IList modules, string[] added, string[] unresolved) Expand(Assembly core, params object[] modules)
         {
-            Type systemInterface = GetType(core, "ReunionMovement.Core.Base.ICustomSystem");
+            Type systemInterface = GetType(core, "ReunionMovement.Framework.Runtime.Base.ICustomSystem");
             Type listType = typeof(List<>).MakeGenericType(systemInterface);
             var list = (IList)Activator.CreateInstance(listType);
             foreach (object module in modules) list.Add(module);
 
-            Type catalog = GetType(core, "ReunionMovement.Core.ModuleCatalog");
+            Type catalog = GetType(core, "ReunionMovement.Framework.Runtime.ModuleCatalog");
             MethodInfo expand = catalog.GetMethod("ExpandDependencies", BindingFlags.Public | BindingFlags.Static);
             var args = new object[] { list, null, null };
             var result = (IList)expand.Invoke(null, args);
@@ -487,7 +487,7 @@ namespace ReunionMovement.HeadlessCheck
         /// <summary>把排好序的模块按 [ModuleOrder] 的序号拼成 "10,20,30" 便于断言。</summary>
         private static string Orders(IList ordered)
         {
-            Type attributeType = GetType(Assembly.GetExecutingAssembly(), "ReunionMovement.Core.Base.ModuleOrderAttribute");
+            Type attributeType = GetType(Assembly.GetExecutingAssembly(), "ReunionMovement.Framework.Runtime.Base.ModuleOrderAttribute");
             var parts = new List<string>();
             foreach (object module in ordered)
             {

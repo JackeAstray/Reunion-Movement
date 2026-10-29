@@ -1,11 +1,13 @@
-﻿using ReunionMovement.Common.Util.HttpService;
+﻿using ReunionMovement.Framework.Modules.Http;
 using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
-namespace ReunionMovement.Common.Util.Download
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules.Download
 {
     /// <summary>
     /// 下载管理器

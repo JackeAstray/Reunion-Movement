@@ -1,6 +1,7 @@
 using System;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities
 {
     /// <summary>
     /// 随机工具类 —— 线程安全。

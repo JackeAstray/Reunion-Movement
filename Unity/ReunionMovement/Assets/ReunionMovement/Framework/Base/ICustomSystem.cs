@@ -1,6 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 
-namespace ReunionMovement.Core.Base
+namespace ReunionMovement.Framework.Runtime.Base
 {
     /// <summary>
     /// 自定义模块（基础接口）—— 仅要求 Init，遵循接口隔离原则 (ISP)。

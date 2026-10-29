@@ -5,7 +5,8 @@ using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities
 {
     /// <summary>
     /// 通用存档系统 —— JSON 序列化到 persistentDataPath/Data/{saveName}.json。

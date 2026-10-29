@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
-using ReunionMovement.Core.EventMessage;
+using ReunionMovement.Framework.Runtime.EventMessage;
 using UnityEngine;
 using UnityEngine.TestTools;
 

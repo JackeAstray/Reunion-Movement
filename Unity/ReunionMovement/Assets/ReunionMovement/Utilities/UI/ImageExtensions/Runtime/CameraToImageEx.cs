@@ -1,7 +1,7 @@
 using ReunionMovement.Common;
 using UnityEngine;
 
-namespace ReunionMovement.UI.ImageExtensions
+namespace ReunionMovement.Utilities.UI.ImageExtensions
 {
     /// <summary>
     /// 把相机画面显示到“变形”的 ImageEx 上（配合形状 SDF / 模糊 / 过渡等特效）。

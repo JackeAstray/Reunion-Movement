@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using ReunionMovement.Common;
 
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Framework.Runtime.UI
 {
     /// <summary>
     /// 一个窗口的运行时描述（由 <see cref="UIWindowAttribute"/> 生成，或按老规则回退推导）。

@@ -7,9 +7,10 @@ using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
-using ReunionMovement.UI.ButtonClick;
+using ReunionMovement.Utilities.UI.ButtonClick;
 
-namespace ReunionMovement.UI.ButtonAnimated
+using ReunionMovement.Common;
+namespace ReunionMovement.Utilities.UI.ButtonAnimated
 {
     public enum ButtonAniState
     {

@@ -1,8 +1,10 @@
-using ReunionMovement.Common.Util.Download;
-using ReunionMovement.Common.Util.HttpService;
-using ReunionMovement.Common.Util.Timer;
+using ReunionMovement.Framework.Modules.Download;
+using ReunionMovement.Framework.Modules.Http;
+using ReunionMovement.Framework.Modules.Timer;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// MonoBehaviour 单例的跨 Play 会话复位清单。

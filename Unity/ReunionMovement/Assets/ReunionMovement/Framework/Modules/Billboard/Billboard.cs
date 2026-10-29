@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// 广告牌：一个组件，用开关组合控制三种朝向行为

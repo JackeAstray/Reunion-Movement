@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using ReunionMovement.Core.UIInput;
+using ReunionMovement.Framework.Runtime.UIInput;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;

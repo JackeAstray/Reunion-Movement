@@ -1,6 +1,6 @@
 ﻿using ReunionMovement.Common;
-using ReunionMovement.Core.Base;
-using ReunionMovement.Core.Resources;
+using ReunionMovement.Framework.Runtime.Base;
+using ReunionMovement.Framework.Runtime.Resources;
 using Cysharp.Threading.Tasks;
 using R3;
 using System;
@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-namespace ReunionMovement.Core.UI
+namespace ReunionMovement.Framework.Runtime.UI
 {
     public partial class UISystem
     {
@@ -36,7 +36,7 @@ namespace ReunionMovement.Core.UI
             if (!uiControllerTypeCache.TryGetValue(uiTemplateName, out type))
             {
                 // 在所有已加载程序集中查找类型（兼容多程序集项目）
-                string fullName = "ReunionMovement.Core.UI." + uiTemplateName;
+                string fullName = "ReunionMovement.Framework.Runtime.UI." + uiTemplateName;
                 foreach (var asm in System.AppDomain.CurrentDomain.GetAssemblies())
                 {
                     type = asm.GetType(fullName);
@@ -46,7 +46,7 @@ namespace ReunionMovement.Core.UI
             }
             if (type == null)
             {
-                Log.Error("CreateUIController: 未能找到UI脚本组件 ReunionMovement.Core.UI.{0}！", uiTemplateName);
+                Log.Error("CreateUIController: 未能找到UI脚本组件 ReunionMovement.Framework.Runtime.UI.{0}！", uiTemplateName);
                 return null;
             }
             UIController uiBase = uiObj.AddComponent(type) as UIController;

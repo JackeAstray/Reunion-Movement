@@ -1,4 +1,4 @@
-using ReunionMovement.Common.Util.HttpService;
+using ReunionMovement.Framework.Modules.Http;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,7 +6,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using UnityEngine;
 
-namespace ReunionMovement.Common.Util
+using ReunionMovement.Common;
+using ReunionMovement.Utilities;
+namespace ReunionMovement.Framework.Modules
 {
     /// <summary>
     /// 全局错误捕获与上报 —— 监听 Application.logMessageReceived，

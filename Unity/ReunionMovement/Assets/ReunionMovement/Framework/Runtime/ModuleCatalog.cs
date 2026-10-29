@@ -1,10 +1,10 @@
-using ReunionMovement.Core.Base;
+using ReunionMovement.Framework.Runtime.Base;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 
-namespace ReunionMovement.Core
+namespace ReunionMovement.Framework.Runtime
 {
     /// <summary>
     /// 模块目录 —— 把"注册顺序即初始化顺序"升级为"声明依赖 + 拓扑排序 + 启动前校验"。
