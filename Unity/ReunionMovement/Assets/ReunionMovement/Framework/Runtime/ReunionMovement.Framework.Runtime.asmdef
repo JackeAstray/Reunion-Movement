@@ -1,10 +1,10 @@
 {
-    "name": "ReunionMovement.Core",
-    "rootNamespace": "ReunionMovement.Core",
+    "name": "ReunionMovement.Framework.Runtime",
+    "rootNamespace": "ReunionMovement.Framework.Runtime",
     "references": [
         "ReunionMovement.Base",
         "ReunionMovement.Common",
-        "ReunionMovement.Utils",
+        "ReunionMovement.Framework.Modules",
         "ReunionMovement.Utilities",
         "ReunionMovement.GenerateScript.AutoScripts",
         "UniTask",

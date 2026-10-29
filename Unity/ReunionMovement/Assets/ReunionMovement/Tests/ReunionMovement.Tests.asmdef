@@ -4,9 +4,9 @@
     "references": [
         "ReunionMovement.Base",
         "ReunionMovement.Common",
-        "ReunionMovement.Utils",
+        "ReunionMovement.Framework.Modules",
         "ReunionMovement.Utilities",
-        "ReunionMovement.Core",
+        "ReunionMovement.Framework.Runtime",
         "ReunionMovement.GenerateScript.AutoScripts",
         "ReunionMovement.Toolbox.Editor",
         "UniTask",

@@ -1,10 +1,10 @@
 {
-    "name": "ReunionMovement.Utils.UI.ImageExtensions.Editor",
+    "name": "ReunionMovement.Utilities.UI.ImageExtensions.Editor",
     "rootNamespace": "ReunionMovement.UI.ImageExtensions.Editor",
     "references": [
         "ReunionMovement.Utilities",
         "ReunionMovement.Common",
-        "ReunionMovement.Core",
+        "ReunionMovement.Framework.Runtime",
         "UnityEngine.UI",
         "Unity.TextMeshPro",
         "ReunionMovement.Editor.Shared"

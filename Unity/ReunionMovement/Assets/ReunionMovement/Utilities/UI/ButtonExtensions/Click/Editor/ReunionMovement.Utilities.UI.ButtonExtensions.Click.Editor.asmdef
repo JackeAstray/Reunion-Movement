@@ -1,10 +1,10 @@
 {
-    "name": "ReunionMovement.Utils.CSG.Example.Editor",
-    "rootNamespace": "ReunionMovement.Common.Util.Example.Editor",
+    "name": "ReunionMovement.Utilities.UI.ButtonExtensions.Click.Editor",
+    "rootNamespace": "ReunionMovement.UI.ButtonExtensions.Editor",
     "references": [
-        "ReunionMovement.Utils",
         "ReunionMovement.Utilities",
-        "ReunionMovement.Common"
+        "ReunionMovement.Common",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [
         "Editor"

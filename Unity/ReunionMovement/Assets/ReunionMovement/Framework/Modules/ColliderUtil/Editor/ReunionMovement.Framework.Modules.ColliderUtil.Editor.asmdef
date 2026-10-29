@@ -1,10 +1,11 @@
 {
-    "name": "ReunionMovement.Utils.UI.ButtonExtensions.Click.Editor",
-    "rootNamespace": "ReunionMovement.UI.ButtonExtensions.Editor",
+    "name": "ReunionMovement.Framework.Modules.ColliderUtil.Editor",
+    "rootNamespace": "ReunionMovement.Common.Util.Editor",
     "references": [
+        "ReunionMovement.Framework.Modules",
         "ReunionMovement.Utilities",
         "ReunionMovement.Common",
-        "UnityEngine.UI"
+        "ReunionMovement.EditorTools"
     ],
     "includePlatforms": [
         "Editor"

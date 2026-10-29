@@ -48,10 +48,10 @@ namespace ReunionMovement.Editor.Guards
         /// <summary>每层允许引用的下层白名单（未列出的层不做方向检查）。</summary>
         private static readonly Dictionary<string, string[]> ForbiddenReferences = new Dictionary<string, string[]>
         {
-            ["ReunionMovement.Base"] = new[] { "ReunionMovement.Common", "ReunionMovement.Utils", "ReunionMovement.Utilities", "ReunionMovement.Framework.Runtime" },
-            ["ReunionMovement.Common"] = new[] { "ReunionMovement.Utils", "ReunionMovement.Utilities", "ReunionMovement.Framework.Runtime" },
-            ["ReunionMovement.Utilities"] = new[] { "ReunionMovement.Utils", "ReunionMovement.Framework.Runtime" },
-            ["ReunionMovement.Utils"] = new[] { "ReunionMovement.Framework.Runtime" },
+            ["ReunionMovement.Base"] = new[] { "ReunionMovement.Common", "ReunionMovement.Framework.Modules", "ReunionMovement.Utilities", "ReunionMovement.Framework.Runtime" },
+            ["ReunionMovement.Common"] = new[] { "ReunionMovement.Framework.Modules", "ReunionMovement.Utilities", "ReunionMovement.Framework.Runtime" },
+            ["ReunionMovement.Utilities"] = new[] { "ReunionMovement.Framework.Modules", "ReunionMovement.Framework.Runtime" },
+            ["ReunionMovement.Framework.Modules"] = new[] { "ReunionMovement.Framework.Runtime" },
             ["ReunionMovement.Framework.Runtime"] = new[]
             {
                 "ReunionMovement.EditorTools",

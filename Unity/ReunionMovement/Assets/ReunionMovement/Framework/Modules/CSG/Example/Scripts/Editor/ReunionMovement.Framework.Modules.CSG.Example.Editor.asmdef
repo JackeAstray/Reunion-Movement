@@ -1,11 +1,10 @@
 {
-    "name": "ReunionMovement.Utils.ColliderUtil.Editor",
-    "rootNamespace": "ReunionMovement.Common.Util.Editor",
+    "name": "ReunionMovement.Framework.Modules.CSG.Example.Editor",
+    "rootNamespace": "ReunionMovement.Common.Util.Example.Editor",
     "references": [
-        "ReunionMovement.Utils",
+        "ReunionMovement.Framework.Modules",
         "ReunionMovement.Utilities",
-        "ReunionMovement.Common",
-        "ReunionMovement.EditorTools"
+        "ReunionMovement.Common"
     ],
     "includePlatforms": [
         "Editor"

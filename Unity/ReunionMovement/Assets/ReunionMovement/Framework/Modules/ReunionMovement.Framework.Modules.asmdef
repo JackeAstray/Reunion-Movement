@@ -1,5 +1,5 @@
 {
-    "name": "ReunionMovement.Utils",
+    "name": "ReunionMovement.Framework.Modules",
     "rootNamespace": "ReunionMovement.Framework.Modules",
     "references": [
         "ReunionMovement.Base",

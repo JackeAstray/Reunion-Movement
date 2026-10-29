@@ -1,6 +1,6 @@
 {
     "name": "ReunionMovement.Base",
-    "rootNamespace": "ReunionMovement.Core.Base",
+    "rootNamespace": "ReunionMovement.Framework.Runtime.Base",
     "references": [
         "UniTask"
     ],

@@ -1,17 +1,11 @@
 {
-    "name": "ReunionMovement.Core.Editor",
-    "rootNamespace": "ReunionMovement.Core.UI.Editor",
+    "name": "ReunionMovement.Utilities.UI.ButtonExtensions.Animated.Editor",
+    "rootNamespace": "ReunionMovement.UI.ButtonExtensions.Editor",
     "references": [
-        "ReunionMovement.Core",
-        "ReunionMovement.Common",
-        "ReunionMovement.Utils",
         "ReunionMovement.Utilities",
-        "ReunionMovement.Base",
-        "UniTask",
+        "ReunionMovement.Common",
         "UnityEngine.UI",
-        "Unity.InputSystem",
-        "Unity.TextMeshPro",
-        "ReunionMovement.Editor.Shared"
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [
         "Editor"

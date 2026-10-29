@@ -1,10 +1,11 @@
 {
-    "name": "ReunionMovement.Utils.Deadline.Editor",
+    "name": "ReunionMovement.Framework.Modules.Network.Editor",
     "rootNamespace": "ReunionMovement.Common.Util.Editor",
     "references": [
-        "ReunionMovement.Utils",
+        "ReunionMovement.Framework.Modules",
         "ReunionMovement.Utilities",
-        "ReunionMovement.Common"
+        "ReunionMovement.Common",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [
         "Editor"

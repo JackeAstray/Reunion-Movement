@@ -21,7 +21,7 @@ namespace ReunionMovement.HeadlessCheck
     /// </summary>
     public static class Program
     {
-        private const string CoreAssemblyName = "ReunionMovement.Core";
+        private const string CoreAssemblyName = "ReunionMovement.Framework.Runtime";
 
         private static readonly List<string> SearchPaths = new List<string>();
         private static int passed;
@@ -63,7 +63,7 @@ namespace ReunionMovement.HeadlessCheck
 
             PreloadFrameworkAssemblies();
             Console.WriteLine("已加载框架程序集: " + string.Join(", ",
-                new[] { "ReunionMovement.Base", "ReunionMovement.Common", "ReunionMovement.Utils", "ReunionMovement.Core" }
+                new[] { "ReunionMovement.Base", "ReunionMovement.Common", "ReunionMovement.Framework.Modules", "ReunionMovement.Framework.Runtime" }
                     .Where(n => AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name == n))));
             Console.WriteLine();
 
@@ -622,8 +622,8 @@ namespace ReunionMovement.HeadlessCheck
             {
                 "ReunionMovement.Base",
                 "ReunionMovement.Common",
-                "ReunionMovement.Utils",
-                "ReunionMovement.Core",
+                "ReunionMovement.Framework.Modules",
+                "ReunionMovement.Framework.Runtime",
                 "UniTask",
                 "R3",
             };

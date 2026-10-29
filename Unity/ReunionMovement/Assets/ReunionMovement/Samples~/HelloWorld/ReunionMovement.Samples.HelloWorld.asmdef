@@ -4,8 +4,8 @@
     "references": [
         "ReunionMovement.Base",
         "ReunionMovement.Common",
-        "ReunionMovement.Core",
-        "ReunionMovement.Utils",
+        "ReunionMovement.Framework.Runtime",
+        "ReunionMovement.Framework.Modules",
         "ReunionMovement.Utilities",
         "UniTask",
         "UnityEngine.UI"

@@ -9,7 +9,7 @@
   或给 X 加 [UnityEngine.Scripting.Preserve]。
 -->
 <linker>
-  <assembly fullname="ReunionMovement.Core">
+  <assembly fullname="ReunionMovement.Framework.Runtime">
     <!-- GameEntryResolver 用 Attribute.GetCustomAttribute + Activator.CreateInstance 找入口 -->
     <type fullname="ReunionMovement.Framework.Runtime.GameEntryResolver" preserve="all" />
     <type fullname="ReunionMovement.Framework.Runtime.Base.ReunionGameEntryAttribute" preserve="all" />
