@@ -150,17 +150,17 @@ namespace ReunionMovement.Core.UIToolkit
             // 仅清字典会泄漏引用（资源驻留内存直到 ResourcesSystem.Clear）
             foreach (var key in panelAssetCache.Keys)
             {
-                ResourcesSystem.Instance.DeleteAssetCache(UXML_PATH_PREFIX + key);
+                Modules.Get<ResourcesSystem>().DeleteAssetCache(UXML_PATH_PREFIX + key);
             }
             if (globalStyleSheet != null)
             {
-                ResourcesSystem.Instance.DeleteAssetCache(GLOBAL_STYLE_PATH);
+                Modules.Get<ResourcesSystem>().DeleteAssetCache(GLOBAL_STYLE_PATH);
                 globalStyleSheet = null;
             }
             // panelSettings 可能为 null/已销毁；DeleteAssetCache 对未登记 key 为安全空操作
             if (panelSettings != null)
             {
-                ResourcesSystem.Instance.DeleteAssetCache(PANEL_SETTINGS_PATH);
+                Modules.Get<ResourcesSystem>().DeleteAssetCache(PANEL_SETTINGS_PATH);
             }
             panelAssetCache.Clear();
             panelStyleCache.Clear();
@@ -199,7 +199,7 @@ namespace ReunionMovement.Core.UIToolkit
 
         private async UniTask LoadPanelSettingsAsync()
         {
-            panelSettings = await ResourcesSystem.Instance
+            panelSettings = await Modules.Get<ResourcesSystem>()
                 .LoadAsync<PanelSettings>(PANEL_SETTINGS_PATH, isCache: true);
 
             if (panelSettings == null)
@@ -233,7 +233,7 @@ namespace ReunionMovement.Core.UIToolkit
             if (panelSettings.themeStyleSheet != null) return;
 
             // 尝试从 Resources 加载自定义主题（ThemeStyleSheet 是 .tss 资源）
-            var theme = ResourcesSystem.Instance
+            var theme = Modules.Get<ResourcesSystem>()
                 .Load<ThemeStyleSheet>(GLOBAL_THEME_PATH, isCache: true);
 
             if (theme != null)
@@ -253,7 +253,7 @@ namespace ReunionMovement.Core.UIToolkit
 
         private void LoadGlobalStyleSheet()
         {
-            globalStyleSheet = ResourcesSystem.Instance
+            globalStyleSheet = Modules.Get<ResourcesSystem>()
                 .Load<StyleSheet>(GLOBAL_STYLE_PATH, isCache: true);
             if (globalStyleSheet != null && RootVisualElement != null)
             {
@@ -290,7 +290,7 @@ namespace ReunionMovement.Core.UIToolkit
             // 加载 UXML
             if (!panelAssetCache.TryGetValue(panelName, out var asset))
             {
-                asset = ResourcesSystem.Instance
+                asset = Modules.Get<ResourcesSystem>()
                     .Load<VisualTreeAsset>($"{UXML_PATH_PREFIX}{panelName}", isCache: true);
                 if (asset == null)
                 {
@@ -359,7 +359,7 @@ namespace ReunionMovement.Core.UIToolkit
                 // 异步加载 UXML（缓存优先）
                 if (!panelAssetCache.TryGetValue(panelName, out var asset))
                 {
-                    asset = await ResourcesSystem.Instance
+                    asset = await Modules.Get<ResourcesSystem>()
                         .LoadAsync<VisualTreeAsset>($"{UXML_PATH_PREFIX}{panelName}", isCache: true);
                     if (asset != null)
                     {

@@ -34,7 +34,7 @@ namespace ReunionMovement.Core.UIInput
             else
             {
                 // 否则通过 ResourcesSystem 加载（需放在 Resources 文件夹下）
-                var loaded = ResourcesSystem.Instance.Load<InputActionAsset>("InputSystem_Actions");
+                var loaded = Modules.Get<ResourcesSystem>().Load<InputActionAsset>("InputSystem_Actions");
                 if (loaded != null)
                 {
                     try
@@ -43,7 +43,7 @@ namespace ReunionMovement.Core.UIInput
                     }
                     finally
                     {
-                        ResourcesSystem.Instance.DeleteAssetCache("InputSystem_Actions");
+                        Modules.Get<ResourcesSystem>().DeleteAssetCache("InputSystem_Actions");
                     }
                     if (inputModule != null)
                     {

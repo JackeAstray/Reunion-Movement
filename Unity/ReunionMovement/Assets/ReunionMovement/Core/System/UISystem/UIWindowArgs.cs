@@ -20,11 +20,11 @@ namespace ReunionMovement.Core.UI
 
     /// <summary>
     /// 窗口接收强类型参数。窗口实现它即可被 <c>UISystem.OpenWindowAsync&lt;TWindow, TArgs&gt;</c> 直接喂参数，
-    /// 不需要再写 <c>GetFromArgs&lt;T&gt;(args, 0)</c> 这种按位置取值。
+    /// 不再有按位置取值的 <c>args[N]</c> 写法。
     ///
     /// <para>
-    /// 与老路径的关系：<see cref="UIController.OnOpen"/> 仍会照常收到 <c>object[]{ args }</c>，
-    /// 所以同一个窗口可以只实现其中一个；两个都实现时，后者（强类型）在 <c>OnOpen</c> 之后调用。
+    /// 与 <see cref="UIController.OnOpen()"/> 的关系：<c>OnOpen()</c> 不再携带参数，可在其中做与参数无关的界面初始化；
+    /// 需要参数就实现本接口。不实现不会报错 —— 参数被忽略，派发处记一条 Debug 日志。
     /// </para>
     /// </summary>
     /// <typeparam name="T">参数类型</typeparam>

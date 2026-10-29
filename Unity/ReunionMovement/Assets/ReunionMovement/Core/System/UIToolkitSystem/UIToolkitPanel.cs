@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using Cysharp.Threading.Tasks;
+using ReunionMovement.Common;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace ReunionMovement.Core.UIToolkit
@@ -20,8 +22,8 @@ namespace ReunionMovement.Core.UIToolkit
     ///     }
     /// }
     ///
-    /// // 打开面板：
-    /// UIToolkitSystem.Instance.OpenPanel&lt;MainMenuPanel&gt;("MainMenu");
+    /// // 打开面板（运行时用 Modules.Get，编辑器工具/测试里才用 XxxSystem.Instance）：
+    /// Modules.Get&lt;UIToolkitSystem&gt;().OpenPanel&lt;MainMenuPanel&gt;("MainMenu");
     /// </code>
     /// </summary>
     public class UIToolkitPanel
@@ -89,14 +91,27 @@ namespace ReunionMovement.Core.UIToolkit
         protected virtual void OnUnbind() { }
 
         /// <summary>
-        /// 打开面板时调用
+        /// 打开面板时调用（框架入口）。同步状态在这里置位，异步初始化交给 <see cref="OnOpenAsync"/>。
+        /// 子类一般不要重写本方法：需要异步逻辑就重写 <see cref="OnOpenAsync"/>，
+        /// 异常会被统一记录，不会像 <c>async void</c> 那样变成未处理异常。
         /// </summary>
         /// <param name="data">外部传入的数据（可选）</param>
         public virtual void OnOpen(object data = null)
         {
             IsOpen = true;
-            Root.style.display = DisplayStyle.Flex;
+            if (Root != null) Root.style.display = DisplayStyle.Flex;
+
+            // 异步钩子：Forget 的 handler 接收异常并记录，不让它冒泡成 async void 的未处理异常
+            OnOpenAsync(data).Forget(ex =>
+                Log.Error("[UIToolkitPanel] {0}.OnOpen 异常: {1}", GetType().Name, ex));
         }
+
+        /// <summary>
+        /// 面板打开后的异步逻辑（子类重写）：等资源、播动画、拉数据都放这里。
+        /// 默认什么都不做；异常由 <see cref="OnOpen"/> 统一记录，子类不必再包 try/catch。
+        /// </summary>
+        /// <param name="data">外部传入的数据（可选）</param>
+        protected virtual UniTask OnOpenAsync(object data) => UniTask.CompletedTask;
 
         /// <summary>
         /// 关闭面板时调用 —— 从 VisualElement 树中移除根元素

@@ -60,7 +60,7 @@ namespace ReunionMovement.Core.Sound
                 }
                 if (clip == null)
                 {
-                    clip = await ResourcesSystem.Instance.LoadAsync<AudioClip>(fullPath);
+                    clip = await Modules.Get<ResourcesSystem>().LoadAsync<AudioClip>(fullPath);
                 }
 
                 // Clear() 期间发生过：缓存已被清空并重建，不再写入（否则条目复活但 LRU 节点
@@ -75,7 +75,7 @@ namespace ReunionMovement.Core.Sound
                         }
                         else
                         {
-                            ResourcesSystem.Instance.DeleteAssetCache(fullPath);
+                            Modules.Get<ResourcesSystem>().DeleteAssetCache(fullPath);
                         }
                     }
                     tcs.TrySetResult(null);
@@ -149,7 +149,7 @@ namespace ReunionMovement.Core.Sound
                 return;
             }
             // 联动 ResourcesSystem 递减引用计数并卸载底层 AudioClip，真正释放内存
-            ResourcesSystem.Instance.DeleteAssetCache(fullPath);
+            Modules.Get<ResourcesSystem>().DeleteAssetCache(fullPath);
         }
 
         /// <summary>

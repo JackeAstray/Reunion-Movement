@@ -111,7 +111,8 @@ namespace ReunionMovement.Core
 
             // 应用玩家保存的语言设置：此前全项目无 SetMultilingual 调用点，
             // GameOption.language 加载后从不生效，玩家所选语言重启即回 ZH_CN
-            LanguagesSystem.Instance.SetMultilingual(GameOption.CurrentOption.language);
+            // （引擎已启动且模块已注册，按契约用 Modules.Get；取不到会抛异常并列出已注册模块）
+            Modules.Get<LanguagesSystem>().SetMultilingual(GameOption.CurrentOption.language);
 
             // 测试/调试场景：跳过自动场景跳转，保留当前场景用于调试
             if (Bootstrap.IsTestScene)
@@ -120,14 +121,14 @@ namespace ReunionMovement.Core
                 return;
             }
 
-            // 游戏启动时，排除启动界面不随场景切换而隐藏
-            // SceneSystem.Instance.ExcludeWindowFromSceneHide(StartupWindowName);
+            // 游戏启动时，排除启动界面不随场景切换而隐藏（当前未启用该行为）
+            // Modules.Get<SceneSystem>().ExcludeWindowFromSceneHide(StartupWindowName);
 
             // 加载初始场景
-            await SceneSystem.Instance.LoadScene(BootSceneName, true, null, null);
+            await Modules.Get<SceneSystem>().LoadScene(BootSceneName, true, null, null);
 
             // 打开启动界面（Addressables 双轨加载，失败自动降级 Resources）
-            await UISystem.Instance.OpenWindowAsync(StartupWindowName);
+            await Modules.Get<UISystem>().OpenWindowAsync(StartupWindowName);
         }
 
         /// <summary>

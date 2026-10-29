@@ -170,7 +170,7 @@ namespace ReunionMovement.Core.UI
                 UnityEngine.Object.DestroyImmediate(existingES.gameObject);
             }
 
-            var esPrefab = ResourcesSystem.Instance.Load<GameObject>("Prefabs/EventSystem/EventSystem");
+            var esPrefab = Modules.Get<ResourcesSystem>().Load<GameObject>("Prefabs/EventSystem/EventSystem");
             if (esPrefab != null)
             {
                 GameObject esGo;
@@ -180,7 +180,7 @@ namespace ReunionMovement.Core.UI
                 }
                 finally
                 {
-                    ResourcesSystem.Instance.DeleteAssetCache("Prefabs/EventSystem/EventSystem");
+                    Modules.Get<ResourcesSystem>().DeleteAssetCache("Prefabs/EventSystem/EventSystem");
                 }
                 esGo.name = "EventSystem";
                 EventSystem = esGo.GetComponent<EventSystem>();

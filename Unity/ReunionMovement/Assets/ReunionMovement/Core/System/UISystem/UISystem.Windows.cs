@@ -81,7 +81,7 @@ namespace ReunionMovement.Core.UI
 
         /// <summary>
         /// [推荐] 类型安全的异步打开窗口 —— 通过 UIController 类型名自动推断 UI 名称。
-        /// 使用方式：UISystem.Instance.OpenWindowAsync&lt;PopupUIPlane&gt;(args);
+        /// 使用方式：Modules.Get&lt;UISystem&gt;().OpenWindowAsync&lt;PopupUIPlane&gt;(args);
         /// </summary>
         public async UniTask<UILoadState> OpenWindowAsync<T>(params object[] args) where T : UIController
         {
@@ -90,7 +90,7 @@ namespace ReunionMovement.Core.UI
 
         /// <summary>
         /// [推荐] 类型安全的打开窗口重载 —— 通过 UIController 类型名自动推断 UI 名称。
-        /// 使用方式：UISystem.Instance.OpenWindow&lt;PopupUIPlane&gt;(args);
+        /// 使用方式：Modules.Get&lt;UISystem&gt;().OpenWindow&lt;PopupUIPlane&gt;(args);
         /// 优点：编译时检查、重构安全、无字符串拼写错误。
         /// </summary>
         /// <typeparam name="T">UI 控制器类型（类名需与 prefab 名一致）</typeparam>

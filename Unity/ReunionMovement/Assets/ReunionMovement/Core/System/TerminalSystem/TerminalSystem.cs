@@ -72,10 +72,10 @@ namespace ReunionMovement.Core.Terminal
             // 检测 ~ / ` 键（Backquote）被按下（按下当帧触发）
             if (keyboard.backquoteKey.wasPressedThisFrame)
             {
-                // UI 系统未初始化时不执行切换
-                if (UISystem.Instance != null && UISystem.Instance.isInited)
+                // UI 系统未初始化时不执行切换（TerminalSystem 依赖 UISystem，见类上的 [ModuleOrder]）
+                if (Modules.TryGet<UISystem>(out var ui) && ui.isInited)
                 {
-                    UISystem.Instance.ToggleWindow("TerminalUIPlane");
+                    ui.ToggleWindow("TerminalUIPlane");
                 }
             }
 #endif
@@ -114,7 +114,7 @@ namespace ReunionMovement.Core.Terminal
                 return;
             }
 
-            if (UISystem.Instance.IsOpen(windowName))
+            if (Modules.Get<UISystem>().IsOpen(windowName))
             {
                 Log.Error("窗口已打开!");
                 return;
@@ -127,7 +127,7 @@ namespace ReunionMovement.Core.Terminal
                 extraArgs[i - 1] = args[i].String;
             }
 
-            UISystem.Instance.OpenWindow(windowName, extraArgs);
+            Modules.Get<UISystem>().OpenWindow(windowName, extraArgs);
         }
         #endregion
 
@@ -143,9 +143,9 @@ namespace ReunionMovement.Core.Terminal
 
                 Log.Debug(str);
 
-                if (UISystem.Instance.IsOpen("TerminalUIPlane"))
+                if (Modules.Get<UISystem>().IsOpen("TerminalUIPlane"))
                 {
-                    UISystem.Instance.SendWindowArgsAsync("TerminalUIPlane", new TerminalWindowArgs("CreateItem", str)).Forget();
+                    Modules.Get<UISystem>().SendWindowArgsAsync("TerminalUIPlane", new TerminalWindowArgs("CreateItem", str)).Forget();
                 }
             }
         }

@@ -88,7 +88,7 @@ namespace ReunionMovement.Core.UI
             GameObject uiObj = GetPooledWindow(name);
             if (uiObj == null)
             {
-                uiObj = ResourcesSystem.Instance.InstantiateAsset<GameObject>(Config.UIPath + name);
+                uiObj = Modules.Get<ResourcesSystem>().InstantiateAsset<GameObject>(Config.UIPath + name);
             }
             Log.Debug("[UISystem] LoadWindow({0}) Instantiate → {1}, activeSelf={2}", name, (uiObj ? uiObj.name : "NULL"), uiObj?.activeSelf);
             if (uiObj == null)
@@ -161,7 +161,7 @@ namespace ReunionMovement.Core.UI
                 // 降级：Resources
                 if (prefab == null)
                 {
-                    prefab = ResourcesSystem.Instance.Load<GameObject>(Config.UIPath + name);
+                    prefab = Modules.Get<ResourcesSystem>().Load<GameObject>(Config.UIPath + name);
                     if (prefab != null)
                     {
                         Log.Debug("[UISystem] LoadWindowAsync({0}) 降级 Resources 加载成功: {1}", name, Config.UIPath + name);
@@ -190,7 +190,7 @@ namespace ReunionMovement.Core.UI
                 finally
                 {
                     if (!fromAddressables)
-                        ResourcesSystem.Instance.DeleteAssetCache(Config.UIPath + name);
+                        Modules.Get<ResourcesSystem>().DeleteAssetCache(Config.UIPath + name);
                 }
 
                 return SetupLoadedWindow(uiObj, name, openWhenFinish, args);

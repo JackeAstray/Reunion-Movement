@@ -72,21 +72,24 @@ namespace ReunionMovement.Core.UI
             LoadLogoTexture(logo2, LOGO2_PATH);
         }
 
-        public override async void OnOpen(object data = null)
+        // 异步打开逻辑走基类的 OnOpenAsync：异常由基类统一记录，
+        // 不再用 async void（那种写法的异常在 await 之后无人接住）
+        protected override async UniTask OnOpenAsync(object data)
         {
+            await base.OnOpenAsync(data);
+
+            if (animationPlaying) return;
+            animationPlaying = true;
+
             try
             {
-                base.OnOpen(data);
-
-                if (animationPlaying) return;
-                animationPlaying = true;
-
                 await PlayLogoAnimation();
             }
-            catch (System.Exception ex)
+            catch
             {
-                Log.Error("[StartGameUIPanel] OnOpen 异常: {0}", ex);
+                // 复位，允许下次打开重播；异常继续上抛，由基类 OnOpen 统一记录
                 animationPlaying = false;
+                throw;
             }
         }
 

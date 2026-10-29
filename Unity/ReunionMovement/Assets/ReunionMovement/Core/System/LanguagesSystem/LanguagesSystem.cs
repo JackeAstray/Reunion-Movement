@@ -79,7 +79,7 @@ namespace ReunionMovement.Core.Languages
             containerEmptyReported = false;
 
             // 从ScriptableObjects中获取文本
-            languagesContainer = ResourcesSystem.Instance.Load<LanguagesContainer>("ScriptableObjects/LanguagesContainer");
+            languagesContainer = Modules.Get<ResourcesSystem>().Load<LanguagesContainer>("ScriptableObjects/LanguagesContainer");
             if (languagesContainer == null || languagesContainer.configs == null)
             {
                 Log.Error("LanguagesContainer或其configs为空, 语言系统初始化失败!");
@@ -130,7 +130,7 @@ namespace ReunionMovement.Core.Languages
             isInited = false;
             initProgress = 0;
             if (!ReferenceEquals(languagesContainer, null))
-                ResourcesSystem.Instance.DeleteAssetCache("ScriptableObjects/LanguagesContainer");
+                Modules.Get<ResourcesSystem>().DeleteAssetCache("ScriptableObjects/LanguagesContainer");
             languagesContainer = null;
             languagesDict = null;
         }

@@ -703,7 +703,7 @@ namespace ReunionMovement.Core.Scene
             // → UnregisterUIWindow → 修改 registeredUIWindows，
             // 在 foreach 迭代期间修改 HashSet 会抛 InvalidOperationException。
             var snapshot = new List<UI.UIWindowAsset>(registeredUIWindows);
-            var uiSystem = UISystem.Instance;
+            Modules.TryGet<UISystem>(out var uiSystem);
             foreach (var window in snapshot)
             {
                 if (window == null) continue;

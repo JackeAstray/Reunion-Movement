@@ -10,8 +10,8 @@ namespace ReunionMovement.Core.UI
     /// <see cref="UISystem"/> 的类型化窗口 API（增量，不动老接口）。
     ///
     /// <para>
-    /// 老写法靠位置参数：<c>OpenWindowAsync("PopupUIPlane", "错误", 3)</c> + 窗口里 <c>GetFromArgs&lt;int&gt;(args, 1)</c>。
-    /// 新写法把"参数"变成一个类型：
+    /// 旧的位置参数写法（<c>OpenWindowAsync("PopupUIPlane", "错误", 3)</c> + 窗口里 <c>GetFromArgs&lt;int&gt;(args, 1)</c>）已移除，
+    /// 现在把"参数"变成一个类型：
     /// </para>
     ///
     /// <code>
@@ -70,7 +70,7 @@ namespace ReunionMovement.Core.UI
 
         /// <summary>
         /// 把强类型参数派发给窗口：窗口实现了 <see cref="IWindowArgsReceiver{T}"/> 才调用，否则静默跳过
-        /// （仍可用老方式从 <see cref="UIController.OnOpen"/> 的 object[] 里取）。
+        /// （参数被忽略、不报错 —— <see cref="UIController.OnOpen()"/> 不带参数）。
         /// </summary>
         private static void DispatchTypedArgs(UIController window, IWindowArgs args)
         {
@@ -84,7 +84,7 @@ namespace ReunionMovement.Core.UI
                 if (!receiverType.IsInstanceOfType(window))
                 {
                     // 窗口没实现该参数类型的接收接口：记一次调试日志即可（不算错误，老窗口就该走 OnOpen）
-                    Log.Debug("[UISystem] {0} 未实现 IWindowArgsReceiver<{1}>，参数只通过 OnOpen(object[]) 传递",
+                    Log.Debug("[UISystem] {0} 未实现 IWindowArgsReceiver<{1}>，参数将被忽略",
                         window.GetType().Name, argsType.Name);
                     return;
                 }

@@ -143,7 +143,7 @@ namespace ReunionMovement.Core.Sound
 
             CreateAudioRoot();
 
-            soundConfigContainer = ResourcesSystem.Instance.Load<SoundConfigContainer>("ScriptableObjects/SoundConfigContainer");
+            soundConfigContainer = Modules.Get<ResourcesSystem>().Load<SoundConfigContainer>("ScriptableObjects/SoundConfigContainer");
             if (soundConfigContainer == null || soundConfigContainer.configs == null)
             {
                 Log.Error("SoundConfigContainer或其configs为空, 声音系统初始化失败!");
@@ -256,7 +256,7 @@ namespace ReunionMovement.Core.Sound
             fadeState = FadeState.None;
 
             foreach (var path in loadedPoolPaths)
-                ResourcesSystem.Instance.DeleteAssetCache(path);
+                Modules.Get<ResourcesSystem>().DeleteAssetCache(path);
             loadedPoolPaths.Clear();
             startupPools.Clear();
 
@@ -298,7 +298,7 @@ namespace ReunionMovement.Core.Sound
                     }
                     else
                     {
-                        ResourcesSystem.Instance.DeleteAssetCache(kv.Key);
+                        Modules.Get<ResourcesSystem>().DeleteAssetCache(kv.Key);
                     }
                 }
                 audioClipCache.Clear();
@@ -310,7 +310,7 @@ namespace ReunionMovement.Core.Sound
             audioClipLoadGate?.CancelAll();
             soundConfigDict?.Clear();
             if (!ReferenceEquals(soundConfigContainer, null))
-                ResourcesSystem.Instance.DeleteAssetCache("ScriptableObjects/SoundConfigContainer");
+                Modules.Get<ResourcesSystem>().DeleteAssetCache("ScriptableObjects/SoundConfigContainer");
             soundConfigContainer = null;
             lastSfxPlayTimes.Clear();
             // 重置音效 prefab 缓存，避免重 Init 时误用旧引用

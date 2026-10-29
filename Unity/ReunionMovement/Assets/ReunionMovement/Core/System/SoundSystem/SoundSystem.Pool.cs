@@ -47,7 +47,7 @@ namespace ReunionMovement.Core.Sound
             StartupPool pool = new StartupPool();
             pool.size = 20;
             pool.parent = sfxRoot.transform;
-            pool.prefab = ResourcesSystem.Instance.Load<GameObject>(poolPath);
+            pool.prefab = Modules.Get<ResourcesSystem>().Load<GameObject>(poolPath);
 
             if (pool.prefab == null)
             {
