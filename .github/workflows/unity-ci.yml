@@ -235,7 +235,9 @@ jobs:
             case "$f" in
               */Plugins/*|*/ThirdParty/*|*/3rd/*|*/GenerateScript/*|*/Examples/*|*/Samples/*) continue ;;
             esac
-            lines=$(wc -l < "$f" | tr -d ' ')
+            # 与 ArchitectureGuard.CheckFileSizes 同口径（File.ReadAllLines 行数）。
+            # 不能用 wc -l：末行没有换行符时会少算 1 行，CI 与编辑器守卫会得出不同结论。
+            lines=$(awk 'END{print NR}' "$f")
             allowed=$(awk -v p="$f" '$2==p {print $1}' "$baseline")
             if [ -n "$allowed" ]; then
               if [ "$lines" -gt "$allowed" ]; then

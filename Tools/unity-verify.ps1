@@ -37,7 +37,7 @@ $ErrorActionPreference = 'Stop'
 # ---- 路径 ----
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $projectPath = Join-Path $repoRoot 'Unity\ReunionMovement'
-$resultDir = Join-Path $projectPath 'Temp\verify'
+$resultDir = Join-Path $projectPath 'Logs\verify'
 $testResults = Join-Path $resultDir 'editmode-results.xml'
 $testLog = Join-Path $resultDir 'editmode.log'
 $guardLog = Join-Path $resultDir 'guard.log'
@@ -45,6 +45,16 @@ $guardLog = Join-Path $resultDir 'guard.log'
 function Write-Step($text) { Write-Host "==> $text" -ForegroundColor Cyan }
 function Write-Ok($text) { Write-Host "    $text" -ForegroundColor Green }
 function Write-Bad($text) { Write-Host "    $text" -ForegroundColor Red }
+
+# Unity.exe 是 GUI 子系统程序：PowerShell 的 `&` 不会等待它，也不会设置 $LASTEXITCODE。
+# 必须经 cmd /c 调用（cmd 会等进程结束），否则脚本在 Unity 还没跑完时就进入下一步，
+# 两个实例抢同一个工程锁、其中一个直接退出 —— 表现为"退出码为空 + 没有生成测试结果"。
+function Invoke-UnityBatch {
+    param([string[]]$UnityArgs)
+    $joined = ($UnityArgs | ForEach-Object { if ($_ -match '\s') { '"' + $_ + '"' } else { $_ } }) -join ' '
+    & cmd /c "`"$UnityPath`" $joined"
+    return $LASTEXITCODE
+}
 
 if (-not (Test-Path $projectPath)) {
     Write-Bad "找不到 Unity 工程目录: $projectPath"
@@ -101,10 +111,11 @@ if (-not $SkipTests) {
     Write-Step '运行 EditMode 测试…'
     if (Test-Path $testResults) { Remove-Item $testResults -Force }
 
-    & $UnityPath -batchmode -nographics -projectPath $projectPath `
-        -runTests -testPlatform EditMode `
-        -testResults $testResults -logFile $testLog
-    $unityExit = $LASTEXITCODE
+    $unityExit = Invoke-UnityBatch @(
+        '-batchmode', '-nographics', '-projectPath', $projectPath,
+        '-runTests', '-testPlatform', 'EditMode',
+        '-testResults', $testResults, '-logFile', $testLog
+    )
 
     if (-not (Test-Path $testResults)) {
         Write-Bad "没有生成测试结果，Unity 退出码 $unityExit。日志: $testLog"
@@ -137,10 +148,11 @@ if (-not $SkipTests) {
 # ---- 2. 架构守卫 ----
 if (-not $SkipGuard) {
     Write-Step '运行架构守卫…'
-    & $UnityPath -batchmode -nographics -quit -projectPath $projectPath `
-        -executeMethod ReunionMovement.Editor.Guards.ArchitectureGuard.RunAllBatch `
-        -logFile $guardLog
-    $guardExit = $LASTEXITCODE
+    $guardExit = Invoke-UnityBatch @(
+        '-batchmode', '-nographics', '-quit', '-projectPath', $projectPath,
+        '-executeMethod', 'ReunionMovement.Editor.Guards.ArchitectureGuard.RunAllBatch',
+        '-logFile', $guardLog
+    )
 
     if ($guardExit -ne 0) {
         Write-Bad "守卫未通过（退出码 $guardExit）。日志: $guardLog"
