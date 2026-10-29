@@ -1,4 +1,4 @@
-﻿using ReunionMovement.Common;
+using ReunionMovement.Common;
 using ReunionMovement.Core.Base;
 using Cysharp.Threading.Tasks;
 using System;
@@ -346,7 +346,7 @@ namespace ReunionMovement.Core.Resources
         #endregion
 
         // 注：原 Addressables 集成（LoadAddressableAsync 等 4 个方法）已迁移至
-        // AddressableSystem（Assets/ReunionMovement/Core/System/AddressableSystem/AddressableSystem.cs），
+        // AddressableSystem（Assets/ReunionMovement/Framework/Runtime/System/AddressableSystem/AddressableSystem.cs），
         // 本类仅保留 Resources 目录职责（含降级兜底）。
     }
 

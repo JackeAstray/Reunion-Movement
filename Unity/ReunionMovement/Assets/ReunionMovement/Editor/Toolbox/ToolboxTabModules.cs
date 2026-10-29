@@ -21,7 +21,7 @@ namespace ReunionMovement.EditorTools.Toolbox
                 EditorGUILayout.HelpBox("未检测到带 [ModuleOrder] 的模块。请确认 Core / Utils 程序集已编译成功。", MessageType.Warning);
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (GUILayout.Button("定位 StartGame.cs", GUILayout.Width(150f))) SelectAsset(AssetRoot + "/Core/StartGame.cs");
+                    if (GUILayout.Button("定位 StartGame.cs", GUILayout.Width(150f))) SelectAsset(AssetRoot + "/Framework/Runtime/StartGame.cs");
                     if (GUILayout.Button("重新检查", GUILayout.Width(90f))) RefreshAll();
                 }
                 return;
@@ -32,8 +32,8 @@ namespace ReunionMovement.EditorTools.Toolbox
             using (new EditorGUILayout.HorizontalScope())
             {
                 EditorGUILayout.LabelField("共 " + modules.Count + " 个模块", EditorStyles.boldLabel, GUILayout.Width(120f));
-                if (GUILayout.Button("定位注册入口 StartGame.cs", GUILayout.Width(200f))) SelectAsset(AssetRoot + "/Core/StartGame.cs");
-                if (GUILayout.Button("定位 Core/System", GUILayout.Width(140f))) PingFolder(AssetRoot + "/Core/System");
+                if (GUILayout.Button("定位注册入口 StartGame.cs", GUILayout.Width(200f))) SelectAsset(AssetRoot + "/Framework/Runtime/StartGame.cs");
+                if (GUILayout.Button("定位 Framework/Runtime/System", GUILayout.Width(200f))) PingFolder(AssetRoot + "/Framework/Runtime/System");
             }
 
             if (problems.Count == 0)
