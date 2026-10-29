@@ -6,6 +6,7 @@
         "ReunionMovement.Common",
         "ReunionMovement.Core",
         "ReunionMovement.Utils",
+        "ReunionMovement.Utilities",
         "UniTask",
         "UnityEngine.UI"
     ],

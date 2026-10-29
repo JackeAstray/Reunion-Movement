@@ -266,10 +266,11 @@ jobs:
             done
           }
           base=Unity/ReunionMovement/Assets/ReunionMovement
-          check "$base/Core/Base/ReunionMovement.Base.asmdef" "ReunionMovement.Base" ReunionMovement.Common ReunionMovement.Utils ReunionMovement.Core
-          check "$base/Common/ReunionMovement.Common.asmdef" "ReunionMovement.Common" ReunionMovement.Utils ReunionMovement.Core
-          check "$base/Utils/ReunionMovement.Utils.asmdef" "ReunionMovement.Utils" ReunionMovement.Core
-          check "$base/Core/ReunionMovement.Core.asmdef" "ReunionMovement.Core" ReunionMovement.EditorTools ReunionMovement.Toolbox.Editor ReunionMovement.Tests
+          check "$base/Framework/Base/ReunionMovement.Base.asmdef" "ReunionMovement.Base" ReunionMovement.Common ReunionMovement.Utils ReunionMovement.Utilities ReunionMovement.Core
+          check "$base/Common/ReunionMovement.Common.asmdef" "ReunionMovement.Common" ReunionMovement.Utils ReunionMovement.Utilities ReunionMovement.Core
+          check "$base/Framework/Modules/ReunionMovement.Framework.Modules.asmdef" "ReunionMovement.Utils" ReunionMovement.Core
+          check "$base/Utilities/ReunionMovement.Utilities.asmdef" "ReunionMovement.Utilities" ReunionMovement.Utils ReunionMovement.Core
+          check "$base/Framework/Runtime/ReunionMovement.Core.asmdef" "ReunionMovement.Core" ReunionMovement.EditorTools ReunionMovement.Toolbox.Editor ReunionMovement.Tests
           exit $fail
 
       - name: .Instance 使用点只减不增

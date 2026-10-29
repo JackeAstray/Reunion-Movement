@@ -5,6 +5,7 @@
         "ReunionMovement.Base",
         "ReunionMovement.Common",
         "ReunionMovement.Utils",
+        "ReunionMovement.Utilities",
         "ReunionMovement.Core",
         "ReunionMovement.GenerateScript.AutoScripts",
         "ReunionMovement.Toolbox.Editor",

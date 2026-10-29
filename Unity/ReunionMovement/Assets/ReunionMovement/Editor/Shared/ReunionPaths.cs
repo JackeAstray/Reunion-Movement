@@ -21,7 +21,7 @@ namespace ReunionMovement.Editor.Shared
     /// </summary>
     public static class ReunionPaths
     {
-        private const string CoreAsmdefSuffix = "/Core/ReunionMovement.Core.asmdef";
+        private const string CoreAsmdefSuffix = "/Framework/Runtime/ReunionMovement.Core.asmdef";
         private const string FallbackRoot = "Assets/ReunionMovement";
 
         /// <summary>包安装时生成物的默认落点（始终位于 Assets/，可写）。</summary>

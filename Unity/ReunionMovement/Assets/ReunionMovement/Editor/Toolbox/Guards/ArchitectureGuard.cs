@@ -48,8 +48,9 @@ namespace ReunionMovement.Editor.Guards
         /// <summary>每层允许引用的下层白名单（未列出的层不做方向检查）。</summary>
         private static readonly Dictionary<string, string[]> ForbiddenReferences = new Dictionary<string, string[]>
         {
-            ["ReunionMovement.Base"] = new[] { "ReunionMovement.Common", "ReunionMovement.Utils", "ReunionMovement.Core" },
-            ["ReunionMovement.Common"] = new[] { "ReunionMovement.Utils", "ReunionMovement.Core" },
+            ["ReunionMovement.Base"] = new[] { "ReunionMovement.Common", "ReunionMovement.Utils", "ReunionMovement.Utilities", "ReunionMovement.Core" },
+            ["ReunionMovement.Common"] = new[] { "ReunionMovement.Utils", "ReunionMovement.Utilities", "ReunionMovement.Core" },
+            ["ReunionMovement.Utilities"] = new[] { "ReunionMovement.Utils", "ReunionMovement.Core" },
             ["ReunionMovement.Utils"] = new[] { "ReunionMovement.Core" },
             ["ReunionMovement.Core"] = new[]
             {
