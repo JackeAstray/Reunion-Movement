@@ -1,5 +1,4 @@
 using Gear.Common;
-using Gear.Framework.Modules;
 using Gear.Utilities;
 using Gear.Framework.Runtime.Base;
 using Cysharp.Threading.Tasks;
@@ -87,8 +86,8 @@ namespace Gear.Framework.Runtime
             GameEntryResolver.Refresh();
             GameEngine.ResetStaticState();
 
-            // MonoBehaviour 单例的复位清单在 Utils 程序集内维护（见 SingletonResets）
-            SingletonResets.ResetAll();
+            // MonoBehaviour 单例的复位由 Modules 程序集自己的
+            // [RuntimeInitializeOnLoadMethod(SubsystemRegistration)] 完成（见 SingletonResets）。
         }
 
         /// <summary>
@@ -254,8 +253,9 @@ namespace Gear.Framework.Runtime
         /// </summary>
         private static async UniTask InitializeEngineAsync()
         {
-            // 启动早期启用全局错误捕获（崩溃日志落盘 + 可选上报），幂等
-            ErrorReporter.Initialize();
+            // 启动早期启用全局错误捕获（崩溃日志落盘 + 可选上报），幂等。
+            // ErrorReporter 在 Modules 程序集里注册到 Base 的桥，Runtime 不直接引用 Modules。
+            ErrorReportingBridge.TryInitialize();
 
             // 若上次失败残留了 driver，先清理，避免重复 Driver
             if (driverGo != null)

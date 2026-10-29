@@ -812,7 +812,7 @@ namespace Gear.Framework.Modules
         {
             try
             {
-                if (SingletonMgr<NetworkMgr>.IsInitialized)
+                if (NetworkMgr.IsInitialized)
                 {
                     NetworkMgr.Instance.AddChannel(channel);
                 }
@@ -827,7 +827,7 @@ namespace Gear.Framework.Modules
         {
             try
             {
-                if (SingletonMgr<NetworkMgr>.IsInitialized)
+                if (NetworkMgr.IsInitialized)
                 {
                     NetworkMgr.Instance.ScheduleRemove(channel);
                 }

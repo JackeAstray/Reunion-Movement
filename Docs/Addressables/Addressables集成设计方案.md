@@ -276,15 +276,15 @@ namespace Gear.Framework.Runtime.Resources
 
 | 系统/文件 | 改造点 | 工作量 |
 | --- | --- | --- |
-| `Core/System/ResourcesSystem/ResourcesSystem.cs` | 删除 `#region Addressables 集成`（4 方法迁至 AddressableSystem），保留 Resources 职责 | 小 |
-| `Core/StartGame.cs` | `CreateModules()` 插入 `AddressableSystem`；`OnGameStartAsync` 前加 `AddressableSystem.InitAsync` | 小 |
+| `Framework/Runtime/System/ResourcesSystem/ResourcesSystem.cs` | 删除 `#region Addressables 集成`（4 方法迁至 AddressableSystem），保留 Resources 职责 | 小 |
+| `Framework/Runtime/StartGame.cs` | `CreateModules()` 插入 `AddressableSystem`；`OnGameStartAsync` 前加 `AddressableSystem.InitAsync` | 小 |
 | `Common/Config/Config.cs` + `Common/Config/GameConfig.cs` | 新增 `enableHotUpdate`（唯一开关，派生 `AddressablesMode` 为 Remote/Off）、`remoteBundleUrl`、`remoteCatalogUrl` | 小 |
-| `Core/System/UISystem/UISystem.cs` | UI Prefab 加载走 `AddressableSystem.LoadAssetAsync`（`Config.UIPath` 前缀），失败降级 Resources | 中 |
-| `Core/System/SoundSystem/` | 音频加载走 Addressables（Remote_Sounds），预载常用音效 | 中 |
-| `Core/System/SceneSystem/` | `LoadScene` 增加 Addressable 模式（Remote_Scenes），保留原有加载路径 | 中 |
-| `Core/System/UIToolkitSystem/` | UXML/USS 走 Addressables（可选，晚一期） | 小 |
-| `Utils/Download/DownloadMgr.cs` | **不改**——职责边界保持（见 §7.5） | 无 |
-| `Utils/ObjectPool/` | 池资源源改为 `AddressableSystem.InstantiateAsync` | 小 |
+| `Framework/Runtime/System/UISystem/UISystem.cs` | UI Prefab 加载走 `AddressableSystem.LoadAssetAsync`（`Config.UIPath` 前缀），失败降级 Resources | 中 |
+| `Framework/Runtime/System/SoundSystem/` | 音频加载走 Addressables（Remote_Sounds），预载常用音效 | 中 |
+| `Framework/Runtime/System/SceneSystem/` | `LoadScene` 增加 Addressable 模式（Remote_Scenes），保留原有加载路径 | 中 |
+| `Framework/Runtime/System/UIToolkitSystem/` | UXML/USS 走 Addressables（可选，晚一期） | 小 |
+| `Framework/Modules/Download/DownloadMgr.cs` | **不改**——职责边界保持（见 §7.5） | 无 |
+| `Framework/Modules/ObjectPool/` | 池资源源改为 `AddressableSystem.InstantiateAsync` | 小 |
 
 ### 7.1 UISystem 改造示意
 ```csharp
@@ -384,10 +384,10 @@ Bootstrap → GameEngine
 | 交付物 | 类型 | 归属 |
 | --- | --- | --- |
 | 本设计文档 | 文档 | Docs/Addressables/ |
-| `AddressableSystem.cs` | 运行时 | Core/System/AddressableSystem/ |
-| `AddressableKeys.cs` | 运行时 | Core/System/AddressableSystem/ |
+| `AddressableSystem.cs` | 运行时 | Framework/Runtime/System/AddressableSystem/ |
+| `AddressableKeys.cs` | 运行时 | Framework/Runtime/System/AddressableSystem/ |
 | `AddressablesSetup.cs` | Editor | Editor/Addressables/ |
 | `AddressablesBuildWindow.cs` | Editor | Editor/Addressables/ |
 | `AddressablesDeployReport.cs` | Editor | Editor/Addressables/ |
-| `GameConfig` 字段扩展 | 配置 | Core/GameConfig.cs + Config.cs |
-| `StartGame` 模块注册 | 集成 | Core/StartGame.cs |
+| `GameConfig` 字段扩展 | 配置 | `Common/Config/GameConfig.cs` + `Common/Config/Config.cs` |
+| `StartGame` 模块注册 | 集成 | Framework/Runtime/StartGame.cs |

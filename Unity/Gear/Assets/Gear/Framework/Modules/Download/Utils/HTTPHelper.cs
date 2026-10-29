@@ -27,9 +27,9 @@ namespace Gear.Framework.Modules.Download
     }
 
     /// <summary>
-    /// HTTP请求帮助类 —— 文件下载体系（Utils/Download）的底层请求封装。
-    /// 与通用业务请求体系（Utils/Http 的 HttpMgr/UnityHttpService）分工不同，超时与错误约定统一收口于
-    /// Gear.Common.Util.HttpDefaults。错误约定：不抛异常，通过 didError 标记表达。
+    /// HTTP请求帮助类 —— 文件下载体系（Framework/Modules/Download）的底层请求封装。
+    /// 与通用业务请求体系（Framework/Modules/Http 的 HttpMgr/UnityHttpService）分工不同，超时与错误约定统一收口于
+    /// Gear.Framework.Modules.HttpDefaults。错误约定：不抛异常，通过 didError 标记表达。
     /// </summary>
     public static class HTTPHelper
     {

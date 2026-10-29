@@ -9,6 +9,7 @@
         "Gear.Framework.Runtime",
         "Gear.GenerateScript.AutoScripts",
         "Gear.Toolbox.Editor",
+        "Gear.Editor.Shared",
         "UniTask",
         "UniTask.Addressables",
         "UnityEngine.UI",

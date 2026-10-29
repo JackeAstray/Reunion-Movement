@@ -64,7 +64,7 @@ namespace Gear.Framework.Runtime
                 }
 
                 // 同一类型的两个不同实例：单例写法下不该出现，但构造函数是 public 的模块
-                // （如 TimerMgr）可以 new 出来。只按实例判重会漏掉这种情况，
+                // （如手写的普通 C# 模块）可以 new 出来。只按实例判重会漏掉这种情况，
                 // 结果是同一个类型被 Init/Update 两次。
                 for (int j = 0; j < nodes.Count; j++)
                 {

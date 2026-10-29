@@ -15,7 +15,7 @@ namespace Gear.Framework.Modules.Http
         /// <summary>
         /// 默认请求超时（秒）。UnityWebRequest.timeout 默认为 0（永不超时），
         /// 服务器无响应时请求会永久挂起，故未显式设置超时时使用此默认值。
-        /// 约定收口于 Gear.Common.Util.HttpDefaults（与 Utils/Download 下载体系共享）。
+        /// 约定收口于 Gear.Framework.Modules.HttpDefaults（与 Framework/Modules/Download 下载体系共享）。
         /// </summary>
         public const int DefaultTimeoutSeconds = HttpDefaults.DefaultRequestTimeoutSeconds;
 

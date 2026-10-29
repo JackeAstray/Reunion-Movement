@@ -1,6 +1,6 @@
 {
     "name": "Gear.Framework.Modules.ColliderUtil.Editor",
-    "rootNamespace": "Gear.Common.Util.Editor",
+    "rootNamespace": "Gear.EditorTools",
     "references": [
         "Gear.Framework.Modules",
         "Gear.Utilities",

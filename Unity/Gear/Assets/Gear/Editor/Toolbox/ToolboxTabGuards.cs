@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Gear.EditorTools.Toolbox
 {
     /// <summary>
-    /// 守卫：把 CI 里跑的五条规则搬到编辑器里，就地看结果。
+    /// 守卫：把 CI 里跑的六条规则搬到编辑器里，就地看结果。
     /// 规则实现只有一份（ArchitectureGuard），这里不复制逻辑，只负责展示。
     /// </summary>
     public sealed partial class GearToolboxWindow
@@ -25,7 +25,7 @@ namespace Gear.EditorTools.Toolbox
         private void DrawGuardsTab()
         {
             SectionHeader("架构守卫",
-                "五条规则与 CI / EditMode 测试里跑的是同一份实现（ArchitectureGuard）。这里只是换个地方显示。");
+                "六条规则与 CI / EditMode 测试里跑的是同一份实现（ArchitectureGuard）。这里只是换个地方显示。");
 
             using (new EditorGUILayout.HorizontalScope())
             {
@@ -105,6 +105,7 @@ namespace Gear.EditorTools.Toolbox
             IList<string> fileSizeOffenders = new List<string>();
             IList<string> metaOffenders = new List<string>();
             IList<string> instanceOffenders = new List<string>();
+            IList<string> legacyOffenders = new List<string>();
 
             guardResults.Add(new GuardResult("单文件行数",
                 "新文件 ≤ " + ArchitectureGuard.MaxLines + " 行；已登记基线的文件只能变小。",
@@ -115,7 +116,7 @@ namespace Gear.EditorTools.Toolbox
                 ArchitectureGuard.CheckMetaFiles(out metaOffenders), metaOffenders));
 
             guardResults.Add(new GuardResult("asmdef 依赖方向",
-                "Base → Common → Utils → Core 单向，上层不能被下层引用。",
+                "Base → Common → Utilities → Modules → Runtime 单向，上层不能被下层引用。",
                 ArchitectureGuard.CheckAssemblyLayers(), null));
 
             guardResults.Add(new GuardResult(".Instance 使用点",
@@ -125,6 +126,10 @@ namespace Gear.EditorTools.Toolbox
             guardResults.Add(new GuardResult("模块顺序声明",
                 "每个 ICustomSystem 实现都要写 [ModuleOrder]，否则初始化顺序退化成书写顺序。",
                 ArchitectureGuard.CheckModuleOrder(), null));
+
+            guardResults.Add(new GuardResult("旧命名残留",
+                "代码、模板与文档里不能再出现改名前的程序集名或目录路径。",
+                ArchitectureGuard.CheckLegacyNames(out legacyOffenders), legacyOffenders));
 
             guardsRan = true;
             Repaint();

@@ -7,9 +7,9 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <AssemblyName>HeadlessCheck</AssemblyName>
-    <RootNamespace>ReunionMovement.HeadlessCheck</RootNamespace>
+    <RootNamespace>Gear.HeadlessCheck</RootNamespace>
     <!-- 这是一个独立于 Unity 的自检工具：编译期不引用任何 Unity 程序集，
-         所有框架类型都通过反射从 Unity/ReunionMovement/Temp/bin/Debug 加载。 -->
+         所有框架类型都通过反射从 Unity/Gear/Temp/bin/Debug 加载。 -->
     <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>

@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-using Gear.Common;
 namespace Gear.Example
 {
     /// <summary>

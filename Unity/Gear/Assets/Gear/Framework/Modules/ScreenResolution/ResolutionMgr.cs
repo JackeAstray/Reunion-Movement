@@ -5,16 +5,34 @@ using UnityEngine.UI;
 using System.Linq;
 
 using Gear.Common;
+using Gear.Framework.Runtime.Base;
 using Gear.Utilities;
 namespace Gear.Framework.Modules
 {
     /// <summary>
     /// 分辨率管理
     /// </summary>
-    public class ResolutionMgr : SingletonMgr<ResolutionMgr>
+    public class ResolutionMgr : SingletonMgr<ResolutionMgr>, IResolutionApplier
     {
         /// <summary>分辨率/纵横比为设备级全局设置，保持跨场景存活</summary>
         protected override bool IsPersistentAcrossScenes => true;
+
+        protected override void Awake()
+        {
+            base.Awake();
+            // 重复实例会在 base.Awake 里被销毁，不能把即将销毁的对象登记为当前实现者。
+            if (ReferenceEquals(Instance, this))
+            {
+                // GameOption 通过 Base 的桥取实现者；Runtime 不直接引用本程序集。
+                ResolutionBridge.Register(this);
+            }
+        }
+
+        protected override void OnDestroy()
+        {
+            ResolutionBridge.Unregister(this);
+            base.OnDestroy();
+        }
 
         public enum AspectRatio
         {

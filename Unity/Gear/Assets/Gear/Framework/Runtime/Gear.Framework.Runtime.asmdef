@@ -4,7 +4,6 @@
     "references": [
         "Gear.Base",
         "Gear.Common",
-        "Gear.Framework.Modules",
         "Gear.Utilities",
         "Gear.GenerateScript.AutoScripts",
         "UniTask",

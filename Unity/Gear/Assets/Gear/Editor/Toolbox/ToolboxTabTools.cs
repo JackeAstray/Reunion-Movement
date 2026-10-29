@@ -47,19 +47,19 @@ namespace Gear.EditorTools.Toolbox
                     new ToolButton("窗口文档", () => OpenDocumentation("03-新增一个窗口.md")));
             }
 
-            SectionHeader("扩展模块", "复制模板 → 保存到 Core/System → 在 StartGame.CreateModules() 显式注册。工具箱不会自动改启动列表。");
+            SectionHeader("扩展模块", "复制模板 → 保存到 Framework/Runtime/System → 在 StartGame.CreateModules() 显式注册。工具箱不会自动改启动列表。");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 EditorGUILayout.LabelField("模板：Gear.Framework.Runtime.Custom.CustomSystem", EditorStyles.boldLabel);
                 EditorGUILayout.LabelField(
-                    "保存为 Core/System/CustomSystem/CustomSystem.cs，沿用 Gear.Framework.Runtime 程序集；不要放进无 asmdef 的 Assets 根目录。",
+                    "保存为 Framework/Runtime/System/CustomSystem/CustomSystem.cs，沿用 Gear.Framework.Runtime 程序集；不要放进无 asmdef 的 Assets 根目录。",
                     EditorStyles.wordWrappedMiniLabel);
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     if (GUILayout.Button("复制模块模板")) CopyModuleTemplate();
-                    if (GUILayout.Button("定位注册入口")) SelectAsset(AssetRoot + "/Core/StartGame.cs");
-                    if (GUILayout.Button("定位 Core 目录")) PingFolder(AssetRoot + "/Core");
+                    if (GUILayout.Button("定位注册入口")) SelectAsset(AssetRoot + "/Framework/Runtime/StartGame.cs");
+                    if (GUILayout.Button("定位 Runtime/System")) PingFolder(AssetRoot + "/Framework/Runtime/System");
                     if (GUILayout.Button("打开新增系统文档")) OpenDocumentation("02-新增一个系统.md");
                 }
 

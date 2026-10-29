@@ -2,6 +2,7 @@
 using UnityEngine;
 
 using Gear.Common;
+using Gear.Framework.Runtime.Base;
 using Gear.Utilities;
 namespace Gear.Framework.Modules
 {
@@ -11,10 +12,33 @@ namespace Gear.Framework.Modules
     /// FPS 采样单一权威：FPSCounter 等显示组件直接从 Instance.CurrentFps 读取，不再各自计数。
     /// 注意：独立 1s 节流轮询，属于监控工具（与 ScreenLogger 同类），刻意不接入 GameEngine 模块调度。
     /// </summary>
-    public class PerformanceMonitor : SingletonMgr<PerformanceMonitor>
+    public class PerformanceMonitor : SingletonMgr<PerformanceMonitor>, IPerformanceStats
     {
         /// <summary>跨场景存活（采样统计不因切场景重置）</summary>
         protected override bool IsPersistentAcrossScenes => true;
+
+        protected override void Awake()
+        {
+            base.Awake();
+            if (ReferenceEquals(Instance, this))
+            {
+                // Runtime 的诊断命令通过 Base 的桥读指标，不直接引用 Modules。
+                PerformanceStatsBridge.Register(this);
+            }
+        }
+
+        protected override void OnDestroy()
+        {
+            PerformanceStatsBridge.Unregister(this);
+            base.OnDestroy();
+        }
+
+        /// <summary>进入 Play 时注册按需创建工厂（不创建对象），交由 Runtime 的诊断命令使用。</summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void RegisterBridgeOnPlay()
+        {
+            PerformanceStatsBridge.Resolve = () => Instance;
+        }
 
         [Header("告警阈值")]
         [Tooltip("低于此 FPS 触发低帧率告警")]

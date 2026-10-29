@@ -86,5 +86,40 @@ namespace Gear.Tests
             Assert.AreEqual(Timer.TimerState.Running, timer.state);
             Assert.AreEqual(0f, timer.elapsed, 0.001f);
         }
+
+        [Test]
+        public void Manager_Ticks_Timers_Through_Explicit_Update()
+        {
+            var manager = TimerMgr.Instance;
+            try
+            {
+                bool completed = false;
+                var timer = manager.CreateTimer(1f, isCountingDown: true);
+                timer.OnCompleted += () => completed = true;
+                timer.Start();
+
+                manager.Tick(0.5f);
+                Assert.IsFalse(completed);
+
+                manager.Tick(0.6f);
+                Assert.IsTrue(completed, "纯 C# TimerMgr 应能通过 Tick 推进计时器");
+            }
+            finally
+            {
+                manager.CancelAllTimers();
+                TimerMgr.ResetStatics();
+            }
+        }
+
+        [Test]
+        public void Manager_ResetStatics_Creates_New_Instance()
+        {
+            var first = TimerMgr.Instance;
+            TimerMgr.ResetStatics();
+            var second = TimerMgr.Instance;
+
+            Assert.AreNotSame(first, second, "ResetStatics 必须换掉纯 C# 单例，避免跨 Play 会话残留计时器");
+            TimerMgr.ResetStatics();
+        }
     }
 }

@@ -1,11 +1,18 @@
 using NUnit.Framework;
 using Gear.Editor.Guards;
+using Gear.Editor.Shared;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Xml.Linq;
 
 namespace Gear.Tests
 {
     /// <summary>
     /// 把架构守卫接入测试套件：CI 跑 EditMode 测试时，这些规则自动生效。
-    /// 拆成三个用例而不是一个 <c>RunAll</c>，是为了失败时能直接看出是哪条规则挂了。
+    /// 拆成多个用例而不是一个 <c>RunAll</c>，是为了失败时能直接看出是哪条规则挂了。
     /// </summary>
     public class ArchitectureGuardTests
     {
@@ -49,7 +56,56 @@ namespace Gear.Tests
         {
             Assert.IsTrue(
                 ArchitectureGuard.CheckAssemblyLayers(),
-                "asmdef 依赖方向颠倒。分层约定：Base → Common → Utils → Core，上层不能反过来被下层引用。");
+                "asmdef 依赖方向颠倒。分层约定：Base → Common → Utilities → Modules → Runtime，上层不能反过来被下层引用。");
+        }
+
+        [Test]
+        public void LegacyNames_HaveNoResidue()
+        {
+            Assert.IsTrue(
+                ArchitectureGuard.CheckLegacyNames(),
+                "代码、模板或随包文档里还有改名前的旧程序集名/旧目录路径。"
+                + "请改成当前的 Gear.Framework.Runtime / Framework/Runtime/System 等命名。");
+        }
+
+        [Test]
+        public void LinkXml_PreservedTypes_Exist_In_Declared_Assembly()
+        {
+            string path = GearPaths.InFramework("link.xml");
+            Assert.IsTrue(File.Exists(path), "link.xml 缺失：" + path);
+
+            var missing = new List<string>();
+            XDocument document = XDocument.Load(path);
+            foreach (XElement assemblyElement in document.Root.Elements("assembly"))
+            {
+                string assemblyName = (string)assemblyElement.Attribute("fullname");
+                Assembly assembly = AppDomain.CurrentDomain.GetAssemblies()
+                    .FirstOrDefault(a => a.GetName().Name == assemblyName);
+                if (assembly == null)
+                {
+                    try { assembly = Assembly.Load(assemblyName); }
+                    catch { /* 交给下面的报告 */ }
+                }
+
+                if (assembly == null)
+                {
+                    // 整程序集 preserve=all 没有类型条目，不能因为没被加载就判失败
+                    if (!assemblyElement.Elements("type").Any()) continue;
+                    missing.Add($"程序集未加载：{assemblyName}");
+                    continue;
+                }
+
+                foreach (XElement typeElement in assemblyElement.Elements("type"))
+                {
+                    string typeName = (string)typeElement.Attribute("fullname");
+                    if (assembly.GetType(typeName, throwOnError: false) == null)
+                    {
+                        missing.Add($"{typeName} 不在 {assemblyName} 程序集里（link.xml 写错程序集）");
+                    }
+                }
+            }
+
+            CollectionAssert.IsEmpty(missing, string.Join("\n", missing));
         }
     }
 }

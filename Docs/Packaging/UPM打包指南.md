@@ -74,7 +74,7 @@ com.jackeastray.gear/
 ├── README.md
 ├── CHANGELOG.md
 ├── LICENSE.md
-├── Common/ Core/ Utils/ UI/ GenerateScript/ Resources/ Plugins/ 3rd/
+├── Common/ Framework/ Utilities/ UI/ GenerateScript/ Resources/ Plugins/ 3rd/
 ├── Editor/
 │   ├── Shared/GearPaths.cs       # 框架根解析
 │   ├── Toolbox/
@@ -148,7 +148,7 @@ public class MyGameEntry : GameEntry
 
 ## 5. 包安装模式下的行为
 
-- `GearPaths` 用 `Gear.Core.asmdef` 反查根目录，兼容 `Assets/Gear` 与
+- `GearPaths` 用 `Framework/Runtime/Gear.Framework.Runtime.asmdef` 反查根目录，兼容 `Assets/Gear` 与
   `Packages/com.jackeastray.gear`。
 - 读框架资源用 `InFramework`；写生成物用 `InWritable`。包安装时写入
   `Assets/GearGenerated/`（包目录只读）。
@@ -172,7 +172,7 @@ public class MyGameEntry : GameEntry
 
 ```powershell
 # 1. 编译
-dotnet build Unity/Gear/Gear.Core.csproj
+dotnet build Unity/Gear/Gear.Framework.Runtime.csproj
 
 # 2. Unity 侧（独占工程）
 pwsh Tools/unity-verify.ps1
@@ -189,7 +189,7 @@ Unity -batchmode -quit -projectPath Unity/Gear `
 
 - `ExportRuntimeBatch` 产出 **42.6 MB / 1,855 文件**；
 - 新建 Unity 6000.3 工程，`Packages/manifest.json` 加 `file:` 包 → 打开后 **0 编译错误**；
-- 产出 `Gear.Core` / `Utils` / `GenerateScript.UI` / `DOTween.Modules` 等 30+ 程序集；
+- 产出 `Gear.Framework.Runtime` / `Gear.Framework.Modules` / `Gear.Utilities` / `GenerateScript.UI` / `DOTween.Modules` 等 30+ 程序集；
 - Addressables 2.9.1 / Input System 1.18.0 / Newtonsoft.Json 3.2.2 / uGUI 2.0.0 / URP 17.3.0 由 `package.json` 依赖自动解析；
 - 空工程探针 `GameEntryResolver.FindEntryType()` 返回 `null`（日志 `[Probe] entry=null`），
   确认包安装后不会接管宿主启动；

@@ -1,25 +1,36 @@
-﻿using Gear.Framework.Runtime;
-using Gear.Framework.Runtime.Base;
+﻿using Gear.Framework.Runtime.Base;
 using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 using Gear.Common;
-using Gear.Utilities;
 namespace Gear.Framework.Modules.Timer
 {
     /// <summary>
-    /// 通用计时器管理器 —— 同时作为 MonoBehaviour 单例（独立场景）和 ICustomSystem（GameEngine 驱动）。
+    /// 通用计时器管理器 —— 纯 C# 单例，由 GameEngine 每帧驱动（<see cref="ISystemUpdatable"/>）。
+    /// <para>
+    /// 不再依赖 MonoBehaviour Update：没有引擎时（工具/测试）可显式调用 <see cref="Tick"/>。
+    /// 这样计时器逻辑不依赖场景与 PlayerLoop，也就能在没有 Unity 的环境里验证。
+    /// </para>
     /// </summary>
     [ModuleOrder(80)]
-    public class TimerMgr : SingletonMgr<TimerMgr>, ICustomSystem, ISystemUpdatable, ISystemDisposable
+    public sealed class TimerMgr : ICustomSystem, ISystemUpdatable, ISystemDisposable
     {
-        /// <summary>
-        /// 已注册为 GameEngine 模块（StartGame.CreateModules），由持久化的引擎每帧驱动；
-        /// 必须跨场景存活，否则引擎持有的引用会失效（fake null）。
-        /// </summary>
-        protected override bool IsPersistentAcrossScenes => true;
+        private static Lazy<TimerMgr> instance = new Lazy<TimerMgr>(() => new TimerMgr());
+
+        /// <summary>单例（懒创建，不创建 GameObject）。</summary>
+        public static TimerMgr Instance => instance.Value;
+
+        /// <summary>是否已创建实例（不会触发懒加载）。</summary>
+        public static bool IsInitialized => instance.IsValueCreated;
+
+        /// <summary>复位跨 Play 会话的静态实例（关闭 Domain Reload 时由 SingletonResets 调用）。</summary>
+        public static void ResetStatics()
+        {
+            instance = new Lazy<TimerMgr>(() => new TimerMgr());
+        }
+
+        private TimerMgr() { }
 
         private readonly List<Timer> timers = new List<Timer>();
         // 复用快照/待移除缓冲：防止 Tick 回调内调用 RemoveTimer/CancelAllTimers
@@ -39,16 +50,17 @@ namespace Gear.Framework.Modules.Timer
         }
 
         /// <summary>
-        /// GameEngine 驱动的 Update（与 MonoBehaviour Update 逻辑相同，避免双重调用）
+        /// GameEngine 驱动入口。logicTime 受 timeScale 影响，与旧版 MonoBehaviour.Update 语义一致。
         /// </summary>
         void ISystemUpdatable.Update(float logicTime, float realTime)
         {
-            // 双驱动防护：引擎驱动的模块实例必须与单例一致，否则两个实例会各自 Tick
-            // 同一份计时器列表导致双倍速（SingletonMgr 保证唯一实例，此校验防御异常装配场景）
-            if (ReferenceEquals(this, Instance))
-            {
-                TickTimers(logicTime);
-            }
+            TickTimers(logicTime);
+        }
+
+        /// <summary>手动推进计时器（无引擎的工具/测试场景使用；正常游戏由 GameEngine 驱动）。</summary>
+        public void Tick(float deltaTime)
+        {
+            TickTimers(deltaTime);
         }
 
         public void Clear()
@@ -157,21 +169,5 @@ namespace Gear.Framework.Modules.Timer
             }
         }
 
-        /// <summary>MonoBehaviour Update（独立场景兜底）</summary>
-        private void Update()
-        {
-            // 仅在 GameEngine 未运行时使用 MonoBehaviour Update 驱动
-            // GameEngine 运行时会通过 ISystemUpdatable.Update 驱动，避免双重调用
-            if (!ModuleRuntime.IsEngineRunning)
-            {
-                TickTimers(Time.deltaTime);
-            }
-        }
-
-        protected override void OnDestroy()
-        {
-            CancelAllTimers();
-            base.OnDestroy();
-        }
     }
 }

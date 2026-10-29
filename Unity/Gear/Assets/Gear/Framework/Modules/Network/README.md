@@ -5,7 +5,7 @@
 ## 目录结构
 
 ```text
-Utils/Network/
+Framework/Modules/Network/
 ├── Base/           INetworkChannel / INetworkClientChannel / INetworkServerChannel / INetworkMessageCodec
 ├── Codec/          帧编解码器（MessageId / LengthPrefixed / Passthrough）+ 字节流组装器
 │                   + CompressedCodec（Deflate 压缩）/ EncryptedCodec（Encrypt-then-MAC 加密）

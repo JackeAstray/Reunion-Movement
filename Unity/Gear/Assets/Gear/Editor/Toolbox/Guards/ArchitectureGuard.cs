@@ -15,7 +15,10 @@ namespace Gear.Editor.Guards
     /// <list type="number">
     /// <item>单文件行数超过阈值（巨型类重生预警）</item>
     /// <item>源文件缺少 .meta（移动文件时最容易犯、后果最隐蔽的错）</item>
-    /// <item>asmdef 依赖方向颠倒（Base ← Common ← Utils ← Core 只能单向）</item>
+    /// <item>asmdef 依赖方向颠倒（Base ← Common ← Utilities ← Modules ← Runtime 只能单向）</item>
+    /// <item><c>Xxx.Instance</c> 使用点超过冻结基线</item>
+    /// <item><c>ICustomSystem</c> 实现缺少 <c>[ModuleOrder]</c></item>
+    /// <item>改名 / 目录归位后的旧命名残留（源码、模板与随包文档）</item>
     /// </list>
     /// <para>CI / 命令行调用：<c>Unity -executeMethod Gear.Editor.Guards.ArchitectureGuard.RunAll -quit</c></para>
     /// </summary>
@@ -45,6 +48,18 @@ namespace Gear.Editor.Guards
             "/Samples/",
         };
 
+        /// <summary>
+        /// 改名 / 目录归位后不允许再出现的旧命名。命中任意一条即失败：
+        /// 代码、随包模板和随包文档都必须指向当前路径，否则接入者照着文档操作会找不到文件。
+        /// </summary>
+        private static readonly string[] LegacyNamePatterns =
+        {
+            @"\bGear\.Core\b",
+            @"\bGear\.Utils\b",
+            @"\bCore/(StartGame|System|Base)\b",
+            @"\bUtils/(Timer|Http|Network|Util|UI)\b",
+        };
+
         /// <summary>每层允许引用的下层白名单（未列出的层不做方向检查）。</summary>
         private static readonly Dictionary<string, string[]> ForbiddenReferences = new Dictionary<string, string[]>
         {
@@ -54,6 +69,7 @@ namespace Gear.Editor.Guards
             ["Gear.Framework.Modules"] = new[] { "Gear.Framework.Runtime" },
             ["Gear.Framework.Runtime"] = new[]
             {
+                "Gear.Framework.Modules",
                 "Gear.EditorTools",
                 "Gear.Toolbox.Editor",
                 "Gear.Tests",
@@ -83,7 +99,8 @@ namespace Gear.Editor.Guards
             bool layers = CheckAssemblyLayers();
             bool instances = CheckInstanceUsage();
             bool orders = CheckModuleOrder();
-            bool ok = sizes && metas && layers && instances && orders;
+            bool legacy = CheckLegacyNames();
+            bool ok = sizes && metas && layers && instances && orders && legacy;
 
             if (ok)
             {
@@ -352,6 +369,62 @@ namespace Gear.Editor.Guards
             var sb = new StringBuilder();
             sb.AppendLine($"[架构守卫] {missing.Count} 个 ICustomSystem 实现缺少 [ModuleOrder]：");
             foreach (string m in missing) sb.AppendLine("  " + m);
+            Debug.LogError(sb.ToString());
+            return false;
+        }
+
+        /// <summary>
+        /// 检查项 6：改名 / 目录归位后的旧命名残留。
+        /// <para>
+        /// 扫描框架目录下的源码、随包模板与随包文档。仓库根目录的 Docs/ 由 CI 的 guard-only
+        /// 作业用同一组规则检查 —— 编辑器工具只应信任 <see cref="GearPaths.Root"/>，
+        /// 不应该去猜宿主工程外部的目录结构。
+        /// </para>
+        /// </summary>
+        public static bool CheckLegacyNames() => CheckLegacyNames(out _);
+
+        /// <summary>同上，并返回残留清单（文件:行号:内容）。</summary>
+        public static bool CheckLegacyNames(out IList<string> offenders)
+        {
+            var found = new List<string>();
+            var patterns = new Regex[LegacyNamePatterns.Length];
+            for (int i = 0; i < patterns.Length; i++)
+            {
+                patterns[i] = new Regex(LegacyNamePatterns[i], RegexOptions.Compiled);
+            }
+
+            string[] extensions = { ".cs", ".md", ".txt", ".asmdef" };
+            foreach (string extension in extensions)
+            {
+                foreach (string path in EnumerateSources("*" + extension))
+                {
+                    if (IsExcluded(path)) continue;
+                    // 规则表本身写着这些旧名字，跳过自己
+                    if (path.EndsWith("/ArchitectureGuard.cs", StringComparison.Ordinal)) continue;
+
+                    string[] lines = File.ReadAllLines(path);
+                    for (int line = 0; line < lines.Length; line++)
+                    {
+                        for (int p = 0; p < patterns.Length; p++)
+                        {
+                            if (!patterns[p].IsMatch(lines[line])) continue;
+                            found.Add($"{path}:{line + 1}：{lines[line].Trim()}");
+                            break;
+                        }
+                    }
+                }
+            }
+
+            offenders = found;
+            if (found.Count == 0)
+            {
+                Debug.Log("[架构守卫] 旧命名残留检查通过");
+                return true;
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"[架构守卫] {found.Count} 处旧命名残留（当前应为 Gear.Framework.Runtime / Framework/Runtime/System 等）：");
+            foreach (string f in found) sb.AppendLine("  " + f);
             Debug.LogError(sb.ToString());
             return false;
         }

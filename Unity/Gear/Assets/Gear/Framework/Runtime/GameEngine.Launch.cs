@@ -109,7 +109,6 @@ namespace Gear.Framework.Runtime
                 // 完成
                 State = EngineState.Running;
                 IsAppPlaying = true;
-                ModuleRuntime.IsEngineRunning = true;
 
                 var elapsed = Time.realtimeSinceStartup - t0;
                 Log.Debug("[GameEngine] 初始化完成，总耗时: {0:F3}s", elapsed);
@@ -184,7 +183,6 @@ namespace Gear.Framework.Runtime
             {
                 State = EngineState.Failed;
             }
-            ModuleRuntime.IsEngineRunning = false;
             // 清理已成功初始化的模块（资源/UI/音效等），避免初始化失败后模块资源全部泄漏
             ClearModuleData();
             // 隔离订阅者异常：失败通知的订阅者抛错不应掩盖真实初始化错误

@@ -58,7 +58,6 @@ namespace Gear.Framework.Runtime
             ClearModuleData();
 
             State = EngineState.Disposed;
-            ModuleRuntime.IsEngineRunning = false;
             updatableModules.Clear();
             fixedUpdateModules.Clear();
             lateUpdateModules.Clear();

@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 
-using Gear.Common;
 namespace Gear.Example
 {
     /// <summary>

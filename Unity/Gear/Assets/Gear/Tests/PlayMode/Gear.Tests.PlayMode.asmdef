@@ -1,0 +1,23 @@
+{
+    "name": "Gear.Tests.PlayMode",
+    "rootNamespace": "Gear.Tests.PlayMode",
+    "references": [
+        "Gear.Base",
+        "Gear.Framework.Runtime",
+        "Gear.Framework.Modules",
+        "UnityEngine.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

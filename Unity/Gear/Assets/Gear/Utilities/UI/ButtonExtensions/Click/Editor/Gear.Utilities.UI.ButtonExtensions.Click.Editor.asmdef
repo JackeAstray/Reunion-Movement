@@ -1,6 +1,6 @@
 {
     "name": "Gear.Utilities.UI.ButtonExtensions.Click.Editor",
-    "rootNamespace": "Gear.UI.ButtonExtensions.Editor",
+    "rootNamespace": "Gear.EditorTools",
     "references": [
         "Gear.Utilities",
         "Gear.Common",

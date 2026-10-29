@@ -13,8 +13,9 @@
 
 ```bash
 cd Unity/Gear
-dotnet build Gear.Core.csproj -v q --nologo
-dotnet build Gear.Utils.csproj -v q --nologo
+dotnet build Gear.Framework.Runtime.csproj -v q --nologo
+# 可选：一并编译测试程序集，本工具的"顺带跑 Unity 用例"部分需要它
+dotnet build Gear.Tests.csproj -v q --nologo
 ```
 
 产物在 `Unity/Gear/Temp/bin/Debug/`，本工具从这里加载。
@@ -94,6 +95,8 @@ Unity 侧另有两个用例：在 `Assembly-CSharp` 已加载时断言返回 `St
 
 `Gear.Tests.dll` 里的用例大多不依赖 Unity。工具会加载它、按 NUnit 规则
 （`[Test]` / `[TestCase]` / `[SetUp]` / `[TearDown]`）逐条执行，**需要 Unity 的自动算 SKIP**：
+
+> 下面是某次运行的示例输出；用例数会随版本增长，以实际运行结果为准。
 
 ```
 --- Unity Test Runner 的用例（本机可跑的部分） ---
