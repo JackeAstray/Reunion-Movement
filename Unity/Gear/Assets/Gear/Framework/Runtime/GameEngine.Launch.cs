@@ -12,6 +12,37 @@ namespace Gear.Framework.Runtime
     public sealed partial class GameEngine
     {
         /// <summary>
+        /// 单个模块的初始化耗时记录（对应它那一次 <see cref="ICustomSystem.Init"/> 调用）。
+        /// 想让启动优化有的放矢，就看这里哪几项最贵。
+        /// </summary>
+        public readonly struct ModuleInitInfo
+        {
+            public ModuleInitInfo(string name, double milliseconds, long allocatedBytes)
+            {
+                Name = name;
+                Milliseconds = milliseconds;
+                AllocatedBytes = allocatedBytes;
+            }
+
+            /// <summary>模块类型名。</summary>
+            public string Name { get; }
+
+            /// <summary>Init 耗时（毫秒，含 await 期间的等待时间，即"阻塞启动"的实际代价）。</summary>
+            public double Milliseconds { get; }
+
+            /// <summary>Init 期间分配的托管内存（字节）；非编辑器中不统计，恒为 0。</summary>
+            public long AllocatedBytes { get; }
+        }
+
+        /// <summary>
+        /// 最近一次启动的逐模块耗时（按 Init 顺序）。启动前的空列表；
+        /// 重新启动会先清空。日志里也有同样内容，这里是给诊断面板/上报用的结构化版本。
+        /// </summary>
+        public IReadOnlyList<ModuleInitInfo> InitReport => initReport;
+
+        private readonly List<ModuleInitInfo> initReport = new List<ModuleInitInfo>();
+
+        /// <summary>
         /// 启动引擎 —— 完整的异步初始化流程。
         /// 返回 InitResult 表示成功或失败，可被 await。
         /// </summary>
@@ -73,6 +104,10 @@ namespace Gear.Framework.Runtime
             updatableModules.Clear();
             fixedUpdateModules.Clear();
             lateUpdateModules.Clear();
+            // 重试后列表内容与上次不同，类型索引必须重建
+            moduleIndex = null;
+            moduleIndexCount = -1;
+            initReport.Clear();
 
             // 取消链：外部 ct + 总超时 + Dispose（Dispose 中 Cancel launchCts 中断在途初始化）
             // 超时不用 new CancellationTokenSource(TimeSpan) / CancelAfter：二者依赖 System.Threading.Timer，
@@ -238,8 +273,11 @@ namespace Gear.Framework.Runtime
 
 #if UNITY_EDITOR
                 var nowMem = GC.GetTotalMemory(false);
-                Log.Debug("  Module [{0}] Init: {1:F3}s, 内存: {2} bytes", module.GetType().Name, endTime - startTime, nowMem - startMem);
+                long allocated = nowMem - startMem;
+                initReport.Add(new ModuleInitInfo(module.GetType().Name, (endTime - startTime) * 1000.0, allocated));
+                Log.Debug("  Module [{0}] Init: {1:F3}s, 内存: {2} bytes", module.GetType().Name, endTime - startTime, allocated);
 #else
+                initReport.Add(new ModuleInitInfo(module.GetType().Name, (endTime - startTime) * 1000.0, 0));
                 Log.Debug("  Module [{0}] Init: {1:F3}s", module.GetType().Name, endTime - startTime);
 #endif
             }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -201,6 +201,39 @@ namespace Gear.Framework.Modules.Timer
                 }
             }
         }
+
+        /// <summary>
+        /// 租约号：每次从对象池取出/放回都会自增。
+        /// 计时器被移除时用它确认"要回收的仍是当初那个实例"，防止重入回调里
+        /// 同一对象已被重新租出去后被误放回池子。
+        /// </summary>
+        internal int Lease { get; private set; }
+
+        /// <summary>
+        /// 归还对象池前复位：清空全部订阅者并把状态拉回 Idle。
+        /// 由 <see cref="TimerMgr"/> 调用（同程序集内部使用）。
+        /// </summary>
+        internal void ResetForPool(float newDuration, bool countingDown, bool loop, int maxLoopCount)
+        {
+            Lease++;
+            duration = Math.Max(0, newDuration);
+            isCountingDown = countingDown;
+            isLoop = loop;
+            maxLoop = maxLoopCount;
+            elapsed = 0f;
+            loopCount = 0;
+            _timeScale = 1f;
+            state = TimerState.Idle;
+            attachedTarget = null;
+            // 必须清空：否则下一次租用会触发上一个使用者的回调
+            OnCompleted = null;
+            OnLoopCompleted = null;
+            OnCancelled = null;
+            OnTick = null;
+        }
+
+        /// <summary>是否已结束、可以安全回收进对象池。</summary>
+        internal bool CanRecycle => state == TimerState.Finished || state == TimerState.Cancelled;
 
         /// <summary>
         /// 获取当前进度（0-1），0表示开始，1表示结束

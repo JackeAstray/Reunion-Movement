@@ -631,7 +631,7 @@ namespace Gear.Framework.Modules
                 object obj;
                 try
                 {
-                    obj = serializer.Deserialize(payload.ToArray(), type);
+                    obj = serializer.Deserialize(payload.AsMemory(), type);
                 }
                 catch (Exception ex)
                 {

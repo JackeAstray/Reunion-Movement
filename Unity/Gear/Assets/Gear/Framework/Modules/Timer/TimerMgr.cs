@@ -1,4 +1,4 @@
-﻿using Gear.Framework.Runtime.Base;
+using Gear.Framework.Runtime.Base;
 using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
@@ -27,6 +27,9 @@ namespace Gear.Framework.Modules.Timer
         /// <summary>复位跨 Play 会话的静态实例（关闭 Domain Reload 时由 SingletonResets 调用）。</summary>
         public static void ResetStatics()
         {
+            // 池化策略不跨 Play 会话保留：每次进入运行都从默认（关闭）开始，
+            // 避免上一次会话里打开的开关悄悄影响下一次
+            ReuseInstances = false;
             instance = new Lazy<TimerMgr>(() => new TimerMgr());
         }
 
@@ -36,7 +39,50 @@ namespace Gear.Framework.Modules.Timer
         // 复用快照/待移除缓冲：防止 Tick 回调内调用 RemoveTimer/CancelAllTimers
         // 重入修改 timers 导致遍历越界（同时保持零分配）
         private readonly List<Timer> tickSnapshot = new List<Timer>();
-        private readonly HashSet<Timer> toRemove = new HashSet<Timer>();
+        private readonly Stack<Timer> pool = new Stack<Timer>();
+
+        /// <summary>
+        /// 待移除表：Timer → 标记时的租约号。用租约号而不是纯引用，
+        /// 是因为回调里可能已经把同一个实例重新租出去（池化开启时），
+        /// 这时不能把它从 timers 里删掉、更不能放回池子。
+        /// </summary>
+        private readonly Dictionary<Timer, int> toRemove = new Dictionary<Timer, int>();
+
+        /// <summary>
+        /// 是否复用已结束的计时器实例。默认关闭。
+        /// <para>
+        /// 关闭是有意的：池化会把同一个 <see cref="Timer"/> 实例重新租给下一次调用，
+        /// 任何仍持有旧引用的代码（常见写法是 <c>timer.OnCompleted += ...</c> 之后又读
+        /// <c>timer.loopCount</c>）会静默作用到新计时器上，属于最难查的一类 bug。
+        /// 只有当确实在一帧内创建上百个短计时器、并且代码不跨租约持有引用时才建议开启。
+        /// </para>
+        /// <para>开启后归还的实例会清空全部事件订阅，所以旧回调不会误触发。</para>
+        /// </summary>
+        public static bool ReuseInstances { get; set; }
+
+        /// <summary>池上限（防止峰值后长期占用内存）。</summary>
+        private const int MaxPooledInstances = 64;
+
+        private Timer RentTimer(float duration, bool countingDown, bool loop, int maxLoop)
+        {
+            if (ReuseInstances && pool.Count > 0)
+            {
+                Timer pooled = pool.Pop();
+                pooled.ResetForPool(duration, countingDown, loop, maxLoop);
+                return pooled;
+            }
+            return new Timer(duration, countingDown, loop, maxLoop);
+        }
+
+        private void ReturnTimer(Timer timer)
+        {
+            if (!ReuseInstances || timer == null) return;
+            if (!timer.CanRecycle) return;
+            if (pool.Count >= MaxPooledInstances) return;
+            // 入池即清空订阅者：即使外部还拿着引用也不会再被回调
+            timer.ResetForPool(0f, true, false, 0);
+            pool.Push(timer);
+        }
 
         #region ICustomSystem 实现（GameEngine 驱动时使用）
 
@@ -75,7 +121,7 @@ namespace Gear.Framework.Modules.Timer
         /// </summary>
         public Timer CreateTimer(float duration, bool isCountingDown = true, bool isLoop = false, int maxLoop = 0)
         {
-            var timer = new Timer(duration, isCountingDown, isLoop, maxLoop);
+            var timer = RentTimer(duration, isCountingDown, isLoop, maxLoop);
             timers.Add(timer);
             return timer;
         }
@@ -86,7 +132,7 @@ namespace Gear.Framework.Modules.Timer
             if (timer == null) return;
             try { timer.Cancel(); }
             catch (Exception ex) { Log.Error("[TimerMgr] RemoveTimer 取消回调异常（已隔离）: {0}", ex.Message); }
-            timers.Remove(timer);
+            if (timers.Remove(timer)) ReturnTimer(timer);
         }
 
         /// <summary>取消所有计时器（逐 timer 异常隔离：单个 OnCancelled 异常不得中断全局清理与列表清空）</summary>
@@ -96,6 +142,7 @@ namespace Gear.Framework.Modules.Timer
             {
                 try { timers[i].Cancel(); }
                 catch (Exception ex) { Log.Error("[TimerMgr] CancelAllTimers 取消回调异常（已隔离）: {0}", ex.Message); }
+                ReturnTimer(timers[i]);
             }
             timers.Clear();
         }
@@ -153,18 +200,22 @@ namespace Gear.Framework.Modules.Timer
                 }
                 if (timer.state == Timer.TimerState.Finished || timer.state == Timer.TimerState.Cancelled)
                 {
-                    // HashSet 天然去重：快照中同一实例可能因回调重入被多次标记，
-                    // 原 List.Contains 在大批量同时完成时退化为 O(n²)
-                    toRemove.Add(timer);
+                    // 字典天然去重：快照中同一实例可能因回调重入被多次标记。
+                    // 记下标记时的租约号，回收时用它确认"还是当初那个实例"
+                    if (!toRemove.ContainsKey(timer)) toRemove.Add(timer, timer.Lease);
                 }
             }
 
-            // 遍历结束后统一移除（引用移除，快照外新增的计时器不受影响）
+            // 遍历结束后统一移除（快照外新增的计时器不受影响）
             if (toRemove.Count > 0)
             {
-                foreach (var timer in toRemove)
+                foreach (var pair in toRemove)
                 {
-                    timers.Remove(timer);
+                    Timer finished = pair.Key;
+                    // 池化开启时，回调可能已把这个实例重新租出去（租约号变化）：
+                    // 此时它是一条在跑的活计时器，既不能从列表里删，也不能放回池
+                    if (finished.Lease != pair.Value) continue;
+                    if (timers.Remove(finished)) ReturnTimer(finished);
                 }
             }
         }

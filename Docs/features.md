@@ -16,8 +16,8 @@
 - **WebGL 体积优化**：ImageEx Shader 变体剥离器（过渡 / 模糊 / 描边组合裁剪）。
 - **崩溃日志上报**：`ErrorReporter` 全局错误捕获（Error/Exception/Assert）+ 本地落盘（1MB 轮转）+ 同类错误聚合 + 可选 HTTP 上报。
 - **通用存档**：`SaveSystem` JSON 原子写入存档（版本字段 + 自动迁移）。
-- **性能监控**：`PerformanceMonitor` 每秒 FPS/托管内存采样 + 防抖告警。
-- **网络消息协议**：`NetworkMessageCodec` / `NetworkMessageDispatcher` 消息 ID 编解码与分发（异常隔离）。
+- **性能监控**：`PerformanceMonitor` 每秒 FPS/托管内存采样 + 防抖告警；引擎每帧循环与逐模块 Update 内置 `ProfilerMarker`（`Gear.GameEngine.*` / `Gear.Module.*`，发布包零开销），启动耗时结构化暴露在 `GameEngine.InitReport`。这些 marker 可以用 `Tools/profile-capture.ps1` 批处理采样成 `Logs/profiler/module-costs.json`（PlayMode + ProfilerRecorder，不需要开编辑器点 Profiler）；`AllocationRatchetTests` 把"每帧零托管分配"锁成会红的断言。
+- **网络消息协议**：`NetworkMessageCodec` / `NetworkMessageDispatcher` 消息 ID 编解码与分发（异常隔离）；强类型消息支持零拷贝反序列化（`INetworkSpanSerializer`，省掉每条报文的 `ToArray()` 复制）。
 - **热更状态机**：`AddressableUpdateFlow` 检查→下载→应用流程（R3 可观测，UI 可直接绑定）。
 - **Addressables 统一封装**：`AddressableSystem` 加载 / 实例化 / 场景 / 释放 / 双轨降级 / 远程更新；一键流水线（迁移→构建 Content→上传 OSS）。
 - **并发去重加载**：`SingleFlightLoader` 同 key 并发请求合并为一次（UI / 音频 / 面板接入）。

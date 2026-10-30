@@ -58,14 +58,13 @@ namespace Gear.Framework.Runtime
         /// <summary>尝试取一个已注册的模块。</summary>
         public static bool TryGet<T>(out T module) where T : class, ICustomSystem
         {
-            var all = All;
-            for (int i = 0; i < all.Count; i++)
+            // 走引擎的类型索引：精确类型 O(1)，接口/基类由引擎退化为线性扫描。
+            // 引擎未启动时直接返回 false（与原实现"空集合"语义一致）。
+            GameEngine engine = GameEngine.Current;
+            if (engine != null && engine.TryGetModule(typeof(T), out ICustomSystem found))
             {
-                if (all[i] is T match)
-                {
-                    module = match;
-                    return true;
-                }
+                module = (T)found;
+                return true;
             }
             module = null;
             return false;

@@ -497,7 +497,7 @@ namespace Gear.Framework.Modules
             {
                 try
                 {
-                    handler(serializer.Deserialize<T>(payload.ToArray()));
+                    handler(serializer.Deserialize<T>(payload.AsMemory()));
                 }
                 catch (Exception ex)
                 {

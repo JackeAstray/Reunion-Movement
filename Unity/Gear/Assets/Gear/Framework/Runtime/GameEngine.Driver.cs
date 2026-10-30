@@ -23,7 +23,10 @@ namespace Gear.Framework.Runtime
             // 一个坏订阅者不应中断帧计时与其他模块更新
             try
             {
-                UpdateSubject.OnNext(Unit.Default);
+                using (EngineProfiler.Section(EngineProfiler.SubjectDispatch))
+                {
+                    UpdateSubject.OnNext(Unit.Default);
+                }
             }
             catch (Exception ex)
             {
@@ -42,7 +45,10 @@ namespace Gear.Framework.Runtime
                 accumTime1s -= 1.0f;
                 try
                 {
-                    UpdatePer1sSubject.OnNext(Unit.Default);
+                    using (EngineProfiler.Section(EngineProfiler.SubjectDispatch))
+                    {
+                        UpdatePer1sSubject.OnNext(Unit.Default);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -54,7 +60,10 @@ namespace Gear.Framework.Runtime
                 accumTime300ms -= 0.3f;
                 try
                 {
-                    UpdatePer300msSubject.OnNext(Unit.Default);
+                    using (EngineProfiler.Section(EngineProfiler.SubjectDispatch))
+                    {
+                        UpdatePer300msSubject.OnNext(Unit.Default);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -68,27 +77,37 @@ namespace Gear.Framework.Runtime
             // 逐模块隔离异常：一个模块 Update 抛异常不中断本帧后续模块。
             updateSnapshot.Clear();
             updateSnapshot.AddRange(updatableModules);
-            for (int i = updateSnapshot.Count - 1; i >= 0; i--)
+            // 本帧开始时的"移除计数"。模块只在被移除后才会与快照不一致，
+            // 所以没有发生过移除时完全不必逐模块 Contains（每帧 n 次线性查找 → 一次 int 比较）
+            int updateEpochAtFrameStart = updatableEpoch;
+            using (EngineProfiler.Section(EngineProfiler.UpdateLoop))
             {
-                ISystemUpdatable module = updateSnapshot[i];
-                try
+                for (int i = updateSnapshot.Count - 1; i >= 0; i--)
                 {
-                    // 快照内的模块可能已被本帧更早的模块 Update 移除：跳过，防同帧双驱动
-                    if (!updatableModules.Contains(module)) continue;
-
-                    // fake-null 防护：MonoBehaviour 模块被意外销毁后引用非 null 但已失效，
-                    // `?.` 拦截不住，直接调用会抛 MissingReferenceException
-                    if (module is UnityEngine.Object unityObj && unityObj == null)
+                    ISystemUpdatable module = updateSnapshot[i];
+                    try
                     {
-                        Log.Warning("[GameEngine] 移除已销毁的 Update 模块: {0}", module.GetType().Name);
-                        updatableModules.Remove(module);
-                        continue;
+                        // 快照内的模块可能已被本帧更早的模块 Update 移除：跳过，防同帧双驱动
+                        if (updateEpochAtFrameStart != updatableEpoch && !updatableModules.Contains(module)) continue;
+
+                        // fake-null 防护：MonoBehaviour 模块被意外销毁后引用非 null 但已失效，
+                        // `?.` 拦截不住，直接调用会抛 MissingReferenceException
+                        if (module is UnityEngine.Object unityObj && unityObj == null)
+                        {
+                            Log.Warning("[GameEngine] 移除已销毁的 Update 模块: {0}", module.GetType().Name);
+                            updatableModules.Remove(module);
+                            updatableEpoch++;
+                            continue;
+                        }
+                        using (EngineProfiler.Module(module))
+                        {
+                            module.Update(deltaTime, unscaledDeltaTime);
+                        }
                     }
-                    module.Update(deltaTime, unscaledDeltaTime);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error("[GameEngine] 模块 Update 异常（已隔离）: {0}, {1}", module?.GetType().Name ?? "Unknown", ex.Message);
+                    catch (Exception ex)
+                    {
+                        Log.Error("[GameEngine] 模块 Update 异常（已隔离）: {0}, {1}", module?.GetType().Name ?? "Unknown", ex.Message);
+                    }
                 }
             }
         }
@@ -101,25 +120,33 @@ namespace Gear.Framework.Runtime
             // 快照遍历（与 OnUpdate 一致）：模块 FixedUpdate 内移除其他模块时防同帧双驱动
             fixedUpdateSnapshot.Clear();
             fixedUpdateSnapshot.AddRange(fixedUpdateModules);
-            for (int i = fixedUpdateSnapshot.Count - 1; i >= 0; i--)
+            int epochAtStepStart = fixedUpdateEpoch;
+            using (EngineProfiler.Section(EngineProfiler.FixedUpdateLoop))
             {
-                ISystemFixedUpdatable module = fixedUpdateSnapshot[i];
-                try
+                for (int i = fixedUpdateSnapshot.Count - 1; i >= 0; i--)
                 {
-                    if (!fixedUpdateModules.Contains(module)) continue;
-
-                    // fake-null 防护：MonoBehaviour 模块被意外销毁后引用非 null 但已失效
-                    if (module is UnityEngine.Object unityObj && unityObj == null)
+                    ISystemFixedUpdatable module = fixedUpdateSnapshot[i];
+                    try
                     {
-                        Log.Warning("[GameEngine] 移除已销毁的 FixedUpdate 模块: {0}", module.GetType().Name);
-                        fixedUpdateModules.Remove(module);
-                        continue;
+                        if (epochAtStepStart != fixedUpdateEpoch && !fixedUpdateModules.Contains(module)) continue;
+
+                        // fake-null 防护：MonoBehaviour 模块被意外销毁后引用非 null 但已失效
+                        if (module is UnityEngine.Object unityObj && unityObj == null)
+                        {
+                            Log.Warning("[GameEngine] 移除已销毁的 FixedUpdate 模块: {0}", module.GetType().Name);
+                            fixedUpdateModules.Remove(module);
+                            fixedUpdateEpoch++;
+                            continue;
+                        }
+                        using (EngineProfiler.Module(module))
+                        {
+                            module.FixedUpdate(fixedDeltaTime);
+                        }
                     }
-                    module.FixedUpdate(fixedDeltaTime);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error("[GameEngine] 模块 FixedUpdate 异常（已隔离）: {0}, {1}", module?.GetType().Name ?? "Unknown", ex.Message);
+                    catch (Exception ex)
+                    {
+                        Log.Error("[GameEngine] 模块 FixedUpdate 异常（已隔离）: {0}, {1}", module?.GetType().Name ?? "Unknown", ex.Message);
+                    }
                 }
             }
         }
@@ -134,25 +161,33 @@ namespace Gear.Framework.Runtime
             // 快照遍历 + 逐模块异常隔离（与 OnUpdate 策略一致）
             lateUpdateSnapshot.Clear();
             lateUpdateSnapshot.AddRange(lateUpdateModules);
-            for (int i = lateUpdateSnapshot.Count - 1; i >= 0; i--)
+            int lateEpochAtFrameStart = lateUpdateEpoch;
+            using (EngineProfiler.Section(EngineProfiler.LateUpdateLoop))
             {
-                ISystemLateUpdatable module = lateUpdateSnapshot[i];
-                try
+                for (int i = lateUpdateSnapshot.Count - 1; i >= 0; i--)
                 {
-                    if (!lateUpdateModules.Contains(module)) continue;
-
-                    // fake-null 防护：MonoBehaviour 模块被意外销毁后引用非 null 但已失效
-                    if (module is UnityEngine.Object unityObj && unityObj == null)
+                    ISystemLateUpdatable module = lateUpdateSnapshot[i];
+                    try
                     {
-                        Log.Warning("[GameEngine] 移除已销毁的 LateUpdate 模块: {0}", module.GetType().Name);
-                        lateUpdateModules.Remove(module);
-                        continue;
+                        if (lateEpochAtFrameStart != lateUpdateEpoch && !lateUpdateModules.Contains(module)) continue;
+
+                        // fake-null 防护：MonoBehaviour 模块被意外销毁后引用非 null 但已失效
+                        if (module is UnityEngine.Object unityObj && unityObj == null)
+                        {
+                            Log.Warning("[GameEngine] 移除已销毁的 LateUpdate 模块: {0}", module.GetType().Name);
+                            lateUpdateModules.Remove(module);
+                            lateUpdateEpoch++;
+                            continue;
+                        }
+                        using (EngineProfiler.Module(module))
+                        {
+                            module.LateUpdate(deltaTime, unscaledDeltaTime);
+                        }
                     }
-                    module.LateUpdate(deltaTime, unscaledDeltaTime);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error("[GameEngine] 模块 LateUpdate 异常（已隔离）: {0}, {1}", module?.GetType().Name ?? "Unknown", ex.Message);
+                    catch (Exception ex)
+                    {
+                        Log.Error("[GameEngine] 模块 LateUpdate 异常（已隔离）: {0}, {1}", module?.GetType().Name ?? "Unknown", ex.Message);
+                    }
                 }
             }
         }

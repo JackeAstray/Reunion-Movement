@@ -19,15 +19,12 @@ namespace Gear.Framework.Runtime
         /// <summary>
         /// 在已注册模块中查找第一个 <typeparamref name="T"/> 的实现（类型或接口），不存在时返回 null。
         /// 引擎层用它按接口取能力，避免直接引用具体模块类型。
+        /// 走与 <see cref="TryGetModule"/> 相同的类型索引：精确类型 O(1)，接口退化为线性扫描。
         /// </summary>
         private T FindModule<T>() where T : class
         {
             if (modules == null) return null;
-            for (int i = 0; i < modules.Count; i++)
-            {
-                if (modules[i] is T match) return match;
-            }
-            return null;
+            return TryGetModule(typeof(T), out ICustomSystem module) ? module as T : null;
         }
 
         /// <summary>需要每帧 Update 的模块（预过滤，避免空调用）</summary>
@@ -35,6 +32,69 @@ namespace Gear.Framework.Runtime
         // 更新循环快照缓冲（复用，零分配）：模块 Update 内移除其他模块时列表收缩，
         // 直接倒序遍历会把同一模块同帧驱动两次
         private readonly List<ISystemUpdatable> updateSnapshot = new List<ISystemUpdatable>();
+
+        /// <summary>
+        /// 三个更新列表的"移除计数"。驱动循环在帧开始时记录一次，
+        /// 只有计数变化过才需要逐模块做 Contains 复查（否则快照必然与列表一致）。
+        /// 因此只有"移除"要自增：新增的模块当帧不在快照里，不影响一致性判断。
+        /// </summary>
+        private int updatableEpoch;
+        private int fixedUpdateEpoch;
+        private int lateUpdateEpoch;
+
+        /// <summary>模块类型索引（快路径）：精确类型 → 模块实例，首次访问时按当前列表构建。</summary>
+        private Dictionary<Type, ICustomSystem> moduleIndex;
+
+        /// <summary>构建索引时的模块数量，用于检测列表被外部改动后重建。</summary>
+        private int moduleIndexCount = -1;
+
+        /// <summary>
+        /// 按类型取模块：精确类型命中走字典（O(1)），接口/基类退化为线性扫描（保持
+        /// "取第一个可赋值实现"的原语义）。列表可在运行期被 Add/RemoveModule 改动，
+        /// 所以用数量做失效检测，外部直接改 <see cref="Modules"/> 列表也能自愈。
+        /// </summary>
+        internal bool TryGetModule(Type type, out ICustomSystem module)
+        {
+            module = null;
+            IList<ICustomSystem> list = modules;
+            if (list == null || list.Count == 0) return false;
+
+            if (moduleIndex == null || moduleIndexCount != list.Count)
+            {
+                RebuildModuleIndex(list);
+            }
+
+            if (moduleIndex.TryGetValue(type, out module)) return true;
+
+            // 接口或基类：保持原来的"第一个可赋值者"语义
+            for (int i = 0; i < list.Count; i++)
+            {
+                ICustomSystem candidate = list[i];
+                if (candidate != null && type.IsInstanceOfType(candidate))
+                {
+                    module = candidate;
+                    return true;
+                }
+            }
+            module = null;
+            return false;
+        }
+
+        private void RebuildModuleIndex(IList<ICustomSystem> list)
+        {
+            if (moduleIndex == null) moduleIndex = new Dictionary<Type, ICustomSystem>(list.Count);
+            else moduleIndex.Clear();
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                ICustomSystem candidate = list[i];
+                if (candidate == null) continue;
+                // 同一类型重复注册时保留先注册的那个（与原线性扫描"取第一个"语义一致）
+                Type type = candidate.GetType();
+                if (!moduleIndex.ContainsKey(type)) moduleIndex.Add(type, candidate);
+            }
+            moduleIndexCount = list.Count;
+        }
 
         /// <summary>需要固定步长 FixedUpdate 的模块（预过滤，避免空调用）</summary>
         private readonly List<ISystemFixedUpdatable> fixedUpdateModules = new List<ISystemFixedUpdatable>();
@@ -94,6 +154,9 @@ namespace Gear.Framework.Runtime
             if (module is ISystemUpdatable updatable) updatableModules.Add(updatable);
             if (module is ISystemFixedUpdatable fixedUpdatable) fixedUpdateModules.Add(fixedUpdatable);
             if (module is ISystemLateUpdatable lateUpdatable) lateUpdateModules.Add(lateUpdatable);
+            // 让类型索引在下一次 Modules.Get 时重建（数量变化即失效）
+            moduleIndex = null;
+            moduleIndexCount = -1;
             Log.Debug("[GameEngine] 模块已注册: {0}", module.GetType().Name);
             return true;
         }
@@ -112,9 +175,22 @@ namespace Gear.Framework.Runtime
                 return false;
             }
 
-            if (module is ISystemUpdatable updatable) updatableModules.Remove(updatable);
-            if (module is ISystemFixedUpdatable fixedUpdatable) fixedUpdateModules.Remove(fixedUpdatable);
-            if (module is ISystemLateUpdatable lateUpdatable) lateUpdateModules.Remove(lateUpdatable);
+            if (module is ISystemUpdatable updatable)
+            {
+                if (updatableModules.Remove(updatable)) updatableEpoch++;
+            }
+            if (module is ISystemFixedUpdatable fixedUpdatable)
+            {
+                if (fixedUpdateModules.Remove(fixedUpdatable)) fixedUpdateEpoch++;
+            }
+            if (module is ISystemLateUpdatable lateUpdatable)
+            {
+                if (lateUpdateModules.Remove(lateUpdatable)) lateUpdateEpoch++;
+            }
+
+            // 让类型索引在下一次 Modules.Get 时重建
+            moduleIndex = null;
+            moduleIndexCount = -1;
 
             if (module is ISystemDisposable disposable)
             {
