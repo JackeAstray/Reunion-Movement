@@ -5,6 +5,7 @@
         "Gear.Base",
         "Gear.Framework.Runtime",
         "Gear.Framework.Modules",
+        "UniTask",
         "UnityEngine.TestRunner"
     ],
     "includePlatforms": [],
