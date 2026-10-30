@@ -3,6 +3,9 @@ name: Unity CI
 # 说明：
 #   - 需要仓库 Secrets: UNITY_LICENSE（GameCI 的 Personal License / Pro 授权文件内容）
 #     获取方式见 https://game.ci/docs/github/activation
+#   - **没有 UNITY_LICENSE 时，下面所有 Unity 作业都会 skipped**。本机验证请走
+#     unity-verify.yml（self-hosted runner，只接受 main push 与手动触发，不接受 PR，
+#     也不需要授权文件，跑的就是 Tools/unity-verify.ps1）。
 #   - EditMode 测试里已经包含「架构守卫」三个用例（超大文件 / 缺失 meta / asmdef 依赖方向），
 #     所以测试绿灯 = 守卫绿灯，不需要单独一步。
 #   - WebGL / Windows 构建默认只在手动触发和 main 分支上跑；Android 只在手动触发，
@@ -268,6 +271,7 @@ jobs:
           exit $missing
 
       - name: 单文件行数（新文件不得超过 600 行）
+        if: ${{ !cancelled() }}
         run: |
           set -euo pipefail
           cd Unity/Gear
@@ -294,6 +298,7 @@ jobs:
           exit $fail
 
       - name: asmdef 依赖方向
+        if: ${{ !cancelled() }}
         run: |
           set -euo pipefail
           fail=0
@@ -316,15 +321,19 @@ jobs:
           exit $fail
 
       - name: .Instance 使用点只减不增
+        if: ${{ !cancelled() }}
         run: |
           set -euo pipefail
           cd Unity/Gear
           baseline="Assets/Gear/Editor/Toolbox/Guards/instance-usage-baseline.txt"
           fail=0
+          # 口径与 ArchitectureGuard.InstanceCheckExcludedSegments 一致：Tests / Example 不参与。
+          # 测试不启动引擎、示例代码本身就是演示，两者继续用 Instance 是刻意保留的（见基线文件注释）。
           while read -r name limit; do
             case "$name" in ''|\#*) continue ;; esac
             actual=$(grep -rho --include='*.cs' --exclude-dir=Plugins --exclude-dir=3rd \
                        --exclude-dir=GenerateScript --exclude-dir=Examples --exclude-dir=Samples \
+                       --exclude-dir=Tests --exclude-dir=Example \
                        "\\b${name}\\.Instance\\b" Assets/Gear 2>/dev/null | wc -l | tr -d ' \r')
             if [ -z "$actual" ] || [ -z "$limit" ]; then
               echo "::error::基线行解析失败：name=[$name] actual=[$actual] limit=[$limit]"
@@ -341,6 +350,7 @@ jobs:
           exit $fail
 
       - name: ICustomSystem 必须声明 ModuleOrder
+        if: ${{ !cancelled() }}
         run: |
           set -euo pipefail
           cd Unity/Gear
@@ -357,6 +367,7 @@ jobs:
           exit $fail
 
       - name: 旧命名残留（改名 / 目录归位）
+        if: ${{ !cancelled() }}
         run: |
           set -euo pipefail
           pattern='\bGear\.(Core|Utils)\b|\bCore/(StartGame|System|Base)\b|\bUtils/(Timer|Http|Network|Util|UI)\b'

@@ -49,6 +49,25 @@ namespace Gear.Editor.Guards
         };
 
         /// <summary>
+        /// <c>.Instance</c> 棘轮的额外排除：测试与示例不参与运行时写法约束。
+        /// <para>
+        /// 这条规则的用途是拦住"运行时新代码又去直取单例"，而测试不启动引擎（必须用 Instance）、
+        /// 示例代码本身就是演示（见 instance-usage-baseline.txt 的"刻意保留"清单）。
+        /// 把它们计入会让基线只能靠改数字维持，反而掩盖真正的新增。
+        /// </para>
+        /// <para>
+        /// 单独一份而不是塞进 <see cref="ExcludedSegments"/>：后者的注释写明只针对行数检查，
+        /// 而行数与旧命名检查应当覆盖随包分发的示例代码。
+        /// CI 的同名步骤用同一组排除目录（--exclude-dir=Tests --exclude-dir=Example），改这里请同步。
+        /// </para>
+        /// </summary>
+        private static readonly string[] InstanceCheckExcludedSegments =
+        {
+            "/Tests/",
+            "/Example/",
+        };
+
+        /// <summary>
         /// 改名 / 目录归位后不允许再出现的旧命名。命中任意一条即失败：
         /// 代码、随包模板和随包文档都必须指向当前路径，否则接入者照着文档操作会找不到文件。
         /// </summary>
@@ -290,7 +309,11 @@ namespace Gear.Editor.Guards
         /// </summary>
         public static bool CheckInstanceUsage() => CheckInstanceUsage(out _);
 
-        /// <summary>同上，并返回超基线的系统清单。</summary>
+        /// <summary>
+        /// 同上，并返回超基线的系统清单。
+        /// <para>统计口径排除测试与示例（<see cref="InstanceCheckExcludedSegments"/>）：它们不参与运行时写法约束；
+        /// CI 的同名步骤使用同一组排除目录。</para>
+        /// </summary>
         public static bool CheckInstanceUsage(out IList<string> offenders)
         {
             Dictionary<string, int> baseline = LoadCountBaseline(InstanceBaselinePath);
@@ -303,7 +326,7 @@ namespace Gear.Editor.Guards
 
             var found = new List<string>();
             var reduced = new List<string>();
-            string[] files = GetCheckedSourceFiles();
+            string[] files = GetInstanceCheckedSourceFiles();
 
             foreach (KeyValuePair<string, int> pair in baseline)
             {
@@ -465,6 +488,28 @@ namespace Gear.Editor.Guards
                 list.Add(path);
             }
             return list.ToArray();
+        }
+
+        /// <summary>在 <see cref="GetCheckedSourceFiles"/> 之上再排除测试与示例（.Instance 棘轮专用）。</summary>
+        private static string[] GetInstanceCheckedSourceFiles()
+        {
+            var list = new List<string>();
+            foreach (string path in GetCheckedSourceFiles())
+            {
+                if (IsInstanceCheckExcluded(path)) continue;
+                list.Add(path);
+            }
+            return list.ToArray();
+        }
+
+        /// <summary>命中 <see cref="InstanceCheckExcludedSegments"/> 任一段即排除（不区分大小写）。</summary>
+        private static bool IsInstanceCheckExcluded(string path)
+        {
+            foreach (string segment in InstanceCheckExcludedSegments)
+            {
+                if (path.IndexOf(segment, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            }
+            return false;
         }
 
         /// <summary>把 GUID 形式的 asmdef 引用还原成程序集名。</summary>

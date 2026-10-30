@@ -1,0 +1,107 @@
+name: Unity Verify（自托管）
+
+# ⚠️ 安全边界（先读这段再改触发条件）
+#
+# GitHub 官方不建议在公共仓库使用自托管 runner：任何人都能 fork 并开 PR，
+# 只要工作流由 pull_request 触发，未经审计的第三方代码就会在**你的机器**上执行。
+#
+# 所以本工作流刻意**只接受 push 到 main 与手动触发（workflow_dispatch）**，
+# 不接受 pull_request / pull_request_target：
+#   - fork 的 PR 永远不会自动跑到这台机器上；
+#   - 能触发执行的只剩"有权限往 main 推代码的人"（你与协作者），
+#     这与"代码已被合入主干"的信任边界一致。
+#   - PR 阶段的快速检查由 unity-ci.yml 的 guard-only 作业在 GitHub hosted runner 上跑
+#     （不碰这台机器），分工是：PR = 静态守卫，main = 全量 Unity 验证。
+#
+# 仍然建议的加固（按性价比排序）：
+#   1. 用专用机器或虚拟机当 runner，不要用存有私钥/日常开发的那台；
+#   2. runner 用低权限本地账户运行（非管理员），且不在这台机器上登录有价值的账号；
+#   3. 用 `config.cmd --ephemeral` 注册：每个作业跑完自动注销，下次运行前重新配置，
+#      降低"被攻陷后长期驻留"的风险；
+#   4. 不要给这台 runner 挂任何仓库 Secret —— 本工作流一个都不需要
+#      （Unity 用的是本机已激活的授权）。
+#
+# 若你希望完全遵循 GitHub 的建议改用 hosted runner：删掉本文件，
+# 在 unity-ci.yml 那条 GameCI 路径上配好 UNITY_LICENSE 即可
+# （前提是 unityci/editor 有 6000.3.10f1 的镜像，没有就得自建镜像）。
+#
+# 一次性前置：
+#   - 已在本机激活 Unity 6000.3.10f1（runner 以当前登录用户身份运行 run.cmd，
+#     **不要 install 成 Windows 服务**：授权跟用户会话走，服务账户下通常未激活）；
+#   - 已安装 PowerShell 7（pwsh）与 git-lfs（checkout 用 LFS 拉取字体等资源）；
+#   - 下方 env.UNITY_EDITOR 指向本机 Unity.exe。
+#
+# 运行注意：
+#   - 批量模式要求独占工程；跑之前别在这台机器上开着同一工程的 Unity 编辑器，
+#     否则脚本会检测到 Temp/UnityLockfile 并以退出码 3 结束；
+#   - 想加 PlayMode 测试时要求 runner 是交互式会话（需要图形/显示），服务化会失败。
+
+on:
+  # 只允许主干与手动触发：不要在这里加 pull_request —— 见上方的安全说明
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 最小权限：即使作业被攻陷，也拿不到写权限的 GITHUB_TOKEN
+permissions:
+  contents: read
+
+concurrency:
+  group: unity-verify-selfhosted-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # 换机器 / 换 Unity 版本时只改这一行：Tools/unity-verify.ps1 会读这个环境变量
+  UNITY_EDITOR: E:\UnityEditor\6000.3.10f1\Editor\Unity.exe
+  UNITY_PROJECT_PATH: Unity/Gear
+
+jobs:
+  verify:
+    name: EditMode 测试 + 架构守卫（本机 Unity）
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 90
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 1
+          # 不把 GITHUB_TOKEN 写进 .git/config，避免作业内的进程顺手复用它
+          persist-credentials: false
+
+      - name: 环境自检
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not (Test-Path $env:UNITY_EDITOR)) {
+            throw "找不到 Unity：$env:UNITY_EDITOR（改本文件顶部的 env.UNITY_EDITOR）"
+          }
+          "Unity: $env:UNITY_EDITOR"
+          git lfs version
+
+      - name: 清理上次残留的工程锁
+        shell: pwsh
+        run: |
+          $lock = Join-Path $env:UNITY_PROJECT_PATH 'Temp\UnityLockfile'
+          if (-not (Test-Path -LiteralPath $lock)) { '没有残留锁'; exit 0 }
+          if (Get-Process Unity -ErrorAction SilentlyContinue) {
+            throw '本机有 Unity 进程正在使用该工程，请先关闭编辑器再重跑'
+          }
+          Remove-Item -LiteralPath $lock -Force
+          "已清理残留锁：$lock"
+
+      - name: EditMode 测试 + 架构守卫
+        shell: pwsh
+        run: |
+          & '.\Tools\unity-verify.ps1' -UnityPath $env:UNITY_EDITOR
+          exit $LASTEXITCODE
+
+      - name: 上传日志与测试结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-verify-results
+          path: |
+            Unity/Gear/Logs/verify/*.xml
+            Unity/Gear/Logs/verify/*.log
+          if-no-files-found: warn
