@@ -44,5 +44,5 @@ SoundSystem 22
 TerminalSystem 1
 TimerMgr 1
 UIInputSystem 38
-UISystem 11
+UISystem 5
 UIToolkitSystem 1

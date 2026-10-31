@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Reflection;
 using Cysharp.Threading.Tasks;
 using NUnit.Framework;
+using R3;
 using UnityEngine;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 using Gear.Framework.Runtime;
 using Gear.Framework.Runtime.Base;
 using Gear.Framework.Runtime.UI;
+using Gear.Framework.Runtime.UIInput;
 
 namespace Gear.Tests.PlayMode
 {
@@ -55,6 +58,50 @@ namespace Gear.Tests.PlayMode
             if (GameEngine.Current != null) GameEngine.Current.Dispose();
             var driver = Object.FindFirstObjectByType<GameEngineDriver>();
             if (driver != null) Object.Destroy(driver.gameObject);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator Cancel_TextInputFocused_DoesNotReachGlobalCancel()
+        {
+            UISystem ui = Modules.Get<UISystem>();
+            Assert.IsNotNull(ui.EventSystem, "UISystem 应创建 EventSystem");
+
+            // 最小引擎不含 UIInputSystem：手动初始化，只为验证 DispatchCancel 的文本聚焦闸门
+            UIInputSystem input = UIInputSystem.Instance;
+            var initTask = input.Init();
+            while (!initTask.GetAwaiter().IsCompleted) yield return null;
+            initTask.GetAwaiter().GetResult();
+
+            var canvasGo = new GameObject("TestCanvas", typeof(Canvas));
+            spawned.Add(canvasGo);
+
+            var inputGo = new GameObject("TestInput", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            inputGo.SetActive(false);
+            var field = inputGo.AddComponent<InputField>();
+            inputGo.transform.SetParent(canvasGo.transform, false);
+            var textGo = new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+            textGo.transform.SetParent(inputGo.transform, false);
+            field.textComponent = textGo.GetComponent<Text>();
+            inputGo.SetActive(true);
+            spawned.Add(inputGo);
+
+            int cancelCount = 0;
+            var subscription = input.CancelSubject.Subscribe(_ => cancelCount++);
+            MethodInfo dispatch = typeof(UIInputSystem).GetMethod("DispatchCancel", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(dispatch, "DispatchCancel 不存在，测试需要随实现更新");
+
+            // 文本输入聚焦：Cancel 被输入框消费，不应广播全局 CancelSubject
+            ui.EventSystem.SetSelectedGameObject(inputGo);
+            dispatch.Invoke(input, new object[] { null, 0 });
+            Assert.AreEqual(0, cancelCount, "文本聚焦时 ESC 不应触发全局返回");
+
+            // 取消聚焦：同样的派发应广播一次全局取消
+            ui.EventSystem.SetSelectedGameObject(null);
+            dispatch.Invoke(input, new object[] { null, 0 });
+            Assert.AreEqual(1, cancelCount, "非文本聚焦时 ESC 应触发全局返回");
+
+            subscription.Dispose();
             yield return null;
         }
 

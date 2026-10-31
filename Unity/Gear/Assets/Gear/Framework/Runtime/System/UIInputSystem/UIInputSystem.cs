@@ -241,7 +241,7 @@ namespace Gear.Framework.Runtime.UIInput
             initProgress = 20;
 
             // 2. 获取 EventSystem 和 InputModule 引用
-            eventSystem = UISystem.Instance?.EventSystem;
+            eventSystem = Modules.TryGet(out UISystem uiSystem) ? uiSystem.EventSystem : null;
             if (eventSystem != null)
             {
                 inputModule = eventSystem.GetComponent<InputSystemUIInputModule>();
@@ -424,7 +424,7 @@ namespace Gear.Framework.Runtime.UIInput
         {
             try
             {
-                return UISystem.Instance != null && UISystem.Instance.HasAnyOpenWindow();
+                return Modules.TryGet(out UISystem uiSystem) && uiSystem.HasAnyOpenWindow();
             }
             catch (Exception ex)
             {

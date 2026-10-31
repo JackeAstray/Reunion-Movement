@@ -1,4 +1,4 @@
-﻿using Gear.Common;
+using Gear.Common;
 using Gear.Framework.Runtime.Base;
 using Gear.Framework.Runtime.Resources;
 using Gear.Framework.Runtime.UI;
@@ -125,7 +125,7 @@ namespace Gear.Framework.Runtime.UIInput
             if (eventSystem == null) return;
 
             // 遍历所有已打开的 UI 窗口，按优先级找第一个可聚焦的
-            var openWindows = UISystem.Instance?.GetAllOpenWindows();
+            var openWindows = Modules.TryGet(out UISystem uiSystem) ? uiSystem.GetAllOpenWindows() : null;
             if (openWindows != null)
             {
                 foreach (var window in openWindows)

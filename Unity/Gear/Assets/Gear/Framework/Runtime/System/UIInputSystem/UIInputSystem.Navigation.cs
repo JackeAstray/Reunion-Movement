@@ -1,4 +1,4 @@
-﻿using Gear.Common;
+using Gear.Common;
 using Gear.Framework.Runtime.Base;
 using Gear.Framework.Runtime.Resources;
 using Gear.Framework.Runtime.UI;
@@ -42,7 +42,7 @@ namespace Gear.Framework.Runtime.UIInput
             var current = EventSystem.current;
             if (eventSystem == null)
             {
-                eventSystem = current ?? UISystem.Instance?.EventSystem;
+                eventSystem = current ?? (Modules.TryGet(out UISystem uiSystem) ? uiSystem.EventSystem : null);
             }
             else if (!eventSystem.isActiveAndEnabled && current != null && current != eventSystem)
             {

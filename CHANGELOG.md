@@ -29,6 +29,8 @@
   并迁移/丢弃旧版本落盘的不稳定键。
 - **死代码**：`UISystem.OnSet` 合并到"已打开窗口再次打开"的真实路径，`OnSetSubject` 恢复可触发；
   `[UIWindow(Static = true)]` 真正生效（关闭保留实例）。
+- **UIInputSystem 访问收敛**：对 UISystem 的 5 处 `Instance` 改为 `Modules.TryGet`，
+  `.Instance` 守卫基线从 117 降到 111。
 - **Static 重开**：关闭后的 Static 窗口在重开前先走 `OnSpawned` 回到 Ready，避免
   `Closed→Open` 非法转换告警，并让焦点域重新置顶。
 - **UI Toolkit**：缺失 PanelSettings 时的兜底 `CreateInstance` 对象在 `Clear()` 中销毁，不再泄漏。
