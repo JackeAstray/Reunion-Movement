@@ -12,8 +12,8 @@ namespace Gear.EditorTools.Package
     /// 独立于 Addressables 的框架分发工具（只顺带校验 Addressables 依赖）：
     /// - 导出根目录：Assets/Gear（运行时 + Editor + Resources + 第三方插件全量）
     /// - AddressableAssetsData/ 为【项目级配置】且位于包外（Assets/AddressableAssetsData），【不随包导出】。
-    ///   接收方打开项目时由 AddressablesSetup 的 [InitializeOnLoad] 自动创建分组/Label/Profile，
-    ///   因此包内地址约定（BuiltIn/UI/...）与自动生成的配置始终一致。
+    ///   仓库默认关闭 Addressables；接收方需要热更时，在工具箱「Addressables」页显式启用，
+    ///   由 AddressablesSetup 按需创建分组/Label/Profile，保证包内地址约定与生成的配置一致。
     /// - 依赖包：com.unity.addressables@2.9.1（自动带 com.unity.scriptablebuildpipeline），需接收方自行安装。
     ///
     /// 菜单：Gear → 打包 → 导出 Gear.unitypackage

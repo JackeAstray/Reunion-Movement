@@ -3,6 +3,10 @@
 > 目标：把框架作为标准 Unity Package（UPM）分发，支持 `file:` / git URL 安装、版本升级与按需导入；
 > 同时保留 `Assets/Gear` 作为开发期源码目录。
 > 旧的分发方式（整目录 `.unitypackage`）仍在，见 [.unitypackage 打包指南](打包指南.md)。
+>
+> **包身份**：固定为 `com.jackeastray.gear`（当前 `1.3.0`），必须与 `GearUpmExporter.cs` 里的
+> `PackageName` / `PackageVersion` 一致。`upm` 分支是发布产物；2026-10 曾出现该分支仍为
+> `com.reunion.movement@1.3.0` 的旧包，安装前先用 `git show origin/upm:package.json` 核对 name/version。
 
 ## 1. 导出
 
@@ -40,7 +44,7 @@ Unity -batchmode -quit -projectPath Unity/Gear `
 | 适用 | 接入自己的游戏 | 跑示例 / 完整验收 | 接入方已在用 OpenUPM |
 
 Runtime / Full 包含 `Plugins` 里的 UniTask / R3 / DOTween / ZString / kcp2k / Telepathy / SimpleWebTransport；
-OpenUPM 模式不含 UniTask / R3 / ZString，其余相同。
+OpenUPM 模式**只不内置 UniTask**（R3 / ZString / DOTween 仍内置），其余相同。
 两种运行时包都包含 `Resources` 其余资源、`Editor` 工具、`GenerateScript/UI`、`Documentation~`。
 iOS 触觉原生实现 `Plugins/iOS/GearHaptics.mm` 会随包分发；Android 的 `VIBRATE` 权限由
 `Editor/Build/AndroidVibratePermission.cs` 在构建时注入。
@@ -168,14 +172,32 @@ public class MyGameEntry : GameEntry
 7. 包内仍带 vendored 的 UniTask / R3 / ZString / DOTween。宿主已装官方同名包时，
    用 `Gear → 开发 → 检查第三方依赖冲突` 检查；二者只能留一套。详见 [第三方依赖](../guides/第三方依赖.md)。
 
-## 7. 验收
+## 7. 发布前检查
+
+发布 `upm` 分支前逐条确认（任何一条不过都不要推）：
+
+1. **改版本**：`GearUpmExporter.cs` 的 `PackageVersion` 与 `BuildChangelog()` 同步；
+   `PackageName` 保持 `com.jackeastray.gear`。
+2. **导出三个 profile**：`ExportRuntimeBatch` / `ExportFullBatch` / `ExportOpenUpmBatch`，确认无报错。
+3. **核对包元数据**：`Build/Packages/com.jackeastray.gear/package.json` 的 `name`、`version` 与源码一致；
+   包内存在 `LICENSE.md` 与 `Third Party Notices.md`。
+4. **空工程烟测**：新建 Unity 6000.3 工程 → `manifest.json` 加 `file:` 包 → 打开后 0 编译错误；
+   确认 `GameEntryResolver.FindEntryType()` 返回 `null`（包不会接管宿主启动）。
+5. **重建本地分支**：`powershell -ExecutionPolicy Bypass -File Tools/upm-publish.ps1 -Export`
+   （只更新本地 `upm`，不推送）。
+6. **核对分支内容**：`git show upm:package.json` 的 name/version 正确、且没有 `Core/`/`Utils/` 旧目录。
+7. **推送**：确认无误后 `-Push`；推送后等 1–2 分钟，再用 `#upm` 在空工程复验一次。
+
+> `upm-publish.ps1` 会校验包名，不匹配时直接失败；`-CheckOnly` 只做过期检查、不动 git。
+
+## 8. 验收
 
 ```powershell
-# 1. 编译
+# 1. 编译（.csproj 由 Unity 生成、不入库；先打开一次工程或跑一次 batchmode 才会有）
 dotnet build Unity/Gear/Gear.Framework.Runtime.csproj
 
 # 2. Unity 侧（独占工程）
-pwsh Tools/unity-verify.ps1
+powershell -ExecutionPolicy Bypass -File Tools/unity-verify.ps1        # 或 pwsh Tools/unity-verify.ps1
 
 # 3. 导出
 Unity -batchmode -quit -projectPath Unity/Gear `

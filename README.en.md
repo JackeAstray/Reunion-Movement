@@ -111,4 +111,6 @@ Documentation is currently Chinese-first:
 
 ## License
 
-[Apache-2.0](LICENSE).
+Gear is licensed under [Apache-2.0](LICENSE). Vendored third-party code, DLLs, fonts and demo
+assets keep their own licenses — see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Confirm the
+redistribution terms for DOTween, Asset Store assets and fonts before publishing a package.

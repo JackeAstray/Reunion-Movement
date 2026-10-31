@@ -103,6 +103,22 @@ $packageJson = Read-Utf8 $packageJsonPath | ConvertFrom-Json
 $packageName = $packageJson.name
 $packageVersion = $packageJson.version
 
+# 包身份是发布契约：与 GearUpmExporter.PackageName 保持一致。
+# 2026-10 曾因 upm 分支遗留 com.reunion.movement@1.3.0 导致 README 的安装地址拿到旧包，
+# 这里做硬校验，避免再次把错误身份的包推上去。
+$expectedPackageName = 'com.jackeastray.gear'
+if ([string]::IsNullOrWhiteSpace($packageName) -or $packageName -ne $expectedPackageName) {
+    throw ("包名不正确：实际 [$packageName]，期望 [$expectedPackageName]。`n" +
+        "请用当前版本的 GearUpmExporter 重新导出，或确认是否要发布另一个包。")
+}
+if ([string]::IsNullOrWhiteSpace($packageVersion) -or $packageVersion -notmatch '^\d+\.\d+\.\d+') {
+    throw "包版本不是 SemVer：[$packageVersion]"
+}
+$notices = Join-Path $PackagePath 'Third Party Notices.md'
+if (-not (Test-Path $notices)) {
+    Write-Warning "包内缺少 'Third Party Notices.md'；对外发布前请确认第三方许可声明已随包分发。"
+}
+
 Write-Host "包目录 : $PackagePath"
 Write-Host "包标识 : $packageName@$packageVersion"
 
@@ -148,7 +164,7 @@ if (Test-Path $sourceRoot) {
 if ($newer.Count -gt 0 -and -not $AllowStale) {
     $nl = [Environment]::NewLine
     $names = ($newer | ForEach-Object { $_.FullName.Replace($repoRoot + '/', '').Replace('\', '/') }) -join ($nl + '  ')
-    throw "包可能已过期：以下源文件比 package.json 新。$nl  $names$nl先重新导出（加 -Export），或确认无实质变化后用 -AllowStale。"
+    throw "包可能已过期：以下源文件比 package.json 新。${nl}  ${names}${nl}先重新导出（加 -Export），或确认无实质变化后用 -AllowStale。"
 }
 
 # ------------------------------------------------------------------ 汇总

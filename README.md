@@ -27,6 +27,10 @@ Unity 游戏框架 —— 纯 C# 生命周期、模块化系统、四传输网�
 "com.jackeastray.gear": "https://github.com/JackeAstray/Gear.git#upm"
 ```
 
+包标识固定为 **`com.jackeastray.gear`**（当前 `1.3.0`）。`upm` 分支是**发布产物**，每次发布重建为单个提交；
+如果你安装到的包名是 `com.reunion.movement`，说明该分支还是重构前的旧包，请让维护者按
+[UPM 打包指南](Docs/Packaging/UPM打包指南.md) 重新发布。
+
 然后在自己的程序集里声明入口并选模块清单：
 
 ```csharp
@@ -103,6 +107,9 @@ Assets/Gear/
 **Addressables 默认关闭**：仓库不带 `Assets/AddressableAssetsData`，运行时 `AddressablesMode.Off`、全程走 Resources（启动更快）。
 需要热更时在工具箱 `Addressables` 页点「启用」，它才会检查包安装并创建分组/Label/Profile —— 详见 [Addressables 快速开始](Docs/Addressables/快速开始.md)。
 
+> 「关闭」指**不启用热更流程**，不是可以不装包：`com.unity.addressables` 仍是硬依赖
+> （`Gear.Framework.Runtime.asmdef` 引用了 `Unity.Addressables`）。不想装它需要自行裁剪程序集与相关代码。
+
 ## 平台支持
 
 | 平台 | 状态 | 说明 |
@@ -132,4 +139,6 @@ Assets/Gear/
 
 ## 许可
 
-见 [LICENSE](LICENSE)。
+Gear 本体见 [LICENSE](LICENSE)（Apache-2.0）。随仓库分发的第三方源码、DLL、字体与美术资源
+保留各自许可，清单见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。
+对外发布前请按该清单确认 DOTween、Asset Store 资源与字体的再分发条款。

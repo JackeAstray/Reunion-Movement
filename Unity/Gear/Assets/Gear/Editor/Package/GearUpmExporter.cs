@@ -21,7 +21,7 @@ namespace Gear.EditorTools.Package
     /// 两种 profile：
     /// <list type="bullet">
     /// <item><b>Full</b>：框架 + 示例 + 字体（约 190 MB），功能最完整；</item>
-    /// <item><b>Runtime</b>：去掉示例场景、示例 UI、字体与第三方演示资源（约 50 MB），
+    /// <item><b>Runtime</b>：去掉示例场景、示例 UI、字体与第三方演示资源（约 43 MB），
     /// 适合接入自己的游戏；缺失的字体/示例需自行补。</item>
     /// </list>
     /// </para>
@@ -39,8 +39,11 @@ namespace Gear.EditorTools.Package
             RuntimeOpenUpm,
         }
 
+        // 包身份是发布契约：package.json 的 name/version 必须与 README、UPM 指南、
+        // upm 分支上的实际包一致。改这里时同步改 Docs/Packaging/UPM打包指南.md 与 Tools/upm-publish.ps1。
+        // 1.3.0：修正 upm 分支曾以 com.reunion.movement@1.3.0 发布导致的身份错位。
         private const string PackageName = "com.jackeastray.gear";
-        private const string PackageVersion = "1.2.0";
+        private const string PackageVersion = "1.3.0";
         private const string DefaultOutputRelative = "Build/Packages";
 
         /// <summary>默认输出根（<c>&lt;project&gt;/Build/Packages</c>）。</summary>
@@ -158,10 +161,33 @@ namespace Gear.EditorTools.Package
                     "See https://www.apache.org/licenses/LICENSE-2.0 for the full text.\n");
             }
 
+            // 第三方组件声明：UPM 约定文件名 "Third Party Notices.md"（带空格），
+            // 与 Unity 官方包的命名保持一致。缺失时不阻断导出，但会在日志里提示。
+            string notices = FindFileInAncestors(projectRoot, "THIRD-PARTY-NOTICES.md");
+            if (notices != null)
+            {
+                File.Copy(notices, Path.Combine(packageDir, "Third Party Notices.md"), true);
+            }
+            else
+            {
+                Debug.LogWarning("[GearUpm] 未找到 THIRD-PARTY-NOTICES.md，包内将缺少第三方许可声明");
+            }
+
             // 4. 包元数据
             WriteText(Path.Combine(packageDir, "package.json"), BuildPackageJson(profile));
             WriteText(Path.Combine(packageDir, "README.md"), BuildReadme(profile));
-            WriteText(Path.Combine(packageDir, "CHANGELOG.md"), BuildChangelog());
+
+            // 仓库根 CHANGELOG.md 是唯一事实来源；找不到时才用内置的兜底文本，
+            // 避免"根目录更新了、包里还是旧版本"的漂移。
+            string changelog = FindFileInAncestors(projectRoot, "CHANGELOG.md");
+            if (changelog != null)
+            {
+                File.Copy(changelog, Path.Combine(packageDir, "CHANGELOG.md"), true);
+            }
+            else
+            {
+                WriteText(Path.Combine(packageDir, "CHANGELOG.md"), BuildChangelog());
+            }
 
             // 5. 校验 + 报告
             if (!Validate(packageDir, out string error))
@@ -409,8 +435,8 @@ Unity 6000.3 游戏框架（{profile} 包）。
                 string json = File.ReadAllText(pkg);
                 if (!json.Contains($"\"name\": \"{PackageName}\""))
                     problems.Add("package.json 的 name 不正确");
-                if (!json.Contains("\"version\""))
-                    problems.Add("package.json 缺少 version");
+                if (!json.Contains($"\"version\": \"{PackageVersion}\""))
+                    problems.Add($"package.json 的 version 不是 {PackageVersion}");
             }
 
             foreach (string file in Directory.GetFiles(packageDir, "*", SearchOption.AllDirectories))
