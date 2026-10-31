@@ -29,15 +29,15 @@ namespace Gear.Framework.Runtime.UI
         /// <summary>变暗时的目标 alpha（<see cref="DimBackground"/> 为 true 时生效）。</summary>
         public static float DimAlpha { get; set; } = 0.6f;
 
-        /// <summary>当前模态栈（从下到上）。</summary>
-        private static readonly List<string> modalStack = new List<string>(4);
+        /// <summary>当前模态栈（从下到上）。纯 C# 实现，单独有 EditMode 用例覆盖关闭顺序。</summary>
+        private static readonly UIModalStack modalStack = new UIModalStack();
 
         /// <summary>被改过的 CanvasGroup 原值：窗口名 → (交互, 透明度, 具体实例)。</summary>
         private static readonly Dictionary<string, (bool interactable, float alpha, CanvasGroup group)> blockedWindows =
             new Dictionary<string, (bool, float, CanvasGroup)>();
 
         /// <summary>当前是否有模态窗口。</summary>
-        public static bool HasModal => modalStack.Count > 0;
+        public static bool HasModal => !modalStack.IsEmpty;
 
         /// <summary>当前模态层数。</summary>
         public static int ModalDepth => modalStack.Count;
@@ -50,16 +50,12 @@ namespace Gear.Framework.Runtime.UI
         {
             get
             {
-                if (modalStack.Count == 0) return false;
+                if (modalStack.IsEmpty) return false;
                 if (!Modules.TryGet(out UISystem ui) || ui == null || !ui.isInited)
                 {
-                    return modalStack.Count > 0;
+                    return true;
                 }
-                for (int i = modalStack.Count - 1; i >= 0; i--)
-                {
-                    if (ui.IsOpen(modalStack[i])) return true;
-                }
-                return false;
+                return modalStack.HasOpen(ui.IsOpen);
             }
         }
 
@@ -70,21 +66,9 @@ namespace Gear.Framework.Runtime.UI
         internal static bool TryPopTopModal(out string windowId)
         {
             windowId = null;
-            if (modalStack.Count == 0) return false;
+            if (modalStack.IsEmpty) return false;
             if (!Modules.TryGet(out UISystem ui) || ui == null || !ui.isInited) return false;
-
-            while (modalStack.Count > 0)
-            {
-                int last = modalStack.Count - 1;
-                string candidate = modalStack[last];
-                modalStack.RemoveAt(last);
-                if (ui.IsOpen(candidate))
-                {
-                    windowId = candidate;
-                    return true;
-                }
-            }
-            return false;
+            return modalStack.TryPopTop(ui.IsOpen, out windowId);
         }
 
         /// <summary>压入一个窗口后调用：登记模态并重算阻断。</summary>
@@ -94,8 +78,7 @@ namespace Gear.Framework.Runtime.UI
 
             if (modal)
             {
-                modalStack.Remove(windowId);
-                modalStack.Add(windowId);
+                modalStack.Push(windowId);
             }
 
             // 任何窗口打开都可能改变"谁该被阻断"（例如模态开着时又开了一个普通窗口），统一重算
@@ -149,12 +132,8 @@ namespace Gear.Framework.Runtime.UI
             // 剔除当前已不可见的模态（被 SetActive(false)/HideAllWindows 隐藏，或已销毁）：
             // 否则 topModal 指向一个看不见的窗口，下面会把其余所有可见窗口全部阻断 ——
             // 而唯一"该可交互"的顶层模态又不在可见集合里，表现为整个 UI 卡死。
-            while (modalStack.Count > 0 && !ui.IsOpen(modalStack[modalStack.Count - 1]))
-            {
-                modalStack.RemoveAt(modalStack.Count - 1);
-            }
-
-            string topModal = modalStack.Count == 0 ? null : modalStack[modalStack.Count - 1];
+            modalStack.PruneClosed(ui.IsOpen);
+            string topModal = modalStack.TopOpen(ui.IsOpen);
 
             if (topModal == null)
             {
