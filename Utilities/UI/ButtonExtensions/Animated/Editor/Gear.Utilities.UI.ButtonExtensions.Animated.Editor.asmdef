@@ -1,0 +1,21 @@
+{
+    "name": "Gear.Utilities.UI.ButtonExtensions.Animated.Editor",
+    "rootNamespace": "Gear.EditorTools",
+    "references": [
+        "Gear.Utilities",
+        "Gear.Common",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

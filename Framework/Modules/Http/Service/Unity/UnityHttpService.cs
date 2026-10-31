@@ -1,0 +1,185 @@
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Text;
+using UnityEngine;
+using UnityEngine.Networking;
+using Newtonsoft.Json;
+
+using Gear.Common;
+using Gear.Utilities;
+namespace Gear.Framework.Modules.Http
+{
+    public class UnityHttpService : IHttpService
+    {
+        /// <summary>
+        /// 默认请求超时（秒）。UnityWebRequest.timeout 默认为 0（永不超时），
+        /// 服务器无响应时请求会永久挂起，故未显式设置超时时使用此默认值。
+        /// 约定收口于 Gear.Framework.Modules.HttpDefaults（与 Framework/Modules/Download 下载体系共享）。
+        /// </summary>
+        public const int DefaultTimeoutSeconds = HttpDefaults.DefaultRequestTimeoutSeconds;
+
+        /// <summary>生产构建下对明文 HTTP 地址告警（不阻断，供开发/内网环境使用），防止登录令牌等敏感数据明文传输</summary>
+        static void WarnIfInsecureScheme(string url)
+        {
+            if (string.IsNullOrEmpty(url)) return;
+            if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            {
+                Debug.LogWarning("[UnityHttpService] 检测到明文 HTTP 请求：" + url + "。生产环境请使用 https:// 避免敏感数据泄露");
+            }
+        }
+
+        public IHttpRequest Get(string uri)
+        {
+            return new UnityHttpRequest(UnityWebRequest.Get(uri));
+        }
+
+        public IHttpRequest GetTexture(string uri)
+        {
+            return new UnityHttpRequest(UnityWebRequestTexture.GetTexture(uri));
+        }
+
+        public IHttpRequest Post(string uri, string postData)
+        {
+            return new UnityHttpRequest(UnityWebRequest.PostWwwForm(uri, postData));
+        }
+
+        public IHttpRequest Post(string uri, WWWForm formData)
+        {
+            return new UnityHttpRequest(UnityWebRequest.Post(uri, formData));
+        }
+
+        public IHttpRequest Post(string uri, Dictionary<string, string> formData)
+        {
+            return new UnityHttpRequest(UnityWebRequest.Post(uri, formData));
+        }
+
+        public IHttpRequest Post(string uri, List<IMultipartFormSection> multipartForm)
+        {
+            return new UnityHttpRequest(UnityWebRequest.Post(uri, multipartForm));
+        }
+
+        public IHttpRequest Post(string uri, byte[] bytes, string contentType)
+        {
+            UnityWebRequest unityWebRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPOST);
+            unityWebRequest.uploadHandler = new UploadHandlerRaw(bytes);
+            unityWebRequest.downloadHandler = new DownloadHandlerBuffer();
+            unityWebRequest.SetRequestHeader("Content-Type", contentType);
+            return new UnityHttpRequest(unityWebRequest);
+        }
+
+        public IHttpRequest PostJson(string uri, string json)
+        {
+            return Post(uri, Encoding.UTF8.GetBytes(json), "application/json");
+        }
+
+        private static readonly JsonSerializerSettings SafeJsonSettings = new JsonSerializerSettings
+        {
+            TypeNameHandling = TypeNameHandling.None
+        };
+
+        public IHttpRequest PostJson<T>(string uri, T payload) where T : class
+        {
+            var json = JsonConvert.SerializeObject(payload, SafeJsonSettings);
+            return PostJson(uri, json);
+        }
+
+        public IHttpRequest Put(string uri, byte[] bodyData)
+        {
+            return new UnityHttpRequest(UnityWebRequest.Put(uri, bodyData));
+        }
+
+        public IHttpRequest Put(string uri, string bodyData)
+        {
+            return new UnityHttpRequest(UnityWebRequest.Put(uri, bodyData));
+        }
+
+        public IHttpRequest Delete(string uri)
+        {
+            return new UnityHttpRequest(UnityWebRequest.Delete(uri));
+        }
+
+        public IHttpRequest Head(string uri)
+        {
+            return new UnityHttpRequest(UnityWebRequest.Head(uri));
+        }
+
+        public IEnumerator Send(IHttpRequest request, Action<HttpResponse> onSuccess = null,
+            Action<HttpResponse> onError = null, Action<HttpResponse> onNetworkError = null)
+        {
+            var unityHttpRequest = request as UnityHttpRequest;
+            if (unityHttpRequest == null)
+            {
+                throw new ArgumentException("UnityHttpService 仅支持 UnityHttpRequest，实际类型: " + request?.GetType().Name);
+            }
+
+            try
+            {
+                using (UnityWebRequest unityWebRequest = unityHttpRequest.UnityWebRequest)
+                {
+                    // 明文 HTTP 告警（仅生产构建生效）
+#if !UNITY_EDITOR && !DEVELOPMENT_BUILD
+                    WarnIfInsecureScheme(unityWebRequest.url);
+#endif
+                    // 默认超时：若调用方未显式设置，则使用默认值，避免请求永久挂起
+                    if (unityWebRequest.timeout <= 0)
+                        unityWebRequest.timeout = DefaultTimeoutSeconds;
+
+                    yield return unityWebRequest.SendWebRequest();
+
+                    // 请求已被取消并释放（HttpMgr.Abort 路径下协程被 cts 掐断后仍可能恢复执行）：
+                    // 直接结束协程，避免继续访问已 Dispose 的 UWR 抛异常、并刷出误导性的"SendAsync 异常"错误日志
+                    if (unityHttpRequest.IsDisposed)
+                    {
+                        yield break;
+                    }
+
+                    var response = new HttpResponse
+                    {
+                        url = unityWebRequest.url,
+                        bytes = unityWebRequest.downloadHandler?.data,
+                        text = unityWebRequest.downloadHandler?.text,
+                        isSuccessful = unityWebRequest.result == UnityWebRequest.Result.Success,
+                        isHttpError = unityWebRequest.result == UnityWebRequest.Result.ProtocolError,
+                        isNetworkError = unityWebRequest.result == UnityWebRequest.Result.ConnectionError,
+                        error = unityWebRequest.error,
+                        statusCode = unityWebRequest.responseCode,
+                        responseHeaders = unityWebRequest.GetResponseHeaders(),
+                        texture = (unityWebRequest.downloadHandler as DownloadHandlerTexture)?.texture
+                    };
+
+                    if (response.isNetworkError) // 使用修正后的条件
+                    {
+                        onNetworkError?.Invoke(response);
+                    }
+                    else if (response.isHttpError) // 使用修正后的条件
+                    {
+                        onError?.Invoke(response);
+                    }
+                    else if (response.isSuccessful) // 检查请求是否成功
+                    {
+                        onSuccess?.Invoke(response);
+                    }
+                }
+            }
+            finally
+            {
+                // 请求生命周期结束（正常完成/中止/异常）：标记底层 UWR 不可再访问，
+                // 防止后续 Abort/进度轮询访问已释放对象抛 InvalidOperationException
+                unityHttpRequest.MarkDisposed();
+            }
+        }
+
+        public void Abort(IHttpRequest request)
+        {
+            var unityHttpRequest = request as UnityHttpRequest;
+            // 已释放（含自然完成）的请求不可再访问底层 UWR
+            if (unityHttpRequest == null || unityHttpRequest.IsDisposed) return;
+            var uwr = unityHttpRequest.UnityWebRequest;
+            if (uwr != null && !uwr.isDone)
+            {
+                uwr.Abort();
+            }
+        }
+    }
+}

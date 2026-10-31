@@ -1,0 +1,27 @@
+{
+    "name": "Gear.Framework.Runtime.Editor",
+    "rootNamespace": "Gear.Framework.Runtime.UI.Editor",
+    "references": [
+        "Gear.Framework.Runtime",
+        "Gear.Common",
+        "Gear.Framework.Modules",
+        "Gear.Utilities",
+        "Gear.Base",
+        "UniTask",
+        "UnityEngine.UI",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "Gear.Editor.Shared"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

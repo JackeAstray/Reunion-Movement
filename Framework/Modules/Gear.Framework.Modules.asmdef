@@ -1,0 +1,25 @@
+{
+    "name": "Gear.Framework.Modules",
+    "rootNamespace": "Gear.Framework.Modules",
+    "references": [
+        "Gear.Base",
+        "Gear.Common",
+        "Gear.Utilities",
+        "UniTask",
+        "Gear.Telepathy",
+        "Gear.Kcp2k",
+        "Gear.SimpleWeb",
+        "UnityEngine.UI",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

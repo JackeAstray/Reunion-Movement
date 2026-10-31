@@ -1,0 +1,41 @@
+using System;
+using Cysharp.Threading.Tasks;
+using Gear.Framework.Runtime.Base;
+
+namespace Gear.Framework.Runtime.Custom
+{
+    // 保存到 Framework/Runtime/System/CustomSystem/CustomSystem.cs，沿用 Gear.Framework.Runtime 程序集。
+    // 在 StartGame.CreateModules()（或你自己的 GameEntry）里显式注册 CustomSystem.Instance。
+    //
+    // [ModuleOrder] 是必须的：序号决定 Init 顺序（现存模块用 10..140，间隔 10），
+    // 后面的 typeof(...) 是依赖，ModuleCatalog 启动时会校验缺依赖 / 成环。
+    [ModuleOrder(150, typeof(Gear.Framework.Runtime.EventMessage.EventMessageSystem))]
+    public sealed class CustomSystem : ICustomSystem, ISystemUpdatable, ISystemDisposable
+    {
+        private static readonly Lazy<CustomSystem> instance =
+            new Lazy<CustomSystem>(() => new CustomSystem());
+
+        public static CustomSystem Instance => instance.Value;
+        public double InitProgress { get; private set; }
+        private CustomSystem() { }
+
+        public UniTask Init()
+        {
+            InitProgress = 0d;
+            // TODO: 初始化；如需 await，将本方法改为 async UniTask。
+            InitProgress = 100d;
+            return UniTask.CompletedTask;
+        }
+
+        public void Update(float logicTime, float realTime)
+        {
+            // TODO: 每帧逻辑；logicTime 受 timeScale 影响，realTime 不受影响。
+        }
+
+        public void Clear()
+        {
+            // TODO: 取消订阅、取消异步任务并释放本模块持有的资源。
+            InitProgress = 0d;
+        }
+    }
+}

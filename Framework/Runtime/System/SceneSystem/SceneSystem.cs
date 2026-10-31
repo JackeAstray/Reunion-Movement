@@ -1,0 +1,687 @@
+using Gear.Common;
+using Gear.Framework.Runtime.Base;
+using Gear.Framework.Runtime.Resources;
+using Cysharp.Threading.Tasks;
+using R3;
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using UnityEngine.AddressableAssets;
+using UnityEngine.Events;
+using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceLocations;
+using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEngine.SceneManagement;
+using UnityEngine;
+using Gear.Framework.Runtime.UI;
+
+namespace Gear.Framework.Runtime.Scene
+{
+    /// <summary>
+    /// 场景加载状态
+    /// </summary>
+    public enum SceneLoadState
+    {
+        /// <summary>空闲</summary>
+        Idle,
+        /// <summary>加载中</summary>
+        Loading,
+        /// <summary>已加载</summary>
+        Loaded,
+        /// <summary>加载失败</summary>
+        Failed
+    }
+
+    /// <summary>
+    /// 场景系统 —— 使用 R3 Subject/ReactiveProperty 管理场景加载状态与进度
+    /// </summary>
+    [ModuleOrder(30, typeof(Gear.Framework.Runtime.Resources.ResourcesSystem), typeof(Gear.Framework.Runtime.Resources.AddressableSystem))]
+    public partial class SceneSystem : ICustomSystem, ISystemDisposable
+    {
+        #region 单例与初始化
+        private static readonly Lazy<SceneSystem> instance = new(() => new SceneSystem());
+        public static SceneSystem Instance => instance.Value;
+
+        public bool isInited { get; private set; }
+
+        private double initProgress = 0;
+        public double InitProgress { get { return initProgress; } }
+        #endregion
+
+        #region 数据
+        private UnityAction beforeSceneLoadingCompletionCallback = null;  // 场景加载前回调
+        private UnityAction sceneLoadingCompletionCallback = null;        // 场景加载完成回调
+
+        private string targetSceneName = null;                            // 将要加载的场景名
+        private string currentSceneName = null;                           // 当前场景名，如若没有场景，则默认返回
+        private string previousSceneName = null;                          // 上一个场景名
+        private int isLoadingAtomic = 0;                                  // 原子操作：0=空闲, 1=加载中（Interlocked）
+        private const string loadSceneName = "LoadingScene";              // 加载场景名字
+
+        /// <summary>生命周期代次：Clear() 时递增，用于让排队/在途加载在引擎销毁后主动放弃</summary>
+        private int clearGeneration = 0;
+
+        /// <summary>在途加载完成信号（排队等待者 await 后重试获取加载锁）</summary>
+        private UniTaskCompletionSource currentLoadTcs;
+
+        /// <summary>场景加载超时（秒），超时后中止等待并标记失败；<=0 表示不超时</summary>
+        public float sceneLoadTimeoutSeconds = 60f;
+        // 场景切换时不隐藏的窗口名称集合（由 LoadScene 调用方在切换前注册）
+        private readonly HashSet<string> excludeFromSceneHide = new HashSet<string>();
+
+        // UI 窗口注册表（UIWindowAsset.OnEnable/OnDisable 自动维护，避免 FindObjectsByType 全遍历）
+        private readonly HashSet<UI.UIWindowAsset> registeredUIWindows = new HashSet<UI.UIWindowAsset>();
+
+        /// <summary>注册 UI 窗口（由 UIWindowAsset.OnEnable 调用）</summary>
+        public void RegisterUIWindow(UI.UIWindowAsset window)
+        {
+            if (window != null) registeredUIWindows.Add(window);
+        }
+
+        /// <summary>注销 UI 窗口（由 UIWindowAsset.OnDisable 调用）</summary>
+        public void UnregisterUIWindow(UI.UIWindowAsset window)
+        {
+            if (window != null) registeredUIWindows.Remove(window);
+        }
+
+        #region R3 响应式属性（推荐新代码使用）
+
+        /// <summary>场景加载进度（0~1）</summary>
+        public Subject<float> ProgressSubject { get; private set; } = new Subject<float>();
+
+        /// <summary>场景加载状态（可观测属性，UI 可直接绑定）</summary>
+        public ReactiveProperty<SceneLoadState> LoadState { get; private set; }
+            = new ReactiveProperty<SceneLoadState>(SceneLoadState.Idle);
+
+        /// <summary>当前场景名称变更</summary>
+        public Subject<string> SceneChangedSubject { get; private set; } = new Subject<string>();
+
+        /// <summary>场景加载完成事件（参数：场景名）</summary>
+        public Subject<string> SceneLoadedSubject { get; private set; } = new Subject<string>();
+
+        #endregion
+
+        #region 兼容旧 API（已废弃，转发到 R3）
+
+        [Obsolete("请使用 SceneSystem.Instance.ProgressSubject.Subscribe()", false)]
+        public event Action<float> getProgress
+        {
+            add
+            {
+                if (value == null) return;
+                var sub = Instance.ProgressSubject.Subscribe(value);
+                _obsoleteProgressSubs ??= new System.Collections.Generic.Dictionary<Delegate, IDisposable>();
+                lock (_obsoleteProgressSubs)
+                {
+                    if (!_obsoleteProgressSubs.ContainsKey(value))
+                        _obsoleteProgressSubs[value] = sub;
+                    else
+                        sub.Dispose(); // 重复订阅，释放多余的
+                }
+            }
+            remove
+            {
+                if (value == null || _obsoleteProgressSubs == null) return;
+                lock (_obsoleteProgressSubs)
+                {
+                    if (_obsoleteProgressSubs.TryGetValue(value, out var d))
+                    {
+                        d.Dispose();
+                        _obsoleteProgressSubs.Remove(value);
+                    }
+                }
+            }
+        }
+        private System.Collections.Generic.Dictionary<Delegate, IDisposable> _obsoleteProgressSubs;
+
+        #endregion
+
+        public float startProgressWaitingTime;                            // 开始 - 等待时长
+        public float endProgressWaitingTime;                              // 结束 - 等待时长
+
+        public bool openLoad;
+
+        // 当前通过 Addressables 加载的场景实例（切换时用于释放 Bundle，避免泄漏）
+        private SceneInstance loadedSceneInstance;
+        // 与实例配套的底层句柄：Scene 被其他 Single 加载销毁后仍靠它归还引用计数
+        private AsyncOperationHandle<SceneInstance> loadedSceneHandle;
+        #endregion
+
+        public UniTask Init()
+        {
+            initProgress = 0;
+
+            // 重建可能已被 Clear() 释放的 R3 Subject（支持模块重初始化）
+            ProgressSubject ??= new Subject<float>();
+            LoadState ??= new ReactiveProperty<SceneLoadState>(SceneLoadState.Idle);
+            SceneChangedSubject ??= new Subject<string>();
+            SceneLoadedSubject ??= new Subject<string>();
+
+            currentSceneName = SceneManager.GetActiveScene().name;
+            startProgressWaitingTime = 0.5f;
+            endProgressWaitingTime = 0.5f;
+
+            initProgress = 100;
+            isInited = true;
+            Log.Debug("SceneSystem 初始化完成");
+            return UniTask.CompletedTask;
+        }
+
+        public void Clear()
+        {
+            Log.Debug("SceneSystem 清除数据");
+
+            isInited = false;
+            // 先递增生命周期代次：排队中的 LoadScene 醒来后发现代次变化直接退出，不再继续加载；
+            // 再取消在途加载信号（排队者用 SuppressCancellationThrow 吞异常）；
+            // 最后强释放加载锁，避免排队者被永久阻塞
+            System.Threading.Interlocked.Increment(ref clearGeneration);
+            if (currentLoadTcs != null)
+            {
+                currentLoadTcs.TrySetCanceled();
+                currentLoadTcs = null;
+            }
+            System.Threading.Interlocked.Exchange(ref isLoadingAtomic, 0);
+            beforeSceneLoadingCompletionCallback = null;
+            sceneLoadingCompletionCallback = null;
+            targetSceneName = null;
+            // 释放残留的 Addressable 场景句柄：Clear 不经过 OnLoadTargetSceneAsync 的释放路径，
+            // 不在这里归还的话 bundle 引用计数会跨引擎会话永久 +1。
+            if (loadedSceneHandle.IsValid())
+            {
+                try
+                {
+                    if (Modules.TryGet(out AddressableSystem addressable) && addressable != null)
+                    {
+                        addressable.ReleaseSceneHandle(loadedSceneHandle);
+                    }
+                    else
+                    {
+                        Addressables.Release(loadedSceneHandle);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("SceneSystem 清理 Addressable 场景句柄失败: {0}", ex.Message);
+                }
+            }
+            loadedSceneHandle = default;
+            loadedSceneInstance = default;
+            // 重置场景名缓存：引擎重建后场景已随引擎销毁卸载，残留的 currentSceneName
+            // 会让 LoadScene(同名) 误判“已加载”直接回调而跳过真实加载；
+            // previousSceneName 残留则使 LoadPreScene 跳向过期场景。
+            currentSceneName = null;
+            previousSceneName = null;
+            openLoad = false;
+
+            // 释放 R3 Subject/ReactiveProperty（重置为 null 以便 Init 时重建）
+            ProgressSubject?.Dispose();
+            ProgressSubject = null;
+            LoadState?.Dispose();
+            LoadState = null;
+            SceneChangedSubject?.Dispose();
+            SceneChangedSubject = null;
+            SceneLoadedSubject?.Dispose();
+            SceneLoadedSubject = null;
+            excludeFromSceneHide.Clear();
+            registeredUIWindows.Clear();
+
+            // 释放废弃事件追踪的订阅
+            if (_obsoleteProgressSubs != null)
+            {
+                lock (_obsoleteProgressSubs)
+                {
+                    foreach (var d in _obsoleteProgressSubs.Values) d?.Dispose();
+                    _obsoleteProgressSubs.Clear();
+                }
+            }
+        }
+
+        #region Load
+        /// <summary>
+        /// 返回上一场景
+        /// </summary>
+        public async UniTask LoadPreScene()
+        {
+            if (!string.IsNullOrEmpty(previousSceneName))
+            {
+                await LoadScene(previousSceneName);
+            }
+        }
+
+        /// <summary>
+        /// 返回上一场景
+        /// </summary>
+        public async UniTask LoadPreScene_OpenLoad(UnityAction bslcc = null, UnityAction slcc = null)
+        {
+            if (string.IsNullOrEmpty(previousSceneName))
+            {
+                return;
+            }
+            await LoadScene(previousSceneName, true, bslcc, slcc);
+        }
+
+        /// <summary>
+        /// 加载场景
+        /// </summary>
+        /// <param name="levelName">要加载的场景名称</param>
+        /// <param name="openLoad">是否开启load场景</param>
+        /// <param name="bslcc">场景加载完成前回调</param>
+        /// <param name="slcc">场景加载完成回调</param>
+        public async UniTask LoadScene(string levelName, bool openLoad = false, UnityAction bslcc = null, UnityAction slcc = null)
+        {
+            await LoadSceneInternal(levelName, openLoad, bslcc, slcc, default);
+        }
+
+        /// <summary>
+        /// 可取消重载：ct 取消时中止排队/在途加载（切账号、断线回大厅等场景由上层主动中止）。
+        /// 取消抛 OperationCanceledException（不触发回调），调用方用 SuppressCancellationThrow 或 catch 处理。
+        /// </summary>
+        public async UniTask LoadScene(string levelName, CancellationToken ct, bool openLoad = false, UnityAction bslcc = null, UnityAction slcc = null)
+        {
+            await LoadSceneInternal(levelName, openLoad, bslcc, slcc, ct);
+        }
+
+        private async UniTask LoadSceneInternal(string levelName, bool openLoad, UnityAction bslcc, UnityAction slcc, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            // 生命周期代次：Clear()（引擎销毁/重建）时递增。代次变化后排队/在途加载必须放弃，
+            // 否则引擎销毁后排队者恢复执行，继续场景加载并污染下一会话状态
+            int gen = clearGeneration;
+
+            // 原子操作：防止并发加载。与旧行为不同，并发调用不再被静默丢弃——
+            // 而是排队等待在途加载完成后再执行，保证调用方的加载请求与回调不丢失。
+            while (Interlocked.CompareExchange(ref isLoadingAtomic, 1, 0) != 0)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (gen != clearGeneration) return; // Clear() 已发生：放弃排队
+                Log.Debug("场景 {0} 排队等待在途加载完成...", levelName);
+                var pending = currentLoadTcs;
+                if (pending != null)
+                {
+                    // Clear() 会取消在途 TCS：吞掉取消异常，由代次检查退出
+                    await pending.Task.SuppressCancellationThrow();
+                    ct.ThrowIfCancellationRequested();
+                    if (gen != clearGeneration) return;
+                }
+                else
+                {
+                    // TCS 尚未就绪（极小窗口），让出一帧重试
+                    await UniTask.Yield(PlayerLoopTiming.Update);
+                }
+            }
+
+            if (gen != clearGeneration)
+            {
+                // 拿到锁后才发现已 Clear：释放锁并退出
+                Interlocked.Exchange(ref isLoadingAtomic, 0);
+                return;
+            }
+
+            var myTcs = new UniTaskCompletionSource();
+            currentLoadTcs = myTcs;
+
+            try
+            {
+                // 取消检查放在 try 内：finally 负责释放加载锁，不会因取消泄漏锁
+                ct.ThrowIfCancellationRequested();
+                // 目标场景已加载：直接回调
+                if (currentSceneName == levelName)
+                {
+                    bslcc?.Invoke();
+                    slcc?.Invoke();
+                    return;
+                }
+                // Clear() 可能已置空 LoadState（系统清理），判空避免 NRE
+                if (LoadState != null) LoadState.Value = SceneLoadState.Loading;
+                // 开始加载
+                sceneLoadingCompletionCallback = slcc;
+                beforeSceneLoadingCompletionCallback = bslcc;
+                targetSceneName = levelName;
+                previousSceneName = currentSceneName;
+                currentSceneName = loadSceneName;
+                this.openLoad = openLoad;
+
+                HideUIWindowsOnSceneChange();
+
+                if (openLoad)
+                {
+                    bool loadingSceneReady = await OnLoadingSceneAsync(loadSceneName, LoadSceneMode.Single);
+                    if (!loadingSceneReady)
+                    {
+                        // 过渡场景失败/超时：中止切换，不再加载目标场景。
+                        // 否则残留的过渡场景 AsyncOperation 之后会以 Single 激活，摧毁目标场景。
+                        if (LoadState != null) LoadState.Value = SceneLoadState.Failed;
+                        ExecuteSlcc();
+                        return;
+                    }
+                }
+                await OnLoadTargetSceneAsync(targetSceneName, LoadSceneMode.Single);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                // 主动取消不是错误：不记错误日志、不触发完成回调，交给调用方处理
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Log.Error("场景加载异常：{0}", ex);
+                if (LoadState != null) LoadState.Value = SceneLoadState.Failed;
+                // 确保异常情况下回调也被触发、状态被重置
+                ExecuteBslcc();
+                ExecuteSlcc();
+            }
+            finally
+            {
+                // 队列释放：仅当自己仍是"在途加载"时才清空信号，避免误清新排队者的 TCS
+                if (ReferenceEquals(currentLoadTcs, myTcs)) currentLoadTcs = null;
+
+                // 注意顺序：所有共享状态必须在释放锁/唤醒排队者之前复位。
+                // myTcs.TrySetResult() 会同步（内联）恢复排队中的 LoadScene，对方拿到锁后
+                // 立刻写 targetSceneName/openLoad/LoadState；如果先唤醒再复位，
+                // 就会把排队者的目标场景清成 null，导致第二次加载以空场景名失败。
+                // 复位跨方法传参字段：加载完成后 openLoad 仅在本流程内有意义，
+                // 不复位会让外部在下次加载前读到上次的过期值
+                openLoad = false;
+
+                // 统一清理本次切换注册的"不隐藏窗口"集合：
+                // 成功路径已由 OnTargetSceneLoaded 之后清理，失败/超时/异常路径在此兜底，
+                // 避免集合残留到下次场景切换导致窗口误不隐藏
+                ClearExcludeSet();
+
+                // 加载未完成时修正状态（Clear() 可能已置空 LoadState，判空避免 NRE）
+                if (LoadState != null && LoadState.Value != SceneLoadState.Loaded)
+                {
+                    targetSceneName = null;
+                    if (gen == clearGeneration)
+                    {
+                        // 以实际激活场景为准，避免 currentSceneName 与真实场景不一致：
+                        // openLoad 模式下过渡场景已激活，不能回滚成 previousSceneName，
+                        // 否则后续 LoadScene(旧场景名) 会误判"已加载"直接回调而不真正加载。
+                        currentSceneName = SceneManager.GetActiveScene().name;
+                    }
+                    // 否则 Clear() 已发生：不回写 currentSceneName，避免污染下一会话的场景名缓存
+                }
+
+                // 最后才释放加载锁并唤醒排队者：此时共享状态已全部复位
+                Interlocked.Exchange(ref isLoadingAtomic, 0);
+                myTcs.TrySetResult();
+            }
+        }
+
+        // Addressables 场景加载/释放与过渡场景超时保护见 SceneSystem.SceneLoading.cs（partial）。
+
+        // 目标场景加载（Addressables 优先 + SceneManager 降级）见 SceneSystem.SceneLoading.cs。
+
+        /// <summary>
+        /// 加载目标场景
+        /// </summary>
+        private async UniTask OnLoadTargetSceneAsync(string levelName, LoadSceneMode loadSceneMode)
+        {
+            // 先释放上一个 Addressable 场景（如果还有）：
+            // 无论接下来走 Addressables 还是 SceneManager，旧句柄都必须归还，
+            // 否则跨分支切换会让 bundle 引用计数永久 +1。
+            await ReleaseLoadedAddressableSceneAsync();
+
+            // 双轨：Addressables 优先（场景已标记为 Addressable 时），失败/未标记则降级 SceneManager。
+            // 注意：未开启热更新（enableHotUpdate=false，即 AddressablesMode.Off）或未初始化时，恒走 SceneManager。
+            if (Config.AddressablesMode != AddressablesMode.Off
+                && AddressableSystem.Instance.isInited
+                && AddressableKeyExists(AddressableKeys.SceneRoot + levelName, typeof(SceneInstance)))
+            {
+                bool loaded = false;
+                // 超时保护：取消会经由 autoReleaseWhenCanceled 释放句柄，防泄漏。
+                // 不用 CancelAfter —— 它依赖 System.Threading.Timer，在 WebGL 上永不触发，
+                // 加载一旦卡住就会永久挂起；改用 PlayerLoop 驱动的 PlatformTimeout。
+                var timeoutCts = new CancellationTokenSource();
+                var timeoutDelayCts = new CancellationTokenSource();
+                if (sceneLoadTimeoutSeconds > 0)
+                {
+                    PlatformTimeout.CancelAfterAsync(timeoutCts, timeoutDelayCts.Token,
+                        TimeSpan.FromSeconds(sceneLoadTimeoutSeconds)).Forget();
+                }
+                try
+                {
+                    loaded = await LoadTargetSceneViaAddressablesAsync(levelName, loadSceneMode, timeoutCts.Token);
+                }
+                finally
+                {
+                    // 先停掉待触发的超时任务，再释放 CTS（否则它会在超时到点后去 Cancel 已释放的对象）
+                    timeoutDelayCts.Cancel();
+                    timeoutDelayCts.Dispose();
+                    timeoutCts.Dispose();
+                }
+
+                if (loaded)
+                {
+                    return;
+                }
+                Log.Warning("场景 {0} Addressables 加载失败，降级 SceneManager", levelName);
+            }
+
+            AsyncOperation async = SceneManager.LoadSceneAsync(levelName, loadSceneMode);
+
+            if (async == null)
+            {
+                Log.Error("加载场景失败：{0} 为 null", nameof(AsyncOperation));
+                if (LoadState != null) LoadState.Value = SceneLoadState.Failed;
+                // 触发并清空所有回调，避免泄漏
+                ExecuteBslcc();
+                ExecuteSlcc();
+                targetSceneName = null;
+                // 以实际激活场景修正（openLoad 模式下过渡场景可能已激活，不能回滚成 previousSceneName）
+                currentSceneName = SceneManager.GetActiveScene().name;
+                return;
+            }
+
+            // WebGL 不支持 allowSceneActivation，缓存判断避免重复调用
+            bool canControlActivation = Application.platform != RuntimePlatform.WebGLPlayer;
+            if (canControlActivation)
+            {
+                async.allowSceneActivation = false;
+            }
+
+            // 超时截止时间（统一供进度等待与激活等待两阶段使用）
+            float timeoutDeadline = sceneLoadTimeoutSeconds > 0
+                ? Time.realtimeSinceStartup + sceneLoadTimeoutSeconds
+                : float.PositiveInfinity;
+
+            CallbackProgress(0.15f);
+            // 等待场景真正开始加载（progress > 0）：快机立即进入进度循环，慢机等待至多
+            // startProgressWaitingTime（避免固定白等 0.5s，同时保留进度条最小展示时长语义）
+            float startWaitDeadline = Time.realtimeSinceStartup + Mathf.Max(0f, startProgressWaitingTime);
+            while (async.progress <= 0f && Time.realtimeSinceStartup < startWaitDeadline)
+            {
+                if (Time.realtimeSinceStartup > timeoutDeadline)
+                {
+                    HandleSceneLoadTimeout(async, levelName);
+                    return;
+                }
+                await UniTask.Yield(PlayerLoopTiming.Update);
+            }
+
+            // 加载进度 —— 节流：每 5 帧回调一次，减少 ~80% 事件触发
+            int frameSkip = 5;
+            int frameCounter = 0;
+            while (async.progress < 0.9f)
+            {
+                if (Time.realtimeSinceStartup > timeoutDeadline)
+                {
+                    HandleSceneLoadTimeout(async, levelName);
+                    return;
+                }
+                if (++frameCounter >= frameSkip)
+                {
+                    CallbackProgress(async.progress);
+                    frameCounter = 0;
+                }
+                await UniTask.Yield(PlayerLoopTiming.Update);
+            }
+
+            // 进度条最小展示时长：用 unscaled 时间，避免 PauseSystem 暂停（timeScale=0）挂起该延时
+            await UniTask.Delay((int)(endProgressWaitingTime * 1000), DelayType.UnscaledDeltaTime);
+
+            CallbackProgress(1f);
+
+            if (canControlActivation)
+            {
+                async.allowSceneActivation = true;
+            }
+
+            while (!async.isDone)
+            {
+                if (Time.realtimeSinceStartup > timeoutDeadline)
+                {
+                    HandleSceneLoadTimeout(async, levelName);
+                    return;
+                }
+                await UniTask.Yield(PlayerLoopTiming.Update);
+            }
+
+            if (!openLoad)
+            {
+                ExecuteBslcc();
+            }
+
+            OnTargetSceneLoaded();
+
+            Log.Debug("目标场景加载完成！");
+
+            ClearExcludeSet();
+
+            ExecuteSlcc();
+        }
+
+        /// <summary>
+        /// 场景加载超时处理：记录失败状态并触发回调。SceneManager 的 AsyncOperation 无法真正中止，
+        /// 放行激活让其自行完成，避免半加载操作永久驻留内存；
+        /// 实际激活场景的状态修正由 LoadScene 的 finally 完成。
+        /// </summary>
+        private void HandleSceneLoadTimeout(AsyncOperation async, string levelName)
+        {
+            Log.Error("场景 {0} 加载超时（>{1}s），已中止等待", levelName, sceneLoadTimeoutSeconds);
+            if (LoadState != null) LoadState.Value = SceneLoadState.Failed;
+            // 放行激活：Unity 无法取消 SceneManager 场景加载，阻塞激活会永久驻留内存
+            if (Application.platform != RuntimePlatform.WebGLPlayer)
+            {
+                async.allowSceneActivation = true;
+            }
+            ExecuteBslcc();
+            ExecuteSlcc();
+        }
+
+        /// <summary>
+        /// 加载下一场景完成回调
+        /// </summary>
+        private void OnTargetSceneLoaded()
+        {
+            // 注意：加载锁（isLoadingAtomic）统一由 LoadScene 的 finally 释放，
+            // 此处不再提前重置 —— 否则排队中的第二个 LoadScene 会提前进入，
+            // 与 finally 的 currentLoadTcs 清理产生竞态。
+            currentSceneName = targetSceneName;
+            targetSceneName = null;
+            // Clear() 可能已释放 Subject/ReactiveProperty（系统清理）,判空避免 NRE
+            if (LoadState != null) LoadState.Value = SceneLoadState.Loaded;
+            // 订阅者异常隔离：坏订阅者不应把“加载成功”沿调用链翻转成 Failed（LoadScene catch），
+            // 也不应阻断后续订阅者收到通知。
+            try
+            {
+                SceneChangedSubject?.OnNext(currentSceneName);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("SceneChangedSubject 订阅者异常（忽略）：{0}", ex);
+            }
+            try
+            {
+                SceneLoadedSubject?.OnNext(currentSceneName);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("SceneLoadedSubject 订阅者异常（忽略）：{0}", ex);
+            }
+        }
+
+        /// <summary>
+        /// 场景加载完成前回调
+        /// </summary>
+        private void ExecuteBslcc()
+        {
+            beforeSceneLoadingCompletionCallback?.Invoke();
+            beforeSceneLoadingCompletionCallback = null;
+        }
+        /// <summary>
+        /// 场景加载完成回调
+        /// </summary>
+        private void ExecuteSlcc()
+        {
+            sceneLoadingCompletionCallback?.Invoke();
+            sceneLoadingCompletionCallback = null;
+        }
+
+        /// <summary>
+        /// 回调用于返回进度（零分配，单次 try-catch 保护）
+        /// </summary>
+        public void CallbackProgress(float progress)
+        {
+            try
+            {
+                // Clear() 已 Dispose 并置 null：在途加载的进度回调（每 5 帧一次）继续触达时
+                // 必须判空，否则每 5 帧刷一条 NRE 错误日志直到加载结束
+                ProgressSubject?.OnNext(progress);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("getProgress 回调异常（忽略）：{0}", ex);
+            }
+        }
+
+        /// <summary>
+        /// 在场景切换时隐藏UI窗口（跳过 excludeFromSceneHide 中注册的窗口）。
+        /// 使用注册表（O(活跃窗口数)）替代 FindObjectsByType（O(场景所有对象)）。
+        /// </summary>
+        private void HideUIWindowsOnSceneChange()
+        {
+            // 拷贝快照再遍历：SetActive(false) 会同步触发 UIWindowAsset.OnDisable
+            // → UnregisterUIWindow → 修改 registeredUIWindows，
+            // 在 foreach 迭代期间修改 HashSet 会抛 InvalidOperationException。
+            var snapshot = new List<UI.UIWindowAsset>(registeredUIWindows);
+            Modules.TryGet<UISystem>(out var uiSystem);
+            foreach (var window in snapshot)
+            {
+                if (window == null) continue;
+                if (!window.isHiddenWhenLeaveScene) continue;
+                if (excludeFromSceneHide.Contains(window.name)) continue;
+
+                // 优先走 UISystem 关闭流程：触发 OnClose 生命周期 / OnCloseSubject 广播 / 对象池回收，
+                // 否则仅 SetActive(false) 会让窗口滞留 uiStateCache，OnClose 清理与池化复用被跳过
+                if (uiSystem != null && uiSystem.IsOpen(window.name))
+                {
+                    uiSystem.CloseWindow(window.name);
+                }
+                else
+                {
+                    window.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 注册在本次场景切换中不隐藏的窗口（场景加载完成后自动清空）
+        /// </summary>
+        public void ExcludeWindowFromSceneHide(string windowName)
+        {
+            excludeFromSceneHide.Add(windowName);
+        }
+
+        /// <summary>
+        /// 清空排除列表（由场景加载完成后自动调用）
+        /// </summary>
+        private void ClearExcludeSet()
+        {
+            excludeFromSceneHide.Clear();
+        }
+        #endregion
+    }
+}

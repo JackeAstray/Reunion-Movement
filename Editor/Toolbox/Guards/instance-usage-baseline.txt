@@ -1,0 +1,48 @@
+# .Instance 使用点基线（架构守卫使用）
+# 两套获取方式（XxxSystem.Instance 与 Modules.Get<T>()）并存是已知的上手成本。
+# 这里冻结现有调用数：新增一处就失败；减少后守卫会在 Console 提示可以下调。
+# 格式：<类型名> <出现次数>（按出现次数计，不是行数）
+#
+# 2026-10-29 第一轮试点（只动"依赖契约保证已注册"的消费点，注册点/测试/示例保持 Instance）：
+#   UISystem        27 → 19（TerminalSystem ×3、SceneSystem ×1、StartGame ×1）
+#   SceneSystem      9 →  7（StartGame 调用 + 一行过期注释）
+#   ResourcesSystem 28 → 27（SoundSystem.Init）
+#   LanguagesSystem 14 → 13（StartGame.OnGameStartAsync）
+#   UIToolkitSystem  2 →  1（UIToolkitPanel 文档示例改教 Modules.Get）
+# 2026-10-29 第二轮试点（模块内部对提供者的直取）：
+#   ResourcesSystem 27 →  3（Language/Sound/UI/UIInput/UIToolkit 内部共 24 处）
+#   UISystem        19 → 13（TerminalSystem 命令路径 4 处；两处文档示例同步改写法）
+#   依据：[ModuleOrder(..., DependsOn)] 已声明"提供者先初始化"；且 GameEngine.Dispose 在
+#        Current = null 之前调用 ClearModuleData()，所以 Clear/Init/Update 路径都能取到实例。
+#
+# 2026-10-30 口径修正（实现与下面的"刻意保留"对齐）：
+#   规则原先按"Assets/Gear 下全部 .cs"统计，把 Tests 与 Example 也算进来，于是
+#   HttpMgr 8 > 5、NetworkMgr 9 > 5、TimerMgr 6 > 3 三条红（多出的正好是测试 3/4/3 处，
+#   外加 Timer/Example 2 处）。CI 与守卫此前都没真正跑通过，所以一直没暴露。
+#   现在 ArchitectureGuard.InstanceCheckExcludedSegments 与 CI 的
+#   --exclude-dir=Tests --exclude-dir=Example 一致排除测试与示例，下列数字按新口径重测：
+#   EventMessageSystem 5→3、LanguagesSystem 13→12、PauseSystem 2→1、ResourcesSystem 3→2、
+#   SceneSystem 7→6、SoundSystem 23→22、TerminalSystem 2→1、TimerMgr 3→1、UISystem 13→12；
+#   HttpMgr/NetworkMgr 仍是 5（它们本来就只算运行时），AddressableSystem/UIInputSystem/
+#   UIToolkitSystem 不变。
+#
+# 刻意保留、不要再迁移（这些文件不参与统计，见 InstanceCheckExcludedSegments）：
+#   ModulePresets（注册点必须持单例）、Tests（测试不启动引擎）、Example/（示例）、
+#   AddressableSystem.LoadWithFallbackAsync（兜底 API 可能在引擎启动前调用，换 Get 会改变失败语义）、
+#   GameOption / PlayMusic / PlaySfx / SoundItem（MonoBehaviour，可能在启动前 OnEnable）、
+#   UIInputSystem 里对 UISystem 的引用（原写法带 ?. 空判断，换 Get 会从"跳过"变成"抛异常"）。
+
+AddressableSystem 12
+EventMessageSystem 3
+HttpMgr 5
+LanguagesSystem 12
+NetworkMgr 5
+PauseSystem 1
+ResourcesSystem 2
+SceneSystem 6
+SoundSystem 22
+TerminalSystem 1
+TimerMgr 1
+UIInputSystem 38
+UISystem 12
+UIToolkitSystem 1
