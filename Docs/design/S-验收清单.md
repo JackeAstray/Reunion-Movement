@@ -10,7 +10,7 @@
 | 架构 | 单一访问路径；无 >1000 行文件；Editor 代码全部 asmdef 化 | **部分** | Editor 已完成（`Gear.Editor.Framework` + `Gear.UI`，33 asmdef）；`.Instance` 仍 117；`LoopScrollRect` 1336 | `.Instance` 收敛 + LoopScrollRect 设计豁免 |
 | 核心可靠性 | RPC 协议可协商；下载有完整性/迁移策略；网络有 loopback 混沌测试 | **部分** | 错误帧开关 + 保留 ID 测试；`.done` + 迁移开关；缺真实回环 | 需集成测试环境 |
 | UI 行为 | 状态机/ESC/返回栈/Static 有 PlayMode 回归 | **大部分** | 210 EditMode；PlayMode 5/5；Back 模态、Static 重开、Open 重复已覆盖；ESC 文本聚焦待 TMP 输入框 | 补 ESC 用例 |
-| 测试与门禁 | PR 上编译 + 类型检查 + 覆盖率阈值；守卫单一实现 | **部分** | 210 EditMode 全绿；6 条守卫；Roslyn 语法门禁；类型检查仍靠 Unity | 需 Unity 授权或自托管 runner |
+| 测试与门禁 | PR 上编译 + 类型检查 + 覆盖率阈值；守卫单一实现 | **部分** | 210 EditMode + 5 PlayMode 全绿；6 条守卫；Roslyn 语法门禁；类型检查仍靠 Unity | 需 Unity 授权或自托管 runner |
 | 文档 | 计数/链接自动校验；历史文档有快照标识；中英对齐 | **接近** | 主要计数已校正；新增 LFS/烟测文档；`Docs/archive` 仍按历史保留 | 链接/计数检查未自动化 |
 | 发布 | 远端 `upm` 与源码一致；空工程安装烟测进 CI | **达成** | 远端 `upm` 已为 `com.jackeastray.gear@1.3.0`；`upm-smoke-test.ps1` 通过；自托管 main 已接入 | — |
 | 仓库卫生 | `.git` 可接受；LFS 历史迁移；大文件门禁 | **部分** | Git objects 109 MB；LFS 642 MB / 23 文件；clone 总量仍约 751 MB | 需外置 `Images/` 或字体才能继续降 |
