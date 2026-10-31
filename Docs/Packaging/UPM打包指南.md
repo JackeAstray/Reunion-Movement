@@ -181,8 +181,9 @@ public class MyGameEntry : GameEntry
 2. **导出三个 profile**：`ExportRuntimeBatch` / `ExportFullBatch` / `ExportOpenUpmBatch`，确认无报错。
 3. **核对包元数据**：`Build/Packages/com.jackeastray.gear/package.json` 的 `name`、`version` 与源码一致；
    包内存在 `LICENSE.md` 与 `Third Party Notices.md`。
-4. **空工程烟测**：新建 Unity 6000.3 工程 → `manifest.json` 加 `file:` 包 → 打开后 0 编译错误；
-   确认 `GameEntryResolver.FindEntryType()` 返回 `null`（包不会接管宿主启动）。
+4. **空工程烟测**：`powershell -ExecutionPolicy Bypass -File Tools/upm-smoke-test.ps1 -UnityPath <Unity.exe>`
+   自动建空工程 → `manifest.json` 加 `file:` 包 → 编译；也可手动新建工程复验。
+   确认 0 编译错误，且 `GameEntryResolver.FindEntryType()` 返回 `null`（包不会接管宿主启动）。
 5. **重建本地分支**：`powershell -ExecutionPolicy Bypass -File Tools/upm-publish.ps1 -Export`
    （只更新本地 `upm`，不推送）。
 6. **核对分支内容**：`git show upm:package.json` 的 name/version 正确、且没有 `Core/`/`Utils/` 旧目录。

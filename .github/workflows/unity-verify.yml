@@ -96,6 +96,18 @@ jobs:
           & '.\Tools\unity-verify.ps1' -UnityPath $env:UNITY_EDITOR
           exit $LASTEXITCODE
 
+      - name: 导出并烟测 UPM 包
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & $env:UNITY_EDITOR -batchmode -quit -nographics -projectPath $env:UNITY_PROJECT_PATH `
+            -executeMethod Gear.EditorTools.Package.GearUpmExporter.ExportRuntimeBatch `
+            -logFile -
+          if ($LASTEXITCODE -ne 0) { throw "UPM 导出失败（退出码 $LASTEXITCODE）" }
+
+          & '.\Tools\upm-smoke-test.ps1' -UnityPath $env:UNITY_EDITOR
+          exit $LASTEXITCODE
+
       - name: 上传日志与测试结果
         if: always()
         uses: actions/upload-artifact@v4

@@ -18,6 +18,8 @@
 - **握手主密钥缺失**：服务端在未配置主密钥时主动断开连接，不再留下"TCP 已连、握手永不完成"的半连接。
 - **下载完整性**：成功落盘写 `<file>.done`（内容为字节数）；`DownloadMgr.skipIfExists` 只认
   "标记存在且大小一致"的文件，中断产生的截断文件会重新下载/续传。
+  旧缓存没有标记时默认重下；确认完整时可临时开启 `DownloadMgr.treatLegacyFileAsComplete`
+  一次性补写标记（见字段注释）。
 - **HttpMgr 清理**：实现 `ISystemDisposable.Clear()`，引擎重启/模块移除时 Abort 在途与排队请求。
 - **UI 状态机**：`Open→Open`（重复打开刷新）与 `Closed→Closed`（池化 `OnClose→OnDespawned`）
   改为合法转换，不再刷假告警。
@@ -32,15 +34,22 @@
 ### Changed
 
 - 巨型文件按 partial 拆分：`NetworkClient`（RPC）、`NetworkServer`（RPC）、`UWRExecutor`（完成标记）、
-  `UIInputSystem`（玩家槽位）各自独立成文件，主文件回落到守卫基线以内。
+  `UIInputSystem`（玩家槽位）、`CarouselSelectionController`（导航）各自独立成文件，主文件回落到守卫基线以内。
 - 新增 `Tools/SyntaxCheck`（Roslyn 语法门禁，不依赖 Unity），CI 在 PR 上无条件执行。
+- 新增 `Tools/upm-smoke-test.ps1`：空工程 `file:` 安装 + 编译烟测，自托管 main 验证已接入。
+- `NetworkClientConfig.enableRpcErrorFrames` / `NetworkServerConfig.enableRpcErrorFrames`：
+  混合版本部署时服务端可关错误帧，回退"空响应"以兼容旧客户端。
+- `DownloadMgr.treatLegacyFileAsComplete`：旧缓存无 `.done` 时可选一次性补标记，避免弱网用户被重下。
 
 ### Added
 
 - `NetworkRpcFrames.EncodeError / TryDecodeError`、`NetworkRpcException` 与对应测试。
-- `UWRExecutor.HasCompletedDownload` 与 `DownloadIntegrityTests`。
+- `UWRExecutor.HasCompletedDownload` / `MarkCompleted` 与 `DownloadIntegrityTests`。
 - `UIWindowCatalogTests`、`NetworkCodecTests` 的分帧重置 / 保留 ID / RPC 错误帧用例。
+- `UIModalStack`（纯 C# 模态栈）与 `UIModalStackTests`；`NetworkClient.IsChannelLost` 与
+  `NetworkClientLivenessTests`。
 - 根目录 `THIRD-PARTY-NOTICES.md`，并随 UPM 包导出为 `Third Party Notices.md`。
+- `Docs/design/S-验收清单.md`：S 的验收标准、已通过命令与剩余阻塞项。
 
 ### Docs
 
