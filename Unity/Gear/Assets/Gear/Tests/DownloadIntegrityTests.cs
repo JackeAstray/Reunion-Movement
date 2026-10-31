@@ -76,5 +76,22 @@ namespace Gear.Tests
 
             Assert.IsFalse(UWRExecutor.HasCompletedDownload(file));
         }
+
+        [Test]
+        public void MarkCompleted_WritesMarkerThatPassesValidation()
+        {
+            string file = Path.Combine(tempDir, "legacy.bin");
+            File.WriteAllBytes(file, new byte[7]);
+
+            Assert.IsTrue(UWRExecutor.MarkCompleted(file));
+            Assert.IsTrue(UWRExecutor.HasCompletedDownload(file),
+                "迁移旧缓存时补写的标记应立即可用");
+        }
+
+        [Test]
+        public void MarkCompleted_MissingFile_ReturnsFalse()
+        {
+            Assert.IsFalse(UWRExecutor.MarkCompleted(Path.Combine(tempDir, "nope.bin")));
+        }
     }
 }

@@ -54,16 +54,27 @@ namespace Gear.Framework.Modules.Download
         /// <summary>写入完成标记（只在确认落盘大小正确后调用）。</summary>
         private void WriteCompletionMarker()
         {
-            string marker = CompletionMarkerPath;
-            if (string.IsNullOrEmpty(marker)) return;
+            MarkCompleted(DownloadResultPath);
+        }
+
+        /// <summary>
+        /// 给一个已落盘文件补写完成标记（迁移旧缓存用）。
+        /// 只记录当前大小，**不校验内容**；调用方需自行确认文件确实完整。
+        /// </summary>
+        public static bool MarkCompleted(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return false;
             try
             {
-                long length = new FileInfo(DownloadResultPath).Length;
-                File.WriteAllText(marker, length.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                long length = new FileInfo(filePath).Length;
+                File.WriteAllText(filePath + CompletionMarkerSuffix,
+                    length.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                return true;
             }
             catch (Exception ex)
             {
-                Log.Warning("[UWRExecutor] 写入完成标记失败: {0}", ex.Message);
+                Log.Warning("[UWRExecutor] 补写完成标记失败: {0}", ex.Message);
+                return false;
             }
         }
 

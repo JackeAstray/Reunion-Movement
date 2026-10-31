@@ -92,6 +92,15 @@ namespace Gear.Framework.Modules
 
         public ClientState State => state;
         public bool IsConnected => state == ClientState.Connected && channel != null && channel.IsConnect;
+
+        /// <summary>
+        /// 通道是否已丢失：只有"状态仍是 Connected、但底层通道已断开"才算。
+        /// 抽成静态方法是为了让 EditMode 用例能直接覆盖这个判定（不启动真实网络）。
+        /// </summary>
+        public static bool IsChannelLost(ClientState state, INetworkClientChannel channel)
+        {
+            return state == ClientState.Connected && (channel == null || !channel.IsConnect);
+        }
         /// <summary>加密会话是否已建立（enableEncryptedHandshake 关闭时连接成功即为 true）</summary>
         public bool IsSessionEstablished => !handshakeEnabled || sessionEstablished;
         public NetworkClientConfig Config => config;
@@ -252,7 +261,7 @@ namespace Gear.Framework.Modules
             // 通道被外部关闭（典型场景：同名通道在 NetworkMgr 中被替换）时，
             // 通道实现通常只清事件、不派发 OnDisconnected。若这里不主动收敛，
             // 客户端会一直停在 Connected：心跳照发、业务消息全丢、也不会重连。
-            if (state == ClientState.Connected && (channel == null || !channel.IsConnect))
+            if (IsChannelLost(state, channel))
             {
                 Log.Warning("[NetworkClient] 通道已断开（可能被同名通道替换），触发重连流程");
                 CloseChannel();
@@ -688,10 +697,14 @@ namespace Gear.Framework.Modules
                 return;
             }
 
-            // 系统帧：RPC 错误响应（未鉴权 / 未注册 / 处理器异常）
-            // 必须在正常响应之前判断：错误是独立消息 ID，不会与空响应混淆。
+            // 系统帧：RPC 错误响应（未鉴权/未注册/处理器异常），必须在正常响应之前判断
             if (messageId == NetworkConstants.ReservedRpcErrorMessageId)
             {
+                if (!config.enableRpcErrorFrames)
+                {
+                    Log.Debug("[NetworkClient] 收到 RPC 错误帧，但 enableRpcErrorFrames=false，已忽略"); // 兼容旧协议
+                    return;
+                }
                 if (NetworkRpcFrames.TryDecodeError(payload, out int errorCorrelationId, out byte errorCode, out string errorMessage))
                 {
                     if (pendingRequests.TryGetValue(errorCorrelationId, out var errorTcs))

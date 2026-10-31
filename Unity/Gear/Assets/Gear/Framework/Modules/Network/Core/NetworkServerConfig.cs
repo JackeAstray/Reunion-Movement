@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 using Gear.Common;
@@ -37,6 +37,10 @@ namespace Gear.Framework.Modules
         [Header("RPC 鉴权")]
         [Tooltip("RPC 鉴权开关：开启后，未通过 MarkConnectionAuthenticated 标记的连接发起的 RPC 请求将被拒绝（默认关闭保持兼容，生产环境建议开启）")]
         public bool requireRpcAuthentication = false;
+
+        [Tooltip("启用 RPC 错误帧（保留 ID 0xFFF7）：失败时返回错误码，客户端能区分未鉴权/未注册/处理器异常。\n" +
+                 "关闭后回退旧行为（失败回空响应），用于兼容尚未升级的旧客户端；混合版本部署时应设为 false。")]
+        public bool enableRpcErrorFrames = true;
 
         [Header("加密握手")]
         [Tooltip("启用加密握手：连接建立后交换随机数派生每连接会话密钥，业务帧 AES-256-CBC+HMAC 加密（两端需同时开启且主密钥一致）")]

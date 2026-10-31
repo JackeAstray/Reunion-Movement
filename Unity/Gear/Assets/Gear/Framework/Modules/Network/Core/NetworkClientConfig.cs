@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 using Gear.Common;
@@ -30,6 +30,9 @@ namespace Gear.Framework.Modules
 
         [Tooltip("流式组装缓冲上限（字节），防恶意超大帧")]
         public int maxAssembledFrameSize = 1 << 20;
+
+        [Tooltip("处理服务端 RPC 错误帧（0xFFF7）。关闭后忽略错误帧，保持与旧服务端的兼容行为（失败会等到超时）。")]
+        public bool enableRpcErrorFrames = true;
 
         [Header("自动重连")]
         public bool autoReconnect = true;

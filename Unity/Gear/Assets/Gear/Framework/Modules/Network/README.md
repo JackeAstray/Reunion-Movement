@@ -105,6 +105,11 @@ server.Start(); // 之后每帧 server.Tick()
 强类型对象消息：`RegisterObjectMessage<T>(id)` + `RegisterObjectHandler<T>` /
 `SendObject<T>` / `BroadcastObject<T>`（默认 JSON，可替换 `INetworkSerializer`）。
 
+RPC 错误帧：服务端失败时回 `0xFFF7`（关联 ID + 错误码 + 文本），客户端抛 `NetworkRpcException`，
+不再把"空响应"当成功。**混合版本部署**（旧客户端连新服务端）时，把
+`NetworkServerConfig.enableRpcErrorFrames` 设为 `false` 回退旧行为（空响应），
+`NetworkClientConfig.enableRpcErrorFrames` 也可关闭对错误帧的处理。
+
 ### 状态机
 
 `Disconnected → Connecting → Connected`；断开后 `→ Reconnecting → Connecting → ...`；

@@ -24,7 +24,7 @@ namespace Gear.Framework.Modules
             {
                 Log.Warning("[NetworkServer] 未鉴权连接 {0} 调用 RPC {1}，已拒绝", connectionId, targetMessageId);
                 TryNotifyError(connectionId, $"连接未鉴权，无法调用 RPC {targetMessageId}");
-                SendRpcError(connectionId, correlationId, NetworkRpcFrames.ErrorCodeUnauthenticated,
+                CompleteRpcWithError(connectionId, correlationId, NetworkRpcFrames.ErrorCodeUnauthenticated,
                     $"连接未鉴权，无法调用 RPC {targetMessageId}");
                 return;
             }
@@ -33,7 +33,7 @@ namespace Gear.Framework.Modules
             {
                 Log.Warning("[NetworkServer] 未注册的 RPC 请求 ID: {0}", targetMessageId);
                 TryNotifyError(connectionId, $"未注册的 RPC 请求 ID: {targetMessageId}");
-                SendRpcError(connectionId, correlationId, NetworkRpcFrames.ErrorCodeHandlerMissing,
+                CompleteRpcWithError(connectionId, correlationId, NetworkRpcFrames.ErrorCodeHandlerMissing,
                     $"未注册的 RPC 请求 ID: {targetMessageId}");
                 return;
             }
@@ -47,13 +47,29 @@ namespace Gear.Framework.Modules
             {
                 Log.Warning("[NetworkServer] RPC 请求 {0} 处理器异常: {1}", targetMessageId, ex.Message);
                 TryNotifyError(connectionId, $"RPC 请求 {targetMessageId} 处理器异常: " + ex.Message);
-                SendRpcError(connectionId, correlationId, NetworkRpcFrames.ErrorCodeHandlerFailed, ex.Message);
+                CompleteRpcWithError(connectionId, correlationId, NetworkRpcFrames.ErrorCodeHandlerFailed, ex.Message);
                 return;
             }
 
             // 只有成功才发正常响应；失败一律走错误帧，客户端不会再拿到"空成功"。
             Send(connectionId, NetworkConstants.ReservedResponseMessageId,
                 NetworkRpcFrames.EncodeResponse(correlationId, response));
+        }
+
+        /// <summary>
+        /// 失败回执的分流：新客户端回错误帧；关闭 <see cref="NetworkServerConfig.enableRpcErrorFrames"/>
+        /// 或对接旧客户端时回空响应，避免旧客户端不认识 0xFFF7 而一直等到超时。
+        /// </summary>
+        void CompleteRpcWithError(int connectionId, int correlationId, byte code, string message)
+        {
+            if (config.enableRpcErrorFrames)
+            {
+                SendRpcError(connectionId, correlationId, code, message);
+                return;
+            }
+
+            Send(connectionId, NetworkConstants.ReservedResponseMessageId,
+                NetworkRpcFrames.EncodeResponse(correlationId, Array.Empty<byte>()));
         }
 
         /// <summary>回执 RPC 错误帧；发送失败只记日志，不能因为回执失败影响连接主循环。</summary>

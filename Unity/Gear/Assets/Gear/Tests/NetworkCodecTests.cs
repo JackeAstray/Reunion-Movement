@@ -333,6 +333,15 @@ namespace Gear.Tests
         }
 
         [Test]
+        public void RpcErrorFrames_EnabledByDefault_ForBothSides()
+        {
+            Assert.IsTrue(new NetworkClientConfig().enableRpcErrorFrames,
+                "新客户端默认应能识别错误帧；对接旧服务端时可显式关闭");
+            Assert.IsTrue(new NetworkServerConfig().enableRpcErrorFrames,
+                "新服务端默认发错误帧；对接旧客户端时应显式关闭");
+        }
+
+        [Test]
         public void StreamAssembler_Reset_DropsPartialFrame()
         {
             var codec = new LengthPrefixedCodec(includeMessageId: true);

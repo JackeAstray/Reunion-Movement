@@ -17,6 +17,13 @@ namespace Gear.Framework.Modules.Download
         /// <summary>下载任务跨场景进行（含图片缓存 LRU），保持跨场景存活</summary>
         protected override bool IsPersistentAcrossScenes => true;
 
+        /// <summary>
+        /// 迁移开关：对旧版本下载、没有 <c>.done</c> 标记的文件，是否按"已完成"处理。
+        /// 默认 false（会重新下载/续传，保证正确性）；确认旧缓存完整时可临时开启，
+        /// 首次跳过时会补写标记。
+        /// </summary>
+        public bool treatLegacyFileAsComplete = false;
+
         private readonly Dictionary<string, Texture2D> imageCache = new Dictionary<string, Texture2D>();
         private readonly LinkedList<string> imageCacheOrder = new LinkedList<string>(); // LRU 访问顺序
         private readonly object imageCacheLock = new object();
@@ -240,6 +247,15 @@ namespace Gear.Framework.Modules.Download
                             Log.Debug("文件已存在且校验通过，跳过下载: {0}", localFilePath);
                             continue;
                         }
+
+                        // 旧版本缓存没有 .done：默认重下；显式开启迁移且文件非空时补标记跳过
+                        if (treatLegacyFileAsComplete && new FileInfo(localFilePath).Length > 0
+                            && UWRExecutor.MarkCompleted(localFilePath))
+                        {
+                            Log.Warning("旧文件无完成标记，按 treatLegacyFileAsComplete 补写标记并跳过: {0}", localFilePath);
+                            continue;
+                        }
+
                         Log.Warning("文件存在但没有有效完成标记（可能上次下载中断），将重新下载/续传: {0}", localFilePath);
                     }
 
