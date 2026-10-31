@@ -19,7 +19,7 @@
 |---|---|
 | [工具箱](guides/工具箱.md) | 七个 Tab 各做什么、菜单结构（按段位固定顺序） |
 | [第三方依赖](guides/第三方依赖.md) | UniTask / R3 / ZString / DOTween 的版本、重名冲突与二选一 |
-| [仓库体积与 LFS](guides/仓库体积与LFS.md) | 877 MB 的 `.git` 从哪来、非破坏性止损与历史重写方案 |
+| [仓库体积与 LFS](guides/仓库体积与LFS.md) | 835 MB 的 `.git` 从哪来、非破坏性止损与历史重写方案 |
 | [跨平台构建指南](guides/跨平台构建指南.md) | 多平台构建、`link.xml`、平台备注 |
 | [features](features.md) | 完整特性清单与示例 GIF |
 
