@@ -11,6 +11,7 @@ using UnityEngine;
 // 框架程序集本身不再声明入口：作为 UPM 包导入宿主工程时，不会自动接管启动。
 // 接入自己的游戏：在你自己的程序集里声明 [assembly: GearGameEntry(typeof(MyGameEntry))]。
 [assembly: InternalsVisibleTo("Gear.Tests")]
+[assembly: InternalsVisibleTo("Gear.Tests.PlayMode")]
 
 namespace Gear.Framework.Runtime
 {

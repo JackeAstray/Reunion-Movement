@@ -53,6 +53,13 @@ namespace Gear.Framework.Runtime.UI
                 }
             }
 
+            // Static 窗口关闭后实例仍在，状态停在 Closed；重开前先走 OnSpawned 回到 Ready，
+            // 否则 OnOpen 会触发 Closed→Open 的非法转换告警（且焦点域不会重新置顶）。
+            if (uiState.uiWindow != null && uiState.uiWindow.State == UIWindowState.Closed)
+            {
+                uiState.uiWindow.OnSpawned();
+            }
+
             OnOpen(uiState, args);
             NotifyOpened(uiName);
             return uiState;
@@ -92,6 +99,13 @@ namespace Gear.Framework.Runtime.UI
                         uiState.uiWindow.MarkInitialized();
                     }
                 }
+            }
+
+            // Static 窗口关闭后实例仍在，状态停在 Closed；重开前先走 OnSpawned 回到 Ready，
+            // 否则 OnOpen 会触发 Closed→Open 的非法转换告警（且焦点域不会重新置顶）。
+            if (uiState.uiWindow != null && uiState.uiWindow.State == UIWindowState.Closed)
+            {
+                uiState.uiWindow.OnSpawned();
             }
 
             OnOpen(uiState, args);
