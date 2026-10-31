@@ -58,7 +58,9 @@
 - `UIWindowCatalogTests`、`NetworkCodecTests` 的分帧重置 / 保留 ID / RPC 错误帧用例。
 - `UIModalStack`（纯 C# 模态栈）与 `UIModalStackTests`；`NetworkClient.IsChannelLost` 与
   `NetworkClientLivenessTests`。
-- `Tests/PlayMode/UIRouterPlayModeTests`：Back 模态顺序、Static 重开、重复打开；PlayMode 5/5。
+- `Tests/PlayMode/UIRouterPlayModeTests`：Back 模态顺序、Static 重开、重复打开、ESC 文本聚焦；PlayMode 6 条。
+- `Tests/PlayMode/NetworkLoopbackPlayModeTests`：真实 TCP 回环的 RPC 成功往返与未注册处理器错误；
+  PlayMode 总计 8 条。
 - 根目录 `THIRD-PARTY-NOTICES.md`，并随 UPM 包导出为 `Third Party Notices.md`。
 - `Docs/design/S-验收清单.md`：S 的验收标准、已通过命令与剩余阻塞项。
 
