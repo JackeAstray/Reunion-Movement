@@ -20,15 +20,19 @@
 # 2026-10-29 阶段 3 命名空间改名：7 个文件各 +1~+2 行（补 using / 消歧别名），一次性对齐。
 # 棘轮从此开始真正收缩：条目只能被删除，数值只能下调。
 
+# 2026-10-30 审查修复对齐：断线重入/场景队列/下载派发/存档 IO 误判等修复补了必要的防御性代码与注释。
+#   NetworkClient 856 → 870、FileDownloader 793 → 798、SaveSystem 656 → 675（一次性对齐）。
+#   NetworkClient 870 → 880：主动断开/关闭统一失败在途 RPC 与可靠发送等待（抽 FailAllPendingAndAcks）。
+#   AddressableSystem 808 → 777、SceneSystem 743 → 687：已按职责拆出 partial 文件，行数只降不升。
+#   EventMessageSystem 713 → 568：泛型零装箱通道拆到 EventMessageSystem.Typed.cs（182 行），删除豁免。
 628 Assets/Gear/Editor/Addressables/AddressablesCdnUploader.cs
 930 Assets/Gear/Editor/Excel/Scripts/ExcelSystem.cs
 929 Assets/Gear/Editor/UIExamples/CreateLocalMultiplayerSelectionExample.cs
 668 Assets/Gear/Framework/Modules/ColliderUtil/ColliderUtil.cs
-793 Assets/Gear/Framework/Modules/Download/FileDownloader.cs
-856 Assets/Gear/Framework/Modules/Network/Core/NetworkClient.cs
+798 Assets/Gear/Framework/Modules/Download/FileDownloader.cs
+880 Assets/Gear/Framework/Modules/Network/Core/NetworkClient.cs
 749 Assets/Gear/Framework/Modules/Network/Core/NetworkServer.cs
 808 Assets/Gear/Framework/Runtime/System/AddressableSystem/AddressableSystem.cs
-713 Assets/Gear/Framework/Runtime/System/EventMessageSystem/EventMessageSystem.cs
 743 Assets/Gear/Framework/Runtime/System/SceneSystem/SceneSystem.cs
 1037 Assets/Gear/Framework/Runtime/System/UIInputSystem/UIInputDeviceProfile.cs
 902 Assets/Gear/Framework/Runtime/System/UIInputSystem/UIInputSystem.Navigation.cs
@@ -39,4 +43,4 @@
 611 Assets/Gear/Utilities/Util/AlgorithmUtil.Components.cs
 943 Assets/Gear/Utilities/Util/AlgorithmUtil.GameObjects.cs
 779 Assets/Gear/Utilities/Util/AlgorithmUtil.Transforms.cs
-656 Assets/Gear/Utilities/Util/SaveSystem.cs
+675 Assets/Gear/Utilities/Util/SaveSystem.cs

@@ -32,9 +32,9 @@ namespace Gear.Framework.Runtime.UI
         /// <summary>当前模态栈（从下到上）。</summary>
         private static readonly List<string> modalStack = new List<string>(4);
 
-        /// <summary>被改过的 CanvasGroup 原值：窗口名 → (interactable, alpha)。</summary>
-        private static readonly Dictionary<string, (bool interactable, float alpha)> blockedWindows =
-            new Dictionary<string, (bool, float)>();
+        /// <summary>被改过的 CanvasGroup 原值：窗口名 → (交互, 透明度, 具体实例)。</summary>
+        private static readonly Dictionary<string, (bool interactable, float alpha, CanvasGroup group)> blockedWindows =
+            new Dictionary<string, (bool, float, CanvasGroup)>();
 
         /// <summary>当前是否有模态窗口。</summary>
         public static bool HasModal => modalStack.Count > 0;
@@ -63,7 +63,22 @@ namespace Gear.Framework.Runtime.UI
             if (string.IsNullOrEmpty(windowId)) return;
 
             modalStack.Remove(windowId);
+            // 先还原这个窗口自己的 CanvasGroup 并删记录：
+            // 若它曾是被阻断的下层窗口，关闭后记录会一直留在 blockedWindows 里，
+            // 同名窗口重建时被当成"已阻断"而跳过，或者永远不还原。
+            RestoreWindowBlock(windowId);
             Recompute();
+        }
+
+        /// <summary>按窗口名还原并删除单条阻断记录（不依赖窗口实例，已销毁的窗口也能清掉）。</summary>
+        private static void RestoreWindowBlock(string windowId)
+        {
+            if (!blockedWindows.TryGetValue(windowId, out var original)) return;
+            blockedWindows.Remove(windowId);
+            var group = original.group;
+            if (group == null) return;
+            group.interactable = original.interactable;
+            group.alpha = original.alpha;
         }
 
         /// <summary>清空模态状态并还原所有被阻断的窗口（重置/退出登录等场景）。</summary>
@@ -84,6 +99,14 @@ namespace Gear.Framework.Runtime.UI
             {
                 RestoreAll();
                 return;
+            }
+
+            // 剔除当前已不可见的模态（被 SetActive(false)/HideAllWindows 隐藏，或已销毁）：
+            // 否则 topModal 指向一个看不见的窗口，下面会把其余所有可见窗口全部阻断 ——
+            // 而唯一"该可交互"的顶层模态又不在可见集合里，表现为整个 UI 卡死。
+            while (modalStack.Count > 0 && !ui.IsOpen(modalStack[modalStack.Count - 1]))
+            {
+                modalStack.RemoveAt(modalStack.Count - 1);
             }
 
             string topModal = modalStack.Count == 0 ? null : modalStack[modalStack.Count - 1];
@@ -117,12 +140,25 @@ namespace Gear.Framework.Runtime.UI
 
         private static void Block(string id, UIController window)
         {
-            if (id == null || blockedWindows.ContainsKey(id)) return;
+            if (id == null || window == null) return;
 
             var group = window.GetComponent<CanvasGroup>();
             if (group == null) group = window.gameObject.AddComponent<CanvasGroup>();
 
-            blockedWindows[id] = (group.interactable, group.alpha);
+            // 同名窗口可能是"销毁后重建"的新实例：旧记录里的 group 已失效，
+            // 不能因为 ContainsKey 就直接跳过（否则新实例永远不被阻断，模态失效）。
+            if (blockedWindows.TryGetValue(id, out var existing))
+            {
+                if (existing.group == group) return;
+                if (existing.group != null)
+                {
+                    existing.group.interactable = existing.interactable;
+                    existing.group.alpha = existing.alpha;
+                }
+                blockedWindows.Remove(id);
+            }
+
+            blockedWindows[id] = (group.interactable, group.alpha, group);
 
             group.interactable = false;
             if (DimBackground) group.alpha = Mathf.Clamp01(DimAlpha);
@@ -136,29 +172,29 @@ namespace Gear.Framework.Runtime.UI
             if (window == null) return;
 
             var group = window.GetComponent<CanvasGroup>();
-            if (group == null) return;
+            // 实例不匹配说明窗口已销毁重建：不能把旧值还原到新实例上
+            if (group == null || group != original.group) return;
 
             group.interactable = original.interactable;
             group.alpha = original.alpha;
         }
 
+        /// <summary>
+        /// 还原所有被改过的 CanvasGroup。
+        /// 直接按记录里的实例还原，而不是遍历"当前打开"的窗口：
+        /// 被隐藏/已关闭的窗口也要还原，且不会因为查不到窗口而把记录留成脏数据。
+        /// </summary>
         private static void RestoreAll()
         {
             if (blockedWindows.Count == 0) return;
 
-            if (Modules.TryGet(out UISystem ui) && ui != null && ui.isInited)
+            foreach (var kv in blockedWindows)
             {
-                var open = new List<UIController>(8);
-                ui.GetAllOpenWindows(open);
-                for (int i = 0; i < open.Count; i++)
-                {
-                    var window = open[i];
-                    if (window == null) continue;
-                    Unblock(window.gameObject.name, window);
-                }
+                var group = kv.Value.group;
+                if (group == null) continue;
+                group.interactable = kv.Value.interactable;
+                group.alpha = kv.Value.alpha;
             }
-
-            // 剩下的（窗口已销毁/已关闭）直接丢弃记录，避免残留
             blockedWindows.Clear();
         }
     }

@@ -259,10 +259,21 @@ namespace Gear.Framework.Modules.StateMachine
             if (currentState != null)
             {
                 oldLabel = currentState.label;
+                var stateAtExit = currentState;
                 // 旧状态退出回调逐段隔离：单个订阅者异常不得中断切换流程
                 // （否则出现“OnStop 已执行但状态未切换”的不一致状态）
                 try { currentState.OnStop?.Invoke(); } catch (Exception ex) { Log.Error("StateMachine OnStop 异常（已隔离）: {0}", ex.Message); }
-                try { OnStateExit?.Invoke(currentState.label); } catch (Exception ex) { Log.Error("StateMachine OnStateExit 订阅者异常（已隔离）: {0}", ex.Message); }
+                try { OnStateExit?.Invoke(stateAtExit.label); } catch (Exception ex) { Log.Error("StateMachine OnStateExit 订阅者异常（已隔离）: {0}", ex.Message); }
+
+                // 重入防护：OnStop/OnStateExit 里可能再次调用 ChangeState（如"死亡时立即切结算"）。
+                // 内层切换已经完整执行并改写 currentState/history，外层若继续会把它覆盖回目标状态，
+                // 造成内外层状态互相踩踏、历史栈出现重复/错序。检测到内层已切换时直接放弃外层。
+                if (!ReferenceEquals(currentState, stateAtExit))
+                {
+                    Log.Warning("StateMachine: 状态 {0} 的退出回调中发生了重入切换（当前已变为 {1}），放弃本次到 {2} 的切换",
+                        stateAtExit.label, currentState != null ? currentState.label.ToString() : "null", newState);
+                    return false;
+                }
 
                 // 同状态重入（如 Attacking→Attacking 重启攻击）不压历史栈：
                 // 从重启后的状态 Revert 应回到真正的上一个状态，而不是重复的自身条目；
@@ -275,8 +286,10 @@ namespace Gear.Framework.Modules.StateMachine
                     {
                         var items = stateHistory.ToArray();
                         stateHistory.Clear();
-                        // items[0] 为栈顶（最新），末位为最旧；丢弃最旧的一条
-                        for (int i = 0; i < items.Length - 1; i++)
+                        // items[0] 为栈顶（最新），末位为最旧；丢弃最旧的一条。
+                        // 必须从"次旧"向"最新"倒序压栈，才能保持原栈顺序；
+                        // 正序压栈会把顺序整体反转，Revert 会退回错误的历史状态。
+                        for (int i = items.Length - 2; i >= 0; i--)
                         {
                             stateHistory.Push(items[i]);
                         }

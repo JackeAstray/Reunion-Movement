@@ -1,4 +1,4 @@
-﻿using Gear.Common;
+using Gear.Common;
 using Gear.Framework.Runtime.Base;
 using Gear.Framework.Runtime.Resources;
 using Gear.Framework.Runtime.UI;
@@ -67,7 +67,16 @@ namespace Gear.Framework.Runtime.UIInput
             {
                 // PushFocus 内部会压入当前旧焦点并设置新焦点（单次压栈）。
                 // 不要在此处再手动 Push，否则每次开窗多压一条，焦点栈无界增长。
+                // 记录"本窗口实际压了几条"：没有可聚焦项时 PushFocus 不会压栈，
+                // 关窗时就绝不能弹栈（否则弹掉的是父窗口的焦点记录）。
+                int before = focusStack.Count;
                 SetSelectedGameObject(firstSelected);
+                int pushed = focusStack.Count - before;
+                if (pushed > 0)
+                {
+                    focusPushesByWindow.TryGetValue(controller.uiName, out int count);
+                    focusPushesByWindow[controller.uiName] = count + pushed;
+                }
             }
         }
 
@@ -79,6 +88,14 @@ namespace Gear.Framework.Runtime.UIInput
             // 与 OnUIOpened 对称：仅当窗口是在 UI 模式下打开（压栈过焦点）时才恢复焦点，
             // 避免 Gameplay 模式下关窗误弹栈导致焦点栈错位（Pop 多于 Push）。
             if (currentMode != UIControlMode.UIControl) return;
+
+            // 只恢复本窗口真正压入过的焦点记录，保证 Push/Pop 按窗口配对
+            if (controller == null) return;
+            string windowId = controller.uiName;
+            if (string.IsNullOrEmpty(windowId)) return;
+            if (!focusPushesByWindow.TryGetValue(windowId, out int pushed) || pushed <= 0) return;
+            if (pushed == 1) focusPushesByWindow.Remove(windowId);
+            else focusPushesByWindow[windowId] = pushed - 1;
 
             // 延迟一帧恢复焦点：当帧窗口尚未完全从 EventSystem 注销，
             // 立即恢复可能被 InputSystemUIInputModule 当帧的导航状态覆写

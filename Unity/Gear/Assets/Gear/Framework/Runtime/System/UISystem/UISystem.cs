@@ -33,6 +33,10 @@ namespace Gear.Framework.Runtime.UI
         // 避免双实例化 + uiStateCache.Add 键冲突抛异常导致孤儿窗口
         private readonly SingleFlightLoader<UILoadState> windowLoadGate = new SingleFlightLoader<UILoadState>();
 
+        // 加载期间收到的"关闭"意图：窗口尚未登记进 uiStateCache 时 CloseWindow 找不到它，
+        // 先记在这里，加载完成后立即关闭并按失败返回，避免"点了取消反而弹出窗口"。
+        private readonly HashSet<string> pendingCloseRequests = new HashSet<string>();
+
         // CloseAllWindows 批量关闭的复用缓冲（避免每次批量操作 new List 分配）
         private readonly List<string> closeBuffer = new List<string>();
 
@@ -99,6 +103,11 @@ namespace Gear.Framework.Runtime.UI
             uiControllerTypeCache.Clear();
             // 取消在途的窗口加载（其完成回调会登记到已清空的缓存中）
             windowLoadGate.CancelAll();
+            pendingCloseRequests.Clear();
+
+            // 先让路由层收尾：取消所有等待中的结果（返回 None）、清空导航栈/模态、断开订阅。
+            // 若放在 Subject Dispose 之后，调用方的 await 将永远不完成，且旧栈会残留到下次会话。
+            UIRouter.NotifySystemClearing();
             // 释放 R3 Subject（自动断开所有订阅）并置 null 以支持重初始化
             OnInitSubject?.Dispose();
             OnInitSubject = null;

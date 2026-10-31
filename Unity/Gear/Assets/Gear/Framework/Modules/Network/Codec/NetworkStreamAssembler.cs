@@ -134,7 +134,14 @@ namespace Gear.Framework.Modules
                 }
                 if (frameLength <= 0 || frameLength > maxBufferSize)
                 {
-                    Log.Warning("[NetworkStreamAssembler] 非法帧长 {0}，丢弃缓冲并重置", frameLength);
+                    // 节流：恶意端持续灌非法长度头时，这里会被高频命中（LengthPrefixedCodec 每 4 字节
+                    // 返回一次 -1），不节流会把日志刷爆，反而成为日志型 DoS。
+                    int now = Environment.TickCount;
+                    if (unchecked(now - lastDecodeFailWarnTicks) > 1000)
+                    {
+                        lastDecodeFailWarnTicks = now;
+                        Log.Warning("[NetworkStreamAssembler] 非法帧长 {0}，丢弃缓冲并重置", frameLength);
+                    }
                     count = 0;
                     return;
                 }

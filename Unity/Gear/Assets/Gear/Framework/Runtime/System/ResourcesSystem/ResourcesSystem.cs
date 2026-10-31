@@ -14,7 +14,7 @@ namespace Gear.Framework.Runtime.Resources
     /// 资源系统
     /// </summary>
     [ModuleOrder(10)]
-    public class ResourcesSystem : ICustomSystem, ISystemDisposable
+    public class ResourcesSystem : ICustomSystem, ISystemDisposable, ISystemClearLast
     {
         #region 单例与初始化
         private static readonly Lazy<ResourcesSystem> instance = new(() => new ResourcesSystem());

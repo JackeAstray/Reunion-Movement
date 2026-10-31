@@ -106,12 +106,26 @@ namespace Gear.Framework.Modules
             // 五星保底判断
             if (Check5StarPull())
             {
+                // 五星双池皆空时 Get5StarItem 返回 null：按既有契约直接返回 null，
+                // 保底计数保留在推进后的值（不降级四星，避免语义漂移；见 GachaSystemTests）
                 result = Get5StarItem();
+                if (result == null)
+                {
+                    // 双池皆空：Get5StarItem 已记录错误；保底计数保留在推进后的值
+                    SavePityState();
+                    return null;
+                }
             }
             // 四星保底判断
             else if (Check4StarPull())
             {
                 result = Get4StarItem();
+                if (result == null)
+                {
+                    // 双池皆空：Get4StarItem 已记录错误；保底计数保留在推进后的值
+                    SavePityState();
+                    return null;
+                }
             }
             else
             {
@@ -464,7 +478,12 @@ namespace Gear.Framework.Modules
                 int pityBeforeReplace = pity4Star;
                 bool guaranteedBeforeReplace = isGuaranteedUp4Star;
                 bool lastPullUpBeforeReplace = isLastPullUp;
-                results[lastThreeStarIndex] = Get4StarItem();
+                GachaItem replacement = Get4StarItem();
+                // 四星池为空时 Get4StarItem 返回 null：不要把原本有效的三星结果覆盖成 null
+                if (replacement != null)
+                {
+                    results[lastThreeStarIndex] = replacement;
+                }
                 pity4Star = pityBeforeReplace;
                 // 同样恢复 UP 保底标记：Get4StarItem 内部翻转的 isGuaranteedUp4Star/isLastPullUp
                 // 属于"正常抽卡"语义，十连保底替换不应消耗/污染玩家的四星大保底状态

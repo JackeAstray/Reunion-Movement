@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 using Gear.Framework.Modules.StateMachine;
 using System.Collections.Generic;
 
@@ -250,6 +250,46 @@ namespace Gear.Tests
             machine.Update(1000f);
 
             Assert.AreEqual("Idle", machine.CurrentState);
+        }
+
+        [Test]
+        public void History_Overflow_Keeps_Newest_Order_For_Revert()
+        {
+            // 回归：历史上限截断后旧实现按 [0..n-2] 正序重压，栈顺序被整体反转，
+            // Revert 会回到"最旧"而不是"上一个"状态。
+            var machine = new StateMachine<int>();
+            for (int i = 0; i < 70; i++) machine.AddState(i);
+
+            machine.CurrentState = 0;
+            for (int i = 1; i < 70; i++)
+            {
+                machine.CurrentState = i;
+            }
+
+            Assert.AreEqual(69, machine.CurrentState);
+            machine.RevertToPreviousState();
+            Assert.AreEqual(68, machine.CurrentState, "超出历史上限后，Revert 仍应回到紧邻的上一个状态");
+        }
+
+        [Test]
+        public void Reentrant_Change_Inside_OnStop_Is_Not_Overwritten_By_Outer_Transition()
+        {
+            // 回归：OnStop 内再次 ChangeState 时，外层切换会继续执行并把内层结果覆盖掉。
+            var machine = new StateMachine<string>();
+            bool reentered = false;
+            machine.AddState("A", onStop: () =>
+            {
+                if (reentered) return;
+                reentered = true;
+                machine.CurrentState = "C";
+            });
+            machine.AddState("B");
+            machine.AddState("C");
+
+            machine.CurrentState = "A";
+            machine.CurrentState = "B";
+
+            Assert.AreEqual("C", machine.CurrentState, "外层的 A→B 不应覆盖 OnStop 中发生的 A→C");
         }
     }
 }

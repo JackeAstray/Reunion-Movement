@@ -173,9 +173,9 @@ namespace Gear.Utilities
             if (string.IsNullOrEmpty(json)) return false;
             try
             {
-                // 快速探测：信封以 {"version" 开头；直接 FromJson 旧格式数据也不会误判（数据无 version 字段时解析出 null）
+                // 信封必须同时含 version 与 payload：否则旧格式数据里恰好叫 payload 的字段会被误判为信封
                 var candidate = JsonUtility.FromJson<SaveEnvelope>(json);
-                if (candidate == null || string.IsNullOrEmpty(candidate.payload)) return false;
+                if (candidate == null || string.IsNullOrEmpty(candidate.version) || string.IsNullOrEmpty(candidate.payload)) return false;
                 envelope = candidate;
                 return true;
             }
@@ -208,22 +208,41 @@ namespace Gear.Utilities
                     if (!File.Exists(path)) return false;
                 }
 
+                // 读文件失败（被占用/权限/磁盘错误）不是"存档损坏"：
+                // 直接返回 false，绝不能走下面的 .corrupt 隔离 —— 否则一次瞬时的 IO 错误
+                // 就会把一份完好的存档改名搬走，玩家表现为"存档突然没了"。
+                string raw;
                 try
                 {
-                    string raw = File.ReadAllText(path);
-                    // 解密失败必须明确失败：ENC1/ENC2 前缀的数据一旦 MAC/解密校验不过，就说明
-                    // 文件已损坏或密钥不匹配。原实现 `DecryptFromText(raw) ?? raw` 会把带 ENC 前缀的
-                    // 密文当作明文 JSON 继续解析，既掩盖真实原因，也让完整性校验形同虚设。
-                    // 注意：启用加密之前写入的明文旧档由 DecryptFromText 内部原样返回（见其末尾分支），
-                    // 向后兼容不依赖这里的回退。
-                    string json = EnableEncryption ? DecryptFromText(raw) : raw;
-                    if (json == null)
-                    {
-                        Log.Error("[SaveSystem] 存档 {0} 解密/完整性校验失败（文件损坏或密钥不匹配），已判定为不可读", path);
-                        LastLoadedVersion = null;
-                        return false;
-                    }
+                    raw = File.ReadAllText(path);
+                }
+                catch (Exception ioEx)
+                {
+                    Log.Warning("SaveSystem 读取存档失败（文件保持原样）{0}: {1}", saveName, ioEx.Message);
+                    return false;
+                }
 
+                // 解密/完整性校验失败同样不隔离：可能是密钥不匹配（换机器、换密钥），
+                // 文件本身是好的，隔离会让用户换回正确密钥后也读不到。
+                string json;
+                try
+                {
+                    json = EnableEncryption ? DecryptFromText(raw) : raw;
+                }
+                catch (Exception decEx)
+                {
+                    Log.Error("SaveSystem 解密存档异常（文件保持原样）{0}: {1}", saveName, decEx.Message);
+                    return false;
+                }
+                if (json == null)
+                {
+                    Log.Error("[SaveSystem] 存档 {0} 解密/完整性校验失败（文件损坏或密钥不匹配），已判定为不可读", path);
+                    LastLoadedVersion = null;
+                    return false;
+                }
+
+                try
+                {
                     // 版本信封解包：新格式 {version, payload}；旧格式（无信封）直接按数据解析
                     string payloadJson = json;
                     string loadedVersion = null;

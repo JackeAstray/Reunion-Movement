@@ -1,4 +1,4 @@
-﻿using Gear.Common;
+using Gear.Common;
 using Gear.Framework.Runtime.Base;
 using Gear.Framework.Runtime.Resources;
 using Gear.Framework.Runtime.UI;
@@ -37,6 +37,13 @@ namespace Gear.Framework.Runtime.UIInput
         {
             firstSelectedRegistry.Remove(uiName);
         }
+
+        /// <summary>
+        /// 每个窗口打开时实际压入的焦点条数（窗口名 → 次数）。
+        /// 关窗时只按这个记录弹栈：若窗口没有任何可聚焦项（例如纯展示弹窗），
+        /// 旧实现只判断"栈非空"就会把父窗口的焦点记录弹掉，导致焦点栈整体错位。
+        /// </summary>
+        private readonly Dictionary<string, int> focusPushesByWindow = new Dictionary<string, int>();
 
         /// <summary>
         /// 将焦点压入栈并设置为当前选中（包装方法，包含边界检查）。
@@ -150,6 +157,7 @@ namespace Gear.Framework.Runtime.UIInput
             }
 #endif
             focusStack.Clear();
+            focusPushesByWindow.Clear();
             SetEventSystemSelection(null);
             CurrentSelected = null;
         }

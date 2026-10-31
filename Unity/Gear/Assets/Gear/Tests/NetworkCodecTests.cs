@@ -62,6 +62,67 @@ namespace Gear.Tests
         }
 
         [Test]
+        public void LengthPrefixedCodec_NegativeLength_ResetsBuffer_AndRecoversOnNextChunk()
+        {
+            // 回归：负长度（0xFFFFFFFF）曾只消费 4 字节长度字段，接着把消息 ID/负载误当长度，
+            // 缓冲持续膨胀且后续合法帧永远等不齐。现在应判定流不可信、丢弃整个缓冲，
+            // 让下一个字节块从干净状态重新分帧。
+            var codec = new LengthPrefixedCodec(includeMessageId: true);
+            var assembler = new NetworkStreamAssembler(codec);
+
+            // 非法帧：长度 = -1，消息 ID = 0x0022，负载 "bad"（共 6 + 3 字节）
+            var invalid = new byte[LengthPrefixedCodec.LengthFieldSize + LengthPrefixedCodec.MessageIdSize + 3];
+            invalid[0] = 0xFF; invalid[1] = 0xFF; invalid[2] = 0xFF; invalid[3] = 0xFF;
+            invalid[4] = 0x22; invalid[5] = 0x00;
+            invalid[6] = (byte)'b'; invalid[7] = (byte)'a'; invalid[8] = (byte)'d';
+
+            var good = codec.Encode(7, Bytes("ok"));
+            var all = new byte[invalid.Length + good.Length];
+            Buffer.BlockCopy(invalid, 0, all, 0, invalid.Length);
+            Buffer.BlockCopy(good, 0, all, invalid.Length, good.Length);
+
+            var received = new List<(ushort id, byte[] payload)>();
+            assembler.Feed(all, (id, frame, payload) => received.Add((id, payload.ToArray())));
+
+            Assert.AreEqual(0, received.Count, "非法长度帧之后的数据已不可信，不能继续按旧偏移解析");
+            Assert.AreEqual(0, assembler.BufferedBytes, "非法帧长必须丢弃整个缓冲，不能留下错位的残余字节");
+
+            // 下一块数据重新开始分帧：合法帧必须能正常解析
+            assembler.Feed(good, (id, frame, payload) => received.Add((id, payload.ToArray())));
+            Assert.AreEqual(1, received.Count);
+            Assert.AreEqual(7, received[0].id);
+            CollectionAssert.AreEqual(Bytes("ok"), received[0].payload);
+        }
+
+        [Test]
+        public void LengthPrefixedCodec_NegativeLength_ResetsAsSoonAsLengthFieldArrives()
+        {
+            // 帧头被拆成多段时，只要长度字段（4 字节）到齐就能判定非法：
+            // 必须立刻丢弃缓冲，不能等"完整帧头"到齐（否则半帧会一直被保留）。
+            var codec = new LengthPrefixedCodec(includeMessageId: true);
+            var assembler = new NetworkStreamAssembler(codec);
+
+            var invalid = new byte[6];
+            invalid[0] = 0xFF; invalid[1] = 0xFF; invalid[2] = 0xFF; invalid[3] = 0xFF;
+            invalid[4] = 0x22; invalid[5] = 0x00;
+            var good = codec.Encode(9, Bytes("x"));
+
+            var received = new List<(ushort id, byte[] payload)>();
+            // 先喂 4 字节（只有长度字段）：应立即判定非法并重置缓冲
+            assembler.Feed(new ArraySegment<byte>(invalid, 0, 4).ToArray(),
+                (id, frame, payload) => received.Add((id, payload.ToArray())));
+
+            Assert.AreEqual(0, received.Count);
+            Assert.AreEqual(0, assembler.BufferedBytes);
+
+            // 后续合法帧重新从干净状态解析
+            assembler.Feed(good, (id, frame, payload) => received.Add((id, payload.ToArray())));
+            Assert.AreEqual(1, received.Count);
+            Assert.AreEqual(9, received[0].id);
+            CollectionAssert.AreEqual(Bytes("x"), received[0].payload);
+        }
+
+        [Test]
         public void Assembler_SplitFrame_AcrossChunks()
         {
             var codec = new LengthPrefixedCodec(includeMessageId: true);

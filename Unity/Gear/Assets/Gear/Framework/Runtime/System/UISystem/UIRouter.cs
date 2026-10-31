@@ -3,6 +3,7 @@ using Gear.Framework.Runtime.UIInput;
 using Cysharp.Threading.Tasks;
 using R3;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Gear.Framework.Runtime.UI
@@ -33,6 +34,11 @@ namespace Gear.Framework.Runtime.UI
         private static IDisposable cancelSubscription;
         private static IDisposable closeSubscription;
         private static bool hooked;
+
+        // 记录"当前订阅挂在哪个 Subject 实例上"：UISystem.Clear()/Init() 会重建 Subject，
+        // 只靠 hooked 布尔量会导致重建后永远不再订阅（旧订阅指向已 Dispose 的 Subject）。
+        private static Subject<UIController> hookedCloseSubject;
+        private static Subject<R3.Unit> hookedCancelSubject;
 
         /// <summary>栈深度。</summary>
         public static int Depth => stack.Count;
@@ -143,7 +149,7 @@ namespace Gear.Framework.Runtime.UI
         {
             if (string.IsNullOrEmpty(windowId)) return;
             stack.Remove(windowId);
-if (Modules.TryGet(out UISystem ui) && ui != null && ui.isInited)
+            if (Modules.TryGet(out UISystem ui) && ui != null && ui.isInited)
             {
                 ui.CloseWindow(windowId);
             }
@@ -169,18 +175,46 @@ if (Modules.TryGet(out UISystem ui) && ui != null && ui.isInited)
 
         /// <summary>
         /// 惰性挂钩：第一次 Push 时才订阅（此时 UISystem/UIInputSystem 必然已初始化）。
+        /// <para>
+        /// 自愈：UISystem.Clear()/Init() 会 Dispose 并重建 Subject。这里按"订阅时的 Subject 实例"
+        /// 判断是否需要重挂，避免重建后返回键、栈同步、模态解除全部静默失效。
+        /// </para>
         /// </summary>
         private static void EnsureHooked()
         {
-            if (hooked) return;
+            Modules.TryGet(out UISystem ui);
+            Modules.TryGet(out UIInputSystem input);
+
+            var currentCloseSubject = ui != null ? ui.OnCloseSubject : null;
+            var currentCancelSubject = input != null ? input.CancelSubject : null;
+
+            if (hooked)
+            {
+                // 仍然挂在同一对 Subject 上：无事可做（包括"当时两个 Subject 都为 null"的场景——
+                // 若后来系统初始化完成，实例变化会走到下面的重挂分支）
+                if (ReferenceEquals(hookedCloseSubject, currentCloseSubject)
+                    && ReferenceEquals(hookedCancelSubject, currentCancelSubject))
+                {
+                    return;
+                }
+
+                // 系统重建过：丢弃指向旧 Subject 的订阅，下面重挂
+                cancelSubscription?.Dispose();
+                cancelSubscription = null;
+                closeSubscription?.Dispose();
+                closeSubscription = null;
+            }
+
             hooked = true;
+            hookedCloseSubject = currentCloseSubject;
+            hookedCancelSubject = currentCancelSubject;
 
             // 1) 返回键：焦点域没有消费取消键时，UIInputSystem 才会广播 CancelSubject
             try
             {
-                if (Modules.TryGet<UIInputSystem>(out var input) && input.CancelSubject != null)
+                if (currentCancelSubject != null)
                 {
-                    cancelSubscription = input.CancelSubject.Subscribe(_ =>
+                    cancelSubscription = currentCancelSubject.Subscribe(_ =>
                     {
                         if (CanGoBack) Back();
                     });
@@ -194,9 +228,9 @@ if (Modules.TryGet(out UISystem ui) && ui != null && ui.isInited)
             // 2) 栈同步：窗口被直接关掉时从栈里摘除
             try
             {
-                if (Modules.TryGet(out UISystem ui) && ui != null && ui.OnCloseSubject != null)
+                if (currentCloseSubject != null)
                 {
-                    closeSubscription = ui.OnCloseSubject.Subscribe(window =>
+                    closeSubscription = currentCloseSubject.Subscribe(window =>
                     {
                         if (window == null) return;
                         string id = string.IsNullOrEmpty(window.uiName)
@@ -214,6 +248,43 @@ if (Modules.TryGet(out UISystem ui) && ui != null && ui.isInited)
             {
                 Log.Warning("[UIRouter] 订阅窗口关闭事件失败（不影响其他功能）: {0}", ex.Message);
             }
+        }
+
+        /// <summary>
+        /// UISystem 即将 Clear 时调用：取消所有等待中的结果（返回 None，不抛异常）、
+        /// 清空导航栈与模态、断开订阅。否则调用方会永久挂在 await，且旧栈/模态残留到下一次会话。
+        /// </summary>
+        internal static void NotifySystemClearing()
+        {
+            // 先完成等待者：slot.Cancel 内部 TrySetResult(None)，await 会正常返回而不是抛异常
+            if (pendingResults.Count > 0)
+            {
+                var slots = new List<IWindowResultSlot>(pendingResults.Values);
+                pendingResults.Clear();
+                for (int i = 0; i < slots.Count; i++)
+                {
+                    try
+                    {
+                        slots[i].Cancel("UISystem 已清理");
+                    }
+                    catch (Exception ex)
+                    {
+                        // 某个等待者恢复时抛异常不能阻断其余等待者完成与后续清理
+                        Log.Error("[UIRouter] 取消窗口结果时等待者异常（已隔离）: {0}", ex.Message);
+                    }
+                }
+            }
+
+            stack.Clear();
+            ResetModal();
+
+            cancelSubscription?.Dispose();
+            cancelSubscription = null;
+            closeSubscription?.Dispose();
+            closeSubscription = null;
+            hooked = false;
+            hookedCloseSubject = null;
+            hookedCancelSubject = null;
         }
 
         /// <summary>域重载关闭时静态栈不会自动复位，这里跟随 Play 会话复位。</summary>

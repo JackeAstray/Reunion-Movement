@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 using Gear.Common;
 using Gear.Utilities;
@@ -53,8 +53,11 @@ namespace Gear.Framework.Modules
             int payloadLen = ReadInt32LE(buffer, offset);
             if (payloadLen < 0)
             {
-                // 非法长度：消费长度字段本身，交由 TryDecode 失败丢弃
-                frameLength = LengthFieldSize;
+                // 非法长度（负数/高位为 1）：字节流已不可信，无法推断该帧真实边界。
+                // 返回负值让 NetworkStreamAssembler 走"非法帧长 → 丢弃整个缓冲并重置"分支，
+                // 而不是只消费 4 字节长度字段后继续在垃圾数据里找帧边界
+                // （那会把后续消息 ID/负载误当长度，持续解析垃圾直到缓冲上限，连接彻底失步）。
+                frameLength = -1;
                 return true;
             }
             long total = (long)frameHeaderSize + payloadLen;

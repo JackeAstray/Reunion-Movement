@@ -348,7 +348,17 @@ namespace Gear.Framework.Modules
                 textGo.transform.SetParent(notice.transform, false);
                 var text = textGo.AddComponent<UnityEngine.UI.Text>();
                 text.text = "当前日期不在允许范围内，游戏内容已锁定。";
-                var font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+                // Unity 2022.2+ 内置字体已从 Arial.ttf 改为 LegacyRuntime.ttf；
+                // Unity 6 下继续取 Arial.ttf 会报 "Arial.ttf is no longer a valid built in font"，
+                // 字体为 null 时 UI.Text 不渲染（提示界面空白）。优先新名字，旧版本回退。
+                Font font = null;
+                try { font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); }
+                catch { /* 旧版本没有该内置字体，回退 Arial */ }
+                if (font == null)
+                {
+                    try { font = Resources.GetBuiltinResource<Font>("Arial.ttf"); }
+                    catch { /* 忽略：下面判空处理 */ }
+                }
                 if (font != null) text.font = font;
                 text.fontSize = 28;
                 text.alignment = TextAnchor.MiddleCenter;

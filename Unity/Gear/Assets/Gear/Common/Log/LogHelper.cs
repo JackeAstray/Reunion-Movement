@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading;
 using Cysharp.Text;
@@ -440,9 +440,24 @@ namespace Gear.Common
         {
             // 不能写 ZString.Format(format, args)：它会绑定到泛型 Format<T1>(string, T1)，
             // 把整个 object[] 当成 arg0，导致 {1} 及以上抛 FormatException。
-            string message = args == null || args.Length == 0
-                ? format
-                : string.Format(format, args);
+            // string.Format 本身也可能因占位符/参数数量不匹配抛 FormatException：
+            // 日志调用不应把异常抛回业务代码（尤其在 catch 块里打日志时会把原始异常吞掉）。
+            string message;
+            if (args == null || args.Length == 0)
+            {
+                message = format;
+            }
+            else
+            {
+                try
+                {
+                    message = string.Format(format, args);
+                }
+                catch (FormatException)
+                {
+                    message = format + " | （日志格式化失败，参数个数 " + args.Length + "）";
+                }
+            }
             Dispatch(level, BuildConsoleString(level, channel, message), null);
             WriteToFileLine(level, channel, message);
         }

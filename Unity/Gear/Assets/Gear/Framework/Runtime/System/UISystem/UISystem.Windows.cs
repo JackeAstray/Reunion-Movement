@@ -20,6 +20,14 @@ namespace Gear.Framework.Runtime.UI
         /// </summary>
         internal UILoadState OpenWindow(string uiName, params object[] args)
         {
+            if (!isInited)
+            {
+                Log.Warning("[UISystem] OpenWindow({0}) 在未初始化/已清理时被调用，已忽略", uiName);
+                return null;
+            }
+            // 新的打开意图覆盖此前"加载中关闭"的记录，否则刚打开就会被自动关闭
+            pendingCloseRequests.Remove(uiName);
+
             //TODO: 需要先创建脚本对象，再根据脚本中的值进行加载资源
             UILoadState uiState;
 
@@ -27,6 +35,7 @@ namespace Gear.Framework.Runtime.UI
             {
                 uiState = LoadWindow(uiName, true, args);
                 Log.Debug("[UISystem] OpenWindow({0}) LoadWindow → {1}", uiName, (uiState != null ? "OK" : "NULL"));
+                if (uiState != null) NotifyOpened(uiName);
                 return uiState;
             }
 
@@ -45,6 +54,7 @@ namespace Gear.Framework.Runtime.UI
             }
 
             OnOpen(uiState, args);
+            NotifyOpened(uiName);
             return uiState;
         }
 
@@ -53,12 +63,21 @@ namespace Gear.Framework.Runtime.UI
         /// </summary>
         internal async UniTask<UILoadState> OpenWindowAsync(string uiName, params object[] args)
         {
+            if (!isInited)
+            {
+                Log.Warning("[UISystem] OpenWindowAsync({0}) 在未初始化/已清理时被调用，已忽略", uiName);
+                return null;
+            }
+            // 同上：重新打开优先于加载期间记录的关闭意图
+            pendingCloseRequests.Remove(uiName);
+
             UILoadState uiState;
 
             if (!uiStateCache.TryGetValue(uiName, out uiState))
             {
                 uiState = await LoadWindowAsync(uiName, true, args);
                 Log.Debug("[UISystem] OpenWindowAsync({0}) LoadWindowAsync → {1}", uiName, (uiState != null ? "OK" : "NULL"));
+                if (uiState != null) NotifyOpened(uiName);
                 return uiState;
             }
 
@@ -76,7 +95,20 @@ namespace Gear.Framework.Runtime.UI
             }
 
             OnOpen(uiState, args);
+            NotifyOpened(uiName);
             return uiState;
+        }
+
+        /// <summary>
+        /// 打开成功后同步给路由层：登记模态并重算下层阻断。
+        /// 这样直接调用 <c>OpenWindow(Async)</c>（不经过 UIRouter）的 Modal 窗口也能正确阻断下层。
+        /// 路由层自身的 NotifyPushed 重复调用是幂等的（同一 Id Remove 再 Add）。
+        /// </summary>
+        private static void NotifyOpened(string uiName)
+        {
+            if (string.IsNullOrEmpty(uiName)) return;
+            var descriptor = UIWindowCatalog.Get(uiName);
+            UIRouter.NotifyPushed(uiName, descriptor.Modal);
         }
 
         /// <summary>
@@ -167,6 +199,15 @@ namespace Gear.Framework.Runtime.UI
             // 未开始Load
             if (!uiStateCache.TryGetValue(name, out uiState))
             {
+                // 异步加载尚未完成：窗口还没登记，但用户已经点了关闭/返回。
+                // 记下关闭意图，加载完成后立即关闭并按"取消"返回（否则取消操作会变成"弹出窗口"）。
+                if (windowLoadGate.IsInflight(name))
+                {
+                    pendingCloseRequests.Add(name);
+                    Log.Debug("[CloseWindow] 窗口 {0} 正在加载，已登记关闭意图", name);
+                    return;
+                }
+
                 Log.Error("[CloseWindow]没有加载的UIWindow: {0}", name);
                 return;
             }
@@ -252,7 +293,7 @@ namespace Gear.Framework.Runtime.UI
 
             // 池化路径：白名单内的轻量窗口放池复用（消除反复 DestroyImmediate/Instantiate 的 GC 与 Canvas 重建）；
             // 同帧关闭再打开时从池取出同一对象，天然避免双实例
-// 池化：窗口声明了 [UIWindow(Pooled = true)] 或仍在老白名单里就复用。
+            // 池化：窗口声明了 [UIWindow(Pooled = true)] 或仍在老白名单里就复用。
             // 老白名单保留是为了不破坏现有工程的显式配置。
             bool poolable = UIWindowCatalog.Get(uiName).Pooled;
             if (enableWindowPool && poolable)

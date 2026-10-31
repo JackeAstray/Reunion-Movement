@@ -1,4 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Gear.Framework.Runtime.Base;
 using System;
 using System.Collections.Generic;
@@ -317,6 +317,9 @@ namespace Gear.Framework.Modules.Http
                 if (MaxPendingRequests > 0 && pendingRequests.Count >= MaxPendingRequests)
                 {
                     Log.Error("HttpMgr 等待队列已达上限 {0}，拒绝新请求 {1}", MaxPendingRequests, request.GetType().Name);
+                    // 被拒绝的请求从未注册进 httpRequests，也没有任何发送路径会 Dispose 它；
+                    // 它可能已经 new 了 UnityWebRequest，不 Abort 就会泄漏原生句柄。
+                    try { request.Abort(); } catch (Exception ex) { Log.Warning("HttpMgr 拒绝请求时释放失败: {0}", ex.Message); }
                     onError?.Invoke(new HttpResponse
                     {
                         isSuccessful = false,

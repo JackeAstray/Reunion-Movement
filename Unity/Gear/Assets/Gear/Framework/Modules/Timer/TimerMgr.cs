@@ -140,9 +140,15 @@ namespace Gear.Framework.Modules.Timer
         {
             for (int i = timers.Count - 1; i >= 0; i--)
             {
-                try { timers[i].Cancel(); }
+                // OnCancelled 回调里可能调用 RemoveTimer/再次 CancelAllTimers 重入修改 timers：
+                // 此时 i 可能已越界，直接取 timers[i] 会抛 IndexOutOfRange，中断全局清理。
+                if (i >= timers.Count) continue;
+                var timer = timers[i];
+                try { timer.Cancel(); }
                 catch (Exception ex) { Log.Error("[TimerMgr] CancelAllTimers 取消回调异常（已隔离）: {0}", ex.Message); }
-                ReturnTimer(timers[i]);
+                // 用 Remove 而不是无条件 ReturnTimer：回调重入时可能已 RemoveTimer 并归还实例，
+                // 再归还一次会让池里出现同一 Timer 的多份引用（下次被同时租给两个调用方）。
+                if (timers.Remove(timer)) ReturnTimer(timer);
             }
             timers.Clear();
         }

@@ -297,6 +297,10 @@ namespace Gear.Framework.Modules.Download
             }
 
             OnDownloadIndividualInvoked?.Invoke(uri);
+
+            // 旧实现只入队从不 Dispatch：单 URI 调用永远不会真正下载。
+            // 有空闲槽位时立即分发；达到并发上限则交给 DispatchCompletion 继续派发。
+            if (NumThreads < MaxConcurrency) _ = Dispatch();
             return UniTask.FromResult(true);
         }
 

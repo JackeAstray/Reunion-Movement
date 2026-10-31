@@ -141,13 +141,18 @@ namespace Gear.Framework.Modules
             CreateChannel();
         }
 
-        /// <summary>主动断开：停止自动重连（可再次 Connect 复用本实例）</summary>
+        /// <summary>
+        /// 主动断开：停止自动重连（可再次 Connect 复用本实例）。
+        /// 在途 RPC/可靠发送必须当场失败：CloseChannel 会先解绑 OnDisconnected，
+        /// 否则等待方只能各自等到超时，表现为"主动断开后调用方仍卡住"。
+        /// </summary>
         public void Disconnect()
         {
             if (closed) return;
             explicitStop = true;
             reconnectWaiting = false;
             CloseChannel();
+            FailAllPendingAndAcks("客户端已主动断开");
             SetState(ClientState.Disconnected);
         }
 
@@ -159,7 +164,7 @@ namespace Gear.Framework.Modules
             explicitStop = true;
             reconnectWaiting = false;
             CloseChannel();
-            FailAllPending("客户端已关闭");
+            FailAllPendingAndAcks("客户端已关闭");
             SetState(ClientState.Closed);
         }
 
@@ -522,18 +527,31 @@ namespace Gear.Framework.Modules
         void HandleDisconnected()
         {
             if (closed) return;
-            FailAllPending("连接已断开");
-            // 断开时结束全部可靠发送等待（重连后 seq 表已无意义）
-            foreach (var kv in pendingAcks)
-            {
-                kv.Value.TrySetResult(false);
-            }
-            pendingAcks.Clear();
+            FailAllPendingAndAcks("连接已断开");
             SetState(ClientState.Disconnected);
             try { OnDisconnected?.Invoke(); } catch (Exception ex) { Log.Warning("[NetworkClient] OnDisconnected 回调异常: {0}", ex.Message); }
             if (config.autoReconnect && !explicitStop)
             {
                 BeginReconnect();
+            }
+        }
+
+        /// <summary>
+        /// 结束全部在途请求与可靠发送等待（断线/主动断开/关闭共用）。
+        /// 必须先快照并清空再完成：UniTaskCompletionSource 的续体是同步执行的，
+        /// 等待方恢复后会执行 finally 里的 Remove，边遍历边完成会抛 Collection was modified，
+        /// 导致断线通知、状态切换与自动重连全部被跳过。
+        /// </summary>
+        void FailAllPendingAndAcks(string message)
+        {
+            FailAllPending(message);
+            if (pendingAcks.Count == 0) return;
+
+            var acks = new List<KeyValuePair<int, UniTaskCompletionSource<bool>>>(pendingAcks);
+            pendingAcks.Clear();
+            for (int i = 0; i < acks.Count; i++)
+            {
+                acks[i].Value.TrySetResult(false);
             }
         }
 
@@ -736,11 +754,17 @@ namespace Gear.Framework.Modules
         void FailAllPending(string message)
         {
             if (pendingRequests.Count == 0) return;
-            foreach (var kv in pendingRequests)
-            {
-                kv.Value.TrySetException(new InvalidOperationException(message));
-            }
+
+            // 先快照并清空，再逐个完成：TrySetException 会同步恢复等待方，
+            // 其 finally 会执行 pendingRequests.Remove(correlationId)。
+            // 若边遍历边完成，会抛 Collection was modified，异常从断线处理路径逃出，
+            // 后面的 SetState(Disconnected)/OnDisconnected/自动重连都会丢失。
+            var requests = new List<KeyValuePair<int, UniTaskCompletionSource<byte[]>>>(pendingRequests);
             pendingRequests.Clear();
+            for (int i = 0; i < requests.Count; i++)
+            {
+                requests[i].Value.TrySetException(new InvalidOperationException(message));
+            }
         }
         #endregion
 

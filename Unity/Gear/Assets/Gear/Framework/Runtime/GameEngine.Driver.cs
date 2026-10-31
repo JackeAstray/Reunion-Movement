@@ -266,7 +266,15 @@ namespace Gear.Framework.Runtime
                 Log.Warning("[GameEngine] SetPaused 在状态 {0} 下被忽略（仅 Running/Paused 可切换）", State);
                 return;
             }
-            if (paused == IsPaused) return;
+
+            // 不能只比较引擎 State 就早退：暂停执行者可以被其他系统直接操作
+            // （例如 Modules.Get<PauseSystem>().RequestPause(...)），此时引擎 State 仍是 Running，
+            // 但 timeScale 已经是 0。早退会导致 Resume() 什么都没做，游戏永久卡在暂停。
+            if (paused == IsPaused)
+            {
+                var current = FindModule<IGamePauseHandler>();
+                if (current == null || current.IsPaused == paused) return;
+            }
 
             State = paused ? EngineState.Paused : EngineState.Running;
             Log.Debug("[GameEngine] 引擎{0}", paused ? "已暂停" : "已恢复");

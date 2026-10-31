@@ -19,13 +19,15 @@ namespace Gear.Framework.Runtime
             // 快照遍历：模块 Clear 期间可能修改列表（如移除自身）
             clearSnapshot.Clear();
             clearSnapshot.AddRange(modules);
+            // 显式契约：实现了 ISystemClearLast 的模块（资源提供者）移到末尾最后清理。
+            // 旧实现按 ResourcesSystem 具体类型硬编码，新增同类提供者时必须记得改这里。
             for (int index = clearSnapshot.Count - 1; index >= 0; index--)
             {
-                if (clearSnapshot[index] is Gear.Framework.Runtime.Resources.ResourcesSystem)
+                if (clearSnapshot[index] is ISystemClearLast)
                 {
-                    var resources = clearSnapshot[index];
+                    var clearLast = clearSnapshot[index];
                     clearSnapshot.RemoveAt(index);
-                    clearSnapshot.Add(resources);
+                    clearSnapshot.Add(clearLast);
                     break;
                 }
             }
@@ -79,6 +81,9 @@ namespace Gear.Framework.Runtime
             OnInitProgressSubject  = CompleteAndDisposeSubject(OnInitProgressSubject);
             OnAppPauseSubject      = CompleteAndDisposeSubject(OnAppPauseSubject);
             OnAppFocusSubject      = CompleteAndDisposeSubject(OnAppFocusSubject);
+            // 状态流也必须收尾：否则 Disposed 的 OnNext 会打到上一会话的订阅者，
+            // 且静态字段残留已完成的 Subject 直到下一次 Create 才重建。
+            OnStateChangedSubject  = CompleteAndDisposeSubject(OnStateChangedSubject);
         }
 
         /// <summary>

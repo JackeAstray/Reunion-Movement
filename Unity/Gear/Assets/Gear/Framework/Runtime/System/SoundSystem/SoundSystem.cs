@@ -1,4 +1,4 @@
-﻿using Gear.Common;
+using Gear.Common;
 using Gear.Framework.Runtime.Base;
 using Gear.Framework.Runtime.Resources;
 using Gear.Framework.Runtime.Scene;
@@ -220,8 +220,11 @@ namespace Gear.Framework.Runtime.Sound
             // 快速路径：无淡入淡出时直接返回，避免每帧无效检查
             if (fadeState == FadeState.None) return;
 
-            // 淡入淡出状态机驱动
-            fadeTimer += logicTime;
+            // 淡入淡出状态机驱动。
+            // 必须用 realTime（unscaled）而不是 logicTime：暂停（timeScale=0）时 logicTime 为 0，
+            // 淡出永远走不到 100%，await FadeOut() 会永久挂起，恢复时残留半透明音量；
+            // 音效淡变本身也不该随游戏倍速变快/变慢。
+            fadeTimer += realTime;
             float t = fadeDuration > 0 ? Mathf.Clamp01(fadeTimer / fadeDuration) : 1f;
             if (source != null)
             {

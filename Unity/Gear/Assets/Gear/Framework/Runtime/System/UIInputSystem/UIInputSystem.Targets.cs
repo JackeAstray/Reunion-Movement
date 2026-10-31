@@ -1,4 +1,4 @@
-﻿using Gear.Common;
+using Gear.Common;
 using Gear.Framework.Runtime.Base;
 using Gear.Framework.Runtime.Resources;
 using Gear.Framework.Runtime.UI;
@@ -284,11 +284,9 @@ namespace Gear.Framework.Runtime.UIInput
                     max = Mathf.Max(max, GetPlayerIndex(device) + 1);
                 }
 
-                EnsurePlayerSlotsLoaded();
-                foreach (var kv in playerSlotOverrides)
-                {
-                    if (kv.Value + 1 > max) max = kv.Value + 1;
-                }
+                // 不再把持久化的槽位覆盖全部计入：GetPlayerIndex 已对已连接设备（含同组子设备）
+                // 应用了覆盖值；遍历 playerSlotOverrides 会把"已拔掉手柄留下的旧槽位"
+                // 也算成可用玩家（例如只剩键鼠却显示 4 人）。
                 return Mathf.Max(1, max);
             }
         }

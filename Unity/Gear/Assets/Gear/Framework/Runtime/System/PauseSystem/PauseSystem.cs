@@ -72,13 +72,29 @@ namespace Gear.Framework.Runtime.Pause
 
         /// <summary>
         /// 设置暂停状态（兼容旧 API，幂等：同状态重复调用无副作用）。
-        /// 等价于 RequestPause(全局键)/ReleasePause(全局键)。
-        /// 多个系统同时暂停时推荐使用 <see cref="RequestPause"/>/<see cref="ReleasePause"/> 携带各自原因对象。
+        /// <para>
+        /// paused=true 等价于 <c>RequestPause(全局键)</c>；
+        /// paused=false 是"显式强制恢复"，会清空**所有**暂停原因（见 <see cref="ClearAllPauses"/>）。
+        /// 这样做是为了让 <c>GameEngine.Resume()</c> / 恢复按钮在"还有别的系统持有暂停原因"时
+        /// 也一定能恢复，不会出现引擎状态已 Running 但 timeScale 仍为 0 的僵死状态。
+        /// 需要精细控制的多系统协作请改用 <see cref="RequestPause"/>/<see cref="ReleasePause"/>。
+        /// </para>
         /// </summary>
         public void SetPaused(bool paused)
         {
             if (paused) RequestPause(GlobalPauseReason);
-            else ReleasePause(GlobalPauseReason);
+            else ClearAllPauses();
+        }
+
+        /// <summary>
+        /// 清空所有暂停原因并恢复（显式恢复入口：引擎 Resume、恢复按钮、退出对局等）。
+        /// 与逐个 <see cref="ReleasePause"/> 的区别是它不关心谁还在持有原因。
+        /// </summary>
+        public void ClearAllPauses()
+        {
+            if (!isInited) return;
+            pauseReasons.Clear();
+            ApplyPausedState(false);
         }
 
         /// <summary>

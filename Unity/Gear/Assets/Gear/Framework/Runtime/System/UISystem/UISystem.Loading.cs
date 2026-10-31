@@ -134,67 +134,107 @@ namespace Gear.Framework.Runtime.UI
 
             // 并发去重：同名窗口在途加载时等待同一结果（SingleFlightLoader 统一管理
             // 单飞/取消/摘除语义；Clear() 会 CancelAll，等待方按“加载失败”返回 null）
-            return await windowLoadGate.RunAsync(name, async () =>
+            UILoadState loaded = null;
+            try
             {
-                GameObject prefab = null;
-                bool fromAddressables = false;
-
-                // 双轨：Addressables 优先
-                if (Config.AddressablesMode != AddressablesMode.Off)
+                loaded = await windowLoadGate.RunAsync(name, async () =>
                 {
-                    prefab = await AddressableSystem.Instance.LoadAssetAsync<GameObject>(AddressableKeys.UIRoot + name);
-                    fromAddressables = prefab != null;
-                    if (prefab != null)
+                    GameObject prefab = null;
+                    bool fromAddressables = false;
+
+                    // 双轨：Addressables 优先
+                    if (Config.AddressablesMode != AddressablesMode.Off)
                     {
-                        Log.Debug("[UISystem] LoadWindowAsync({0}) 从 Addressables 加载成功: {1}", name, AddressableKeys.UIRoot + name);
-                    }
-                }
-
-                // Clear() 防护：await 期间系统可能被清理（UI 根节点已销毁、缓存已清空），
-                // 继续 Instantiate + 登记会把孤儿窗口写进新缓存或触发空引用
-                if (uiRoot == null)
-                {
-                    Log.Warning("[UISystem] LoadWindowAsync({0}) 中止：加载期间系统已清理", name);
-                    return null;
-                }
-
-                // 降级：Resources
-                if (prefab == null)
-                {
-                    prefab = Modules.Get<ResourcesSystem>().Load<GameObject>(Config.UIPath + name);
-                    if (prefab != null)
-                    {
-                        Log.Debug("[UISystem] LoadWindowAsync({0}) 降级 Resources 加载成功: {1}", name, Config.UIPath + name);
-                    }
-                }
-
-                if (prefab == null)
-                {
-                    Log.Error("[UISystem] LoadWindowAsync({0}) 加载失败（Addressables + Resources 均未命中）", name);
-                    return null;
-                }
-
-                GameObject uiObj;
-                try
-                {
-                    uiObj = GetPooledWindow(name);
-                    if (uiObj == null)
-                    {
-                        uiObj = UnityEngine.Object.Instantiate(prefab);
-                        if (fromAddressables)
+                        prefab = await AddressableSystem.Instance.LoadAssetAsync<GameObject>(AddressableKeys.UIRoot + name);
+                        fromAddressables = prefab != null;
+                        if (prefab != null)
                         {
-                            AddressableSystem.Instance.ReleaseAsset(prefab);
+                            Log.Debug("[UISystem] LoadWindowAsync({0}) 从 Addressables 加载成功: {1}", name, AddressableKeys.UIRoot + name);
                         }
                     }
-                }
-                finally
-                {
-                    if (!fromAddressables)
-                        Modules.Get<ResourcesSystem>().DeleteAssetCache(Config.UIPath + name);
-                }
 
-                return SetupLoadedWindow(uiObj, name, openWhenFinish, args);
-            });
+                    // Clear() 防护：await 期间系统可能被清理（UI 根节点已销毁、缓存已清空），
+                    // 继续 Instantiate + 登记会把孤儿窗口写进新缓存或触发空引用
+                    if (uiRoot == null)
+                    {
+                        Log.Warning("[UISystem] LoadWindowAsync({0}) 中止：加载期间系统已清理", name);
+                        // 已从 Addressables 取到引用时同样要归还，否则 bundle 引用计数泄漏
+                        ReleaseLoadedPrefab(name, prefab, fromAddressables);
+                        return null;
+                    }
+
+                    // 降级：Resources
+                    if (prefab == null)
+                    {
+                        prefab = Modules.Get<ResourcesSystem>().Load<GameObject>(Config.UIPath + name);
+                        if (prefab != null)
+                        {
+                            Log.Debug("[UISystem] LoadWindowAsync({0}) 降级 Resources 加载成功: {1}", name, Config.UIPath + name);
+                        }
+                    }
+
+                    if (prefab == null)
+                    {
+                        Log.Error("[UISystem] LoadWindowAsync({0}) 加载失败（Addressables + Resources 均未命中）", name);
+                        return null;
+                    }
+
+                    GameObject uiObj;
+                    try
+                    {
+                        uiObj = GetPooledWindow(name);
+                        if (uiObj == null)
+                        {
+                            uiObj = UnityEngine.Object.Instantiate(prefab);
+                        }
+                    }
+                    finally
+                    {
+                        // 不论走池化还是新建，预加载的资源引用都必须归还：
+                        // 旧实现只在 Instantiate 分支释放，池化命中时每打开一次就泄漏一次。
+                        ReleaseLoadedPrefab(name, prefab, fromAddressables);
+                    }
+
+                    return SetupLoadedWindow(uiObj, name, openWhenFinish, args);
+                });
+            }
+            finally
+            {
+                // 加载失败/取消时，加载期间累积的关闭意图已经无意义，直接丢弃
+                if (loaded == null) pendingCloseRequests.Remove(name);
+            }
+
+            // 加载期间用户点了关闭：窗口已经登记并打开，立刻关闭并从结果里抹掉，
+            // 避免"点了取消反而弹出窗口"，也避免 UIRouter 把已关闭窗口压栈。
+            if (loaded != null && pendingCloseRequests.Remove(name))
+            {
+                Log.Debug("[UISystem] LoadWindowAsync({0}) 加载期间收到关闭请求，直接关闭", name);
+                CloseWindow(name);
+                return null;
+            }
+
+            return loaded;
+        }
+
+        /// <summary>归还窗口预加载得到的资源引用（Addressables 句柄 / Resources 缓存）。</summary>
+        private void ReleaseLoadedPrefab(string name, GameObject prefab, bool fromAddressables)
+        {
+            if (prefab == null) return;
+            try
+            {
+                if (fromAddressables)
+                {
+                    AddressableSystem.Instance.ReleaseAsset(prefab);
+                }
+                else
+                {
+                    Modules.Get<ResourcesSystem>().DeleteAssetCache(Config.UIPath + name);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("[UISystem] 归还窗口资源引用失败 {0}: {1}", name, ex.Message);
+            }
         }
 
         /// <summary>

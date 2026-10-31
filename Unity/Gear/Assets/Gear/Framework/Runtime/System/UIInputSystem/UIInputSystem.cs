@@ -340,6 +340,7 @@ namespace Gear.Framework.Runtime.UIInput
             }
 
             focusStack.Clear();
+            focusPushesByWindow.Clear();
             firstSelectedRegistry.Clear();
             // 不清理 focusScopes/targetScopes：场景中的窗口/轮播可能在引擎重初始化后仍然存活，
             // 它们已注册过；清理后不会自动重建。GetTopFocusScope 会跳过已销毁的焦点域。
