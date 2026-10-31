@@ -7,7 +7,7 @@
 
 | 维度 | S 标准 | 当前 | 证据 / 命令 | 阻塞 |
 |---|---|---|---|---|
-| 架构 | 单一访问路径；无 >1000 行文件；Editor 代码全部 asmdef 化 | **达成（1 项设计豁免）** | Editor 已完成（33 asmdef）；`.Instance` **22 处**（仅注册点 + Modules 独立使用）；`LoopScrollRect` 1336 登记为设计豁免 | 仅 LoopScrollRect 不拆 |
+| 架构 | 单一访问路径；无 >1000 行文件；Editor 代码全部 asmdef 化 | **达成** | Editor 已完成（33 asmdef）；`.Instance` **22 处**（仅注册点 + Modules 独立使用）；最大文件 998 行，无 >1000 | — |
 | 核心可靠性 | RPC 协议可协商；下载有完整性/迁移策略；网络有 loopback 回归 | **达成（除压力/混沌）** | 错误帧开关 + 保留 ID 测试；`.done` + 迁移开关；TCP 回环 RPC 成功/错误/自动重连 3 条 PlayMode | 压力/混沌测试未做 |
 | UI 行为 | 状态机/ESC/返回栈/Static 有 PlayMode 回归 | **达成** | 210 EditMode；PlayMode 9/9；Back 模态、Static 重开、Open 重复、ESC 文本聚焦均已覆盖 | — |
 | 测试与门禁 | PR 上编译 + 类型检查 + 覆盖率阈值；守卫单一实现 | **达成（同仓 PR）/ 部分（fork）** | 210 EditMode + 9 PlayMode 全绿；6 条守卫；语法/文档链接门禁；同仓 PR 走自托管 `unity-verify-pr.yml` | fork PR 仍需 `UNITY_LICENSE` 才能跑 Unity |
@@ -49,7 +49,7 @@ powershell -ExecutionPolicy Bypass -File Tools/upm-smoke-test.ps1 -UnityPath <Un
 |---|---|---|
 | `.Instance` 收敛 | 22 处（仅注册点 + Modules 程序集独立使用） | 已给 11 个 Runtime 模块加 `GetOrInstance()`；Modules 内的 Http/Network/Timer 因不能引用 Runtime 保留直取 |
 | Editor asmdef | ✅ 已完成：`UI/` → `Gear.UI`，`Editor/` 非嵌套目录 → `Gear.Editor.Framework` | — |
-| `LoopScrollRect` | 1336 行 | **登记为设计豁免**：高内聚的虚拟化列表组件，拆分布局/滚动逻辑会降低可读性；S 验收接受该例外 |
+| `LoopScrollRect` | ✅ 已拆分 | 1336 → 472 主文件 + 447 layout + 204 pull + 259 scroll（均 <600） |
 | PlayMode 回归 | ✅ 已完成 9 条 | Back 模态、Static 重开、重复打开、ESC 文本聚焦、TCP RPC 成功/错误/自动重连 |
 
 ### 3.2 需要授权 / 不可逆
@@ -74,8 +74,7 @@ powershell -ExecutionPolicy Bypass -File Tools/upm-smoke-test.ps1 -UnityPath <Un
 
 ## 5. 结论
 
-当前状态：**架构、UI、核心可靠性、发布四项达成 S（含 LoopScrollRect 一项设计豁免）；
-文档接近 S；仓库卫生部分达成；平台验证未达。**
+当前状态：**架构、UI、核心可靠性、发布四项达成 S；文档接近 S；仓库卫生部分达成；平台验证未达。**
 
 代码内能做的已经做完；剩余项全部需要 **Unity 授权 / 真机 / 产品决策**。
 `S-验收清单` 因此不再用主观分数描述，而是以本表的证据与资源边界为准。

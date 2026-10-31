@@ -41,6 +41,7 @@
 
 - 巨型文件按 partial 拆分：`NetworkClient`（RPC）、`NetworkServer`（RPC）、`UWRExecutor`（完成标记）、
   `UIInputSystem`（玩家槽位）、`CarouselSelectionController`（导航）各自独立成文件，主文件回落到守卫基线以内。
+  `LoopScrollRect` 1336 → 472 主文件 + 447 layout + 204 pull + 259 scroll，`>1000` 文件清零。
 - 新增 `Tools/SyntaxCheck`（Roslyn 语法门禁，不依赖 Unity），CI 在 PR 上无条件执行。
 - 新增 `Tools/upm-smoke-test.ps1`：空工程 `file:` 安装 + 编译烟测，自托管 main 验证已接入。
 - `NetworkClientConfig.enableRpcErrorFrames` / `NetworkServerConfig.enableRpcErrorFrames`：

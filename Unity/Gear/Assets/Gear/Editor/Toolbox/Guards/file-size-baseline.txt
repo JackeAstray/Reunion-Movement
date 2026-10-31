@@ -38,7 +38,6 @@
 998 Assets/Gear/Framework/Runtime/System/UIInputSystem/UIInputDeviceProfile.cs
 760 Assets/Gear/Framework/Runtime/System/UIInputSystem/UIInputSystem.Targets.cs
 615 Assets/Gear/UI/Select/LocalMultiplayerPlayerCard.cs
-1336 Assets/Gear/Utilities/UI/LoopScrollRect/LoopScrollRect.cs
 611 Assets/Gear/Utilities/Util/AlgorithmUtil.Components.cs
 943 Assets/Gear/Utilities/Util/AlgorithmUtil.GameObjects.cs
 779 Assets/Gear/Utilities/Util/AlgorithmUtil.Transforms.cs
