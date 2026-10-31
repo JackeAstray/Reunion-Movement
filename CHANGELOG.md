@@ -48,6 +48,8 @@
 - `DownloadMgr.treatLegacyFileAsComplete`：旧缓存无 `.done` 时可选一次性补标记，避免弱网用户被重下。
 - 新增 `UI/Gear.UI.asmdef` 与 `Editor/Gear.Editor.Framework.asmdef`：UI 与编辑器工具不再落
   `Assembly-CSharp` / `Assembly-CSharp-Editor`，架构守卫能看到这两层依赖。
+- CI 新增 `unity-verify-pr.yml`：同仓库分支的 PR 在自托管 runner 上跑编译 + EditMode + 守卫；
+  fork PR 明确跳过（安全边界），仍由 hosted 的静态门禁覆盖。
 - 发布：`upm` 已推送为 `com.jackeastray.gear@1.3.0`；历史已重写并把 GIF/`.unitypackage`
   迁入 LFS（23 个对象）。旧包备份标签 `upm-backup-20261031`；协作者需要重新 clone。
 

@@ -1,0 +1,81 @@
+name: Unity Verify（PR，同仓分支）
+
+# ⚠️ 安全边界
+#
+# 本工作流使用自托管 runner，只在 **同仓库分支** 的 PR 上运行：
+#   - fork 的 PR（head.repo != 本仓库）一律 skipped，第三方代码不会跑到这台机器；
+#   - 能触发的只剩有 push 权限的协作者，与"代码已进入主干"的信任边界一致。
+# 不要把它改成对所有 PR 开放；fork PR 的静态检查仍由 unity-ci.yml 的 guard-only /
+# syntax-check 在 GitHub hosted runner 上完成。
+#
+# 目的：PR 阶段就拿到"类型编译 + EditMode 测试 + 架构守卫"结果，而不是等合并后。
+# 前置与 unity-verify.yml 相同：本机已激活 Unity 6000.3.10f1，runner 以登录用户身份运行。
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: unity-verify-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  UNITY_EDITOR: E:\UnityEditor\6000.3.10f1\Editor\Unity.exe
+  UNITY_PROJECT_PATH: Unity/Gear
+
+jobs:
+  verify-pr:
+    name: PR 编译 + EditMode + 守卫
+    # 只接受同仓库分支；fork PR 不落到自托管机器
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 90
+    steps:
+      - name: 检出 PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          lfs: true
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: 环境自检
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not (Test-Path $env:UNITY_EDITOR)) {
+            throw "找不到 Unity：$env:UNITY_EDITOR（改本文件顶部的 env.UNITY_EDITOR）"
+          }
+          "Unity: $env:UNITY_EDITOR"
+
+      - name: 清理上次残留的工程锁
+        shell: pwsh
+        run: |
+          $lock = Join-Path $env:UNITY_PROJECT_PATH 'Temp\UnityLockfile'
+          if (-not (Test-Path -LiteralPath $lock)) { '没有残留锁'; exit 0 }
+          if (Get-Process Unity -ErrorAction SilentlyContinue) {
+            throw '本机有 Unity 进程正在使用该工程，请先关闭编辑器再重跑'
+          }
+          Remove-Item -LiteralPath $lock -Force
+          "已清理残留锁：$lock"
+
+      - name: EditMode 测试 + 架构守卫
+        shell: pwsh
+        run: |
+          & '.\Tools\unity-verify.ps1' -UnityPath $env:UNITY_EDITOR
+          exit $LASTEXITCODE
+
+      - name: 上传日志与测试结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-verify-pr-results
+          path: |
+            Unity/Gear/Logs/verify/*.xml
+            Unity/Gear/Logs/verify/*.log
+          if-no-files-found: warn
