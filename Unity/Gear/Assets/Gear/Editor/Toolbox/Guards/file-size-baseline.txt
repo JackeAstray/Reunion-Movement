@@ -25,6 +25,7 @@
 #   NetworkClient 870 → 880：主动断开/关闭统一失败在途 RPC 与可靠发送等待（抽 FailAllPendingAndAcks）。
 #   AddressableSystem 808 → 777、SceneSystem 743 → 687：已按职责拆出 partial 文件，行数只降不升。
 #   EventMessageSystem 713 → 568：泛型零装箱通道拆到 EventMessageSystem.Typed.cs（182 行），删除豁免。
+#   UIInputSystem.Navigation 902 → 429 + UIInputSystem.Navigation.Dispatch.cs（498 行），删除豁免。
 628 Assets/Gear/Editor/Addressables/AddressablesCdnUploader.cs
 930 Assets/Gear/Editor/Excel/Scripts/ExcelSystem.cs
 929 Assets/Gear/Editor/UIExamples/CreateLocalMultiplayerSelectionExample.cs
@@ -35,7 +36,6 @@
 808 Assets/Gear/Framework/Runtime/System/AddressableSystem/AddressableSystem.cs
 743 Assets/Gear/Framework/Runtime/System/SceneSystem/SceneSystem.cs
 1037 Assets/Gear/Framework/Runtime/System/UIInputSystem/UIInputDeviceProfile.cs
-902 Assets/Gear/Framework/Runtime/System/UIInputSystem/UIInputSystem.Navigation.cs
 844 Assets/Gear/Framework/Runtime/System/UIInputSystem/UIInputSystem.Targets.cs
 1136 Assets/Gear/UI/Select/CarouselSelectionController.cs
 615 Assets/Gear/UI/Select/LocalMultiplayerPlayerCard.cs
