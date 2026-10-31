@@ -5,6 +5,7 @@ using Cysharp.Threading.Tasks;
 using R3;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -15,7 +16,7 @@ namespace Gear.Framework.Runtime.UIToolkit
     /// 与现有 UISystem (uGUI/Canvas) 并存，可按界面粒度混用两种 UI 方案。
     /// </summary>
     [ModuleOrder(110, typeof(Gear.Framework.Runtime.Resources.ResourcesSystem))]
-    public class UIToolkitSystem : ICustomSystem, ISystemDisposable
+    public class UIToolkitSystem : ICustomSystem, ISystemDisposable, ICustomSystemCancellableInit
     {
         #region 单例与初始化
 
@@ -100,7 +101,11 @@ namespace Gear.Framework.Runtime.UIToolkit
 
         #region 初始化 / 清理
 
-        public async UniTask Init()
+        public UniTask Init() => InitCore(default);
+
+        async UniTask ICustomSystemCancellableInit.Init(CancellationToken ct) => await InitCore(ct);
+
+        private async UniTask InitCore(CancellationToken ct)
         {
             initProgress = 0;
             isInited = false;
@@ -118,6 +123,7 @@ namespace Gear.Framework.Runtime.UIToolkit
 
             // 2. 加载 PanelSettings
             await LoadPanelSettingsAsync();
+            ct.ThrowIfCancellationRequested();
             if (myGeneration != initGeneration) return;
             initProgress = 60;
 

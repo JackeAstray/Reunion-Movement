@@ -246,7 +246,16 @@ namespace Gear.Framework.Runtime
                 var startMem = GC.GetTotalMemory(false);
 #endif
                 var startTime = Time.realtimeSinceStartup;
-                await module.Init().AttachExternalCancellation(ct);
+                // 优先使用可取消初始化：引擎超时/Dispose 时模块能真正中止内部加载，
+                // 而不是只停止等待、把异步续体留在后台继续写状态。
+                if (module is ICustomSystemCancellableInit cancellable)
+                {
+                    await cancellable.Init(ct);
+                }
+                else
+                {
+                    await module.Init().AttachExternalCancellation(ct);
+                }
                 var endTime = Time.realtimeSinceStartup;
 
                 // 预过滤：记录需要 Update 的模块（ISystemUpdatable 取代 IRequiresUpdate）

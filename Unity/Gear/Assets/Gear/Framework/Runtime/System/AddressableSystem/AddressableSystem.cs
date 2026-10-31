@@ -42,7 +42,7 @@ namespace Gear.Framework.Runtime.Resources
     /// 设计文档：仓库 Docs/Addressables/Addressables集成设计方案.md §5
     /// </summary>
     [ModuleOrder(20, typeof(Gear.Framework.Runtime.Resources.ResourcesSystem))]
-    public partial class AddressableSystem : ICustomSystem, ISystemDisposable
+    public partial class AddressableSystem : ICustomSystem, ISystemDisposable, ICustomSystemCancellableInit
     {
         #region 单例与初始化
         private static readonly Lazy<AddressableSystem> instance = new(() => new AddressableSystem());
@@ -84,7 +84,11 @@ namespace Gear.Framework.Runtime.Resources
         /// 初始化 Addressables。Off 模式直接跳过；Remote 模式附带 Catalog 更新检查（失败不阻断启动）。
         /// 初始化失败不抛出 —— 业务层可通过 LoadWithFallbackAsync 降级到 ResourcesSystem。
         /// </summary>
-        public async UniTask Init()
+        public UniTask Init() => InitCore(default);
+
+        async UniTask ICustomSystemCancellableInit.Init(CancellationToken ct) => await InitCore(ct);
+
+        private async UniTask InitCore(CancellationToken ct)
         {
             initProgress = 0;
             isInited = false;
@@ -121,7 +125,7 @@ namespace Gear.Framework.Runtime.Resources
                 }
 
                 var handle = Addressables.InitializeAsync();
-                await handle.ToUniTask();
+                await handle.ToUniTask(cancellationToken: ct);
                 if (myGeneration != initGeneration) return; // 初始化期间已被 Clear/重启
                 initProgress = 50;
 
@@ -133,12 +137,18 @@ namespace Gear.Framework.Runtime.Resources
                         // 首次下载的远程 Catalog 与内嵌 version.json 锚点核对
                         // （无内嵌锚点或本地已有缓存 Catalog 时跳过，详见 VerifyCatalogAnchor）
                         await VerifyCatalogAnchorAsync();
+                        ct.ThrowIfCancellationRequested();
                         if (catalogAnchorFailed)
                         {
                             Log.Error("AddressableSystem 远程 Catalog 与内嵌锚点不一致，已拒绝远程更新（仅使用内嵌/本地内容）");
                         }
-                        var result = await CheckUpdateAsync();
+                        var result = await CheckUpdateAsync(ct);
+                        ct.ThrowIfCancellationRequested();
                         Log.Debug("AddressableSystem 远程更新检查: {0}", result.hasUpdate ? "有更新待下载" : "无更新");
+                    }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                    {
+                        throw; // 引擎取消/超时：不要被"远程检查失败不阻断启动"吞掉
                     }
                     catch (Exception ex)
                     {
@@ -151,6 +161,11 @@ namespace Gear.Framework.Runtime.Resources
                 isInited = true;
                 lastInitFailureTime = -1f;
                 Log.Debug("AddressableSystem 初始化完成 (Mode={0})", Mode);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                // 引擎取消/超时：交给 LaunchAsync 统一处理，不写失败冷却/不置 isInited
+                throw;
             }
             catch (Exception ex)
             {
@@ -165,11 +180,7 @@ namespace Gear.Framework.Runtime.Resources
         /// <summary>上次初始化失败的时间（realtimeSinceStartup；&lt;0 表示从未失败）</summary>
         private float lastInitFailureTime = -1f;
 
-        /// <summary>
-        /// 初始化代次：Init 含多个 await（Addressables 初始化/远程检查），期间引擎可能
-        /// 超时/Dispose 并调用 Clear()。续体必须校验代次后再写 isInited/冷却时间，
-        /// 否则会出现“Clear 之后又被置为已初始化”的僵尸状态。
-        /// </summary>
+        /// <summary>初始化代次：Clear/重启递增，在途 Init 的 await 续体恢复后据此放弃，避免僵尸初始化</summary>
         private int initGeneration;
         /// <summary>初始化失败后的重试冷却（秒），避免每个加载入口都触发一次全量重试</summary>
         private const float InitRetryCooldownSeconds = 5f;

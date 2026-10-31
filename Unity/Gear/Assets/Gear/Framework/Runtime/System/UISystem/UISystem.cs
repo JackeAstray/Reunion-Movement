@@ -5,6 +5,7 @@ using Cysharp.Threading.Tasks;
 using R3;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -14,7 +15,7 @@ namespace Gear.Framework.Runtime.UI
     /// UI系统 —— UI 生命周期事件使用 R3 Subject 替代 static event
     /// </summary>
     [ModuleOrder(90, typeof(Gear.Framework.Runtime.Resources.ResourcesSystem), typeof(Gear.Framework.Runtime.Resources.AddressableSystem), typeof(Gear.Framework.Runtime.Scene.SceneSystem))]
-    public partial class UISystem : ICustomSystem, ISystemDisposable
+    public partial class UISystem : ICustomSystem, ISystemDisposable, ICustomSystemCancellableInit
     {
         #region 单例与初始化
         private static readonly Lazy<UISystem> instance = new(() => new UISystem());
@@ -77,7 +78,11 @@ namespace Gear.Framework.Runtime.UI
         public int maxPooledWindowsPerName = 3;
         private readonly Dictionary<string, Stack<GameObject>> windowPool = new Dictionary<string, Stack<GameObject>>();
         #endregion
-        public async UniTask Init()
+        public UniTask Init() => InitCore(default);
+
+        async UniTask ICustomSystemCancellableInit.Init(CancellationToken ct) => await InitCore(ct);
+
+        private async UniTask InitCore(CancellationToken ct)
         {
             initProgress = 0;
             isInited = false;
@@ -91,7 +96,7 @@ namespace Gear.Framework.Runtime.UI
             OnSetSubject ??= new Subject<UIController>();
             OnCloseSubject ??= new Subject<UIController>();
 
-            if (!await CreateRoot(myGeneration)) return;
+            if (!await CreateRoot(myGeneration, ct)) return;
             if (myGeneration != initGeneration) return;
 
             // 预热窗口目录：扫一次程序集 + 特性（约几毫秒），之后按 Id/类型查询零反射，
@@ -163,7 +168,7 @@ namespace Gear.Framework.Runtime.UI
         /// 创建根节点
         /// </summary>
         /// <returns>false 表示初始化期间系统已被 Clear/重启，调用方不应再置 isInited</returns>
-        private async UniTask<bool> CreateRoot(int generation)
+        private async UniTask<bool> CreateRoot(int generation, CancellationToken ct)
         {
             uiRoot = new GameObject("UIRoot");
             mainUIRoot = new GameObject("MainUIRoot");
@@ -181,7 +186,7 @@ namespace Gear.Framework.Runtime.UI
             // Input System 包可能尚未初始化完毕，此时 Instantiate 预制体上的
             // InputSystemUIInputModule.OnEnable() 会静默失败。
             // 等一帧后 Input System 就绪，再创建即可正常工作。
-            await UniTask.Yield(PlayerLoopTiming.Update);
+            await UniTask.Yield(PlayerLoopTiming.Update, ct);
             if (generation != initGeneration) return false;
 
             // 销毁已有的 EventSystem，从预制体加载干净的实例
@@ -229,7 +234,7 @@ namespace Gear.Framework.Runtime.UI
                     UnityEngine.Object.DestroyImmediate(oldModule);
 
                     // 等待一帧，确保 DestroyImmediate 完全生效且 InputSystem 进一步就绪
-                    await UniTask.Yield(PlayerLoopTiming.Update);
+                    await UniTask.Yield(PlayerLoopTiming.Update, ct);
                     if (generation != initGeneration)
                     {
                         // 期间已被 Clear：销毁刚实例化的 EventSystem，避免孤儿根节点

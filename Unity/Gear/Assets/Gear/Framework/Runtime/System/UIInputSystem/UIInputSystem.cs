@@ -6,6 +6,7 @@ using Cysharp.Threading.Tasks;
 using R3;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -22,7 +23,7 @@ namespace Gear.Framework.Runtime.UIInput
     /// 避免同一次按键被 EventSystem 与本系统重复处理。
     /// </summary>
     [ModuleOrder(100, typeof(Gear.Framework.Runtime.UI.UISystem), typeof(Gear.Framework.Runtime.Resources.ResourcesSystem))]
-    public partial class UIInputSystem : ICustomSystem, ISystemUpdatable, ISystemDisposable
+    public partial class UIInputSystem : ICustomSystem, ISystemUpdatable, ISystemDisposable, ICustomSystemCancellableInit
     {
         #region 单例与初始化
         private static readonly Lazy<UIInputSystem> instance = new(() => new UIInputSystem());
@@ -207,7 +208,11 @@ namespace Gear.Framework.Runtime.UIInput
 
         #endregion
         #region 初始化
-        public async UniTask Init()
+        public UniTask Init() => InitCore(default);
+
+        async UniTask ICustomSystemCancellableInit.Init(CancellationToken ct) => await InitCore(ct);
+
+        private async UniTask InitCore(CancellationToken ct)
         {
             initProgress = 0;
             isInited = false;
@@ -243,6 +248,7 @@ namespace Gear.Framework.Runtime.UIInput
 
             // 3. 加载 InputActionAsset 并应用自定义绑定
             await LoadInputActionsAsync();
+            ct.ThrowIfCancellationRequested();
             if (myGeneration != initGeneration) return; // 期间已被 Clear/重启
             ApplyBindingsToActions();
             initProgress = 70;
