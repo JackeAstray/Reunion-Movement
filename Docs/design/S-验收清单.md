@@ -50,19 +50,32 @@ powershell -ExecutionPolicy Bypass -File Tools/upm-smoke-test.ps1 -UnityPath <Un
 | `.Instance` 收敛 | 22 处（仅注册点 + Modules 程序集独立使用） | 已给 11 个 Runtime 模块加 `GetOrInstance()`；Modules 内的 Http/Network/Timer 因不能引用 Runtime 保留直取 |
 | Editor asmdef | ✅ 已完成：`UI/` → `Gear.UI`，`Editor/` 非嵌套目录 → `Gear.Editor.Framework` | — |
 | `LoopScrollRect` | 1336 行 | **登记为设计豁免**：高内聚的虚拟化列表组件，拆分布局/滚动逻辑会降低可读性；S 验收接受该例外 |
-| PlayMode 回归 | 缺 UI 状态机/ESC/Back/Static | 用 `Tests/PlayMode` 加 3 条；需要 UI 预制体或运行时构造 Canvas |
+| PlayMode 回归 | ✅ 已完成 9 条 | Back 模态、Static 重开、重复打开、ESC 文本聚焦、TCP RPC 成功/错误/自动重连 |
 
 ### 3.2 需要授权 / 不可逆
 
-| 项 | 需要的动作 | 影响 |
+| 项 | 状态 | 影响 |
 |---|---|---|
 | 推送 `upm` | ✅ 已执行（2026-10-31）；旧包备份标签 `upm-backup-20261031` | 旧安装方从 `com.reunion.movement` 迁到 `com.jackeastray.gear` |
 | 历史重写 | ✅ 已执行 `git lfs migrate import --include="*.gif,*.unitypackage" --everything` 并强推所有分支 | 所有提交哈希改变，协作者必须重新 clone；LFS 占用约 642 MB |
-| PR 类型门禁 | 配 `UNITY_LICENSE` 或把自托管 runner 接到 PR | 公共仓库自托管 runner 有安全风险，需先加固 |
-| 真机验证 | WebGL 浏览器、Android/iOS 设备、macOS | 代码仓库内无法替代 |
+| PR 类型门禁 | ✅ 同仓 PR 已接自托管 `unity-verify-pr.yml`；fork PR 仍被跳过 | fork 需要 `UNITY_LICENSE` 才能跑 Unity |
+| 真机验证 | ❌ 未执行 | WebGL 浏览器、Android/iOS 设备、macOS |
 
-## 4. 结论
+## 4. 所需资源（剩余项）
 
-当前状态更准确的描述是 **"A- 的工程 + S- 的可复现验证 + 未完成的发布/仓库/平台"**。
-代码内还能继续推进（`.Instance`、Editor asmdef、PlayMode），但**发布与仓库两项必须由维护者做不可逆操作**，
-平台验证需要真实设备。把这三类混在一起说"全 S"会掩盖风险；本清单就是分解后的验收边界。
+| 剩余项 | 需要什么 | 为什么仓库内做不了 |
+|---|---|---|
+| fork PR 的 Unity 测试 | `UNITY_LICENSE` secret，或允许 fork 的 hosted Unity runner | 自托管 runner 不能安全执行未审计的 fork 代码 |
+| WebGL 浏览器验证 | 浏览器 + 构建产物 | 需要真实浏览器/图形栈，batchmode 无法替代 |
+| Android / iOS 真机 | Android 设备；iPhone/iPad + macOS/Xcode | 设备与 macOS 链接环境不在仓库内 |
+| macOS / Linux 构建 | 对应系统 + Unity 安装 | 当前只有 Windows 环境 |
+| 继续降低 clone 体积 | 产品决策：外置 `Images/` 或字体，或从历史剔除 | 会破坏文档图片/字体资源，不能由代码单方面决定 |
+| 压力/混沌测试 | 网络异常注入工具与运行时长 | 可选增强，不是当前 S 的阻塞项 |
+
+## 5. 结论
+
+当前状态：**架构、UI、核心可靠性、发布四项达成 S（含 LoopScrollRect 一项设计豁免）；
+文档接近 S；仓库卫生部分达成；平台验证未达。**
+
+代码内能做的已经做完；剩余项全部需要 **Unity 授权 / 真机 / 产品决策**。
+`S-验收清单` 因此不再用主观分数描述，而是以本表的证据与资源边界为准。
