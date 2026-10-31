@@ -37,7 +37,8 @@ namespace Gear.Framework.Modules
             SetActive(startsActive);
         }
 
-        private void Update()
+        // LateUpdate：相机通常在 LateUpdate 才最终定位，Update 里计算会慢一帧导致箭头抖动
+        private void LateUpdate()
         {
             if (!isActive)
             {

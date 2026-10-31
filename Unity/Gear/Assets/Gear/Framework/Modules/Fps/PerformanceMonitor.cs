@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 using Gear.Common;
@@ -89,7 +89,8 @@ namespace Gear.Framework.Modules
                 {
                     lowFpsWarned = true;
                     Log.Warning($"[PerformanceMonitor] 低帧率告警: {CurrentFps:F1} FPS（阈值 {lowFpsThreshold:F0}）");
-                    OnLowFpsWarning?.Invoke(CurrentFps);
+                    try { OnLowFpsWarning?.Invoke(CurrentFps); }
+                    catch (Exception ex) { Log.Warning("[PerformanceMonitor] OnLowFpsWarning 订阅者异常（已隔离）: {0}", ex.Message); }
                 }
             }
             else
@@ -104,7 +105,8 @@ namespace Gear.Framework.Modules
                 {
                     highMemWarned = true;
                     Log.Warning($"[PerformanceMonitor] 内存告警: {CurrentMemoryMB} MB（阈值 {highMemoryMB} MB）");
-                    OnHighMemoryWarning?.Invoke(CurrentMemoryMB);
+                    try { OnHighMemoryWarning?.Invoke(CurrentMemoryMB); }
+                    catch (Exception ex) { Log.Warning("[PerformanceMonitor] OnHighMemoryWarning 订阅者异常（已隔离）: {0}", ex.Message); }
                 }
             }
             else

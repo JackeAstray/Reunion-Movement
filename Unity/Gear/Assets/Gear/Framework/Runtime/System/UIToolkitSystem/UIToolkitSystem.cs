@@ -1,4 +1,4 @@
-﻿using Gear.Common;
+using Gear.Common;
 using Gear.Framework.Runtime.Base;
 using Gear.Framework.Runtime.Resources;
 using Cysharp.Threading.Tasks;
@@ -23,6 +23,9 @@ namespace Gear.Framework.Runtime.UIToolkit
         public static UIToolkitSystem Instance => instance.Value;
 
         public bool isInited { get; private set; }
+
+        /// <summary>初始化代次：Clear/重新 Init 会递增，用于让在途 Init 的 await 续体失效</summary>
+        private int initGeneration;
 
         private double initProgress = 0;
         public double InitProgress { get { return initProgress; } }
@@ -100,6 +103,9 @@ namespace Gear.Framework.Runtime.UIToolkit
         public async UniTask Init()
         {
             initProgress = 0;
+            isInited = false;
+            // 初始化代次：LoadPanelSettingsAsync 含 await，期间 Clear/重启后不能继续写入 isInited
+            int myGeneration = ++initGeneration;
 
             // 重建 R3 Subject（Clear() 已 Dispose，重初始化时必须重建，
             // 否则 OpenPanel 中的 OnNext 会抛 ObjectDisposedException）
@@ -112,6 +118,7 @@ namespace Gear.Framework.Runtime.UIToolkit
 
             // 2. 加载 PanelSettings
             await LoadPanelSettingsAsync();
+            if (myGeneration != initGeneration) return;
             initProgress = 60;
 
             // 3. 预加载全局样式表
@@ -126,6 +133,8 @@ namespace Gear.Framework.Runtime.UIToolkit
         public void Clear()
         {
             Log.Debug("[UIToolkitSystem] 清除数据");
+            // 使在途 Init 的续体失效
+            initGeneration++;
 
             // 关闭所有面板。快照遍历：OnClose 是用户代码，若面板在 OnClose 中调用 ClosePanel
             // 修改 panelInstances，foreach 会抛 InvalidOperationException。

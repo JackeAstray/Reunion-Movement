@@ -25,9 +25,15 @@ namespace Gear.Framework.Runtime.UIInput
 
         private void RegisterUIEvents()
         {
-            // R3 原生订阅方式
-            uiOpenSubscription = UISystem.Instance.OnOpenSubject.Subscribe(OnUIOpened);
-            uiCloseSubscription = UISystem.Instance.OnCloseSubject.Subscribe(OnUIClosed);
+            // 初始化期间 UISystem 可能已被 Clear（Subject 置 null）：直接订阅会 NRE 并让整个 Init 失败
+            var ui = UISystem.Instance;
+            if (ui == null || ui.OnOpenSubject == null || ui.OnCloseSubject == null)
+            {
+                Log.Warning("[UIInputSystem] UISystem 尚未就绪（Subject 为空），跳过 UI 生命周期订阅");
+                return;
+            }
+            uiOpenSubscription = ui.OnOpenSubject.Subscribe(OnUIOpened);
+            uiCloseSubscription = ui.OnCloseSubject.Subscribe(OnUIClosed);
         }
 
         private void UnregisterUIEvents()

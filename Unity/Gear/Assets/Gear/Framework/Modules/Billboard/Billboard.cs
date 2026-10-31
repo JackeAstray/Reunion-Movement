@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 using Gear.Common;
 using Gear.Utilities;
@@ -47,7 +47,9 @@ namespace Gear.Framework.Modules
             originalRotation = transform.rotation;
         }
 
-        void Update()
+        // LateUpdate：相机通常在 LateUpdate（Cinemachine 等）才最终定位，
+        // 在 Update 里朝向会用到上一帧的相机姿态，产生一帧抖动
+        void LateUpdate()
         {
             // 如果目标引用丢失，限流重试获取主相机（Camera.main 内部是 FindGameObjectsWithTag，极慢）
             if (targetTF == null)

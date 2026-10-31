@@ -33,6 +33,9 @@ namespace Gear.Framework.Runtime.UIInput
         /// <summary>初始化代数：引擎 Clear/Init 循环后递增，导航目标据此重新注册/申请 UI 模式。</summary>
         public int InitVersion { get; private set; }
 
+        /// <summary>初始化代次：Clear 会递增，用于让在途 Init 的 await 续体失效</summary>
+        private int initGeneration;
+
         private double initProgress = 0;
         public double InitProgress { get { return initProgress; } }
         #endregion
@@ -207,7 +210,10 @@ namespace Gear.Framework.Runtime.UIInput
         public async UniTask Init()
         {
             initProgress = 0;
+            isInited = false;
             InitVersion++;
+            // 初始化代次：LoadInputActionsAsync 含 await，期间 Clear/重启后不能继续注册与置 isInited
+            int myGeneration = ++initGeneration;
 
             // 设备控件缓存可能来自上一次 Play（关闭域重载时），重新初始化时清空
             UIInputDeviceRegistry.InvalidateAll();
@@ -237,6 +243,7 @@ namespace Gear.Framework.Runtime.UIInput
 
             // 3. 加载 InputActionAsset 并应用自定义绑定
             await LoadInputActionsAsync();
+            if (myGeneration != initGeneration) return; // 期间已被 Clear/重启
             ApplyBindingsToActions();
             initProgress = 70;
 
@@ -327,6 +334,8 @@ namespace Gear.Framework.Runtime.UIInput
         public void Clear()
         {
             Log.Debug("UIInputSystem 清除数据");
+            // 使在途 Init 的 await 续体失效
+            initGeneration++;
 
             UnregisterUIEvents();
             UnregisterInputCallbacks();

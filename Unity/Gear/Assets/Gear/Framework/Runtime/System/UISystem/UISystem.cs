@@ -22,6 +22,9 @@ namespace Gear.Framework.Runtime.UI
 
         public bool isInited { get; private set; }
 
+        /// <summary>初始化代次：Clear/重新 Init 会递增，用于让在途 Init 的跨帧续体失效</summary>
+        private int initGeneration;
+
         private double initProgress = 0;
         public double InitProgress { get { return initProgress; } }
         #endregion
@@ -77,6 +80,10 @@ namespace Gear.Framework.Runtime.UI
         public async UniTask Init()
         {
             initProgress = 0;
+            isInited = false;
+            // 初始化代次：CreateRoot 含两次跨帧 await，期间引擎可能超时/Dispose 并调用 Clear()。
+            // 续体必须据此放弃，否则会在 Clear 之后重新创建 UIRoot/EventSystem 并置 isInited=true。
+            int myGeneration = ++initGeneration;
 
             // 重建可能已被 Clear() 释放的 R3 Subject（支持模块重初始化）
             OnInitSubject ??= new Subject<UIController>();
@@ -84,7 +91,8 @@ namespace Gear.Framework.Runtime.UI
             OnSetSubject ??= new Subject<UIController>();
             OnCloseSubject ??= new Subject<UIController>();
 
-            await CreateRoot();
+            if (!await CreateRoot(myGeneration)) return;
+            if (myGeneration != initGeneration) return;
 
             // 预热窗口目录：扫一次程序集 + 特性（约几毫秒），之后按 Id/类型查询零反射，
             // 避免"第一次打开某个窗口"时才扫描造成的毛刺。
@@ -99,6 +107,8 @@ namespace Gear.Framework.Runtime.UI
         {
             Log.Debug("UISystem 清除数据");
             isInited = false;
+            // 使在途 Init 的续体失效
+            initGeneration++;
             uiStateCache.Clear();
             uiControllerTypeCache.Clear();
             // 取消在途的窗口加载（其完成回调会登记到已清空的缓存中）
@@ -152,7 +162,8 @@ namespace Gear.Framework.Runtime.UI
         /// <summary>
         /// 创建根节点
         /// </summary>
-        private async UniTask CreateRoot()
+        /// <returns>false 表示初始化期间系统已被 Clear/重启，调用方不应再置 isInited</returns>
+        private async UniTask<bool> CreateRoot(int generation)
         {
             uiRoot = new GameObject("UIRoot");
             mainUIRoot = new GameObject("MainUIRoot");
@@ -171,6 +182,7 @@ namespace Gear.Framework.Runtime.UI
             // InputSystemUIInputModule.OnEnable() 会静默失败。
             // 等一帧后 Input System 就绪，再创建即可正常工作。
             await UniTask.Yield(PlayerLoopTiming.Update);
+            if (generation != initGeneration) return false;
 
             // 销毁已有的 EventSystem，从预制体加载干净的实例
             var existingES = UnityEngine.Object.FindFirstObjectByType<EventSystem>();
@@ -218,6 +230,13 @@ namespace Gear.Framework.Runtime.UI
 
                     // 等待一帧，确保 DestroyImmediate 完全生效且 InputSystem 进一步就绪
                     await UniTask.Yield(PlayerLoopTiming.Update);
+                    if (generation != initGeneration)
+                    {
+                        // 期间已被 Clear：销毁刚实例化的 EventSystem，避免孤儿根节点
+                        if (esGo != null) UnityEngine.Object.Destroy(esGo);
+                        EventSystem = null;
+                        return false;
+                    }
 
                     // 用 AddComponent 创建全新模块 —— 此时 OnEnable 会正常注册到 InputSystem
                     var newModule = esGo.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
@@ -279,6 +298,7 @@ namespace Gear.Framework.Runtime.UI
             }
 
             initProgress = 50;
+            return true;
         }
 
     }

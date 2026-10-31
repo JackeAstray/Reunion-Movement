@@ -88,6 +88,7 @@ namespace Gear.Framework.Runtime.Resources
         {
             initProgress = 0;
             isInited = false;
+            int myGeneration = ++initGeneration;
 
             // 失败冷却：Init 失败后，每个 Load/Instantiate 入口都会再次触发 Init，
             // 若 Addressables 服务不可用，会形成"每次加载都全量重试初始化"的风暴。
@@ -121,6 +122,7 @@ namespace Gear.Framework.Runtime.Resources
 
                 var handle = Addressables.InitializeAsync();
                 await handle.ToUniTask();
+                if (myGeneration != initGeneration) return; // 初始化期间已被 Clear/重启
                 initProgress = 50;
 
                 // 远程模式：检查 Catalog 更新（仅告警，不阻断启动）
@@ -144,6 +146,7 @@ namespace Gear.Framework.Runtime.Resources
                     }
                 }
 
+                if (myGeneration != initGeneration) return; // 远程检查期间已被 Clear/重启
                 initProgress = 100;
                 isInited = true;
                 lastInitFailureTime = -1f;
@@ -152,6 +155,8 @@ namespace Gear.Framework.Runtime.Resources
             catch (Exception ex)
             {
                 Log.Error("AddressableSystem 初始化失败（业务层将降级 Resources）: {0}", ex.Message);
+                // 已被 Clear/重启的过期初始化不再回写 isInited/冷却时间
+                if (myGeneration != initGeneration) return;
                 isInited = false;
                 lastInitFailureTime = Time.realtimeSinceStartup;
             }
@@ -159,6 +164,13 @@ namespace Gear.Framework.Runtime.Resources
 
         /// <summary>上次初始化失败的时间（realtimeSinceStartup；&lt;0 表示从未失败）</summary>
         private float lastInitFailureTime = -1f;
+
+        /// <summary>
+        /// 初始化代次：Init 含多个 await（Addressables 初始化/远程检查），期间引擎可能
+        /// 超时/Dispose 并调用 Clear()。续体必须校验代次后再写 isInited/冷却时间，
+        /// 否则会出现“Clear 之后又被置为已初始化”的僵尸状态。
+        /// </summary>
+        private int initGeneration;
         /// <summary>初始化失败后的重试冷却（秒），避免每个加载入口都触发一次全量重试</summary>
         private const float InitRetryCooldownSeconds = 5f;
 
@@ -249,6 +261,8 @@ namespace Gear.Framework.Runtime.Resources
         public void Clear()
         {
             Log.Debug("AddressableSystem 清除数据");
+            // 使在途 Init 的续体失效：它是异步的，不会随 Clear 一起停下
+            initGeneration++;
             pendingUpdateCatalogs.Clear();
 
             // 释放所有未配对释放的实例句柄，避免直接清零统计掩盖泄漏
