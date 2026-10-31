@@ -44,7 +44,10 @@ namespace Gear.Tests.PlayMode
                 host = "127.0.0.1",
                 port = port,
                 codec = NetworkCodecType.MessageId,
-                autoReconnect = false,
+                autoReconnect = true,
+                reconnectBaseDelay = 0.1f,
+                reconnectMaxDelay = 0.5f,
+                maxReconnectAttempts = -1,
                 connectTimeout = 5f,
             });
             client.Connect();
@@ -113,6 +116,49 @@ namespace Gear.Tests.PlayMode
             }
 
             Assert.IsTrue(threw, "未注册处理器应抛 NetworkRpcException，而不是空成功/超时");
+        }
+        [UnityTest]
+        public IEnumerator AutoReconnect_AfterServerRestart_AndRpcWorks()
+        {
+            // 停服务端：客户端应进入 Disconnected/Reconnecting
+            server.Stop();
+            float deadline = UnityEngine.Time.realtimeSinceStartup + 5f;
+            while (client.IsConnected && UnityEngine.Time.realtimeSinceStartup < deadline)
+            {
+                client.Tick();
+                yield return null;
+            }
+            Assert.IsFalse(client.IsConnected, "服务端停止后客户端应断开");
+
+            // 同一端口重启服务端，客户端应自动重连
+            var restarted = new NetworkServer(new NetworkServerConfig
+            {
+                transport = NetworkTransportType.Tcp,
+                port = port,
+                codec = NetworkCodecType.MessageId,
+            });
+            Assert.IsTrue(restarted.Start(), "重启 TCP 服务端失败");
+            server = restarted;
+
+            deadline = UnityEngine.Time.realtimeSinceStartup + 8f;
+            while (!client.IsConnected && UnityEngine.Time.realtimeSinceStartup < deadline)
+            {
+                server.Tick();
+                client.Tick();
+                yield return null;
+            }
+            Assert.IsTrue(client.IsConnected, "客户端应自动重连成功");
+
+            // 重连后 RPC 仍可用（覆盖 CreateChannel 重置分帧缓冲）
+            server.RegisterRequestHandler(11, (connectionId, payload) => new byte[] { 7 });
+            var task = client.RequestAsync(11, Array.Empty<byte>(), TimeSpan.FromSeconds(3));
+            while (!task.GetAwaiter().IsCompleted)
+            {
+                server.Tick();
+                client.Tick();
+                yield return null;
+            }
+            CollectionAssert.AreEqual(new byte[] { 7 }, task.GetAwaiter().GetResult());
         }
     }
 }
