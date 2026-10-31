@@ -1,4 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using R3;
 using System.Threading;
 using Gear.Common;
@@ -72,6 +72,15 @@ namespace Gear.Framework.Runtime.Resources
                 LastResult = await system.CheckUpdateAsync(ct);
                 if (ct.IsCancellationRequested)
                 {
+                    State.Value = FlowState.Failed;
+                    return State.Value;
+                }
+
+                // 检查失败（网络/服务端/锚点校验）不能当成"已是最新"：
+                // 那会把热更故障静默吞掉，玩家永远收不到更新也没有任何错误提示。
+                if (LastResult.checkFailed)
+                {
+                    Log.Error("[AddressableUpdateFlow] 检查更新失败（非'已是最新'），流程标记为 Failed");
                     State.Value = FlowState.Failed;
                     return State.Value;
                 }

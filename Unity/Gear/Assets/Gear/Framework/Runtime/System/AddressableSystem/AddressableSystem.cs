@@ -1,4 +1,4 @@
-﻿using Gear.Common;
+using Gear.Common;
 using Gear.Framework.Runtime.Base;
 using Cysharp.Threading.Tasks;
 using System;
@@ -27,6 +27,12 @@ namespace Gear.Framework.Runtime.Resources
         public bool hasUpdate;
         /// <summary>可更新的 Catalog 列表（hasUpdate 为 true 时非空）</summary>
         public List<string> updatedCatalogs;
+        /// <summary>
+        /// 检查过程是否失败（网络/服务端错误、锚点校验失败等）。
+        /// 失败时 hasUpdate 也为 false，但语义是"未知"而不是"已是最新"——
+        /// 热更流程必须据此报 Failed，否则会把检查失败静默显示成"已是最新版本"。
+        /// </summary>
+        public bool checkFailed;
     }
 
     /// <summary>
@@ -36,7 +42,7 @@ namespace Gear.Framework.Runtime.Resources
     /// 设计文档：仓库 Docs/Addressables/Addressables集成设计方案.md §5
     /// </summary>
     [ModuleOrder(20, typeof(Gear.Framework.Runtime.Resources.ResourcesSystem))]
-    public class AddressableSystem : ICustomSystem, ISystemDisposable
+    public partial class AddressableSystem : ICustomSystem, ISystemDisposable
     {
         #region 单例与初始化
         private static readonly Lazy<AddressableSystem> instance = new(() => new AddressableSystem());
@@ -82,6 +88,17 @@ namespace Gear.Framework.Runtime.Resources
         {
             initProgress = 0;
             isInited = false;
+
+            // 失败冷却：Init 失败后，每个 Load/Instantiate 入口都会再次触发 Init，
+            // 若 Addressables 服务不可用，会形成"每次加载都全量重试初始化"的风暴。
+            // 冷却期内直接返回未就绪，让调用方走 Resources 降级。
+            if (lastInitFailureTime >= 0f
+                && Time.realtimeSinceStartup - lastInitFailureTime < InitRetryCooldownSeconds)
+            {
+                Log.Warning("AddressableSystem 初始化失败冷却中（{0:F1}s 后可重试），本次跳过", 
+                    InitRetryCooldownSeconds - (Time.realtimeSinceStartup - lastInitFailureTime));
+                return;
+            }
 
             if (Mode == AddressablesMode.Off)
             {
@@ -129,14 +146,21 @@ namespace Gear.Framework.Runtime.Resources
 
                 initProgress = 100;
                 isInited = true;
+                lastInitFailureTime = -1f;
                 Log.Debug("AddressableSystem 初始化完成 (Mode={0})", Mode);
             }
             catch (Exception ex)
             {
                 Log.Error("AddressableSystem 初始化失败（业务层将降级 Resources）: {0}", ex.Message);
                 isInited = false;
+                lastInitFailureTime = Time.realtimeSinceStartup;
             }
         }
+
+        /// <summary>上次初始化失败的时间（realtimeSinceStartup；&lt;0 表示从未失败）</summary>
+        private float lastInitFailureTime = -1f;
+        /// <summary>初始化失败后的重试冷却（秒），避免每个加载入口都触发一次全量重试</summary>
+        private const float InitRetryCooldownSeconds = 5f;
 
         /// <summary>是否仅允许 https 远程地址（拒绝明文 http，防止 CDN 热更被中间人替换）</summary>
         private static bool s_plaintextWarned;
@@ -251,6 +275,12 @@ namespace Gear.Framework.Runtime.Resources
             loadCount = 0;
             releaseCount = 0;
             activeCount = 0;
+            // 失败冷却与锚点失败标记都是"本次引擎会话"的状态：
+            // Clear 后 Time.realtimeSinceStartup 可能归零，若不清空冷却时间，
+            // 下一次会话会在头 5 秒内被误判为"仍在冷却"而拒绝初始化；
+            // 锚点失败标记同理，否则重启后永久拒绝远程更新。
+            lastInitFailureTime = -1f;
+            catalogAnchorFailed = false;
             isInited = false;
         }
 
@@ -443,69 +473,11 @@ namespace Gear.Framework.Runtime.Resources
         }
         #endregion
 
-        #region 场景
-        /// <summary>
-        /// 异步加载场景（Addressable 场景）。返回的 SceneInstance 通过 <see cref="UnloadSceneAsync"/> 卸载。
-        /// </summary>
-        public async UniTask<SceneInstance> LoadSceneAsync(object key, LoadSceneMode mode = LoadSceneMode.Single, IProgress<float> progress = null, CancellationToken ct = default)
-        {
-            if (Mode == AddressablesMode.Off)
-            {
-                Log.Warning("AddressableSystem 处于 Off 模式，无法加载场景: {0}", key);
-                return default;
-            }
-            if (!isInited)
-            {
-                Log.Warning("AddressableSystem 未初始化，自动执行 Init()");
-                await Init();
-                if (!isInited) return default;
-            }
+        // 场景加载/卸载 API 已拆分到 AddressableSystem.Scene.cs（partial），
+        // 避免主文件继续膨胀；句柄重载与释放语义见该文件。
 
-            AsyncOperationHandle<SceneInstance> handle = default;
-            try
-            {
-                handle = Addressables.LoadSceneAsync(key, mode);
-                var scene = await handle.ToUniTask(progress, cancellationToken: ct, autoReleaseWhenCanceled: true);
-                if (handle.Status != AsyncOperationStatus.Succeeded)
-                {
-                    Log.Error("Addressables 场景加载失败: {0}, Status: {1}", key, handle.Status);
-                    if (handle.IsValid()) Addressables.Release(handle);
-                    return default;
-                }
-                Interlocked.Increment(ref loadCount);
-                Interlocked.Increment(ref activeCount);
-                return scene;
-            }
-            catch (OperationCanceledException)
-            {
-                // 取消路径：autoReleaseWhenCanceled 已自动释放句柄
-                return default;
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Addressables 场景加载异常: {0}, {1}", key, ex.Message);
-                // 异常路径也必须释放句柄
-                if (handle.IsValid()) Addressables.Release(handle);
-                return default;
-            }
-        }
+        // 场景 API 见 AddressableSystem.Scene.cs
 
-        /// <summary>卸载 Addressable 场景（与 LoadSceneAsync 成对）</summary>
-        public async UniTask UnloadSceneAsync(SceneInstance sceneInstance, IProgress<float> progress = null, CancellationToken ct = default)
-        {
-            try
-            {
-                var handle = Addressables.UnloadSceneAsync(sceneInstance);
-                await handle.ToUniTask(progress, cancellationToken: ct, autoReleaseWhenCanceled: true);
-                Interlocked.Increment(ref releaseCount);
-                Interlocked.Decrement(ref activeCount);
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Addressables 场景卸载异常: {0}", ex.Message);
-            }
-        }
-        #endregion
 
         #region 远程更新
         /// <summary>
@@ -521,6 +493,7 @@ namespace Gear.Framework.Runtime.Resources
             if (catalogAnchorFailed)
             {
                 Log.Error("AddressableSystem Catalog 锚点校验失败，已跳过远程更新检查");
+                result.checkFailed = true;
                 return result;
             }
 
@@ -545,6 +518,8 @@ namespace Gear.Framework.Runtime.Resources
             catch (Exception ex)
             {
                 Log.Warning("AddressableSystem 检查更新失败: {0}", ex.Message);
+                // 区分"检查失败"与"确认无更新"：否则上层会把网络故障显示成已是最新
+                result.checkFailed = true;
             }
             return result;
         }

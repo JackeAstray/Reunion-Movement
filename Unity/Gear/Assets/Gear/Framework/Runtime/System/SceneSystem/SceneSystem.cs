@@ -1,4 +1,4 @@
-﻿using Gear.Common;
+using Gear.Common;
 using Gear.Framework.Runtime.Base;
 using Gear.Framework.Runtime.Resources;
 using Cysharp.Threading.Tasks;
@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Threading;
 using UnityEngine.AddressableAssets;
 using UnityEngine.Events;
+using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.SceneManagement;
@@ -35,7 +36,7 @@ namespace Gear.Framework.Runtime.Scene
     /// 场景系统 —— 使用 R3 Subject/ReactiveProperty 管理场景加载状态与进度
     /// </summary>
     [ModuleOrder(30, typeof(Gear.Framework.Runtime.Resources.ResourcesSystem), typeof(Gear.Framework.Runtime.Resources.AddressableSystem))]
-    public class SceneSystem : ICustomSystem, ISystemDisposable
+    public partial class SceneSystem : ICustomSystem, ISystemDisposable
     {
         #region 单例与初始化
         private static readonly Lazy<SceneSystem> instance = new(() => new SceneSystem());
@@ -142,6 +143,8 @@ namespace Gear.Framework.Runtime.Scene
 
         // 当前通过 Addressables 加载的场景实例（切换时用于释放 Bundle，避免泄漏）
         private SceneInstance loadedSceneInstance;
+        // 与实例配套的底层句柄：Scene 被其他 Single 加载销毁后仍靠它归还引用计数
+        private AsyncOperationHandle<SceneInstance> loadedSceneHandle;
         #endregion
 
         public UniTask Init()
@@ -182,6 +185,28 @@ namespace Gear.Framework.Runtime.Scene
             beforeSceneLoadingCompletionCallback = null;
             sceneLoadingCompletionCallback = null;
             targetSceneName = null;
+            // 释放残留的 Addressable 场景句柄：Clear 不经过 OnLoadTargetSceneAsync 的释放路径，
+            // 不在这里归还的话 bundle 引用计数会跨引擎会话永久 +1。
+            if (loadedSceneHandle.IsValid())
+            {
+                try
+                {
+                    if (Modules.TryGet(out AddressableSystem addressable) && addressable != null)
+                    {
+                        addressable.ReleaseSceneHandle(loadedSceneHandle);
+                    }
+                    else
+                    {
+                        Addressables.Release(loadedSceneHandle);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("SceneSystem 清理 Addressable 场景句柄失败: {0}", ex.Message);
+                }
+            }
+            loadedSceneHandle = default;
+            loadedSceneInstance = default;
             // 重置场景名缓存：引擎重建后场景已随引擎销毁卸载，残留的 currentSceneName
             // 会让 LoadScene(同名) 误判“已加载”直接回调而跳过真实加载；
             // previousSceneName 残留则使 LoadPreScene 跳向过期场景。
@@ -322,7 +347,15 @@ namespace Gear.Framework.Runtime.Scene
 
                 if (openLoad)
                 {
-                    await OnLoadingSceneAsync(loadSceneName, LoadSceneMode.Single);
+                    bool loadingSceneReady = await OnLoadingSceneAsync(loadSceneName, LoadSceneMode.Single);
+                    if (!loadingSceneReady)
+                    {
+                        // 过渡场景失败/超时：中止切换，不再加载目标场景。
+                        // 否则残留的过渡场景 AsyncOperation 之后会以 Single 激活，摧毁目标场景。
+                        if (LoadState != null) LoadState.Value = SceneLoadState.Failed;
+                        ExecuteSlcc();
+                        return;
+                    }
                 }
                 await OnLoadTargetSceneAsync(targetSceneName, LoadSceneMode.Single);
             }
@@ -343,10 +376,11 @@ namespace Gear.Framework.Runtime.Scene
             {
                 // 队列释放：仅当自己仍是"在途加载"时才清空信号，避免误清新排队者的 TCS
                 if (ReferenceEquals(currentLoadTcs, myTcs)) currentLoadTcs = null;
-                // 无论成功、失败、异常还是超时都释放加载锁，防止后续加载被永久阻塞
-                Interlocked.Exchange(ref isLoadingAtomic, 0);
-                myTcs.TrySetResult();
 
+                // 注意顺序：所有共享状态必须在释放锁/唤醒排队者之前复位。
+                // myTcs.TrySetResult() 会同步（内联）恢复排队中的 LoadScene，对方拿到锁后
+                // 立刻写 targetSceneName/openLoad/LoadState；如果先唤醒再复位，
+                // 就会把排队者的目标场景清成 null，导致第二次加载以空场景名失败。
                 // 复位跨方法传参字段：加载完成后 openLoad 仅在本流程内有意义，
                 // 不复位会让外部在下次加载前读到上次的过期值
                 openLoad = false;
@@ -369,117 +403,27 @@ namespace Gear.Framework.Runtime.Scene
                     }
                     // 否则 Clear() 已发生：不回写 currentSceneName，避免污染下一会话的场景名缓存
                 }
+
+                // 最后才释放加载锁并唤醒排队者：此时共享状态已全部复位
+                Interlocked.Exchange(ref isLoadingAtomic, 0);
+                myTcs.TrySetResult();
             }
         }
 
-        /// <summary>
-        /// 检查 Addressables key 是否已注册（Addressables 2.9.1 无 Addressables.Exists API，
-        /// 通过遍历 ResourceLocators 判断）。须在 Addressables 初始化后调用。
-        /// </summary>
-        private static bool AddressableKeyExists(object key, Type type)
-        {
-            try
-            {
-                foreach (var locator in Addressables.ResourceLocators)
-                {
-                    if (locator.Locate(key, type, out var locations))
-                    {
-                        return locations != null && locations.Count > 0;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Warning("Addressables 检查 key 失败 {0}: {1}", key, ex.Message);
-            }
-            return false;
-        }
+        // Addressables 场景加载/释放与过渡场景超时保护见 SceneSystem.SceneLoading.cs（partial）。
 
-        /// <summary>
-        /// 通过 Addressables 加载目标场景（地址 Remote/Scenes/{name}），成功返回 true。
-        /// 切换前先卸载旧 Addressable 场景（释放 Bundle）；进度映射为 0.15~1.0，与 SceneManager 流程对齐。
-        /// </summary>
-        private async UniTask<bool> LoadTargetSceneViaAddressablesAsync(string levelName, LoadSceneMode loadSceneMode, CancellationToken ct = default)
-        {
-            try
-            {
-                // 释放上一个 Addressable 场景，避免 Bundle 泄漏
-                if (loadedSceneInstance.Scene.IsValid())
-                {
-                    await AddressableSystem.Instance.UnloadSceneAsync(loadedSceneInstance, ct: ct);
-                    loadedSceneInstance = default;
-                }
-
-                // 进度映射：Addressables 0~1 → SceneSystem 0.15~1.0（与 SceneManager 流程起始回调点对齐）
-                var progress = new Progress<float>(p => CallbackProgress(0.15f + 0.85f * Mathf.Clamp01(p)));
-                var sceneInstance = await AddressableSystem.Instance.LoadSceneAsync(
-                    AddressableKeys.SceneRoot + levelName, loadSceneMode, progress, ct);
-                if (!sceneInstance.Scene.IsValid())
-                {
-                    return false;
-                }
-
-                loadedSceneInstance = sceneInstance;
-                CallbackProgress(1f);
-                if (!openLoad)
-                {
-                    ExecuteBslcc();
-                }
-                OnTargetSceneLoaded();
-                ClearExcludeSet();
-                ExecuteSlcc();
-                Log.Debug("目标场景（Addressables）加载完成: {0}", levelName);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Addressables 场景加载异常 {0}: {1}", levelName, ex.Message);
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// 加载过渡场景
-        /// </summary>
-        private async UniTask OnLoadingSceneAsync(string loadSceneName, LoadSceneMode loadSceneMode)
-        {
-            var async = SceneManager.LoadSceneAsync(loadSceneName, loadSceneMode);
-            if (async == null)
-            {
-                Log.Warning("过渡场景 {0} 加载失败，跳过过渡场景", loadSceneName);
-                // 即便失败也要触发回调，避免回调泄漏
-                ExecuteBslcc();
-                CallbackProgress(0);
-                return;
-            }
-
-            // 过渡场景超时保护：加载卡死时不再无限等待
-            float timeoutDeadline = sceneLoadTimeoutSeconds > 0
-                ? Time.realtimeSinceStartup + sceneLoadTimeoutSeconds
-                : float.PositiveInfinity;
-
-            while (!async.isDone)
-            {
-                if (Time.realtimeSinceStartup > timeoutDeadline)
-                {
-                    Log.Error("过渡场景 {0} 加载超时（>{1}s），跳过等待", loadSceneName, sceneLoadTimeoutSeconds);
-                    ExecuteBslcc();
-                    CallbackProgress(0);
-                    return;
-                }
-                await UniTask.Yield(PlayerLoopTiming.Update);
-            }
-
-            Log.Debug("Loading场景加载完成！");
-            ExecuteBslcc();
-            CallbackProgress(0);
-        }
+        // 目标场景加载（Addressables 优先 + SceneManager 降级）见 SceneSystem.SceneLoading.cs。
 
         /// <summary>
         /// 加载目标场景
         /// </summary>
         private async UniTask OnLoadTargetSceneAsync(string levelName, LoadSceneMode loadSceneMode)
         {
+            // 先释放上一个 Addressable 场景（如果还有）：
+            // 无论接下来走 Addressables 还是 SceneManager，旧句柄都必须归还，
+            // 否则跨分支切换会让 bundle 引用计数永久 +1。
+            await ReleaseLoadedAddressableSceneAsync();
+
             // 双轨：Addressables 优先（场景已标记为 Addressable 时），失败/未标记则降级 SceneManager。
             // 注意：未开启热更新（enableHotUpdate=false，即 AddressablesMode.Off）或未初始化时，恒走 SceneManager。
             if (Config.AddressablesMode != AddressablesMode.Off
