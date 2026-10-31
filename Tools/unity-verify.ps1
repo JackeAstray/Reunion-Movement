@@ -29,7 +29,8 @@
 param(
     [string]$UnityPath,
     [switch]$SkipTests,
-    [switch]$SkipGuard
+    [switch]$SkipGuard,
+    [switch]$IncludePlayMode
 )
 
 $ErrorActionPreference = 'Stop'
@@ -165,6 +166,43 @@ if (-not $SkipGuard) {
     }
     else {
         Write-Ok '守卫通过'
+    }
+}
+
+# ---- 3. PlayMode（可选；需要图形/交互会话，CI 自托管 runner 用） ----
+if ($IncludePlayMode) {
+    Write-Step '运行 PlayMode 测试…'
+    $playResults = Join-Path $resultDir 'playmode-results.xml'
+    $playLog = Join-Path $resultDir 'playmode.log'
+    if (Test-Path $playResults) { Remove-Item $playResults -Force }
+
+    $playExit = Invoke-UnityBatch @(
+        '-batchmode', '-nographics', '-projectPath', $projectPath,
+        '-runTests', '-testPlatform', 'PlayMode',
+        '-testResults', $playResults, '-logFile', $playLog
+    )
+
+    if (-not (Test-Path $playResults)) {
+        Write-Bad "没有生成 PlayMode 结果，Unity 退出码 $playExit。日志: $playLog"
+        $exitCode = 1
+    }
+    else {
+        [xml]$playXml = Get-Content -LiteralPath $playResults -Raw -Encoding UTF8
+        $playRun = $playXml.'test-run'
+        $playTotal = [int]$playRun.total
+        $playPassed = [int]$playRun.passed
+        $playFailed = [int]$playRun.failed
+
+        if ($playFailed -gt 0 -or $playTotal -eq 0) {
+            Write-Bad "PlayMode 失败：共 $playTotal，通过 $playPassed，失败 $playFailed"
+            foreach ($case in $playXml.SelectNodes("//test-case[@result='Failed']")) {
+                Write-Bad "  × $($case.fullname)"
+            }
+            $exitCode = 1
+        }
+        else {
+            Write-Ok "PlayMode 全部通过：$playTotal 个用例"
+        }
     }
 }
 

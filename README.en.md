@@ -11,7 +11,7 @@ Addressables hot update, and SDF-based UI.
 | Platform | Status | Notes |
 |---|---|---|
 | Windows (x64) | ✅ Verified | Local build: 170.8 MB / 0 errors |
-| WebGL | 🟡 Configured | CI job + WebGL guards; real-browser verification pending |
+| WebGL | ✅ Builds | Local build: 44.3 MB / 0 errors (12m55s); real-browser verification pending |
 | Android | ✅ Builds | APK 75 MB / 0 errors; `VIBRATE` permission verified; device launch pending |
 | iOS | 🟡 Code ready | Haptics `.mm` added; Xcode link needs macOS |
 | macOS / Linux | 🟡 Script ready | Build menu / CLI provided; not executed yet |

@@ -47,6 +47,7 @@
 - `NetworkClientConfig.enableRpcErrorFrames` / `NetworkServerConfig.enableRpcErrorFrames`：
   混合版本部署时服务端可关错误帧，回退"空响应"以兼容旧客户端。
 - `DownloadMgr.treatLegacyFileAsComplete`：旧缓存无 `.done` 时可选一次性补标记，避免弱网用户被重下。
+- 平台：WebGL 本机构建通过（44.3 MB / 0 错误，12m55s）；浏览器真机验证仍待做。
 - 新增 `UI/Gear.UI.asmdef` 与 `Editor/Gear.Editor.Framework.asmdef`：UI 与编辑器工具不再落
   `Assembly-CSharp` / `Assembly-CSharp-Editor`，架构守卫能看到这两层依赖。
 - CI 新增 `unity-verify-pr.yml`：同仓库分支的 PR 在自托管 runner 上跑编译 + EditMode + 守卫；

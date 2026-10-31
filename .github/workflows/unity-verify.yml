@@ -93,7 +93,7 @@ jobs:
       - name: EditMode 测试 + 架构守卫
         shell: pwsh
         run: |
-          & '.\Tools\unity-verify.ps1' -UnityPath $env:UNITY_EDITOR
+          & '.\Tools\unity-verify.ps1' -UnityPath $env:UNITY_EDITOR -IncludePlayMode
           exit $LASTEXITCODE
 
       - name: 导出并烟测 UPM 包
