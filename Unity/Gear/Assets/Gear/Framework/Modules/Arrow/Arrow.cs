@@ -28,6 +28,9 @@ namespace Gear.Framework.Modules
         private Camera mainCamera;
         private bool isActive;
         private CameraMainRetry cameraRetry = new CameraMainRetry(-999f);
+        // origin 的 RectTransform 缓存（避免每帧 GetComponent）；owner 变化时失效
+        private RectTransform originRectCache;
+        private Transform originRectOwner;
 
         private void Awake()
         {
@@ -68,11 +71,39 @@ namespace Gear.Framework.Modules
         {
             if (origin == null || canvas == null || baseRect == null)
                 return;
-            Vector2 originPosOnScreen = origin.position;
-            var originRect = origin.GetComponent<RectTransform>();
-            if (originRect != null)
-                myRect.anchoredPosition = originRect.anchoredPosition;
-            ApplyDirection(originPosOnScreen);
+
+            var originRect = GetOriginRect();
+            Vector2 screenPos;
+            if (canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+            {
+                // Overlay：UI 坐标与屏幕像素同一空间，保持原行为
+                screenPos = origin.position;
+                if (originRect != null)
+                    myRect.anchoredPosition = originRect.anchoredPosition;
+            }
+            else
+            {
+                // Camera/World 空间 Canvas：origin.position 是世界坐标，不能直接当屏幕坐标用；
+                // 先转屏幕空间，再换算到箭头父矩形的本地坐标
+                Camera cam = canvas.worldCamera != null ? canvas.worldCamera : mainCamera;
+                screenPos = RectTransformUtility.WorldToScreenPoint(cam, origin.position);
+                if (myRect.parent is RectTransform parentRect
+                    && RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRect, screenPos, cam, out var local))
+                {
+                    myRect.anchoredPosition = local;
+                }
+            }
+            ApplyDirection(screenPos);
+        }
+
+        private RectTransform GetOriginRect()
+        {
+            if (originRectOwner != origin)
+            {
+                originRectOwner = origin;
+                originRectCache = origin != null ? origin.GetComponent<RectTransform>() : null;
+            }
+            return originRectCache;
         }
 
         public void SetupWorld()
