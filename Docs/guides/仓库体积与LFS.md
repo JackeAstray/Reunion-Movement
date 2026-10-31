@@ -1,15 +1,15 @@
 # 仓库体积与 LFS
 
-> 现状快照：2026-10-31。结论先说：**当前 835 MB 的 `.git` 不是代码造成的，是历史里的大二进制造成的；
-> 不重写历史就无法真正瘦身**。本文给出非破坏性止损方案与需要协调的历史重写步骤。
-> （其中包含本地重建的 `upm` 发布分支；推远端后远端也会增加这部分。）
+> 现状快照：2026-10-31（**已完成历史重写 + LFS 迁移**）。结论先说：Git 对象从 695 MB
+> 降到约 109 MB；但 LFS 里仍有约 642 MB 的 GIF/字体，所以 **checkout 总量仍约 751 MB**。
+> 要进一步缩小 clone，需要把 `Images/` 与字体外置，或从历史剔除。
 
 ## 1. 体积构成（实测）
 
 | 位置 | 体积 | 说明 |
 |---|---|---|
-| `.git/objects` | 695 MB | 历史提交里的 GIF / 字体 / 旧 `.unitypackage` 等 |
-| `.git/lfs` | 140 MB | 已进入 LFS 的对象 |
+| `.git/objects` | 109 MB | 重写后的 Git 历史（大文件已变 LFS 指针） |
+| `.git/lfs` | 642 MB | 23 个 LFS 对象（GIF / unitypackage 等） |
 | `Images/` | 445 MB | 文档用示例 GIF/PNG |
 | `Unity/Gear/Assets/Gear/Fonts/` | 130 MB | 思源 / HarmonyOS Sans / 第三方中文字体 |
 | 工作区 `Assets/` | 198 MB | 含上述字体 |

@@ -12,8 +12,8 @@
 | UI 行为 | 状态机/ESC/返回栈/Static 有 PlayMode 回归 | **部分** | 210 条 EditMode；PlayMode 2/2；`UIModalStack` 纯逻辑已测；UI 三条集成仍缺 | 需要真实 Canvas/预制体 |
 | 测试与门禁 | PR 上编译 + 类型检查 + 覆盖率阈值；守卫单一实现 | **部分** | 210 EditMode 全绿；6 条守卫；Roslyn 语法门禁；类型检查仍靠 Unity | 需 Unity 授权或自托管 runner |
 | 文档 | 计数/链接自动校验；历史文档有快照标识；中英对齐 | **接近** | 主要计数已校正；新增 LFS/烟测文档；`Docs/archive` 仍按历史保留 | 链接/计数检查未自动化 |
-| 发布 | 远端 `upm` 与源码一致；空工程安装烟测进 CI | **部分** | 本地包 `com.jackeastray.gear@1.3.0`；`upm-smoke-test.ps1`；自托管 main 已接入 | 远端尚未 push |
-| 仓库卫生 | `.git` 可接受；LFS 历史迁移；大文件门禁 | **未达** | 835 MB；LFS 仅 1 个文件 | 需历史重写 + 全员重新 clone |
+| 发布 | 远端 `upm` 与源码一致；空工程安装烟测进 CI | **达成** | 远端 `upm` 已为 `com.jackeastray.gear@1.3.0`；`upm-smoke-test.ps1` 通过；自托管 main 已接入 | — |
+| 仓库卫生 | `.git` 可接受；LFS 历史迁移；大文件门禁 | **部分** | Git objects 109 MB；LFS 642 MB / 23 文件；clone 总量仍约 751 MB | 需外置 `Images/` 或字体才能继续降 |
 | 平台 | WebGL 浏览器 / Android / iOS / mac / Linux 真实验证 | **未达** | 仅构建配置 | 需设备与 macOS |
 
 ## 2. 已通过的验收命令
@@ -53,8 +53,8 @@ powershell -ExecutionPolicy Bypass -File Tools/upm-smoke-test.ps1 -UnityPath <Un
 
 | 项 | 需要的动作 | 影响 |
 |---|---|---|
-| 推送 `upm` | `git push --force origin upm:upm` | 旧安装方从 `com.reunion.movement` 迁到 `com.jackeastray.gear` |
-| 历史重写 | `git lfs migrate import --everything` 或 `filter-repo` | 所有提交哈希改变，协作者必须重新 clone |
+| 推送 `upm` | ✅ 已执行（2026-10-31）；旧包备份标签 `upm-backup-20261031` | 旧安装方从 `com.reunion.movement` 迁到 `com.jackeastray.gear` |
+| 历史重写 | ✅ 已执行 `git lfs migrate import --include="*.gif,*.unitypackage" --everything` 并强推所有分支 | 所有提交哈希改变，协作者必须重新 clone；LFS 占用约 642 MB |
 | PR 类型门禁 | 配 `UNITY_LICENSE` 或把自托管 runner 接到 PR | 公共仓库自托管 runner 有安全风险，需先加固 |
 | 真机验证 | WebGL 浏览器、Android/iOS 设备、macOS | 代码仓库内无法替代 |
 
