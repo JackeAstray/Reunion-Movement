@@ -58,6 +58,10 @@ namespace Gear.EditorTools.Toolbox
                 () => SelectAsset(AssetRoot + "/Plugins/Generators/Gear.SourceGenerator.dll"),
                 "未找到源码生成器；已生成的代码仍可用，但自动生成能力不可用。");
             AddDocumentationCheck("00-快速开始.md", "快速开始");
+            AddDocumentationCheck("01-架构总览.md", "架构总览");
+            AddDocumentationCheck("02-新增一个系统.md", "新增一个系统");
+            AddDocumentationCheck("03-新增一个窗口.md", "新增一个窗口");
+            AddDocumentationCheck("04-接入自己的游戏.md", "接入自己的游戏");
             AddDocumentationCheck("05-常见陷阱.md", "常见陷阱");
             AddDocumentationCheck("Addressables/快速开始.md", "Addressables 快速开始");
             AddDocumentationCheck("Packaging/打包指南.md", "打包指南");

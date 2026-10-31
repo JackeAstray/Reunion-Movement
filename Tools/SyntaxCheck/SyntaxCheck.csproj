@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <AssemblyName>Gear.SyntaxCheck</AssemblyName>
+    <RootNamespace>Gear.SyntaxCheck</RootNamespace>
+    <!--
+      直接引用 .NET SDK 自带的 Roslyn，避免 NuGet 还原：
+      CI 与本机都只依赖已安装的 dotnet SDK，离线/受限网络也能跑。
+    -->
+    <RoslynBin>$(MSBuildToolsPath)/Roslyn/bincore</RoslynBin>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Microsoft.CodeAnalysis">
+      <HintPath>$(RoslynBin)/Microsoft.CodeAnalysis.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Microsoft.CodeAnalysis.CSharp">
+      <HintPath>$(RoslynBin)/Microsoft.CodeAnalysis.CSharp.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

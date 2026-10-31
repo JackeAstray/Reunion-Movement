@@ -1,2 +1,6 @@
 # Visual Studio cache directory
 .vs/
+
+# .NET 工具（Tools/SyntaxCheck 等）的构建产物
+Tools/SyntaxCheck/bin/
+Tools/SyntaxCheck/obj/

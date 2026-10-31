@@ -6,8 +6,10 @@ name: Unity CI
 #   - **没有 UNITY_LICENSE 时，下面所有 Unity 作业都会 skipped**。本机验证请走
 #     unity-verify.yml（self-hosted runner，只接受 main push 与手动触发，不接受 PR，
 #     也不需要授权文件，跑的就是 Tools/unity-verify.ps1）。
-#   - EditMode 测试里已经包含「架构守卫」三个用例（超大文件 / 缺失 meta / asmdef 依赖方向），
-#     所以测试绿灯 = 守卫绿灯，不需要单独一步。
+#   - EditMode 测试里已经包含「架构守卫」六个规则 + link.xml 共 7 个用例，所以测试绿灯 = 守卫绿灯，
+#     不需要单独一步。
+#   - PR 上**无条件执行**的只有 syntax-check（C# 语法）与 guard-only（静态守卫）；两者都不做类型检查。
+#     类型/行为验证仍依赖 UNITY_LICENSE 或 main 上的自托管 unity-verify。
 #   - WebGL / Windows 构建默认只在手动触发和 main 分支上跑；Android 只在手动触发，
 #     避免每个 PR 都烧构建时长。
 
@@ -246,6 +248,24 @@ jobs:
           name: android-build
           path: build/Android
           if-no-files-found: warn
+
+  syntax-check:
+    name: C# 语法检查（不依赖 Unity）
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 安装 .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: 检查 C# 语法
+        run: dotnet run --project Tools/SyntaxCheck -- Unity/Gear/Assets/Gear
 
   guard-only:
     name: 架构守卫（不跑 Unity 的快速检查）
