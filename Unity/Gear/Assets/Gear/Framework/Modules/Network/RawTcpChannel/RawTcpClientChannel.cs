@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Threading;
@@ -26,9 +26,24 @@ namespace Gear.Framework.Modules
         /// <summary>事件队列上限：主线程停摆时后台接收仍在入队，超限丢弃最旧事件防内存无界增长</summary>
         private const int MaxPendingEvents = 1024;
 
+        /// <summary>接收事件队列的字节上限：只按条数限流时，1024 × 64KB ≈ 64MB/连接，
+        /// 主线程停摆期间容易被灌满；按字节预算把内存压到常量级</summary>
+        private const long MaxPendingBytes = 8L * 1024 * 1024;
+
+        /// <summary>发送队列字节上限：对端不读时不能让待发数据无限堆积（主线程只入队，实际写在线程池）</summary>
+        private const long MaxQueuedSendBytes = 4L * 1024 * 1024;
+
         // 溢出丢弃计数（节流告警：主线程长时间停摆时避免每事件刷日志）
         int droppedEventCount;
         int lastDropWarnTick;
+
+        /// <summary>已入队但尚未派发的接收字节数（近似值，用于字节预算）</summary>
+        long pendingBytes;
+
+        // ===== 异步发送（避免主线程被 stream.Write 阻塞） =====
+        readonly ConcurrentQueue<byte[]> sendQueue = new ConcurrentQueue<byte[]>();
+        long queuedSendBytes;
+        int sendPumpRunning;
 
         enum EventType { Connected, Data, Disconnected, Error }
 
@@ -41,21 +56,21 @@ namespace Gear.Framework.Modules
         // 防止旧线程复用新 stream（双线程抢读/数据交错）并排入虚假的 Error/Disconnected 事件。
         int generation;
         readonly ConcurrentQueue<(EventType type, byte[] data, string message)> events = new ConcurrentQueue<(EventType type, byte[] data, string message)>();
-        readonly object sendLock = new object();
         readonly int receiveChunkSize;
 
-        /// <summary>有界入队：超限时丢弃最旧事件（并发下的近似判断即可，多丢少丢一条无碍）</summary>
+        /// <summary>有界入队：条数与字节双预算，超限时丢弃最旧事件（并发下的近似判断即可）</summary>
         private void EnqueueEvent((EventType type, byte[] data, string message) ev)
         {
-            if (events.Count >= MaxPendingEvents)
+            long after = Interlocked.Add(ref pendingBytes, ev.data?.Length ?? 0);
+            while ((events.Count >= MaxPendingEvents || after > MaxPendingBytes)
+                   && events.TryDequeue(out var dropped))
             {
-                events.TryDequeue(out _);
-                // 节流告警：主线程停摆导致持续丢弃时，每秒最多记录一条，避免刷屏
+                after = Interlocked.Add(ref pendingBytes, -(dropped.data?.Length ?? 0));
                 if (Interlocked.Increment(ref droppedEventCount) == 1
                     || Environment.TickCount - lastDropWarnTick > 1000)
                 {
                     lastDropWarnTick = Environment.TickCount;
-                    Log.Warning("[RawTcpClientChannel] 事件队列超限（{0}），丢弃最旧事件。主线程可能长时间停摆，累计丢弃 {1}", MaxPendingEvents, Volatile.Read(ref droppedEventCount));
+                    Log.Warning("[RawTcpClientChannel] 事件队列超限（条数/字节），丢弃最旧事件。主线程可能长时间停摆，累计丢弃 {0}", Volatile.Read(ref droppedEventCount));
                 }
             }
             events.Enqueue(ev);
@@ -122,7 +137,15 @@ namespace Gear.Framework.Modules
                     TryClose(client);
                     return;
                 }
-                stream = client.GetStream();
+                var newStream = client.GetStream();
+                // GetStream() 之后必须再校验一次：检查与 GetStream 之间可能发生 Close/重连，
+                // 此时旧连接对象仍可能返回可写流，继续置 connected=true 会留下“已关闭但显示已连接”的僵尸状态
+                if (!running || gen != generation || !ReferenceEquals(client, socket))
+                {
+                    TryClose(client);
+                    return;
+                }
+                stream = newStream;
                 connected = true;
                 EnqueueEvent((EventType.Connected, null, null));
                 recvThread = new Thread(() => ReceiveLoop(stream, gen)) { IsBackground = true, Name = "RawTcpClient.Recv" };
@@ -175,6 +198,7 @@ namespace Gear.Framework.Modules
             while (processed < 512 && events.TryDequeue(out var ev))
             {
                 processed++;
+                Interlocked.Add(ref pendingBytes, -(ev.data?.Length ?? 0));
                 try
                 {
                     switch (ev.type)
@@ -201,22 +225,74 @@ namespace Gear.Framework.Modules
             }
         }
 
+        /// <summary>
+        /// 发送（非阻塞）：主线程只负责入队，实际 socket 写由线程池串行泵执行。
+        /// 这样对端不读数据时不会再卡住主线程（旧实现 stream.Write 最长阻塞 SendTimeout=10s）。
+        /// 返回 false 表示未入队（未连接 / 队列积压超预算）。
+        /// </summary>
         public bool SendMessage(byte[] data)
         {
             if (!connected || data == null || data.Length == 0) return false;
-            lock (sendLock)
+
+            long after = Interlocked.Add(ref queuedSendBytes, data.Length);
+            if (after > MaxQueuedSendBytes)
             {
-                if (!connected || stream == null) return false;
-                try
+                Interlocked.Add(ref queuedSendBytes, -data.Length);
+                Log.Warning("[RawTcpClientChannel] 发送队列积压超限（{0} 字节），本次发送被拒绝", after);
+                return false;
+            }
+
+            sendQueue.Enqueue(data);
+            StartSendPump();
+            return true;
+        }
+
+        private void StartSendPump()
+        {
+            if (Interlocked.CompareExchange(ref sendPumpRunning, 1, 0) != 0) return;
+            _ = SendPumpAsync();
+        }
+
+        /// <summary>串行发送泵：保证帧顺序，写失败时把错误/断开事件交回主线程派发。</summary>
+        private async Task SendPumpAsync()
+        {
+            try
+            {
+                while (sendQueue.TryDequeue(out var data))
                 {
-                    stream.Write(data, 0, data.Length);
-                    return true;
+                    try
+                    {
+                        if (!running || !connected || stream == null) continue;
+                        // 异步写也可能因对端零窗口无限挂起：加超时兜底（超时后由 catch 关闭连接）
+                        var writeTask = stream.WriteAsync(data, 0, data.Length);
+                        var completed = await Task.WhenAny(writeTask, Task.Delay(DefaultSendTimeoutMs)).ConfigureAwait(false);
+                        if (completed != writeTask) throw new TimeoutException("发送超时");
+                        await writeTask.ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (running)
+                        {
+                            running = false;
+                            connected = false;
+                            EnqueueEvent((EventType.Error, null, "发送失败: " + ex.Message));
+                            EnqueueEvent((EventType.Disconnected, null, null));
+                            // 释放 socket 让阻塞中的接收线程醒来；running=false 已抑制它再派发重复事件
+                            try { stream?.Dispose(); } catch { }
+                        }
+                        break;
+                    }
+                    finally
+                    {
+                        Interlocked.Add(ref queuedSendBytes, -data.Length);
+                    }
                 }
-                catch (Exception ex)
-                {
-                    OnError?.Invoke("发送失败: " + ex.Message);
-                    return false;
-                }
+            }
+            finally
+            {
+                Interlocked.Exchange(ref sendPumpRunning, 0);
+                // 收尾期间又有新数据入队：重启泵，避免数据滞留在队列里
+                if (!sendQueue.IsEmpty) StartSendPump();
             }
         }
 
@@ -232,8 +308,16 @@ namespace Gear.Framework.Modules
 
         void CloseSocket()
         {
+            // 推进代次：让在途 ConnectAsync 的“连接后校验”失效，
+            // 防止 Close 之后旧连接把 connected 重新置 true（僵尸连接）
+            Interlocked.Increment(ref generation);
             running = false;
             connected = false;
+            // 清空待发队列，避免关闭后仍持有大块数据
+            while (sendQueue.TryDequeue(out var pending))
+            {
+                Interlocked.Add(ref queuedSendBytes, -pending.Length);
+            }
             try { stream?.Dispose(); } catch { }
             stream = null;
             TryClose(socket);

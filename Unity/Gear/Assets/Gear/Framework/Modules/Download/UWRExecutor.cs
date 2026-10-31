@@ -43,6 +43,64 @@ namespace Gear.Framework.Modules.Download
         public event Action OnDownloadChunkedSucces;
         public event Action<int, string> OnDownloadError;
 
+        // ===== 回调异常隔离：订阅者抛异常不能打乱下载状态机/续传计数 =====
+        private void SafeChunkSuccess()
+        {
+            try { OnDownloadChunkedSucces?.Invoke(); }
+            catch (Exception ex) { Log.Warning("[UWRExecutor] OnDownloadChunkedSucces 回调异常（已隔离）: {0}", ex.Message); }
+        }
+
+        private void SafeSuccess()
+        {
+            try { OnDownloadSuccess?.Invoke(); }
+            catch (Exception ex) { Log.Warning("[UWRExecutor] OnDownloadSuccess 回调异常（已隔离）: {0}", ex.Message); }
+        }
+
+        private void SafeError(string message)
+        {
+            try { OnDownloadError?.Invoke(0, message); }
+            catch (Exception ex) { Log.Warning("[UWRExecutor] OnDownloadError 回调异常（已隔离）: {0}", ex.Message); }
+        }
+
+        /// <summary>续传标识 sidecar：记录已落盘内容对应的 ETag/Last-Modified，防止把旧文件续到新内容上</summary>
+        private string EtagSidecarPath
+        {
+            get
+            {
+                string resultPath = DownloadResultPath;
+                return string.IsNullOrEmpty(resultPath) ? null : resultPath + ".etag";
+            }
+        }
+
+        private string ReadLocalEtag()
+        {
+            try
+            {
+                if (!File.Exists(EtagSidecarPath)) return null;
+                return File.ReadAllText(EtagSidecarPath)?.Trim();
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("[UWRExecutor] 读取续传标识失败（按不匹配处理）: {0}", ex.Message);
+                return null;
+            }
+        }
+
+        private void WriteLocalEtag()
+        {
+            if (string.IsNullOrEmpty(fileETag)) return;
+            try { File.WriteAllText(EtagSidecarPath, fileETag); }
+            catch (Exception ex) { Log.Warning("[UWRExecutor] 写入续传标识失败: {0}", ex.Message); }
+        }
+
+        private void DeletePartialFile()
+        {
+            try { if (File.Exists(DownloadResultPath)) File.Delete(DownloadResultPath); }
+            catch (Exception ex) { Log.Warning("[UWRExecutor] 删除旧分块文件失败: {0}", ex.Message); }
+            try { if (File.Exists(EtagSidecarPath)) File.Delete(EtagSidecarPath); }
+            catch { /* sidecar 清理失败忽略，下次仍会因标识不一致而重下 */ }
+        }
+
         public bool Completed => Progress == 1.0f;
         public override float Progress => progress;
         public override long BytesDownloaded => bytesDownloaded;
@@ -261,7 +319,7 @@ namespace Gear.Framework.Modules.Download
             {
                 DidError = true;
                 Log.Error("UWRExecutor.Download 参数不完整（Uri={0}, DownloadPath={1}），中止下载", Uri, DownloadPath);
-                try { OnDownloadError?.Invoke(0, "下载参数不完整（Uri 或 DownloadPath 为空）"); }
+                try { SafeError("下载参数不完整（Uri 或 DownloadPath 为空）"); }
                 catch (Exception ex) { Log.Warning("[UWRExecutor] OnDownloadError 回调异常: {0}", ex.Message); }
                 return null;
             }
@@ -304,13 +362,15 @@ namespace Gear.Framework.Modules.Download
                         && fileSize != contentLength)
                     {
                         DidError = true;
-                        OnDownloadError?.Invoke(0, string.Format(
+                        SafeError(string.Format(
                             "单文件下载大小不匹配（落盘 {0} ≠ Content-Length {1}），判定文件损坏，中止下载", fileSize, contentLength));
                         Cancel();
                         return;
                     }
+                    // 单文件是整包覆盖写：清掉可能残留的续传 sidecar，避免下次误判
+                    try { if (File.Exists(EtagSidecarPath)) File.Delete(EtagSidecarPath); } catch { }
                     progress = 1.0f;
-                    OnDownloadSuccess?.Invoke();
+                    SafeSuccess();
                     endTime = Environment.TickCount;
                     bytesDownloaded = fileSize;
                 };
@@ -332,8 +392,31 @@ namespace Gear.Framework.Modules.Download
                             return null;
                         }
                     }
+
+                    // 续传身份校验：本地已有内容、但 sidecar 记录的标识与本次 HEAD 的标识不一致时，
+                    // 说明远端文件已被替换，不能把旧字节续到新内容上 → 删除本地分块从头下载。
+                    bool hasRemoteEtag = !string.IsNullOrEmpty(fileETag);
+                    string localEtag = ReadLocalEtag();
+                    if (fileSize > 0 && hasRemoteEtag
+                        && !string.Equals(localEtag, fileETag, StringComparison.Ordinal))
+                    {
+                        Log.Warning("[UWRExecutor] 续传标识不匹配（本地 {0} / 远端 {1}），删除旧分块重新下载: {2}",
+                            localEtag ?? "无", fileETag, DownloadResultPath);
+                        DeletePartialFile();
+                        fileSize = 0;
+                    }
+
                     long remaining = expectedSize - fileSize;
-                    if (remaining <= 0)
+                    if (remaining < 0)
+                    {
+                        // 本地文件比远端声明更大：旧文件/损坏，旧实现会直接当“已完成”而保留错误内容
+                        Log.Warning("[UWRExecutor] 本地分块（{0}）大于远端大小（{1}），删除后重新下载: {2}",
+                            fileSize, expectedSize, DownloadResultPath);
+                        DeletePartialFile();
+                        fileSize = 0;
+                    }
+                    remaining = expectedSize - fileSize;
+                    if (remaining == 0)
                     {
                         // 本地文件已达到预期大小（断点续传/上次进程在写完后被杀）：本次下载视为已完成。
                         // 必须置 CompletedMultipartDownload 并派发成功事件 —— 否则 FileDownloader.DispatchCompletion
@@ -344,8 +427,8 @@ namespace Gear.Framework.Modules.Download
                         bytesDownloaded = fileSize;
                         CompletedMultipartDownload = true;
                         endTime = Environment.TickCount;
-                        try { OnDownloadSuccess?.Invoke(); }
-                        catch (Exception ex) { Log.Warning("[UWRExecutor] OnDownloadSuccess 回调异常: {0}", ex.Message); }
+                        WriteLocalEtag();
+                        SafeSuccess();
                         return null;
                     }
 
@@ -375,7 +458,7 @@ namespace Gear.Framework.Modules.Download
                     // 异常路径必须标记错误：否则 resp 为 null → Download() 返回 null，
                     // FileDownloader 会把该 URI 当"已处理"递减计数，文件静默丢失且整体仍报成功
                     DidError = true;
-                    try { OnDownloadError?.Invoke(0, e.Message); } catch { /* 订阅者异常不外溢 */ }
+                    SafeError(e.Message);
                     Log.Error(e.ToString());
                 }
             }
@@ -391,7 +474,7 @@ namespace Gear.Framework.Modules.Download
                         if (uwr.result != UnityWebRequest.Result.Success)
                         {
                             DidError = true;
-                            OnDownloadError?.Invoke(0, uwr.error);
+                            SafeError(uwr.error);
                             Cancel();
                         }
                     }
@@ -427,7 +510,7 @@ namespace Gear.Framework.Modules.Download
             if (currentRequest.responseCode != 206)
             {
                 DidError = true;
-                OnDownloadError?.Invoke(0, string.Format("服务器忽略 Range 头（HTTP {0}），中止分块下载以免文件被重复追加损坏", currentRequest.responseCode));
+                SafeError(string.Format("服务器忽略 Range 头（HTTP {0}），中止分块下载以免文件被重复追加损坏", currentRequest.responseCode));
                 Cancel();
                 return;
             }
@@ -442,18 +525,20 @@ namespace Gear.Framework.Modules.Download
             if (fileSize > expectedSize)
             {
                 DidError = true;
-                OnDownloadError?.Invoke(0, string.Format("分块下载文件大小超过预期（{0} > {1}），判定文件损坏，中止下载", fileSize, expectedSize));
+                SafeError(string.Format("分块下载文件大小超过预期（{0} > {1}），判定文件损坏，中止下载", fileSize, expectedSize));
                 Cancel();
                 return;
             }
 
-            OnDownloadChunkedSucces?.Invoke();
+            SafeChunkSuccess();
             progress = expectedSize > 0 ? (float)fileSize / expectedSize : 0f;
             bytesDownloaded = fileSize;
 
             if (fileSize == expectedSize)
             {
-                OnDownloadSuccess?.Invoke();
+                // 记录本次内容标识：下次续传必须与远端标识一致，才允许复用本地文件
+                WriteLocalEtag();
+                SafeSuccess();
                 endTime = Environment.TickCount;
                 CompletedMultipartDownload = true;
             }

@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 
 using Gear.Common;
@@ -186,7 +187,9 @@ namespace Gear.Framework.Modules
             tickSnapshot.AddRange(connections.Values);
             foreach (var conn in tickSnapshot)
             {
-                while (processed < 4096 && conn.TryDequeue(out var ev))
+                // 每连接独立配额：避免单个高吞吐连接吃满全局预算，导致其它连接的数据整帧被饿死
+                int connBudget = 256;
+                while (connBudget-- > 0 && processed < 4096 && conn.TryDequeue(out var ev))
                 {
                     processed++;
                     try
@@ -296,13 +299,25 @@ namespace Gear.Framework.Modules
         readonly TcpClient socket;
         readonly int chunkSize;
         readonly ConcurrentQueue<RecvEvent> events = new ConcurrentQueue<RecvEvent>();
-        readonly object sendLock = new object();
-        // 事件队列上限（同上：主线程停摆时防内存无界增长）
-        private const int MaxPendingEvents = 1024;
+        // 发送队列：主线程只入队，socket 写由线程池串行泵执行（对端不读时不再卡住主线程）
+        readonly ConcurrentQueue<byte[]> sendQueue = new ConcurrentQueue<byte[]>();
+        long queuedSendBytes;
+        int sendPumpRunning;
         NetworkStream stream;
         Thread recvThread;
         volatile bool running;
         volatile bool closed;
+
+        /// <summary>事件队列上限（同上：主线程停摆时防内存无界增长）</summary>
+        private const int MaxPendingEvents = 1024;
+
+        /// <summary>接收字节预算（每连接）：只按条数限流时 1024×64KB≈64MB/连接，按字节压到常量级</summary>
+        private const long MaxPendingBytes = 4L * 1024 * 1024;
+
+        /// <summary>发送积压预算（每连接）</summary>
+        private const long MaxQueuedSendBytes = 2L * 1024 * 1024;
+
+        long pendingBytes;
 
         public int Id { get; }
 
@@ -348,47 +363,101 @@ namespace Gear.Framework.Modules
                     if (n <= 0) break;
                     var copy = new byte[n];
                     Buffer.BlockCopy(buffer, 0, copy, 0, n);
-                    // 有界入队：主线程停摆时丢弃最旧事件，防内存无界增长
-                    if (events.Count >= MaxPendingEvents) events.TryDequeue(out _);
-                    events.Enqueue(new RecvEvent { Type = RecvEventType.Data, Data = copy });
+                    Enqueue(new RecvEvent { Type = RecvEventType.Data, Data = copy });
                 }
             }
             catch (Exception ex)
             {
                 if (running)
                 {
-                    if (events.Count >= MaxPendingEvents) events.TryDequeue(out _);
-                    events.Enqueue(new RecvEvent { Type = RecvEventType.Error, Message = "接收异常: " + ex.Message });
+                    Enqueue(new RecvEvent { Type = RecvEventType.Error, Message = "接收异常: " + ex.Message });
                 }
             }
             if (running)
             {
-                if (events.Count >= MaxPendingEvents) events.TryDequeue(out _);
-                events.Enqueue(new RecvEvent { Type = RecvEventType.Disconnected });
+                Enqueue(new RecvEvent { Type = RecvEventType.Disconnected });
             }
+        }
+
+        /// <summary>有界入队（条数 + 字节双预算），超限丢最旧，防主线程停摆时内存无界增长</summary>
+        private void Enqueue(RecvEvent ev)
+        {
+            long after = Interlocked.Add(ref pendingBytes, ev.Data?.Length ?? 0);
+            while ((events.Count >= MaxPendingEvents || after > MaxPendingBytes)
+                   && events.TryDequeue(out var dropped))
+            {
+                after = Interlocked.Add(ref pendingBytes, -(dropped.Data?.Length ?? 0));
+            }
+            events.Enqueue(ev);
         }
 
         public bool TryDequeue(out RecvEvent ev)
         {
-            return events.TryDequeue(out ev);
+            if (!events.TryDequeue(out ev)) return false;
+            Interlocked.Add(ref pendingBytes, -(ev.Data?.Length ?? 0));
+            return true;
         }
 
+        /// <summary>发送（非阻塞）：入队后由线程池串行写，失败时关闭连接交给 TickRefresh 回收</summary>
         public bool Send(byte[] data)
         {
-            lock (sendLock)
+            if (!running || closed || data == null || data.Length == 0) return false;
+
+            long after = Interlocked.Add(ref queuedSendBytes, data.Length);
+            if (after > MaxQueuedSendBytes)
             {
-                if (!running || closed || stream == null || data == null || data.Length == 0) return false;
-                try
+                Interlocked.Add(ref queuedSendBytes, -data.Length);
+                Log.Warning("RawTcp 连接 {0} 发送队列积压超限（{1} 字节），本次发送被拒绝", Id, after);
+                return false;
+            }
+
+            sendQueue.Enqueue(data);
+            StartSendPump();
+            return true;
+        }
+
+        private void StartSendPump()
+        {
+            if (Interlocked.CompareExchange(ref sendPumpRunning, 1, 0) != 0) return;
+            _ = SendPumpAsync();
+        }
+
+        private async Task SendPumpAsync()
+        {
+            try
+            {
+                while (sendQueue.TryDequeue(out var data))
                 {
-                    stream.Write(data, 0, data.Length);
-                    return true;
+                    try
+                    {
+                        if (!running || closed || stream == null) continue;
+                        // 异步写也可能因对端零窗口无限挂起：加超时兜底（超时后关闭连接）
+                        var writeTask = stream.WriteAsync(data, 0, data.Length);
+                        var completed = await Task.WhenAny(writeTask, Task.Delay(10000)).ConfigureAwait(false);
+                        if (completed != writeTask) throw new TimeoutException("发送超时");
+                        await writeTask.ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        // 主动 Close 造成的写中断不是错误，不要往事件队列里塞虚假 Error
+                        if (!closed)
+                        {
+                            Log.Warning("RawTcp 连接 {0} 发送失败: {1}", Id, ex.Message);
+                            Enqueue(new RecvEvent { Type = RecvEventType.Error, Message = "发送失败: " + ex.Message });
+                        }
+                        Close();
+                        break;
+                    }
+                    finally
+                    {
+                        Interlocked.Add(ref queuedSendBytes, -data.Length);
+                    }
                 }
-                catch (Exception ex)
-                {
-                    Log.Warning("RawTcp 连接 {0} 发送失败: {1}", Id, ex.Message);
-                    Close();
-                    return false;
-                }
+            }
+            finally
+            {
+                Interlocked.Exchange(ref sendPumpRunning, 0);
+                if (!sendQueue.IsEmpty) StartSendPump();
             }
         }
 
@@ -397,6 +466,10 @@ namespace Gear.Framework.Modules
             if (closed) return;
             closed = true;
             running = false;
+            while (sendQueue.TryDequeue(out var pending))
+            {
+                Interlocked.Add(ref queuedSendBytes, -pending.Length);
+            }
             try { stream?.Dispose(); } catch { }
             try { socket?.Close(); } catch { }
         }
