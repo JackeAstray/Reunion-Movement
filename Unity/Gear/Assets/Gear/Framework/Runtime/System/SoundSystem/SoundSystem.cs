@@ -1,4 +1,4 @@
-using Gear.Common;
+﻿using Gear.Common;
 using Gear.Framework.Runtime.Base;
 using Gear.Framework.Runtime.Resources;
 using Gear.Framework.Runtime.Scene;
@@ -21,6 +21,15 @@ namespace Gear.Framework.Runtime.Sound
         #region 单例与初始化
         private static readonly Lazy<SoundSystem> instance = new(() => new SoundSystem());
         public static SoundSystem Instance => instance.Value;
+
+        /// <summary>
+        /// 引擎已启动时取注册实例；否则回退到单例（编辑器 / 预初始化 / 独立使用）。
+        /// 调用方统一用本方法，避免直接散落 <c>Xxx.Instance</c>；注册点仍必须用 <c>Instance</c>。
+        /// </summary>
+        public static SoundSystem GetOrInstance()
+        {
+            return Gear.Framework.Runtime.Modules.TryGet(out SoundSystem system) ? system : Instance;
+        }
 
         public bool isInited { get; private set; }
 
@@ -297,7 +306,7 @@ namespace Gear.Framework.Runtime.Sound
                 {
                     if (addressableClips.Contains(kv.Key))
                     {
-                        if (kv.Value != null) AddressableSystem.Instance.ReleaseAsset(kv.Value);
+                        if (kv.Value != null) AddressableSystem.GetOrInstance().ReleaseAsset(kv.Value);
                     }
                     else
                     {

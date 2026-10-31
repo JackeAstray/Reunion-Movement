@@ -230,7 +230,7 @@ namespace Gear.Framework.Runtime
 
                 // 应用音乐和音效设置到 SoundSystem（已初始化后才触碰：
                 // 未初始化时访问 Lazy 单例 + EnsureAudioSource 会提前创建音频根节点，破坏初始化顺序）
-                var ss = SoundSystem.Instance;
+                var ss = SoundSystem.GetOrInstance();
                 if (ss != null && ss.isInited)
                 {
                     // 将淡入淡出时间同步
@@ -425,7 +425,7 @@ namespace Gear.Framework.Runtime
         public static void SetMusicVolume(float volume)
         {
             currentOption.musicVolume = Mathf.Clamp01(volume);
-            SoundSystem.Instance?.SetMusicProperties(currentOption.musicVolume, currentOption.musicMuted);
+            SoundSystem.GetOrInstance()?.SetMusicProperties(currentOption.musicVolume, currentOption.musicMuted);
             SaveOptions();
         }
 
@@ -433,7 +433,7 @@ namespace Gear.Framework.Runtime
         public static void SetMusicMuted(bool muted)
         {
             currentOption.musicMuted = muted;
-            SoundSystem.Instance?.SetMusicProperties(currentOption.musicVolume, currentOption.musicMuted);
+            SoundSystem.GetOrInstance()?.SetMusicProperties(currentOption.musicVolume, currentOption.musicMuted);
             SaveOptions();
         }
 
@@ -441,7 +441,7 @@ namespace Gear.Framework.Runtime
         public static void SetSfxVolume(float volume)
         {
             currentOption.sfxVolume = Mathf.Clamp01(volume);
-            SoundSystem.Instance?.SetSfxProperties(currentOption.sfxVolume, currentOption.sfxMuted);
+            SoundSystem.GetOrInstance()?.SetSfxProperties(currentOption.sfxVolume, currentOption.sfxMuted);
             SaveOptions();
         }
 
@@ -449,7 +449,7 @@ namespace Gear.Framework.Runtime
         public static void SetSfxMuted(bool muted)
         {
             currentOption.sfxMuted = muted;
-            SoundSystem.Instance?.SetSfxProperties(currentOption.sfxVolume, currentOption.sfxMuted);
+            SoundSystem.GetOrInstance()?.SetSfxProperties(currentOption.sfxVolume, currentOption.sfxMuted);
             SaveOptions();
         }
 
@@ -475,7 +475,7 @@ namespace Gear.Framework.Runtime
         public static void SetLanguage(Multilingual language)
         {
             currentOption.language = language;
-            LanguagesSystem.Instance.SetMultilingual(language);
+            LanguagesSystem.GetOrInstance().SetMultilingual(language);
             SaveOptions();
         }
         #endregion

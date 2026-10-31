@@ -1,4 +1,4 @@
-using Gear.Common;
+﻿using Gear.Common;
 using Gear.Framework.Runtime.Base;
 using Cysharp.Threading.Tasks;
 using System;
@@ -494,7 +494,7 @@ namespace Gear.Framework.Runtime.Resources
                 if (asset != null) return asset;
                 Log.Warning("Addressables 加载失败，降级 Resources: {0} -> {1}", addrKey, resourcePath);
             }
-            return await ResourcesSystem.Instance.LoadAsync<T>(resourcePath);
+            return await ResourcesSystem.GetOrInstance().LoadAsync<T>(resourcePath);
         }
         #endregion
 

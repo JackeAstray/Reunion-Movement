@@ -45,7 +45,7 @@ namespace Gear.Framework.Runtime.Languages
             // 语言系统就绪订阅（OnReady 是稳定实例 Subject，Clear 不销毁）：
             // 覆盖“引擎运行中语言系统 Clear→Init，旧 CurrentLanguage 订阅已失效”的场景，
             // 否则本组件标记 isInitFinished 后永不重订阅，文本永久停留在旧语言。
-            readySubscription = LanguagesSystem.Instance.OnReady.Subscribe(_ => OnLanguageReady());
+            readySubscription = LanguagesSystem.GetOrInstance().OnReady.Subscribe(_ => OnLanguageReady());
 
             if (GameEngine.Current != null && GameEngine.Current.State == EngineState.Running)
             {
@@ -74,7 +74,7 @@ namespace Gear.Framework.Runtime.Languages
             // 语言系统 Clear() 后 CurrentLanguage 为 null（未重新 Init）：保持“未完成”状态，
             // 等待 OnLanguageReady（语言系统重新 Init 广播）或引擎再次初始化广播时重试。
             // 注意：isInitFinished 必须保持 false，否则重建后永不重订阅。
-            var currentLanguage = LanguagesSystem.Instance.CurrentLanguage;
+            var currentLanguage = LanguagesSystem.GetOrInstance().CurrentLanguage;
             if (currentLanguage == null)
             {
                 Log.Warning("UIText: LanguagesSystem 已清理（CurrentLanguage 为 null），等待其重新初始化");
@@ -95,7 +95,7 @@ namespace Gear.Framework.Runtime.Languages
         /// </summary>
         private void OnLanguageReady()
         {
-            var currentLanguage = LanguagesSystem.Instance.CurrentLanguage;
+            var currentLanguage = LanguagesSystem.GetOrInstance().CurrentLanguage;
             if (currentLanguage == null) return;
             isInitFinished = true;
             BindLanguage(currentLanguage);
@@ -135,12 +135,12 @@ namespace Gear.Framework.Runtime.Languages
         /// </summary>
         public void GetTextLanguage()
         {
-            if (LanguagesSystem.Instance == null)
+            if (LanguagesSystem.GetOrInstance() == null)
             {
                 return;
             }
 
-            string value = LanguagesSystem.Instance.GetTextById(number);
+            string value = LanguagesSystem.GetOrInstance().GetTextById(number);
 
             if (!string.IsNullOrEmpty(value))
             {

@@ -87,11 +87,11 @@ namespace Gear.Framework.Runtime.Sound
 
             if (useFade)
             {
-                await SoundSystem.Instance.PlaySwitch(musicIndex);
+                await SoundSystem.GetOrInstance().PlaySwitch(musicIndex);
             }
             else
             {
-                await SoundSystem.Instance.PlayMusic(musicIndex, NormalizedVolume);
+                await SoundSystem.GetOrInstance().PlayMusic(musicIndex, NormalizedVolume);
             }
 
             ApplyLoopSetting();
@@ -117,11 +117,11 @@ namespace Gear.Framework.Runtime.Sound
 
             if (useFade)
             {
-                await SoundSystem.Instance.PlaySwitch(index);
+                await SoundSystem.GetOrInstance().PlaySwitch(index);
             }
             else
             {
-                await SoundSystem.Instance.PlayMusic(index, NormalizedVolume);
+                await SoundSystem.GetOrInstance().PlayMusic(index, NormalizedVolume);
             }
 
             ApplyLoopSetting();
@@ -136,7 +136,7 @@ namespace Gear.Framework.Runtime.Sound
         {
             if (fadeDuration >= 0f)
             {
-                SoundSystem.Instance.fadeDuration = fadeDuration;
+                SoundSystem.GetOrInstance().fadeDuration = fadeDuration;
             }
         }
 
@@ -217,7 +217,7 @@ namespace Gear.Framework.Runtime.Sound
         /// </summary>
         public void PauseMusic()
         {
-            SoundSystem.Instance.PauseMusic();
+            SoundSystem.GetOrInstance().PauseMusic();
             CancelPlaybackMonitor();
         }
 
@@ -236,7 +236,7 @@ namespace Gear.Framework.Runtime.Sound
                 var audio = GetAudioSource();
                 if (audio != null && audio.clip != null)
                 {
-                    SoundSystem.Instance.PlayMusic();
+                    SoundSystem.GetOrInstance().PlayMusic();
                     StartPlaybackMonitorIfNeeded();
                     return;
                 }
@@ -264,7 +264,7 @@ namespace Gear.Framework.Runtime.Sound
         /// </summary>
         public void StopMusic()
         {
-            SoundSystem.Instance.StopMusic();
+            SoundSystem.GetOrInstance().StopMusic();
             CancelPlaybackMonitor();
         }
 
@@ -310,7 +310,7 @@ namespace Gear.Framework.Runtime.Sound
         /// <returns></returns>
         private AudioSource GetAudioSource()
         {
-            return SoundSystem.Instance.MusicAudioSource;
+            return SoundSystem.GetOrInstance().MusicAudioSource;
         }
 
         /// <summary>

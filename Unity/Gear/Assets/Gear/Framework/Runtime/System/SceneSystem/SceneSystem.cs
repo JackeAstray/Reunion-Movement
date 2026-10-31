@@ -1,4 +1,4 @@
-using Gear.Common;
+﻿using Gear.Common;
 using Gear.Framework.Runtime.Base;
 using Gear.Framework.Runtime.Resources;
 using Cysharp.Threading.Tasks;
@@ -103,7 +103,7 @@ namespace Gear.Framework.Runtime.Scene
 
         #region 兼容旧 API（已废弃，转发到 R3）
 
-        [Obsolete("请使用 SceneSystem.Instance.ProgressSubject.Subscribe()", false)]
+        [Obsolete("请使用 SceneSystem.GetOrInstance().ProgressSubject.Subscribe()", false)]
         public event Action<float> getProgress
         {
             add
@@ -427,7 +427,7 @@ namespace Gear.Framework.Runtime.Scene
             // 双轨：Addressables 优先（场景已标记为 Addressable 时），失败/未标记则降级 SceneManager。
             // 注意：未开启热更新（enableHotUpdate=false，即 AddressablesMode.Off）或未初始化时，恒走 SceneManager。
             if (Config.AddressablesMode != AddressablesMode.Off
-                && AddressableSystem.Instance.isInited
+                && AddressableSystem.GetOrInstance().isInited
                 && AddressableKeyExists(AddressableKeys.SceneRoot + levelName, typeof(SceneInstance)))
             {
                 bool loaded = false;

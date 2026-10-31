@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Gear.Common;
 using Gear.Framework.Runtime.UI;
@@ -169,7 +169,7 @@ namespace Gear.UI.Select
         private void OnEnable()
         {
             // UIInputSystem 可能在启动早期尚未初始化，等它就绪后再注册
-            if (!UIInputSystem.Instance.isInited)
+            if (!UIInputSystem.GetOrInstance().isInited)
             {
                 bindRequested = true;
                 return;
@@ -189,7 +189,7 @@ namespace Gear.UI.Select
 
         private void Update()
         {
-            var inputSystem = UIInputSystem.Instance;
+            var inputSystem = UIInputSystem.GetOrInstance();
             if (!inputSystem.isInited) return;
 
             // UIInputSystem 初始化前激活，或引擎 Clear/Init 循环后，重新注册到当前焦点域
@@ -207,7 +207,7 @@ namespace Gear.UI.Select
             // 总是先清理上一次的指针/注册状态，组内模式也不会重复添加 onClick
             Unbind();
 
-            if (!UIInputSystem.Instance.isInited)
+            if (!UIInputSystem.GetOrInstance().isInited)
             {
                 bindRequested = true;
                 return;
@@ -218,7 +218,7 @@ namespace Gear.UI.Select
             // 组内选择框由 CarouselSelectionGroup 统一注册；组外才直接注册到窗口焦点域
             if (ownerGroup == null)
             {
-                UIInputSystem.Instance.RegisterNavigationTarget(this, autoEnableUIControl);
+                UIInputSystem.GetOrInstance().RegisterNavigationTarget(this, autoEnableUIControl);
                 registered = true;
             }
             else
@@ -237,7 +237,7 @@ namespace Gear.UI.Select
 
             if (registered)
             {
-                UIInputSystem.Instance.UnregisterNavigationTarget(this);
+                UIInputSystem.GetOrInstance().UnregisterNavigationTarget(this);
                 registered = false;
             }
 

@@ -103,7 +103,7 @@ namespace Gear.UI.Select
 
         private void Update()
         {
-            if (UIInputSystem.Instance.isInited)
+            if (UIInputSystem.GetOrInstance().isInited)
             {
                 deviceRefreshTimer -= Time.unscaledDeltaTime;
                 if (deviceRefreshTimer <= 0f)
@@ -200,13 +200,13 @@ namespace Gear.UI.Select
                 return;
             }
 
-            if (!UIInputSystem.Instance.isInited)
+            if (!UIInputSystem.GetOrInstance().isInited)
             {
                 playersScanned = false;
                 return;
             }
 
-            UIInputSystem.Instance.GetConnectedDeviceInfos(deviceBuffer);
+            UIInputSystem.GetOrInstance().GetConnectedDeviceInfos(deviceBuffer);
             playersScanned = true;
             bool[] connected = new bool[cards.Length];
 

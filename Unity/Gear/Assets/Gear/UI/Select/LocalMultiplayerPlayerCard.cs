@@ -89,7 +89,7 @@ namespace Gear.UI.Select
 
         private void OnEnable()
         {
-            if (!UIInputSystem.Instance.isInited)
+            if (!UIInputSystem.GetOrInstance().isInited)
             {
                 bindRequested = true;
                 return;
@@ -109,7 +109,7 @@ namespace Gear.UI.Select
 
         private void Update()
         {
-            var inputSystem = UIInputSystem.Instance;
+            var inputSystem = UIInputSystem.GetOrInstance();
             if (!inputSystem.isInited || manager == null) return;
 
             int version = inputSystem.InitVersion;
@@ -123,14 +123,14 @@ namespace Gear.UI.Select
         private void Bind()
         {
             Unbind();
-            if (!UIInputSystem.Instance.isInited)
+            if (!UIInputSystem.GetOrInstance().isInited)
             {
                 bindRequested = true;
                 return;
             }
 
             bindRequested = false;
-            UIInputSystem.Instance.RegisterNavigationTarget(this, true);
+            UIInputSystem.GetOrInstance().RegisterNavigationTarget(this, true);
             registered = true;
         }
 
@@ -139,7 +139,7 @@ namespace Gear.UI.Select
             bindRequested = false;
             if (!registered) return;
 
-            UIInputSystem.Instance.UnregisterNavigationTarget(this);
+            UIInputSystem.GetOrInstance().UnregisterNavigationTarget(this);
             registered = false;
         }
 

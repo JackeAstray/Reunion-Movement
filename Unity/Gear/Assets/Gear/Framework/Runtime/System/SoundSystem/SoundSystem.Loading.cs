@@ -55,7 +55,7 @@ namespace Gear.Framework.Runtime.Sound
                 bool fromAddressables = false;
                 if (Config.AddressablesMode != AddressablesMode.Off)
                 {
-                    clip = await AddressableSystem.Instance.LoadAssetAsync<AudioClip>(ToSoundAddressableKey(fullPath));
+                    clip = await AddressableSystem.GetOrInstance().LoadAssetAsync<AudioClip>(ToSoundAddressableKey(fullPath));
                     fromAddressables = clip != null;
                 }
                 if (clip == null)
@@ -71,7 +71,7 @@ namespace Gear.Framework.Runtime.Sound
                     {
                         if (fromAddressables)
                         {
-                            AddressableSystem.Instance.ReleaseAsset(clip);
+                            AddressableSystem.GetOrInstance().ReleaseAsset(clip);
                         }
                         else
                         {
@@ -145,7 +145,7 @@ namespace Gear.Framework.Runtime.Sound
             if (clip == null) return;
             if (addressableClips.Remove(fullPath))
             {
-                AddressableSystem.Instance.ReleaseAsset(clip);
+                AddressableSystem.GetOrInstance().ReleaseAsset(clip);
                 return;
             }
             // 联动 ResourcesSystem 递减引用计数并卸载底层 AudioClip，真正释放内存

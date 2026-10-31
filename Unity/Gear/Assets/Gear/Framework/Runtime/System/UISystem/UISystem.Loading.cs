@@ -1,4 +1,4 @@
-using Gear.Common;
+﻿using Gear.Common;
 using Gear.Framework.Runtime.Base;
 using Gear.Framework.Runtime.Resources;
 using Cysharp.Threading.Tasks;
@@ -145,7 +145,7 @@ namespace Gear.Framework.Runtime.UI
                     // 双轨：Addressables 优先
                     if (Config.AddressablesMode != AddressablesMode.Off)
                     {
-                        prefab = await AddressableSystem.Instance.LoadAssetAsync<GameObject>(AddressableKeys.UIRoot + name);
+                        prefab = await AddressableSystem.GetOrInstance().LoadAssetAsync<GameObject>(AddressableKeys.UIRoot + name);
                         fromAddressables = prefab != null;
                         if (prefab != null)
                         {

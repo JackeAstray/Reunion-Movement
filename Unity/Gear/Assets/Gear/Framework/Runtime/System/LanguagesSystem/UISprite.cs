@@ -43,18 +43,18 @@ namespace Gear.Framework.Runtime.Languages
 
             // 语言系统就绪订阅（OnReady 是稳定实例 Subject，Clear 不销毁）：
             // 覆盖“引擎运行中语言系统 Clear→Init，旧 CurrentLanguage 订阅已失效”的场景
-            readySubscription = LanguagesSystem.Instance.OnReady.Subscribe(_ => OnLanguageReady());
+            readySubscription = LanguagesSystem.GetOrInstance().OnReady.Subscribe(_ => OnLanguageReady());
 
-            if (LanguagesSystem.Instance.CurrentLanguage != null)
+            if (LanguagesSystem.GetOrInstance().CurrentLanguage != null)
             {
-                BindLanguage(LanguagesSystem.Instance.CurrentLanguage);
+                BindLanguage(LanguagesSystem.GetOrInstance().CurrentLanguage);
             }
         }
 
         /// <summary>语言系统重新就绪：重绑最新 CurrentLanguage 并刷新图片</summary>
         private void OnLanguageReady()
         {
-            var currentLanguage = LanguagesSystem.Instance.CurrentLanguage;
+            var currentLanguage = LanguagesSystem.GetOrInstance().CurrentLanguage;
             if (currentLanguage == null) return;
             BindLanguage(currentLanguage);
         }
@@ -71,7 +71,7 @@ namespace Gear.Framework.Runtime.Languages
         private void ApplyLanguage()
         {
             if (image == null) return;
-            var currentLanguage = LanguagesSystem.Instance.CurrentLanguage;
+            var currentLanguage = LanguagesSystem.GetOrInstance().CurrentLanguage;
             if (currentLanguage == null) return;
 
             var target = FindSprite(currentLanguage.Value);

@@ -37,7 +37,7 @@ namespace Gear.Framework.Runtime.Sound
             if (audioClip == null)
             {
                 // 如果没有有效的音频剪辑，则立即回收
-                SoundSystem.Instance.Recycle(gameObject);
+                SoundSystem.GetOrInstance().Recycle(gameObject);
                 return;
             }
 
@@ -49,10 +49,10 @@ namespace Gear.Framework.Runtime.Sound
             {
                 // sfxRoot 可能已被 SoundSystem.Clear() 销毁并置 null（在途 PlaySfx 的 await 恢复交错）：
                 // 判空并回收对象，避免 NRE 且防止已 Spawn 对象成为泄漏条目
-                var root = SoundSystem.Instance.sfxRoot;
+                var root = SoundSystem.GetOrInstance().sfxRoot;
                 if (root == null)
                 {
-                    SoundSystem.Instance.Recycle(gameObject);
+                    SoundSystem.GetOrInstance().Recycle(gameObject);
                     return;
                 }
                 transform.parent = root.transform;
@@ -111,7 +111,7 @@ namespace Gear.Framework.Runtime.Sound
             bool canceled = await UniTask.Delay(System.TimeSpan.FromSeconds(duration), ignoreTimeScale: false, PlayerLoopTiming.Update, ct).SuppressCancellationThrow();
             if (canceled) return;
             // 回收对象
-            SoundSystem.Instance.Recycle(gameObject);
+            SoundSystem.GetOrInstance().Recycle(gameObject);
         }
 
         /// <summary>

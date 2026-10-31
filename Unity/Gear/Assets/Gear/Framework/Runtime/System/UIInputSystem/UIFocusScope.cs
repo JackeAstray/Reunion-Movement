@@ -33,8 +33,8 @@ namespace Gear.Framework.Runtime.UIInput
                 requestUIControl = value;
                 if (!scopeActive) return;
 
-                if (value) UIInputSystem.Instance.RequestUIControl(this);
-                else UIInputSystem.Instance.ReleaseUIControl(this);
+                if (value) UIInputSystem.GetOrInstance().RequestUIControl(this);
+                else UIInputSystem.GetOrInstance().ReleaseUIControl(this);
             }
         }
 
@@ -49,20 +49,20 @@ namespace Gear.Framework.Runtime.UIInput
         private void OnEnable()
         {
             scopeActive = true;
-            UIInputSystem.Instance.PushFocusScope(this);
+            UIInputSystem.GetOrInstance().PushFocusScope(this);
             Log.Debug("[UIFocusScope] 打开焦点域：{0}", gameObject.name);
         }
 
         private void OnDisable()
         {
             scopeActive = false;
-            UIInputSystem.Instance.PopFocusScope(this);
+            UIInputSystem.GetOrInstance().PopFocusScope(this);
             Log.Debug("[UIFocusScope] 关闭焦点域：{0}", gameObject.name);
         }
 
         public void BringToFront()
         {
-            if (IsActive) UIInputSystem.Instance.BringFocusScopeToFront(this);
+            if (IsActive) UIInputSystem.GetOrInstance().BringFocusScopeToFront(this);
         }
 
         public void Register(IUINavigationTarget target)

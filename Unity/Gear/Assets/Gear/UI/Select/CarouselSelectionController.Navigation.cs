@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Gear.Common;
 using Gear.Framework.Runtime.UI;
@@ -83,7 +83,7 @@ namespace Gear.UI.Select
         /// </summary>
         private void CloseOwningWindow()
         {
-            var uiSystem = UISystem.Instance;
+            var uiSystem = UISystem.GetOrInstance();
 
             // 子菜单：只关闭指定面板；面板若带 UIFocusScope，SetActive(false) 会自动出栈并恢复父面板输入
             if (closeTarget != null)
@@ -208,15 +208,15 @@ namespace Gear.UI.Select
             bool reRegister = registered && ownerGroup == null;
             if (reRegister)
             {
-                UIInputSystem.Instance.UnregisterNavigationTarget(this);
+                UIInputSystem.GetOrInstance().UnregisterNavigationTarget(this);
                 registered = false;
             }
 
             playerSlot = slot;
 
-            if (reRegister && isActiveAndEnabled && UIInputSystem.Instance.isInited)
+            if (reRegister && isActiveAndEnabled && UIInputSystem.GetOrInstance().isInited)
             {
-                UIInputSystem.Instance.RegisterNavigationTarget(this, autoEnableUIControl);
+                UIInputSystem.GetOrInstance().RegisterNavigationTarget(this, autoEnableUIControl);
                 registered = true;
             }
         }
@@ -231,7 +231,7 @@ namespace Gear.UI.Select
                 // 组内由组统一接收输入，选择框不再直接注册到焦点域
                 if (registered)
                 {
-                    UIInputSystem.Instance.UnregisterNavigationTarget(this);
+                    UIInputSystem.GetOrInstance().UnregisterNavigationTarget(this);
                     registered = false;
                 }
                 ownerGroup = group;
@@ -239,9 +239,9 @@ namespace Gear.UI.Select
             }
 
             ownerGroup = null;
-            if (isActiveAndEnabled && UIInputSystem.Instance.isInited && !registered)
+            if (isActiveAndEnabled && UIInputSystem.GetOrInstance().isInited && !registered)
             {
-                UIInputSystem.Instance.RegisterNavigationTarget(this, autoEnableUIControl);
+                UIInputSystem.GetOrInstance().RegisterNavigationTarget(this, autoEnableUIControl);
                 registered = true;
             }
         }

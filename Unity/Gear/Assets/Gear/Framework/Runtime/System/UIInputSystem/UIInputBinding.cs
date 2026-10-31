@@ -18,10 +18,10 @@ namespace Gear.Framework.Runtime.UIInput
     /// binding.cancel = "escape";
     /// 
     /// // 切换 UI 控制模式
-    /// UIInputSystem.Instance.EnableUIControl();
+    /// UIInputSystem.GetOrInstance().EnableUIControl();
     /// 
     /// // 关闭键盘/手柄/方向盘对 UI 的接管，但保留鼠标点击 UI
-    /// UIInputSystem.Instance.DisableUIControl();
+    /// UIInputSystem.GetOrInstance().DisableUIControl();
     /// </code>
     /// </summary>
     [Serializable]
@@ -202,10 +202,10 @@ namespace Gear.Framework.Runtime.UIInput
     /// 使用示例：
     /// <code>
     /// // 打开背包或系统菜单时
-    /// UIInputSystem.Instance.EnableUIControl();
+    /// UIInputSystem.GetOrInstance().EnableUIControl();
     /// 
     /// // 关闭菜单回到角色控制时
-    /// UIInputSystem.Instance.DisableUIControl();
+    /// UIInputSystem.GetOrInstance().DisableUIControl();
     /// </code>
     /// </summary>
     public enum UIControlMode

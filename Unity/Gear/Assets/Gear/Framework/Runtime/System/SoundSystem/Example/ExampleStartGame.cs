@@ -23,19 +23,19 @@ namespace Gear.Example
         {
             var modules = base.CreateModules();
 
-            modules.Add(ResourcesSystem.Instance);
+            modules.Add(ResourcesSystem.GetOrInstance());
 
-            modules.Add(SceneSystem.Instance);
+            modules.Add(SceneSystem.GetOrInstance());
 
-            modules.Add(EventMessageSystem.Instance);
+            modules.Add(EventMessageSystem.GetOrInstance());
 
-            modules.Add(LanguagesSystem.Instance);
+            modules.Add(LanguagesSystem.GetOrInstance());
 
-            modules.Add(SoundSystem.Instance);
+            modules.Add(SoundSystem.GetOrInstance());
 
-            modules.Add(UISystem.Instance);
+            modules.Add(UISystem.GetOrInstance());
 
-            modules.Add(TerminalSystem.Instance);
+            modules.Add(TerminalSystem.GetOrInstance());
 
             return modules;
         }

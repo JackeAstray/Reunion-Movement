@@ -1,4 +1,4 @@
-using Gear.Common;
+﻿using Gear.Common;
 using Gear.Framework.Modules;
 using Gear.Utilities;
 using Gear.Framework.Runtime;
@@ -417,7 +417,7 @@ namespace Gear.Framework.Runtime.UI
         //关闭窗口
         public void CloseWindow()
         {
-            UISystem.Instance.CloseWindow(closeWindow);
+            UISystem.GetOrInstance().CloseWindow(closeWindow);
         }
     }
 }

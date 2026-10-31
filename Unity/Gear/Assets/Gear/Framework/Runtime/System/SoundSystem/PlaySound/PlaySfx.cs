@@ -45,7 +45,7 @@ namespace Gear.Framework.Runtime.Sound
         {
             try
             {
-                await SoundSystem.Instance.PlaySfx(id, emitter, loop, NormalizedVolume, pitch);
+                await SoundSystem.GetOrInstance().PlaySfx(id, emitter, loop, NormalizedVolume, pitch);
             }
             catch (System.Exception ex)
             {
@@ -65,7 +65,7 @@ namespace Gear.Framework.Runtime.Sound
         {
             try
             {
-                await SoundSystem.Instance.PlaySfx(sfxIndex, emitter, loop, NormalizedVolume, pitch);
+                await SoundSystem.GetOrInstance().PlaySfx(sfxIndex, emitter, loop, NormalizedVolume, pitch);
             }
             catch (System.Exception ex)
             {
@@ -78,7 +78,7 @@ namespace Gear.Framework.Runtime.Sound
         /// </summary>
         public void StopSfx()
         {
-            SoundSystem.Instance.StopSfx();
+            SoundSystem.GetOrInstance().StopSfx();
         }
     }
 }

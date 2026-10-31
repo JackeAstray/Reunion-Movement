@@ -1,4 +1,4 @@
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using R3;
 using System.Threading;
 using Gear.Common;
@@ -58,7 +58,7 @@ namespace Gear.Framework.Runtime.Resources
 
             Progress.Value = 0f;
             State.Value = FlowState.Checking;
-            var system = AddressableSystem.Instance;
+            var system = AddressableSystem.GetOrInstance();
 
             if (system.Mode != AddressablesMode.Remote)
             {

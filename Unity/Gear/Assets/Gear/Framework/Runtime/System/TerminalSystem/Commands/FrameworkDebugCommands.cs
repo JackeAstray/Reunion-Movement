@@ -88,7 +88,7 @@ namespace Gear.Framework.Runtime.Terminal
         internal static void AddrCleanCache(CommandArg[] args)
         {
             Log.Debug("[Cmd] AddrCleanCache 开始清理...");
-            AddressableSystem.Instance.CleanBundleCache().Forget();
+            AddressableSystem.GetOrInstance().CleanBundleCache().Forget();
         }
     }
 }

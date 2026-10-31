@@ -32,17 +32,17 @@
 #   GameOption / PlayMusic / PlaySfx / SoundItem（MonoBehaviour，可能在启动前 OnEnable）、
 #   UIInputSystem 里对 UISystem 的引用（原写法带 ?. 空判断，换 Get 会从"跳过"变成"抛异常"）。
 
-AddressableSystem 9
-EventMessageSystem 3
+AddressableSystem 1
+EventMessageSystem 1
 HttpMgr 5
-LanguagesSystem 12
+LanguagesSystem 1
 NetworkMgr 5
 PauseSystem 1
-ResourcesSystem 2
-SceneSystem 6
-SoundSystem 22
+ResourcesSystem 1
+SceneSystem 1
+SoundSystem 1
 TerminalSystem 1
 TimerMgr 1
-UIInputSystem 38
-UISystem 5
+UIInputSystem 1
+UISystem 1
 UIToolkitSystem 1

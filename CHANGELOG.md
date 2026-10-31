@@ -31,6 +31,8 @@
   `[UIWindow(Static = true)]` 真正生效（关闭保留实例）。
 - **UIInputSystem 访问收敛**：对 UISystem 的 5 处 `Instance` 改为 `Modules.TryGet`，
   `.Instance` 守卫基线从 117 降到 111。
+- **`.Instance` 收敛**：11 个 Runtime 模块新增 `GetOrInstance()`（引擎优先、单例兜底），
+  散落调用点统一迁移；守卫基线从 **111 降到 22**（仅注册点与 Modules 程序集独立使用保留）。
 - **Static 重开**：关闭后的 Static 窗口在重开前先走 `OnSpawned` 回到 Ready，避免
   `Closed→Open` 非法转换告警，并让焦点域重新置顶。
 - **UI Toolkit**：缺失 PanelSettings 时的兜底 `CreateInstance` 对象在 `Clear()` 中销毁，不再泄漏。

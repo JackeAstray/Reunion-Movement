@@ -1,4 +1,4 @@
-using Gear.Utilities;
+﻿using Gear.Utilities;
 using Gear.Common;
 using Gear.Framework.Runtime.UIInput;
 using Cysharp.Threading.Tasks;
@@ -162,7 +162,7 @@ namespace Gear.Framework.Runtime.UI
         /// </summary>
         protected void OpenWindow(string uiName, params object[] args)
         {
-            UISystem.Instance.OpenWindow(uiName, args);
+            UISystem.GetOrInstance().OpenWindow(uiName, args);
         }
 
         /// <summary>
@@ -178,7 +178,7 @@ namespace Gear.Framework.Runtime.UI
                 Log.Error("UIController.CloseWindow: uiName 与 this.uiName 均为空，无法关闭窗口");
                 return;
             }
-            UISystem.Instance.CloseWindow(target);
+            UISystem.GetOrInstance().CloseWindow(target);
         }
 
         #region 功能
