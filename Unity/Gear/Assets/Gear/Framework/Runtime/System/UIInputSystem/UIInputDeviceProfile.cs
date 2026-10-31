@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -120,7 +120,7 @@ namespace Gear.Framework.Runtime.UIInput
     /// 仅依赖设备描述字符串分类，因此同一套逻辑可用于手柄、赛车方向盘、飞行摇杆和普通 HID 摇杆。
     /// 用户重绑定的结果按设备 product 持久化到 PlayerPrefs。
     /// </summary>
-    public static class UIInputDeviceRegistry
+    public static partial class UIInputDeviceRegistry
     {
         private const string OverridePrefsKey = "ui_input_device_bindings_v1";
 
@@ -676,6 +676,10 @@ namespace Gear.Framework.Runtime.UIInput
         public static void InvalidateAll()
         {
             s_cache.Clear();
+            // 序号是“本次引擎会话”的运行时分配，重初始化/新会话必须清空：
+            // 否则 deviceId 复用或设备重连会让键在会话之间漂移，已保存的槽位对不上。
+            s_gamepadOrdinals.Clear();
+            s_nextGamepadOrdinal.Clear();
         }
 
         private static DeviceCache GetCache(InputDevice device)
@@ -932,50 +936,7 @@ namespace Gear.Framework.Runtime.UIInput
             return slash >= 0 ? path.Substring(slash + 1) : path;
         }
 
-        /// <summary>
-        /// 设备的稳定键（优先 product + serial），用于把按键/玩家槽位绑定持久化到该设备。
-        /// 加入 serial 可区分两个同型号方向盘（如两只 G923）。
-        /// 结果缓存在 DeviceCache，避免每帧拼接字符串。
-        /// </summary>
-        public static string GetDeviceKey(InputDevice device)
-        {
-            if (device == null) return "keyboard_mouse";
-            return GetCache(device).DeviceKey;
-        }
-
-        /// <summary>
-        /// 玩家分组键：同一个物理设备的多个 HID 子设备（底座、踏板、轮缘等）
-        /// 应占用同一个玩家槽位，不能因为枚举出多个 InputDevice 就多出 P2/P3。
-        /// 有 serial 时按 manufacturer#serial 分组；没有 serial 时退回 product 键。
-        /// </summary>
-        public static string GetPlayerGroupKey(InputDevice device)
-        {
-            if (device == null) return "keyboard_mouse";
-
-            var description = device.description;
-            string serial = description.serial;
-            if (!string.IsNullOrEmpty(serial))
-            {
-                string manufacturer = description.manufacturer ?? string.Empty;
-                return manufacturer + "#" + serial;
-            }
-
-            return GetDeviceKey(device);
-        }
-
-        private static string ComputeDeviceKey(InputDevice device)
-        {
-            string product = device.description.product;
-            string serial = device.description.serial;
-
-            if (!string.IsNullOrEmpty(product))
-            {
-                return string.IsNullOrEmpty(serial) ? product : product + "#" + serial;
-            }
-            if (!string.IsNullOrEmpty(device.displayName)) return device.displayName;
-            if (!string.IsNullOrEmpty(device.name)) return device.name;
-            return device.layout;
-        }
+        // 设备键/玩家分组键（含无 serial 手柄的去重序号）见 UIInputDeviceProfile.Keys.cs（partial）。
 
         private static string GetDeviceSearchKey(InputDevice device)
         {
