@@ -267,6 +267,9 @@ jobs:
       - name: 检查 C# 语法
         run: dotnet run --project Tools/SyntaxCheck -- Unity/Gear/Assets/Gear
 
+      - name: 检查 Markdown 本地链接
+        run: dotnet run --project Tools/DocsCheck -- .
+
   guard-only:
     name: 架构守卫（不跑 Unity 的快速检查）
     runs-on: ubuntu-latest

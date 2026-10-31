@@ -4,3 +4,5 @@
 # .NET 工具（Tools/SyntaxCheck 等）的构建产物
 Tools/SyntaxCheck/bin/
 Tools/SyntaxCheck/obj/
+Tools/DocsCheck/bin/
+Tools/DocsCheck/obj/
