@@ -1,4 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Gear.Framework.Runtime.Base;
 using System;
 using System.Collections.Generic;
@@ -74,8 +74,14 @@ namespace Gear.Framework.Modules
                 }
             }
 
-            // 关闭被替换的旧通道（Telepathy/KCP 的线程、socket、事件订阅），防止连接泄漏
-            toClose?.Close();
+            // 关闭被替换的旧通道（Telepathy/KCP 的线程、socket、事件订阅），防止连接泄漏。
+            // 注意：部分通道的 Close 只清事件、不派发 OnDisconnected，其所属 NetworkClient
+            // 会靠 Tick 里的 channel.IsConnect 兜底收敛；这里记一条日志，便于排查"同名通道互踢"。
+            if (toClose != null)
+            {
+                Log.Warning("[NetworkMgr] 同名通道 {0} 被替换，旧通道已关闭", channel.ChannelName);
+                toClose.Close();
+            }
         }
 
         /// <summary>

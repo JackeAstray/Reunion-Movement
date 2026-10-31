@@ -1,4 +1,4 @@
-﻿namespace Gear.Framework.Modules
+namespace Gear.Framework.Modules
 {
     /// <summary>网络层公共常量</summary>
     public static class NetworkConstants
@@ -27,10 +27,16 @@
         /// <summary>加密握手 ClientHello（客户端→服务端，保留）：负载 = [16B 客户端随机数]</summary>
         public const ushort ReservedHandshakeClientHello = 0xFFF9;
 
+        /// <summary>
+        /// RPC 错误响应帧消息 ID（服务端→客户端，保留）：负载 = [4B 关联 ID][1B 错误码][UTF8 消息]。
+        /// 与正常响应帧分开，客户端才能把"未鉴权/未注册/处理器异常"与"空成功"区分开。
+        /// </summary>
+        public const ushort ReservedRpcErrorMessageId = 0xFFF7;
+
         /// <summary>是否保留系统消息 ID（握手/ACK/PING/PONG/RPC 帧），业务注册前应拦截</summary>
         public static bool IsReservedMessageId(ushort messageId)
         {
-            return messageId >= ReservedHandshakeClientHello; // 0xFFF9~0xFFFF 全部保留
+            return messageId >= ReservedRpcErrorMessageId; // 0xFFF7~0xFFFF 全部保留
         }
     }
 }

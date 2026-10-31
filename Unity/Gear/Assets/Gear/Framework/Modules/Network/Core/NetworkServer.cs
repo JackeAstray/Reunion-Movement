@@ -17,7 +17,7 @@ namespace Gear.Framework.Modules
     /// 6. 强类型对象消息（BroadcastObject / RegisterObjectHandler）。
     /// 线程安全：所有事件均在 Tick 调用线程（主线程）派发；宿主每帧调用 Tick()。
     /// </summary>
-    public sealed class NetworkServer
+    public sealed partial class NetworkServer
     {
         readonly NetworkServerConfig config;
         readonly INetworkMessageCodec codec;
@@ -372,43 +372,6 @@ namespace Gear.Framework.Modules
             });
         }
 
-        void HandleRpcRequest(int connectionId, ArraySegment<byte> payload)
-        {
-            if (!NetworkRpcFrames.TryDecodeRequest(payload, out int correlationId, out ushort targetMessageId, out var requestPayload))
-            {
-                TryNotifyError(connectionId, "RPC 请求帧格式错误");
-                return;
-            }
-            // 鉴权闸门：开启 requireRpcAuthentication 后，未鉴权连接的 RPC 一律拒绝（防越权调用）
-            if (config.requireRpcAuthentication && !authenticatedConnections.Contains(connectionId))
-            {
-                Log.Warning("[NetworkServer] 未鉴权连接 {0} 调用 RPC {1}，已拒绝", connectionId, targetMessageId);
-                TryNotifyError(connectionId, $"连接未鉴权，无法调用 RPC {targetMessageId}");
-                Send(connectionId, NetworkConstants.ReservedResponseMessageId, NetworkRpcFrames.EncodeResponse(correlationId, Array.Empty<byte>()));
-                return;
-            }
-            byte[] response = Array.Empty<byte>();
-            if (requestHandlers.TryGetValue(targetMessageId, out var handler))
-            {
-                try
-                {
-                    response = handler(connectionId, requestPayload.ToArray()) ?? Array.Empty<byte>();
-                }
-                catch (Exception ex)
-                {
-                    Log.Warning("[NetworkServer] RPC 请求 {0} 处理器异常: {1}", targetMessageId, ex.Message);
-                    TryNotifyError(connectionId, $"RPC 请求 {targetMessageId} 处理器异常: " + ex.Message);
-                }
-            }
-            else
-            {
-                Log.Warning("[NetworkServer] 未注册的 RPC 请求 ID: {0}", targetMessageId);
-                TryNotifyError(connectionId, $"未注册的 RPC 请求 ID: {targetMessageId}");
-            }
-            // 无论成败均回执（异常/未注册回空响应），避免请求方一直等待
-            Send(connectionId, NetworkConstants.ReservedResponseMessageId, NetworkRpcFrames.EncodeResponse(correlationId, response));
-        }
-
         /// <summary>OnError 订阅者异常隔离（与 HandleError 一致，异常不得沿派发链崩掉主循环）</summary>
         void TryNotifyError(int connectionId, string message)
         {
@@ -428,8 +391,21 @@ namespace Gear.Framework.Modules
             {
                 if (handshakeMasterKey == null)
                 {
-                    // 没有主密钥就算不出持有证明，客户端也无法校验 —— 此时不应发出 ServerHello
-                    Log.Error("[NetworkServer] 连接 {0} 已建立，但握手主密钥尚未下发（SetHandshakeMasterKey），无法开始加密握手", connectionId);
+                    // 没有主密钥就算不出持有证明，客户端也无法校验 —— 此时不应发出 ServerHello。
+                    // 仅记日志会让连接停在"TCP 已连、握手永远不完成"的半死状态，必须主动断开。
+                    Log.Error("[NetworkServer] 连接 {0} 已建立，但握手主密钥尚未下发（SetHandshakeMasterKey），断开连接", connectionId);
+                    TryNotifyError(connectionId, "服务端未配置握手主密钥，连接已断开");
+                    if (channel == null || !channel.Disconnect(connectionId))
+                    {
+                        Log.Warning("[NetworkServer] 断开未握手连接 {0} 失败（可能已断开）", connectionId);
+                    }
+                    // 传输层可能不回调 OnDisconnected：兜底清理注册表，避免半连接泄漏。
+                    if (connections.Remove(connectionId, out var rejected))
+                    {
+                        rejected.Dispatcher.ClearHandlers();
+                        authenticatedConnections.Remove(connectionId);
+                    }
+                    return;
                 }
                 else
                 {

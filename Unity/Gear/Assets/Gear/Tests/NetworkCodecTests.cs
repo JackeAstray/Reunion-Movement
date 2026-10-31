@@ -295,6 +295,66 @@ namespace Gear.Tests
         }
 
         [Test]
+        public void RpcFrames_ErrorRoundTrip_WithChineseMessage()
+        {
+            var frame = NetworkRpcFrames.EncodeError(
+                4242, NetworkRpcFrames.ErrorCodeHandlerMissing, "未注册的 RPC 请求 ID: 77");
+
+            Assert.IsTrue(NetworkRpcFrames.TryDecodeError(new ArraySegment<byte>(frame), out var corr, out var code, out var message));
+            Assert.AreEqual(4242, corr);
+            Assert.AreEqual(NetworkRpcFrames.ErrorCodeHandlerMissing, code);
+            Assert.AreEqual("未注册的 RPC 请求 ID: 77", message);
+        }
+
+        [Test]
+        public void RpcFrames_ErrorRoundTrip_EmptyMessage()
+        {
+            var frame = NetworkRpcFrames.EncodeError(7, NetworkRpcFrames.ErrorCodeUnauthenticated, null);
+
+            Assert.IsTrue(NetworkRpcFrames.TryDecodeError(new ArraySegment<byte>(frame), out var corr, out var code, out var message));
+            Assert.AreEqual(7, corr);
+            Assert.AreEqual(NetworkRpcFrames.ErrorCodeUnauthenticated, code);
+            Assert.AreEqual(string.Empty, message);
+        }
+
+        [Test]
+        public void RpcFrames_Error_TooShort_Fails()
+        {
+            Assert.IsFalse(NetworkRpcFrames.TryDecodeError(new ArraySegment<byte>(new byte[4]), out _, out _, out _));
+        }
+
+        [Test]
+        public void ReservedRange_IncludesRpcErrorFrame()
+        {
+            Assert.IsTrue(NetworkConstants.IsReservedMessageId(NetworkConstants.ReservedRpcErrorMessageId));
+            Assert.IsTrue(NetworkConstants.IsReservedMessageId(NetworkConstants.ReservedResponseMessageId));
+            Assert.IsFalse(NetworkConstants.IsReservedMessageId((ushort)(NetworkConstants.ReservedRpcErrorMessageId - 1)),
+                "0xFFF6 及以下应留给业务消息");
+        }
+
+        [Test]
+        public void StreamAssembler_Reset_DropsPartialFrame()
+        {
+            var codec = new LengthPrefixedCodec(includeMessageId: true);
+            var assembler = new NetworkStreamAssembler(codec);
+            var frame = codec.Encode(5, Bytes("hello"));
+
+            // 旧连接只送来半个帧头：缓冲区里留下残余
+            var partial = new byte[3];
+            Array.Copy(frame, partial, partial.Length);
+            assembler.Feed(partial, (_, __, ___) => { });
+            Assert.Greater(assembler.BufferedBytes, 0, "应保留半帧");
+
+            // 重连时必须清空：否则新流首字节会与旧半帧拼成错帧
+            assembler.Reset();
+            Assert.AreEqual(0, assembler.BufferedBytes);
+
+            ushort receivedId = 0;
+            assembler.Feed(frame, (id, __, ___) => receivedId = id);
+            Assert.AreEqual(5, receivedId, "Reset 后新连接的完整帧仍应正常解析");
+        }
+
+        [Test]
         public void TypedProtocol_RegisterAndLookup()
         {
             var protocol = new NetworkTypedProtocol();

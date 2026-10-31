@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 using Gear.Common;
@@ -20,7 +20,7 @@ namespace Gear.Framework.Modules
             // 保留 ID 拦截：PING/PONG/RPC 帧与业务消息混用会静默冲突，注册前必须拦截
             if (NetworkConstants.IsReservedMessageId(messageId))
             {
-                Log.Error("[NetworkTypedProtocol] 消息 ID {0} 是系统保留 ID（0xFFFB~0xFFFF：ACK/PING/PONG/RPC 帧），禁止业务注册", messageId);
+                Log.Error("[NetworkTypedProtocol] 消息 ID {0} 是系统保留 ID（0xFFF7~0xFFFF：RPC 错误/握手/ACK/PING/PONG/RPC 帧），禁止业务注册", messageId);
                 return false;
             }
 

@@ -19,7 +19,7 @@ namespace Gear.Framework.Modules
     /// 6. 线程安全：所有事件均在 Tick 调用线程（主线程）派发。
     /// 宿主需每帧调用 Tick()，或调用 DriveAsync(...).Forget() 自动驱动。
     /// </summary>
-    public sealed class NetworkClient
+    public sealed partial class NetworkClient
     {
         /// <summary>客户端连接状态机</summary>
         public enum ClientState
@@ -173,6 +173,11 @@ namespace Gear.Framework.Modules
             CloseChannel();
             if (closed) return;
 
+            // 连接重建：上一条连接可能留下未消费的半帧（长度前缀 / RawTcp 尤其明显）。
+            // 不清理会让旧连接的残余字节与新流首字节拼帧，表现为错帧或静默丢消息。
+            // 这一步必须在创建新通道之前做，且与是否启用加密握手无关。
+            assembler.Reset();
+
             // 加密握手：重连/重连后回退明文 codec 并复位会话状态（新连接需重新握手）
             if (handshakeEnabled)
             {
@@ -242,6 +247,16 @@ namespace Gear.Framework.Modules
                         CreateChannel();
                     }
                 }
+            }
+
+            // 通道被外部关闭（典型场景：同名通道在 NetworkMgr 中被替换）时，
+            // 通道实现通常只清事件、不派发 OnDisconnected。若这里不主动收敛，
+            // 客户端会一直停在 Connected：心跳照发、业务消息全丢、也不会重连。
+            if (state == ClientState.Connected && (channel == null || !channel.IsConnect))
+            {
+                Log.Warning("[NetworkClient] 通道已断开（可能被同名通道替换），触发重连流程");
+                CloseChannel();
+                HandleDisconnected();
             }
 
             // 2) 连接超时
@@ -442,9 +457,19 @@ namespace Gear.Framework.Modules
         {
             while (reliableResendQueue.Count > 0 && IsConnected && !closed)
             {
-                var (id, payload) = reliableResendQueue.Dequeue();
+                // 先 Peek 再发送，成功后才 Dequeue：原实现先出队再发送，
+                // 一旦这次发送失败（恰好又断线），这条消息就永久丢了。
+                var (id, payload) = reliableResendQueue.Peek();
                 Log.Debug("[NetworkClient] 重连补发可靠消息 messageId={0}（剩余 {1}）", id, reliableResendQueue.Count);
-                await SendReliableAsync(id, payload, TimeSpan.FromSeconds(Mathf.Max(1f, config.reconnectBaseDelay)), 2);
+                bool sent = await SendReliableAsync(id, payload, TimeSpan.FromSeconds(Mathf.Max(1f, config.reconnectBaseDelay)), 2);
+                if (!sent)
+                {
+                    // 仍连不上：保留队首并停止本轮，等下一次重连成功再继续；
+                    // 若已连接但重试耗尽，也停下来避免死循环（消息仍在队列里，可人工重试）。
+                    Log.Warning("[NetworkClient] 重连补发失败，保留消息 messageId={0}（剩余 {1}）", id, reliableResendQueue.Count);
+                    break;
+                }
+                reliableResendQueue.Dequeue();
             }
         }
 
@@ -663,6 +688,30 @@ namespace Gear.Framework.Modules
                 return;
             }
 
+            // 系统帧：RPC 错误响应（未鉴权 / 未注册 / 处理器异常）
+            // 必须在正常响应之前判断：错误是独立消息 ID，不会与空响应混淆。
+            if (messageId == NetworkConstants.ReservedRpcErrorMessageId)
+            {
+                if (NetworkRpcFrames.TryDecodeError(payload, out int errorCorrelationId, out byte errorCode, out string errorMessage))
+                {
+                    if (pendingRequests.TryGetValue(errorCorrelationId, out var errorTcs))
+                    {
+                        pendingRequests.Remove(errorCorrelationId);
+                        errorTcs.TrySetException(new NetworkRpcException(errorCode, errorMessage));
+                    }
+                    else
+                    {
+                        Log.Warning("[NetworkClient] 收到未知关联 ID {0} 的 RPC 错误: {1}",
+                            errorCorrelationId, errorMessage);
+                    }
+                }
+                else
+                {
+                    Log.Warning("[NetworkClient] RPC 错误帧格式错误");
+                }
+                return;
+            }
+
             // 系统帧：RPC 响应
             if (messageId == NetworkConstants.ReservedResponseMessageId)
             {
@@ -764,68 +813,6 @@ namespace Gear.Framework.Modules
             for (int i = 0; i < requests.Count; i++)
             {
                 requests[i].Value.TrySetException(new InvalidOperationException(message));
-            }
-        }
-        #endregion
-
-        #region RPC 请求/响应
-
-        /// <summary>
-        /// 发送请求并等待响应（服务端需用 NetworkServer.RegisterRequestHandler 注册同 ID 处理器）。
-        /// 超时抛 TimeoutException；连接断开/关闭抛 InvalidOperationException。
-        /// </summary>
-        public UniTask<byte[]> RequestAsync(ushort messageId, byte[] payload, TimeSpan timeout, CancellationToken cancellationToken = default)
-        {
-            if (state != ClientState.Connected || channel == null || !channel.IsConnect)
-            {
-                return UniTask.FromException<byte[]>(new InvalidOperationException("未连接，无法发起请求"));
-            }
-            int correlationId = Interlocked.Increment(ref rpcCorrelation);
-            var requestFrame = NetworkRpcFrames.EncodeRequest(correlationId, messageId, payload);
-            var tcs = new UniTaskCompletionSource<byte[]>();
-            // 必须先注册再做 Send：Send 在同步派发的传输层上可能立刻触发响应处理，
-            // 那时 pendingRequests 里还没有这个 correlationId，响应会被当成"未知关联 ID"丢弃，
-            // 调用方只能白等一个超时（且失败原因完全不可见）。
-            pendingRequests[correlationId] = tcs;
-            if (!Send(NetworkConstants.ReservedRequestMessageId, requestFrame))
-            {
-                pendingRequests.Remove(correlationId);
-                return UniTask.FromException<byte[]>(new InvalidOperationException("发送请求失败"));
-            }
-            return WaitResponseAsync(correlationId, tcs, timeout, cancellationToken);
-        }
-
-        /// <summary>RequestAsync 的秒数便捷重载</summary>
-        public UniTask<byte[]> RequestAsync(ushort messageId, byte[] payload, float timeoutSeconds, CancellationToken cancellationToken = default)
-        {
-            return RequestAsync(messageId, payload, TimeSpan.FromSeconds(timeoutSeconds), cancellationToken);
-        }
-
-        /// <summary>强类型请求/响应（类型需先注册消息 ID）</summary>
-        public async UniTask<TResponse> RequestAsync<TRequest, TResponse>(TRequest request, TimeSpan timeout, CancellationToken cancellationToken = default)
-        {
-            if (!typedProtocol.TryGetId(typeof(TRequest), out var messageId))
-            {
-                throw new InvalidOperationException($"类型 {typeof(TRequest).Name} 未注册消息 ID（先调用 RegisterObjectMessage）");
-            }
-            var response = await RequestAsync(messageId, serializer.Serialize(request), timeout, cancellationToken);
-            return serializer.Deserialize<TResponse>(response);
-        }
-
-        async UniTask<byte[]> WaitResponseAsync(int correlationId, UniTaskCompletionSource<byte[]> tcs, TimeSpan timeout, CancellationToken ct)
-        {
-            try
-            {
-                var (hasResultLeft, result) = await UniTask.WhenAny(
-                    tcs.Task,
-                    // 超时计时不受 timeScale 影响：游戏暂停（timeScale=0）时 RPC 不会悬挂到恢复
-                    UniTask.Delay(timeout, ignoreTimeScale: true, PlayerLoopTiming.Update, ct));
-                if (hasResultLeft) return result;
-                throw new TimeoutException($"请求超时（{timeout.TotalSeconds:0.0}s）");
-            }
-            finally
-            {
-                pendingRequests.Remove(correlationId);
             }
         }
         #endregion

@@ -176,5 +176,5 @@ client.OnSessionEstablished += () => { /* 业务通信应等待此事件 */ };
 - `NetworkMessageCodec` 静态类与旧 `INetworkClientChannel` 用法保持不变；
 - `UniversalNetworkBehaviour` 公共字段与事件契约不变，新增 `codec` 字段与 `RawTCP` 传输；
 - 默认 `codec = MessageId`，线上帧格式与旧版一致（`[2B ID][负载]`，ID=0 即旧版裸数据）；
-- 保留消息 ID 范围 `0xFFF9 ~ 0xFFFF`（握手 / ACK / PING / PONG / RPC），业务消息请避开；
+- 保留消息 ID 范围 `0xFFF7 ~ 0xFFFF`（RPC 错误 / 握手 / ACK / PING / PONG / RPC 请求响应），业务消息请避开；
 - `RawTcp` 基于原生 Socket，仅支持桌面/移动等原生平台（WebGL 请使用 WebSocket 传输）。
