@@ -40,6 +40,8 @@
 - `NetworkClientConfig.enableRpcErrorFrames` / `NetworkServerConfig.enableRpcErrorFrames`：
   混合版本部署时服务端可关错误帧，回退"空响应"以兼容旧客户端。
 - `DownloadMgr.treatLegacyFileAsComplete`：旧缓存无 `.done` 时可选一次性补标记，避免弱网用户被重下。
+- 新增 `UI/Gear.UI.asmdef` 与 `Editor/Gear.Editor.Framework.asmdef`：UI 与编辑器工具不再落
+  `Assembly-CSharp` / `Assembly-CSharp-Editor`，架构守卫能看到这两层依赖。
 
 ### Added
 

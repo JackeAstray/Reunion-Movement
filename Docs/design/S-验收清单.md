@@ -7,7 +7,7 @@
 
 | 维度 | S 标准 | 当前 | 证据 / 命令 | 阻塞 |
 |---|---|---|---|---|
-| 架构 | 单一访问路径；无 >1000 行文件；Editor 代码全部 asmdef 化 | **未达** | `.Instance` 基线 121；`LoopScrollRect` 1336；17 个 Editor 文件仍在 `Assembly-CSharp-Editor` | 见 §3 |
+| 架构 | 单一访问路径；无 >1000 行文件；Editor 代码全部 asmdef 化 | **部分** | Editor 已完成（`Gear.Editor.Framework` + `Gear.UI`，33 asmdef）；`.Instance` 仍 121；`LoopScrollRect` 1336 | `.Instance` 收敛 + LoopScrollRect 设计豁免 |
 | 核心可靠性 | RPC 协议可协商；下载有完整性/迁移策略；网络有 loopback 混沌测试 | **部分** | 错误帧开关 + 保留 ID 测试；`.done` + 迁移开关；缺真实回环 | 需集成测试环境 |
 | UI 行为 | 状态机/ESC/返回栈/Static 有 PlayMode 回归 | **部分** | 196→210 条 EditMode；`UIModalStack` 纯逻辑已测；缺 PlayMode | UI 需要真实 Canvas/预制体 |
 | 测试与门禁 | PR 上编译 + 类型检查 + 覆盖率阈值；守卫单一实现 | **部分** | 210 EditMode 全绿；6 条守卫；Roslyn 语法门禁；类型检查仍靠 Unity | 需 Unity 授权或自托管 runner |
@@ -39,7 +39,7 @@ powershell -ExecutionPolicy Bypass -File Tools/upm-smoke-test.ps1 -UnityPath <Un
 | 项 | 现状 | 下一步 |
 |---|---|---|
 | `.Instance` 收敛 | 121 处（14 个类型） | 先迁移"引擎已启动后"的提供者访问；保留预初始化/编辑器/测试的显式豁免，并把基线继续下调 |
-| Editor asmdef | 17 个 `.cs` 在 `Assembly-CSharp-Editor` | 先迁 `Editor/UIExamples`（依赖 `Gear.UI.Select` 属于 Assembly-CSharp），再给其余目录加 asmdef |
+| Editor asmdef | ✅ 已完成：`UI/` → `Gear.UI`，`Editor/` 非嵌套目录 → `Gear.Editor.Framework` | — |
 | `LoopScrollRect` | 1336 行，约定不拆 | 如必须满足"无 >1000"，按 partial 拆布局/滚动逻辑；否则在 S 清单里登记为"设计豁免" |
 | PlayMode 回归 | 缺 UI 状态机/ESC/Back/Static | 用 `Tests/PlayMode` 加 3 条；需要 UI 预制体或运行时构造 Canvas |
 

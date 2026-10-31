@@ -1,0 +1,34 @@
+{
+    "name": "Gear.Editor.Framework",
+    "rootNamespace": "Gear.EditorTools",
+    "references": [
+        "Gear.Base",
+        "Gear.Common",
+        "Gear.Framework.Runtime",
+        "Gear.Framework.Modules",
+        "Gear.Utilities",
+        "Gear.UI",
+        "Gear.GenerateScript.AutoScripts",
+        "Gear.GenerateScript.UI",
+        "Gear.Editor.Shared",
+        "Gear.EditorTools",
+        "UniTask",
+        "Unity.Addressables",
+        "Unity.Addressables.Editor",
+        "Unity.ResourceManager",
+        "UnityEngine.UI",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
