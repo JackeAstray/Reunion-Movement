@@ -1,4 +1,4 @@
-﻿using Gear.Framework.Modules.Http;
+using Gear.Framework.Modules.Http;
 using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
@@ -233,14 +233,26 @@ namespace Gear.Framework.Modules.Download
                 {
                     if (skipIfExists)
                     {
-                        Log.Debug("文件已存在，跳过下载: {0}", localFilePath);
-                        continue;
+                        // 只认"完成标记 + 大小一致"的文件：仅凭 File.Exists 会把上次中断留下的
+                        // 截断文件当成已完成，后续永远不再下载（静默损坏）。
+                        if (UWRExecutor.HasCompletedDownload(localFilePath))
+                        {
+                            Log.Debug("文件已存在且校验通过，跳过下载: {0}", localFilePath);
+                            continue;
+                        }
+                        Log.Warning("文件存在但没有有效完成标记（可能上次下载中断），将重新下载/续传: {0}", localFilePath);
                     }
-                    else if (deleteIfExists)
+
+                    if (deleteIfExists)
                     {
                         try
                         {
                             File.Delete(localFilePath);
+                            // 旧文件删除后，完成标记与续传标识也必须一起清掉
+                            string marker = localFilePath + UWRExecutor.CompletionMarkerSuffix;
+                            if (File.Exists(marker)) File.Delete(marker);
+                            string etag = localFilePath + ".etag";
+                            if (File.Exists(etag)) File.Delete(etag);
                             Log.Debug("已删除旧文件: {0}", localFilePath);
                         }
                         catch (Exception ex)

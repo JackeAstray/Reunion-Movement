@@ -14,7 +14,7 @@ namespace Gear.Framework.Modules.Download
     /// <summary>
     /// UnityWebRequest 下载器执行器
     /// </summary>
-    public class UWRExecutor : IDownloadExecutor
+    public partial class UWRExecutor : IDownloadExecutor
     {
         protected long expectedSize = 0;
         protected int chunkSize = 0;
@@ -99,6 +99,7 @@ namespace Gear.Framework.Modules.Download
             catch (Exception ex) { Log.Warning("[UWRExecutor] 删除旧分块文件失败: {0}", ex.Message); }
             try { if (File.Exists(EtagSidecarPath)) File.Delete(EtagSidecarPath); }
             catch { /* sidecar 清理失败忽略，下次仍会因标识不一致而重下 */ }
+            DeleteCompletionMarker();
         }
 
         public bool Completed => Progress == 1.0f;
@@ -221,6 +222,8 @@ namespace Gear.Framework.Modules.Download
                     Log.Error("删除文件失败: {0}", ex);
                 }
             }
+            // 取消/失败后文件不再可信：完成标记必须一起删除，否则下次会把它当成已完成
+            DeleteCompletionMarker();
             // 返回 true 表示本次确实执行了取消（幂等重入返回 false 见开头）
             return true;
         }
@@ -370,6 +373,7 @@ namespace Gear.Framework.Modules.Download
                     // 单文件是整包覆盖写：清掉可能残留的续传 sidecar，避免下次误判
                     try { if (File.Exists(EtagSidecarPath)) File.Delete(EtagSidecarPath); } catch { }
                     progress = 1.0f;
+                    WriteCompletionMarker();
                     SafeSuccess();
                     endTime = Environment.TickCount;
                     bytesDownloaded = fileSize;
@@ -428,6 +432,7 @@ namespace Gear.Framework.Modules.Download
                         CompletedMultipartDownload = true;
                         endTime = Environment.TickCount;
                         WriteLocalEtag();
+                        WriteCompletionMarker();
                         SafeSuccess();
                         return null;
                     }
@@ -538,6 +543,7 @@ namespace Gear.Framework.Modules.Download
             {
                 // 记录本次内容标识：下次续传必须与远端标识一致，才允许复用本地文件
                 WriteLocalEtag();
+                WriteCompletionMarker();
                 SafeSuccess();
                 endTime = Environment.TickCount;
                 CompletedMultipartDownload = true;

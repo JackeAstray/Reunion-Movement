@@ -20,7 +20,7 @@ namespace Gear.Framework.Modules.Http
     /// </para>
     /// </summary>
     [ModuleOrder(140)]
-    public class HttpMgr : ICustomSystem, ISystemUpdatable
+    public class HttpMgr : ICustomSystem, ISystemUpdatable, ISystemDisposable
     {
         private static Lazy<HttpMgr> instance = new Lazy<HttpMgr>(() => new HttpMgr());
 
@@ -479,6 +479,36 @@ namespace Gear.Framework.Modules.Http
                 var cts = new CancellationTokenSource();
                 httpRequests[pending.Request] = cts;
                 SendAsync(pending.Request, cts, pending.OnSuccess, pending.OnError, pending.OnNetworkError).Forget();
+            }
+        }
+
+        /// <summary>
+        /// 清理在途/排队请求（引擎 Dispose 或模块被移除时调用）。
+        /// 改造前 HttpMgr 不实现 <see cref="ISystemDisposable"/>，引擎重启后旧请求仍持有
+        /// UnityWebRequest 句柄并可能回调已销毁的对象；这里统一 Abort + 取消。
+        /// </summary>
+        public void Clear()
+        {
+            if (httpRequests != null)
+            {
+                foreach (var pair in httpRequests)
+                {
+                    try { pair.Key.Abort(); }
+                    catch (Exception ex) { Log.Warning("[HttpMgr] Clear 中止请求失败: {0}", ex.Message); }
+                    try { pair.Value.Cancel(); }
+                    catch (Exception ex) { Log.Warning("[HttpMgr] Clear 取消请求失败: {0}", ex.Message); }
+                    try { pair.Value.Dispose(); }
+                    catch (Exception ex) { Log.Warning("[HttpMgr] Clear 释放 CTS 失败: {0}", ex.Message); }
+                }
+                httpRequests.Clear();
+            }
+
+            // 排队中的请求从未发送，也必须 Abort 释放可能已分配的 UWR
+            while (pendingRequests.Count > 0)
+            {
+                var pending = pendingRequests.Dequeue();
+                try { pending.Request.Abort(); }
+                catch (Exception ex) { Log.Warning("[HttpMgr] Clear 中止排队请求失败: {0}", ex.Message); }
             }
         }
 
