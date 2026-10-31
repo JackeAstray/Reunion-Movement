@@ -144,9 +144,11 @@ namespace Gear.Framework.Runtime.UIInput
 
         private bool devicesDirty = true;
 
-        // ---- 玩家槽位持久化（按设备 product 记录，插入顺序变化后仍保持分配） ----
+        // ---- 玩家槽位持久化（按跨会话稳定的设备键记录，插入顺序变化后仍保持分配） ----
         private const string PlayerSlotPrefsKey = "ui_input_player_slots_v1";
         private Dictionary<string, int> playerSlotOverrides;
+        // 同型号无 serial 手柄的槽位只在本次会话内有效（设备键含 #dupN，跨会话不可稳定复现）
+        private readonly Dictionary<string, int> sessionPlayerSlotOverrides = new Dictionary<string, int>(4);
         private bool playerSlotsLoaded;
 
         [Serializable]

@@ -35,6 +35,12 @@ namespace Gear.Framework.Runtime.UI
         /// <summary>是否允许对象池复用（关闭后进池而不是销毁）。默认 false。</summary>
         public bool Pooled { get; set; }
 
+        /// <summary>
+        /// 关闭时是否保留实例（常驻 HUD/启动界面这类不该反复重建的窗口）。默认 false。
+        /// 与 <see cref="Pooled"/> 的区别：Static 窗口关闭后不出池、也不销毁，下次直接复用同一实例。
+        /// </summary>
+        public bool Static { get; set; }
+
         /// <param name="id">窗口标识；不传则回退到类名</param>
         public UIWindowAttribute(string id = null)
         {

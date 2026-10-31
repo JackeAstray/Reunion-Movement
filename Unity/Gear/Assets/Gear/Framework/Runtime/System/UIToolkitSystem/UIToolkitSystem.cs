@@ -16,7 +16,7 @@ namespace Gear.Framework.Runtime.UIToolkit
     /// 与现有 UISystem (uGUI/Canvas) 并存，可按界面粒度混用两种 UI 方案。
     /// </summary>
     [ModuleOrder(110, typeof(Gear.Framework.Runtime.Resources.ResourcesSystem))]
-    public class UIToolkitSystem : ICustomSystem, ISystemDisposable, ICustomSystemCancellableInit
+    public partial class UIToolkitSystem : ICustomSystem, ISystemDisposable, ICustomSystemCancellableInit
     {
         #region 单例与初始化
 
@@ -44,6 +44,8 @@ namespace Gear.Framework.Runtime.UIToolkit
 
         /// <summary>PanelSettings 配置（决定缩放、分辨率等）</summary>
         private PanelSettings panelSettings;
+        /// <summary>panelSettings 是否是缺失资源时 CreateInstance 出来的兜底对象（Clear 时要销毁）</summary>
+        private bool panelSettingsCreatedFallback;
 
         /// <summary>全局样式表（所有面板共享）</summary>
         private StyleSheet globalStyleSheet;
@@ -193,6 +195,14 @@ namespace Gear.Framework.Runtime.UIToolkit
                 GlobalDocument = null;
             }
 
+            // 缺失资源时 CreateInstance 的 PanelSettings 不由 ResourcesSystem 管理，必须手动销毁
+            if (panelSettingsCreatedFallback && panelSettings != null)
+            {
+                UnityEngine.Object.Destroy(panelSettings);
+                panelSettings = null;
+            }
+            panelSettingsCreatedFallback = false;
+
             isInited = false;
         }
         #endregion
@@ -216,6 +226,7 @@ namespace Gear.Framework.Runtime.UIToolkit
         {
             panelSettings = await Modules.Get<ResourcesSystem>()
                 .LoadAsync<PanelSettings>(PANEL_SETTINGS_PATH, isCache: true);
+            panelSettingsCreatedFallback = false;
 
             if (panelSettings == null)
             {
@@ -225,6 +236,7 @@ namespace Gear.Framework.Runtime.UIToolkit
                 Log.Error("[UIToolkitSystem] 未找到 PanelSettings 资源（Resources/{0}），UI Toolkit 面板将无法渲染。" +
                     "请在 Resources/{0} 下创建 PanelSettings 并绑定 Theme Style Sheet。", PANEL_SETTINGS_PATH);
                 panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+                panelSettingsCreatedFallback = true;
             }
 
             // 确保 PanelSettings 有 Theme Style Sheet（Unity 6 强制要求，否则 UI 不渲染）
@@ -555,40 +567,6 @@ namespace Gear.Framework.Runtime.UIToolkit
         public bool IsPanelOpen(string panelName)
         {
             return panelInstances.ContainsKey(panelName);
-        }
-        #endregion
-
-        #region 样式加载
-
-        /// <summary>
-        /// 同步加载面板专属 USS 样式表（可选，不存在时不报错）
-        /// </summary>
-        private void LoadPanelStyle(string panelName, VisualElement root)
-        {
-            // 使用 Resources.Load 直接加载（不存在时返回 null，不打 Error）
-            var style = UnityEngine.Resources.Load<StyleSheet>($"{USS_PATH_PREFIX}{panelName}");
-            if (style != null)
-            {
-                root.styleSheets.Add(style);
-                panelStyleCache[panelName] = style;
-            }
-        }
-
-        /// <summary>
-        /// 异步加载面板专属 USS 样式表（可选，不存在时不报错）
-        /// </summary>
-        private async UniTask LoadPanelStyleAsync(string panelName, VisualElement root)
-        {
-            // 异步加载，不缓存到 ResourcesSystem（避免缺失时打 Error）。
-            // 直接 await ResourceRequest（ToUniTask），避免 WaitUntil 每帧轮询开销
-            var request = UnityEngine.Resources.LoadAsync<StyleSheet>($"{USS_PATH_PREFIX}{panelName}");
-            await request.ToUniTask();
-            var style = request.asset as StyleSheet;
-            if (style != null)
-            {
-                root.styleSheets.Add(style);
-                panelStyleCache[panelName] = style;
-            }
         }
         #endregion
     }

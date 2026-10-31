@@ -29,9 +29,11 @@ namespace Gear.Framework.Runtime.UI
     /// 合法转换：
     /// <code>
     /// None ──OnInit──▶ Ready ──OnOpen──▶ Open ──OnClose──▶ Closed
-    ///                    ▲                                   │
+    ///                    ▲                  │  ↺ OnOpen       │  ↺ OnDespawned
     ///                    └──── OnSpawned（池化复用）◀─────────┘
     /// </code>
+    /// 其中 <c>Open→Open</c>（重复打开刷新数据）与 <c>Closed→Closed</c>（池化 OnClose→OnDespawned）
+    /// 是设计内的幂等路径，不告警。
     /// </para>
     /// </summary>
     public partial class UIController
@@ -76,10 +78,12 @@ namespace Gear.Framework.Runtime.UI
                     // OnInit：首次；OnSpawned：从 Closed 复用
                     return from == UIWindowState.None || from == UIWindowState.Closed;
                 case UIWindowState.Open:
-                    // Ready 正常打开；Open 重复打开要告警；Closed 后未 OnInit 直接打开也告警
-                    return from == UIWindowState.Ready;
+                    // Ready 正常打开；Open→Open 是合法的"重复打开刷新数据"路径
+                    // （UISystem.Loading 对已激活窗口直接走 OnOpen，不应告警）
+                    return from == UIWindowState.Ready || from == UIWindowState.Open;
                 case UIWindowState.Closed:
-                    return from == UIWindowState.Open;
+                    // Open→Closed 正常关闭；Closed→Closed 是池化路径（OnClose 后紧接 OnDespawned）
+                    return from == UIWindowState.Open || from == UIWindowState.Closed;
                 default:
                     return true;
             }

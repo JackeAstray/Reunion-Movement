@@ -198,8 +198,7 @@ namespace Gear.Framework.Runtime.UIInput
                 if (candidate == null) continue;
                 if (UIInputDeviceRegistry.GetPlayerGroupKey(candidate) != groupKey) continue;
 
-                string key = UIInputDeviceRegistry.GetDeviceKey(candidate);
-                if (playerSlotOverrides.TryGetValue(key, out int slot)) return slot;
+                if (TryGetSlotOverride(candidate, out int slot)) return slot;
             }
 
             return -1;
@@ -243,8 +242,7 @@ namespace Gear.Framework.Runtime.UIInput
             {
                 var device = routedDevices[i];
                 if (device == null) continue;
-                string key = UIInputDeviceRegistry.GetDeviceKey(device);
-                if (playerSlotOverrides.TryGetValue(key, out int assigned) && assigned == slot)
+                if (TryGetSlotOverride(device, out int assigned) && assigned == slot)
                 {
                     return true;
                 }
@@ -289,86 +287,6 @@ namespace Gear.Framework.Runtime.UIInput
                 // 也算成可用玩家（例如只剩键鼠却显示 4 人）。
                 return Mathf.Max(1, max);
             }
-        }
-
-        /// <summary>读取设备被显式分配的玩家槽位（-1 表示按连接顺序自动分配）。</summary>
-        public int GetAssignedPlayerSlot(InputDevice device)
-        {
-            if (device == null) return -1;
-            EnsurePlayerSlotsLoaded();
-            string key = UIInputDeviceRegistry.GetDeviceKey(device);
-            return playerSlotOverrides.TryGetValue(key, out int slot) ? slot : -1;
-        }
-
-        /// <summary>
-        /// 把设备固定到指定玩家槽位（按设备 product 持久化）。
-        /// 多方向盘场景建议在设置界面中显式分配，避免 Windows 设备枚举顺序变化导致选错选择框。
-        /// slot &lt; 0 表示恢复自动分配。
-        /// </summary>
-        public void AssignPlayerSlot(InputDevice device, int slot)
-        {
-            if (device == null) return;
-            EnsurePlayerSlotsLoaded();
-
-            string key = UIInputDeviceRegistry.GetDeviceKey(device);
-            if (slot < 0)
-            {
-                playerSlotOverrides.Remove(key);
-            }
-            else
-            {
-                playerSlotOverrides[key] = slot;
-            }
-            SavePlayerSlots();
-        }
-
-        /// <summary>清除所有设备的玩家槽位固定分配。</summary>
-        public void ClearPlayerSlotAssignments()
-        {
-            EnsurePlayerSlotsLoaded();
-            if (playerSlotOverrides.Count == 0) return;
-            playerSlotOverrides.Clear();
-            SavePlayerSlots();
-        }
-
-        private void EnsurePlayerSlotsLoaded()
-        {
-            if (playerSlotsLoaded) return;
-            playerSlotsLoaded = true;
-            playerSlotOverrides = new Dictionary<string, int>(8);
-
-            string json = PlayerPrefs.GetString(PlayerSlotPrefsKey, null);
-            if (string.IsNullOrEmpty(json)) return;
-
-            try
-            {
-                var list = JsonUtility.FromJson<PlayerSlotList>(json);
-                if (list?.items == null) return;
-                for (int i = 0; i < list.items.Count; i++)
-                {
-                    var entry = list.items[i];
-                    if (entry != null && !string.IsNullOrEmpty(entry.deviceKey))
-                    {
-                        playerSlotOverrides[entry.deviceKey] = entry.slot;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Warning("UIInputSystem: 玩家槽位配置读取失败: {0}", ex.Message);
-            }
-        }
-
-        private void SavePlayerSlots()
-        {
-            EnsurePlayerSlotsLoaded();
-            var list = new PlayerSlotList();
-            foreach (var kv in playerSlotOverrides)
-            {
-                list.items.Add(new PlayerSlotEntry { deviceKey = kv.Key, slot = kv.Value });
-            }
-            PlayerPrefs.SetString(PlayerSlotPrefsKey, JsonUtility.ToJson(list));
-            PlayerPrefs.Save();
         }
 
         /// <summary>已接入的实体控制器数量。</summary>

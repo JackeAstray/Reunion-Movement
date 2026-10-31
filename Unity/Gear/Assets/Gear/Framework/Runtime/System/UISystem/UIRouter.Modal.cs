@@ -42,6 +42,51 @@ namespace Gear.Framework.Runtime.UI
         /// <summary>当前模态层数。</summary>
         public static int ModalDepth => modalStack.Count;
 
+        /// <summary>
+        /// 是否存在仍打开的模态窗口。
+        /// 会跳过"已关闭但还留在栈里"的残留项（不修改栈，避免属性读取产生副作用）。
+        /// </summary>
+        public static bool HasOpenModal
+        {
+            get
+            {
+                if (modalStack.Count == 0) return false;
+                if (!Modules.TryGet(out UISystem ui) || ui == null || !ui.isInited)
+                {
+                    return modalStack.Count > 0;
+                }
+                for (int i = modalStack.Count - 1; i >= 0; i--)
+                {
+                    if (ui.IsOpen(modalStack[i])) return true;
+                }
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 取出最上层仍打开的模态窗口，并从模态栈移除（只出栈，不负责关闭）。
+        /// 供 <see cref="UIRouter.Back"/> 使用：模态不一定进导航栈，必须单独处理。
+        /// </summary>
+        internal static bool TryPopTopModal(out string windowId)
+        {
+            windowId = null;
+            if (modalStack.Count == 0) return false;
+            if (!Modules.TryGet(out UISystem ui) || ui == null || !ui.isInited) return false;
+
+            while (modalStack.Count > 0)
+            {
+                int last = modalStack.Count - 1;
+                string candidate = modalStack[last];
+                modalStack.RemoveAt(last);
+                if (ui.IsOpen(candidate))
+                {
+                    windowId = candidate;
+                    return true;
+                }
+            }
+            return false;
+        }
+
         /// <summary>压入一个窗口后调用：登记模态并重算阻断。</summary>
         internal static void NotifyPushed(string windowId, bool modal)
         {

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using Gear.Framework.Runtime.Scene;
 
 namespace Gear.Framework.Runtime.UI
@@ -14,7 +14,9 @@ namespace Gear.Framework.Runtime.UI
         /// </summary>
         public PanelType panelType = PanelType.NormalUI;
         /// <summary>
-        /// 是否为全屏界面
+        /// 界面尺寸档位（预留字段）。
+        /// 注意：当前没有任何运行时消费者，不会自动关闭 Main Camera 或切换渲染；
+        /// 需要全屏档请在业务层自行处理。保留字段是为了不破坏既有预制体序列化。
         /// </summary>
         public PanelSize panelSize = PanelSize.SmallPanel;
         /// <summary>

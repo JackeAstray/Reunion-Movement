@@ -43,8 +43,8 @@ namespace Gear.Framework.Runtime.UI
         /// <summary>栈深度。</summary>
         public static int Depth => stack.Count;
 
-        /// <summary>是否还有可返回的窗口。</summary>
-        public static bool CanGoBack => !stack.IsEmpty;
+        /// <summary>是否还有可返回的窗口（导航栈或模态栈）。</summary>
+        public static bool CanGoBack => !stack.IsEmpty || HasOpenModal;
 
         /// <summary>栈顶窗口 Id；空栈为 null。</summary>
         public static string Top => stack.Top;
@@ -115,11 +115,21 @@ namespace Gear.Framework.Runtime.UI
         }
 
         /// <summary>
-        /// 返回：关闭栈顶窗口并从栈里移除。
+        /// 返回：优先关闭最上层模态窗口，其次关闭导航栈顶。
+        /// <para>
+        /// 模态窗口打开时不一定会经过 <see cref="PushAsync{TWindow, TArgs}"/>，因此不在导航栈里；
+        /// 旧实现直接弹导航栈，会关掉模态下面那个被遮住的窗口。这里先处理模态栈。
+        /// </para>
         /// </summary>
         /// <returns>成功返回 true；栈为空或系统未初始化返回 false（调用方可据此决定是否上报输入）</returns>
         public static bool Back()
         {
+            if (TryPopTopModal(out string modalId))
+            {
+                if (TryCloseWindow(modalId, "Back(modal)")) return true;
+                // 模态栈已弹出但关闭失败（UISystem 未初始化）：落到下面的栈逻辑，避免吞掉输入
+            }
+
             if (!stack.TryPop(out string windowId)) return false;
 
             if (!Modules.TryGet(out UISystem ui) || ui == null || !ui.isInited)
@@ -129,15 +139,24 @@ namespace Gear.Framework.Runtime.UI
                 return false;
             }
 
+            return TryCloseWindow(windowId, "Back");
+        }
+
+        /// <summary>关闭一个窗口并记录日志；异常隔离，返回是否成功。</summary>
+        private static bool TryCloseWindow(string windowId, string reason)
+        {
+            if (string.IsNullOrEmpty(windowId)) return false;
+            if (!Modules.TryGet(out UISystem ui) || ui == null || !ui.isInited) return false;
+
             try
             {
                 ui.CloseWindow(windowId);
-                Log.Debug("[UIRouter] Back 关闭 {0}（栈: {1}）", windowId, stack);
+                Log.Debug("[UIRouter] {0} 关闭 {1}（栈: {2}）", reason, windowId, stack);
                 return true;
             }
             catch (Exception ex)
             {
-                Log.Error("[UIRouter] Back 关闭 {0} 异常: {1}", windowId, ex.Message);
+                Log.Error("[UIRouter] {0} 关闭 {1} 异常: {2}", reason, windowId, ex.Message);
                 return false;
             }
         }

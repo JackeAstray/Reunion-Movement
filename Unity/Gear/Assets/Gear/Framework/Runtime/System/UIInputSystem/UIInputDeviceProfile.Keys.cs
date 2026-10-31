@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine.InputSystem;
 
@@ -27,6 +28,32 @@ namespace Gear.Framework.Runtime.UIInput
         {
             if (device == null) return "keyboard_mouse";
             return GetCache(device).DeviceKey;
+        }
+
+        /// <summary>
+        /// 跨会话稳定的设备键；无法稳定识别时返回 null。
+        /// <para>
+        /// <see cref="GetDeviceKey"/> 对"同型号且无 serial 的手柄"会追加会话内序号 <c>#dupN</c>，
+        /// 这个序号只保证本次运行内唯一，重启后设备枚举顺序一变就会指到另一台手柄。
+        /// 因此持久化玩家槽位时必须用它过滤：带 <c>#dup</c> 的键不落盘，只在本次会话内生效。
+        /// </para>
+        /// </summary>
+        public static string GetPersistentDeviceKey(InputDevice device)
+        {
+            if (device == null) return "keyboard_mouse";
+
+            string key = GetDeviceKey(device);
+            if (string.IsNullOrEmpty(key)) return null;
+
+            // product 本身可能包含 '#'，只把末尾的 "#dup<数字>" 视为会话序号
+            int dupIndex = key.LastIndexOf("#dup", StringComparison.Ordinal);
+            if (dupIndex < 0) return key;
+
+            for (int i = dupIndex + 4; i < key.Length; i++)
+            {
+                if (!char.IsDigit(key[i])) return key; // 不是序号后缀，按稳定键处理
+            }
+            return null;
         }
 
         /// <summary>

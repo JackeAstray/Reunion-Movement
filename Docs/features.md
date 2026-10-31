@@ -13,6 +13,8 @@
 - **SDF 形状 UI**：`ImageEx` 基于 SDF 着色器实现 12 种形状（四边形 / 心形 / 六边形 / 星形 / 圆角等）+ 渐变 / 模糊 / 描边 / 过渡特效；`ImageExReplica`（相机画面投影）、`ImageExTweener`（参数动画）。
 - **循环滚动列表**：`LoopScrollRect` 对象池 + 虚拟化 + 数据索引缓存，滚动零 GC、选中状态零 GetComponent。
 - **UI Toolkit 面板系统**：`UIToolkitSystem` 异步加载 UXML/USS，面板栈管理。
+  注意：当前样式走 `Resources`（未接入 Addressables），且未与 `UIInputSystem` 的焦点/导航整合；
+  除展示型面板外按实验性能力看待。
 - **WebGL 体积优化**：ImageEx Shader 变体剥离器（过渡 / 模糊 / 描边组合裁剪）。
 - **崩溃日志上报**：`ErrorReporter` 全局错误捕获（Error/Exception/Assert）+ 本地落盘（1MB 轮转）+ 同类错误聚合 + 可选 HTTP 上报。
 - **通用存档**：`SaveSystem` JSON 原子写入存档（版本字段 + 自动迁移）。

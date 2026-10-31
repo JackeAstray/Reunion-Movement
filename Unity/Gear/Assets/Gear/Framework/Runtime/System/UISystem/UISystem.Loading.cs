@@ -262,7 +262,9 @@ namespace Gear.Framework.Runtime.UI
                 uiWindow = uiController,
                 openWhenFinish = openWhenFinish,
                 openArgs = args,
-                isOnInit = true
+                isOnInit = true,
+                // 关闭时保留实例的窗口（[UIWindow(Static = true)]）：CloseWindow 只隐藏不销毁
+                isStaticUI = UIWindowCatalog.Get(name).Static
             };
             uiLoadState.uiWindow.uiName = name;
 
@@ -361,6 +363,18 @@ namespace Gear.Framework.Runtime.UI
                     catch (Exception ex)
                     {
                         Log.Error("OnOpenSubject 订阅者异常（已隔离）: {0}", ex.Message);
+                    }
+
+                    // 重复打开等价于旧的 Set 语义（同一实例、刷新参数）：
+                    // 历史上 OnSet 方法没有任何调用点，OnSetSubject 因此永不触发；
+                    // 这里把它挂到"已打开窗口再次打开"这条真实路径上。
+                    try
+                    {
+                        OnSetSubject.OnNext(uiBase);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error("OnSetSubject 订阅者异常（已隔离）: {0}", ex.Message);
                     }
                 });
                 return;

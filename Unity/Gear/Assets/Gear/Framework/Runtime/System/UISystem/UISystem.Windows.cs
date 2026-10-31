@@ -135,42 +135,6 @@ namespace Gear.Framework.Runtime.UI
         }
 
         /// <summary>
-        /// 设置窗口
-        /// </summary>
-        /// <param name="uiState"></param>
-        /// <param name="args"></param>
-        private void OnSet(UILoadState uiState, params object[] args)
-        {
-            // LoadWindow 为同步加载，不存在“加载中”状态，无需 isLoading 分支
-            UIController uiBase = uiState.uiWindow;
-
-            if (uiBase != null && uiBase.gameObject.activeSelf)
-            {
-                // 在 BeforeOpen 之前激活，确保 UI 可见
-                uiBase.gameObject.SetActive(true);
-
-                uiBase.BeforeOpen(() =>
-                {
-                    float setStartTime = Time.realtimeSinceStartup;
-                    uiBase.OnReopen();
-                    float setElapsed = Time.realtimeSinceStartup - setStartTime;
-
-                    Log.Debug(string.Format("OnSet UI {0}, cost {1}", uiBase.gameObject.name, setElapsed));
-
-                    // 订阅者异常隔离：坏订阅者不应中断 SetWindow 流程
-                    try
-                    {
-                        OnSetSubject.OnNext(uiBase);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error("OnSetSubject 订阅者异常（已隔离）: {0}", ex.Message);
-                    }
-                });
-            }
-        }
-
-        /// <summary>
         /// 关闭窗口
         /// </summary>
         /// <param name="t"></param>

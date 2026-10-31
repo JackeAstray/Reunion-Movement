@@ -25,22 +25,26 @@ namespace Gear.Framework.Runtime.UI
         /// <summary>是否允许池化。</summary>
         public readonly bool Pooled;
 
+        /// <summary>关闭时是否保留实例（常驻 HUD；不销毁也不池化）。</summary>
+        public readonly bool Static;
+
         /// <summary>是否来自 <see cref="UIWindowAttribute"/>（false 表示按老规则回退推导）。</summary>
         public readonly bool Declared;
 
-        public UIWindowDescriptor(string id, Type controllerType, PanelType layer, bool modal, bool pooled, bool declared)
+        public UIWindowDescriptor(string id, Type controllerType, PanelType layer, bool modal, bool pooled, bool declared, bool isStatic = false)
         {
             Id = id;
             ControllerType = controllerType;
             Layer = layer;
             Modal = modal;
             Pooled = pooled;
+            Static = isStatic;
             Declared = declared;
         }
 
         public override string ToString()
         {
-            return $"{Id}（{ControllerType?.Name}, {Layer}, modal={Modal}, pooled={Pooled}, declared={Declared}）";
+            return $"{Id}（{ControllerType?.Name}, {Layer}, modal={Modal}, pooled={Pooled}, static={Static}, declared={Declared}）";
         }
     }
 
@@ -224,7 +228,8 @@ namespace Gear.Framework.Runtime.UI
                 declared ? attribute.Layer : PanelType.NormalUI,
                 declared && attribute.Modal,
                 declared && attribute.Pooled,
-                declared);
+                declared,
+                declared && attribute.Static);
 
             byType[type] = descriptor;
 

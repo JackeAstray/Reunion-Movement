@@ -366,6 +366,15 @@ namespace Gear.Framework.Runtime.UIInput
 
         private void DispatchCancel(InputDevice device, int player)
         {
+            // 文本输入聚焦时，Cancel 属于"退出编辑/清空输入框"的语义，不能冒泡成
+            // UIRouter.Back() 把整个窗口关掉。改造前只有导航做了这个检查，Cancel 仍照发，
+            // 导致输入框里按 ESC 会误关窗口（与 Docs/03 的承诺相反）。
+            if (IsTextInputFocused())
+            {
+                Log.Debug("[UIInputSystem] 文本输入聚焦中，Cancel 由输入框消费（不触发窗口返回）");
+                return;
+            }
+
             var e = new UIButtonEvent(device, player);
 
             try { CancelEventSubject?.OnNext(e); }

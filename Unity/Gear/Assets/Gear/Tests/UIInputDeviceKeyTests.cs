@@ -65,5 +65,28 @@ namespace Gear.Tests
 
             Assert.IsFalse(key.EndsWith("#dup1"), "单手柄必须保持原有键，避免已保存的绑定/玩家槽位失效");
         }
+
+        [Test]
+        public void SingleGamepad_PersistentKeyMatchesDeviceKey()
+        {
+            var pad = AddGamepad();
+            string key = UIInputDeviceRegistry.GetDeviceKey(pad);
+
+            Assert.AreEqual(key, UIInputDeviceRegistry.GetPersistentDeviceKey(pad),
+                "只有一个同型号手柄时，设备键本身跨会话稳定，可以直接持久化");
+        }
+
+        [Test]
+        public void DuplicateGamepads_WithoutSerial_HaveNoPersistentKey()
+        {
+            var first = AddGamepad();
+            var second = AddGamepad();
+
+            Assert.AreEqual(UIInputDeviceRegistry.GetDeviceKey(first),
+                UIInputDeviceRegistry.GetPersistentDeviceKey(first));
+
+            Assert.IsNull(UIInputDeviceRegistry.GetPersistentDeviceKey(second),
+                "带 #dupN 的键只在本会话唯一，不能落盘（否则重启后可能指到另一台手柄）");
+        }
     }
 }
