@@ -81,8 +81,7 @@ namespace Gear.Framework.Runtime.UI
             if (state?.uiWindow != null)
             {
                 stack.Push(windowId);
-                // 声明了 [UIWindow(Modal = true)] 的窗口会阻断下层窗口交互
-                NotifyPushed(windowId, UIWindowCatalog.Get(windowId).Modal);
+                // 模态登记已由 UISystem.OpenWindow(Async) → NotifyOpened 完成，这里不再重复调用
                 Log.Debug("[UIRouter] Push {0}（栈: {1}）", windowId, stack);
             }
             else
@@ -109,8 +108,7 @@ namespace Gear.Framework.Runtime.UI
             if (state?.uiWindow != null)
             {
                 stack.Push(windowId);
-                // 声明了 [UIWindow(Modal = true)] 的窗口会阻断下层窗口交互
-                NotifyPushed(windowId, UIWindowCatalog.Get(windowId).Modal);
+                // 模态登记已由 UISystem.OpenWindow(Async) → NotifyOpened 完成，这里不再重复调用
                 Log.Debug("[UIRouter] Push {0}（栈: {1}）", windowId, stack);
             }
             return state;

@@ -224,7 +224,8 @@ namespace Gear.Framework.Runtime.UI
             {
                 if (fromAddressables)
                 {
-                    AddressableSystem.Instance.ReleaseAsset(prefab);
+                    // 运行时统一通过 Modules 取提供者（项目约定；与 SceneSystem 一致）
+                    Modules.Get<AddressableSystem>().ReleaseAsset(prefab);
                 }
                 else
                 {
